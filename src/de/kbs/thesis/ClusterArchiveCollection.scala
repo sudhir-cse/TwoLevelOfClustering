@@ -103,12 +103,49 @@ object ClusterArchiveCollection {
 
 }
 
-/*
- * Data Pre-processing
- * 
- * 
- */
-
+//fit a CountVectorizerModel from the carpus
+//	 val countVectorizerModel = new CountVectorizer()
+//		.setInputCol("stopWordsFiltered")
+//		.setOutputCol("features")
+//		.setVocabSize(200)
+//		.setMinDF(5)
+//		.fit(stopWordsRemoved)
+//		
+//		val featurizedData = countVectorizerModel.transform(stopWordsRemoved)
+//		
+//	  //featurizedData.show()
+//
+//    // Trains a LDA model.
+//    val lda = new LDA().setK(10).setMaxIter(10)
+//    val model = lda.fit(featurizedData)
+//
+////    val ll = model.logLikelihood(dataset)
+////    val lp = model.logPerplexity(dataset)
+////    println(s"The lower bound on the log likelihood of the entire corpus: $ll")
+////    println(s"The upper bound bound on perplexity: $lp")
+//
+//    // Describe topics.
+//    val topics = model.describeTopics(3)
+//    println("The topics described by their top-weighted terms:")
+//    topics.show(false)
+//
+//    // Shows the result.
+//    val transformed = model.transform(featurizedData)
+//    transformed.show()
+//    
+//    println("----------------list of topics----------------")
+//    val vocab = countVectorizerModel.vocabulary
+//    for ((row) <- topics) {
+//        val topicNumber = row.get(0)
+////        val termIndices = row.getAs[Array[Int]](1)
+////        termIndices.foreach { indeces => print("TopicName: "+ vocab(indeces)+" ") }
+////        print("\n")
+//    val terms:WrappedArray[Int] = row.get(1).asInstanceOf[WrappedArray[Int]]
+//    for ((termIdx) <- terms) {
+//        print(vocab(termIdx)+ " ")
+//        }
+//    print("\n")
+//    }
 
 
 
