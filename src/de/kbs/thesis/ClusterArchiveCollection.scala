@@ -24,9 +24,10 @@ object ClusterArchiveCollection {
 			.getOrCreate()
 
 		//RDD[Row(timeStemp, fileName, fileContent)]
-		//Filename has been composed of Timestamp and Filename. Separator as a "-" has been used
+		//Filename has been composed of Times tamp and Filename. Separator as a "-" has been used
+		//Data filtering includes: toLoweCasae, replace all the white space characters with single char, keep only alphabetic chars, keep only the words > 2.
 		val training = spark.sparkContext.wholeTextFiles("data")
-		  .map(kvTouple => Row(kvTouple._1.split("-")(0), kvTouple._1.split("=")(1), kvTouple._2))
+		  .map(kvTouple => Row(kvTouple._1.split("=")(0), kvTouple._1.split("=")(1), kvTouple._2.toLowerCase().replaceAll("""\s+""", " ").replaceAll("""[^a-zA-Z\s]""", "").replaceAll("""\b\p{IsLetter}{1,2}\b""","")))
 
 		//Convert training RDD to DataFrame(timeStamp, fileName, fileContent)
 		//Schema is encoded in String
@@ -101,3 +102,32 @@ object ClusterArchiveCollection {
 	}
 
 }
+
+/*
+ * Data Pre-processing
+ * 
+ * 
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
