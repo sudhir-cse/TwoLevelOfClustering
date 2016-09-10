@@ -10,6 +10,8 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.Dataset
+import org.apache.spark.ml.feature.{CountVectorizer, CountVectorizerModel}
 
 
 object ClusterArchiveCollection {
@@ -100,53 +102,85 @@ object ClusterArchiveCollection {
 		spark.stop()
 
 	}
-
+	
+	  //This method computes topic from text documents collection
+  //Input column "stopWordsFiltered", should be already pre-processed
+  def computeTopic(dataset: Dataset[Row]): String = {
+    
+   var topic: String = ""
+    
+    //Term-frequencies vector
+	 val tfModel = new CountVectorizer()
+		.setInputCol("stopWordsFiltered")
+		.setOutputCol("features-TF")
+		.setVocabSize(100)
+		.setMinDF(5)
+		.fit(dataset)
+		
+	 val tf  = tfModel.transform(dataset)
+	
+  //TF-IDF vector
+	val tfidfModel = new IDF()
+	  .setInputCol("features-TF")
+	  .setOutputCol("features-TFIDF")
+	  .fit(tf)
+  
+	val vocab = tfModel.vocabulary
+	val tfidfWeight  = tfidfModel.idf.toArray
+	
+	val vocabAndWeight = vocab.map { term => (term, tfidfWeight(vocab.indexOf(term))) }
+  
+	//Now sort by weight
+	val sortedVocabAndWeight = vocabAndWeight.sortWith((tuple1, tuple2) => tuple1._2 > tuple2._2)
+	
+	sortedVocabAndWeight.foreach(println)
+	 
+	val impoTopics = sortedVocabAndWeight.map((tuple) => tuple._1)
+	
+	//argument to take (5) is the number of vocabularies terms used for topic
+	impoTopics.take(5).foreach { term => topic = topic + " "+term }
+	
+	return topic
+		
+  }
+  
 }
-
-//fit a CountVectorizerModel from the carpus
-//	 val countVectorizerModel = new CountVectorizer()
-//		.setInputCol("stopWordsFiltered")
-//		.setOutputCol("features")
-//		.setVocabSize(200)
-//		.setMinDF(5)
-//		.fit(stopWordsRemoved)
-//		
-//		val featurizedData = countVectorizerModel.transform(stopWordsRemoved)
-//		
-//	  //featurizedData.show()
-//
-//    // Trains a LDA model.
-//    val lda = new LDA().setK(10).setMaxIter(10)
-//    val model = lda.fit(featurizedData)
-//
-////    val ll = model.logLikelihood(dataset)
-////    val lp = model.logPerplexity(dataset)
-////    println(s"The lower bound on the log likelihood of the entire corpus: $ll")
-////    println(s"The upper bound bound on perplexity: $lp")
-//
-//    // Describe topics.
-//    val topics = model.describeTopics(3)
-//    println("The topics described by their top-weighted terms:")
-//    topics.show(false)
-//
-//    // Shows the result.
-//    val transformed = model.transform(featurizedData)
-//    transformed.show()
+//  //This method computes a topic
+//  //Make sure that Data-frame has 'features' columns
+//  def computeTopic(df: Dataset[Row], vocabularies: Array[String]): String = {
 //    
-//    println("----------------list of topics----------------")
-//    val vocab = countVectorizerModel.vocabulary
-//    for ((row) <- topics) {
-//        val topicNumber = row.get(0)
-////        val termIndices = row.getAs[Array[Int]](1)
-////        termIndices.foreach { indeces => print("TopicName: "+ vocab(indeces)+" ") }
-////        print("\n")
-//    val terms:WrappedArray[Int] = row.get(1).asInstanceOf[WrappedArray[Int]]
-//    for ((termIdx) <- terms) {
-//        print(vocab(termIdx)+ " ")
-//        }
-//    print("\n")
+//    var finalTopic:String = ""
+//    
+//    //Train a LDA model
+//    //setK = 1, for this function to work properly, i.e. to return a single topic
+//    val lda = new LDA().setK(2).setMaxIter(5)
+//    val model = lda.fit(df)
+//    
+//    //Describe topics, parameter to describeTopics() means number of words the final topic will be composed of.
+//    val topic = model.describeTopics(5)
+//    topic.show()
+//    
+//    val  collectedTopic = topic.collect()
+//    vocabularies.foreach { println }
+//    
+//    //Form final topic, topic will contain only one row as setK() has been set to 1.
+//    for ((row) <- collectedTopic) { 
+//      val topicNumber = row.get(0)
+//      val terms:WrappedArray[Int] = row.get(1).asInstanceOf[WrappedArray[Int]]
+//      for ((termIdx) <- terms) {
+//        finalTopic += vocabularies(termIdx)+ " "
+//      }
 //    }
-
+//    
+//   // Show result
+//   // val transformed = model.transform(df)
+//   // transformed.show()
+//    
+//    println(finalTopic)
+//    
+//    return finalTopic
+//    
+//  }
 
 
 
