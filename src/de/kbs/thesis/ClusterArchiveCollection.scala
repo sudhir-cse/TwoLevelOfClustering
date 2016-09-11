@@ -12,6 +12,7 @@ import org.apache.spark.sql.types.StructField
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.Dataset
 import org.apache.spark.ml.feature.{CountVectorizer, CountVectorizerModel}
+import org.apache.spark.rdd.RDD
 
 
 object ClusterArchiveCollection {
@@ -103,7 +104,70 @@ object ClusterArchiveCollection {
 
 	}
 	
-	  //This method computes topic from text documents collection
+  //Pre-processing data: RDD[(String, String)]
+  def preProcessData(spark: SparkSession, data: RDD[(String, String)]): Dataset[Row] = {
+   
+    //RDD[Row(timeStemp, fileName, fileContent)]
+		//Filename has been composed of Timestamp and Filename. Separator as a "-" has been used
+		//Data filterring includes: toLoweCasae, replace all the white space characters with single char, keep only alphabetic chars, keep only the words > 2.
+		val tempData = data.map(kvTouple => Row(kvTouple._1, kvTouple._2.toLowerCase().replaceAll("""\s+""", " ").replaceAll("""[^a-zA-Z\s]""", "").replaceAll("""\b\p{IsLetter}{1,2}\b""","")))
+
+		//Convert training RDD to DataFrame(fileName, fileContent)
+		//Schema is encoded in String
+		val schemaString = "fileName fileContent"
+
+		//Generate schema based on the string of schema
+		val fields = schemaString.split(" ")
+		  .map ( fieldName => StructField(fieldName, StringType, nullable = true) )
+
+		//Now create schema
+		val schema = StructType(fields)
+
+		//Apply schema to RDD
+		//This is input for pipeline
+		val trainingDF = spark.createDataFrame(tempData, schema)
+		trainingDF.show()
+
+		//split fileContent column into words
+		val wordsData = new Tokenizer()
+		  .setInputCol("fileContent")
+		  .setOutputCol("words")
+		  .transform(trainingDF)
+
+		//Remove stop words
+		val stopWordsRemoved = new StopWordsRemover()
+		  .setInputCol("words")
+		  .setOutputCol("stopWordsFiltered")
+		  .transform(wordsData)
+
+    return stopWordsRemoved
+  }
+  
+  //Compute feature space
+  def computeFeatureSpace(preProcessedData: Dataset[Row], vocabSize: Int, minDF: Int): Dataset[Row] = {
+    
+    //Term-frequencies vector
+	 val tfModel = new CountVectorizer()
+		.setInputCol("stopWordsFiltered")
+		.setOutputCol("features-TF")
+		.setVocabSize(vocabSize)
+		.setMinDF(minDF)
+		.fit(preProcessedData)
+		val featurizedData  = tfModel.transform(preProcessedData)
+	  //featurizedData.show()
+	
+	  //TF-IDF vector
+		val tfidfModel = new IDF()
+		  .setInputCol("features-TF")
+		  .setOutputCol("features")
+		  .fit(featurizedData)		  
+	 val tfidf = tfidfModel.transform(featurizedData)
+  
+	 return tfidf
+	     
+  }
+  
+  //This method computes topic from text documents collection
   //Input column "stopWordsFiltered", should be already pre-processed
   def computeTopic(dataset: Dataset[Row]): String = {
     
@@ -130,7 +194,7 @@ object ClusterArchiveCollection {
 	
 	val vocabAndWeight = vocab.map { term => (term, tfidfWeight(vocab.indexOf(term))) }
   
-	//Now sort by weight
+	//now sort by weight
 	val sortedVocabAndWeight = vocabAndWeight.sortWith((tuple1, tuple2) => tuple1._2 > tuple2._2)
 	
 	sortedVocabAndWeight.foreach(println)
