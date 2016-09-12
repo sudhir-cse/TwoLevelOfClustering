@@ -25,6 +25,12 @@ object ClusterArchiveCollection {
   
   def main(arg: Array[String]): Unit = {
     
+    val firstLevelClustersNum: Int = 5
+    val firstLevelClusterMaxItr: Int = 50
+    
+    val secondLevelClustersNum: Int = 3
+    val secondLevelClusterMaxInt: Int = 50
+    
   //Create spark session with the name 'Clustering in Archive Collection' that runs locally on all the core 
 		val spark = SparkSession.builder()
 		 	.master("local[*]")
@@ -41,7 +47,7 @@ object ClusterArchiveCollection {
 		val preProcessedTrainingData = preProcessData(spark, trainingData)
 		
 		//Compute K-means model Hierarchy
-		computeModelHierarchy(spark, preProcessedTrainingData, 5, 50, 3, 50)
+		computeModelHierarchy(spark, preProcessedTrainingData, firstLevelClustersNum, firstLevelClusterMaxItr, secondLevelClustersNum, secondLevelClusterMaxInt)
 		  
    spark.stop()
     
