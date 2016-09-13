@@ -1,0 +1,1912 @@
+A CLASSIFICATION-BASED METHODOLOGY
+FOR PLANNING AUDIT STRATEGIES IN FRAUD DETECTION
+F. Bonchi (1,2),F. Giannotti (I), G. Mainetto (`I, D. Pedreschi
+(*I
+"`CNUCE
+- CNR
+(*)Dipartimento
+di lnformatica
+Italian Nat. Research Council
+Universit-A di Pisa
+Via S. Maria 36, 56126 Pisa, Italy
+Corso ltalia 40, 56125 Pisa, Italy
++39 050 593111
+f.aiannotti@cnuce.cnr.it
++39050887252
+bonchi@di.unioi.it
+o.mainetto@cnuce.cnr.it
+pedre@di.unioi.it
+
+
+ABSTRACT
+
+Planning adequate audit strategies is a key success factor in a
+posterion'
+fraud detection, e.g., in the fiscal and insurance
+domains, where audits are intended to detect tax evasion and
+fraudulent claims. A case study is presented in this paper, which
+illustrates how techniques based on classification can be used to
+support the task of planning
+audit strategies. The proposed
+approach is sensible to some conflicting issues of audit planning,
+e.g., the trade-off
+between
+maximizing
+audit
+benefits
+vs.
+minimizing audit costs. A methodological scenario, common to a
+whole class of similar applications, is then abstracted away from
+the case study. The limitations of available systems to support the
+identified overall KDD process, bring us to point out the key
+aspects of a logic-based database language, integrated with mining
+mechanisms, which
+is used to provide
+a uniform,
+highly
+expressive environment for the various steps in the construction of
+the considered case-study.
+Keywords
+Knowledge discovery in databases, data mining, classification,
+decision trees, fraud detection, logic-based database languages,
+integration of querying and mining.
+
+1. INTRODUCTION
+Fraud detection is becoming
+a central application
+area for
+knowledge
+discovery
+in databases, as it poses challenging
+technical and methodological problems, many of which are still
+open [6, 201. A major task in fraud detection is that of
+constructing models, or projiles, of fraudulent behavior, which
+may serve in decision support systems for:
+
+-
+preventing frauds (on-line fraud detection), or
+
+-
+planning audit strategies (a posteriori fraud detection.)
+
+The first case is typical of domains such as credit cards and
+mobile telephony [5, 181.The case of a posteriori fraud detection,
+which is considered in this paper, is pertinent to a whole class of
+applications, namely whenever we are faced with the problem of
+
+
+Permission to make digital or hard copies of all or part of this work t'o~
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies hear this notice and the full citation on the lirst page. To copy
+otherwise, to wyuhlish, to post on scrvcrs or to rcdistrihutc to lists.
+requires prior specific permission and/or a fee.
+KDD-99 San Diego CA USA
+Copyright ACM 1999 l-58113-143-7/99/08...$5.00
+constructing models by analyzing historical audit data, to the
+purpose of planning effectively future audits. This is the case, e.g.,
+in the fiscal and insurance domain, where an adequately targeted
+audit strategy is a key success factor for governments and
+insurance companies. In fact, huge amounts of frauded resources
+may be recovered in principle
+from well-targeted
+audits: for
+instance, the form of tax evasion consisting in filing fraudulent tax
+declarations in Italy is estimated between 3% and 10% of GNP
+[19]. This explains the increasing interest and investments of
+governments and insurance companies in intelligent systems for
+audit planning.
+
+From the point of view of KDD technology, we observe that,
+while data mining tools (classification,
+clustering, association
+rules,...) have reached a state of relative maturity, the overall
+KDD
+process, consisting
+of many crucial
+steps, is poorly
+supported by the available environments and systems. This is a
+severe limitation at two different levels:
+
+-
+at the design level, where a helpful methodological scenario
+is needed, which drives the design of the overall KDD
+process in the selected class of applications,
+
+-
+at the system level, where an integrated environment is
+needed, which supports the development of the overall KDD
+process in the selected class of applications.
+
+These limitations are evident in fraud detection, where specific
+issues make the KDD process hard, including the complexity of
+data preparation,
+the need of combining
+diverse knowledge
+extraction
+paradigms,
+the need of
+sophisticated,
+domain-
+dependent model evaluation.
+
+In this paper, we present a case study on fiscal fraud detection,
+developed within a project aimed at investigating the adequacy
+and sustainability of KDD in the detection of tax evasion. The
+paper discusses:
+
+-
+the potential effectiveness of a KDD process oriented to
+planning audit strategies;
+
+-
+a methodology which supports the design of such KDD
+process;
+-
+an integrated environment for the development of such KDD
+process.
+Audit planning is a difficult task, in that it has to take into account
+constraints on the available resources (human and financial) to
+carry out the audits themselves. Therefore, planning has to face
+two conflicting issues:
+
+
+
+
+175
+
+-
+maximizing audit benefits, i.e., define subjects to be selected
+for audit in such a way that the recovery of evaded tax is
+maximized, and
+
+-
+minimizing audit cosis, i.e., define subjects to be selected for
+audit in such a way that the resources needed to carry out the
+audits are minimized.
+
+Although these options are pertinent to the political
+level, the
+capability
+of designing systems for supporting
+this form of
+decisions are technically
+precise challenges: is there a KDD
+methodology for audit planning which may be tuned according to
+these options? What and how data mining tools may be adopted?
+How extracted knowledge
+may be combined
+with
+domain
+knowledge to obtain useful audit models? These are some of the
+questions addressed in Section 3 of the present paper: our
+experience in the case study indicates that classification-based
+KDD
+is an extremely
+promising
+direction
+for fiscal fraud
+detection, and calls for future larger-scale efforts. However, our
+approach is aimed at abstracting from the particular case study,
+and identifying the lines of a methodology for a whole class of
+applications - those centered on planning audit strategies.
+
+Besides the case study
+and the methodology,
+our
+third
+contribution
+is to show how a logic-based database language,
+integrated with mining mechanisms, can be conveniently used to
+formalize and develop the overall KDD process. The methodology
+adopted in the case study is formalized, in Section 4, using a
+query language that integrates the capabilities of deductive rules
+with the inductive capabilities of classification.
+
+2. PRELIMINARIES
+ON METHODS
+FOR
+KNOWLEDGE
+EXTRACTION
+In this paper, we assume that the reader is familiar with the basic
+concepts of KDD and data mining. Therefore, this section is
+limited at setting the general stage where the case study has been
+deployed, while
+finer grade details are clarified
+during the
+technical presentation.
+
+In 121, two different approaches in knowledge extraction are
+highlighted.
+
+-
+Hypothesis
+Verification:
+is a top-down
+approach, which
+verifies predetined assertions on the data. The domain expert
+generates hypotheses,
+which
+are matched
+against the
+available data.
+
+-
+Knowledge Discovery: is a bottom-up approach, which starts
+from data and tries to induce some relevant features that are
+not known in advance. In this analysis, data themselves
+suggest conjectures on their semantics.
+
+When dealing with a concrete case of analysis, both approaches
+are interleaved, switching from one to the other in different phases
+of the same project.
+
+In the literature, knowledge discovery is further characterized as
+either directed or undirected. In directed knowledge discovery,
+the goal of the process is to explain the value of some particular
+attribute in terms of others. Usually a particular
+attribute is
+selected, which is called target, and the system is asked to
+estimate, classify, or predict the target attribute. In undirected
+knowledge discovery there is no target attribute, and the system is
+asked to identify patterns, or regularities, or relationships in the
+data that may be significant.
+A typical data mining tool for
+directed knowledge discovery is classification,
+whereas typical
+tools for undirected knowledge
+discovery
+are clustering and
+association rules.
+
+In this paper, we refer to a process of directed knowledge
+discovery, which consists of the following phases:
+
+a)
+Identify sources of available data
+
+b)
+Detect the model of analysis
+
+c)
+Prepare data for analysis
+
+d)
+Reduce data
+
+e)
+Build and train the model
+
+f)
+Evaluate the model
+
+These phases drive the presentation of the experiments conducted
+in our case study, as illustrated in Section 3. In these experiments,
+a predictive model will be built, using classification. As usual, the
+classifiers will
+learn from preclassified
+data where the target
+attribute is already known. In the phase of data preparation
+preclassified data will be partitioned into two subsets. The first
+subset is the training-set,
+and it will be used for building the
+initial classifier. The second subset is the test-set, which will be
+used to verify the correctness of the initial classifier. Finally, we
+evaluate the classifiers on the basis of various quality indicators,
+both domain-independent and domain dependent.
+
+Decision tree is the classification
+technique used in this paper.
+Such a choice is a natural one when predictive models are to be
+developed.
+In particular,
+decision
+trees are perceived
+as a
+consolidated tool with high explanatory capability, as the obtained
+classifiers
+can be readily
+expressed
+using
+rules.
+Simple,
+explanatory models are needed when, as in this case study, it is
+crucial to convince the user of the usefulness of the KDD
+approach. On the other hand, a parallel approach using regression
+models [3] has been pursued with similar results. We are aware
+that other classification tools may be adopted, such as Bayes net
+model: however,
+the main focus of this research was the
+methodology needed to tailor the KDD process to the target class
+of applications.
+In our experiments, we used C5.0 [16], the most recent available
+version of the decision tree algorithm that J.Ross Quinlan has
+been evolving and refining for many years. C5.0 is an extension of
+the well-known
+C4.5 algorithm
+[15]. This classification
+tool
+offers several advanced mechanisms, which revealed useful in
+tuning the predictive model:
+
+-
+Pruning
+level, which allows tuning the severity of tree
+pruning algorithm [14]. Pruning is the activity of replacing a
+whole subtree of the decision tree with one of its leaves. This
+operation is frequently necessary to balance the tree and to
+reduce misclassification.
+
+-
+Misclassification
+weights, which allows defining different
+costs for different errors in classification.
+
+-
+Adaptive boosting [73: is a technique that builds a sequence
+of classifiers, where classifier k is built starting from the
+errors of classifier k-l. A voting strategy is then used to reach
+the final classification.
+
+3. CLASSIFICATION-BASED
+METHODS
+FOR PLANNING
+AUDIT
+STRATEGIES
+In this Section, a methodology
+for constructing
+profiles
+of
+fraudulent
+behavior
+is presented, aimed at supporting
+audit
+
+
+
+
+176
+
+planning. The reference paradigm is that of the KDD process, in
+the version of direct knowledge extraction [2]. The reference
+technique is that of classification, using decision trees [3, 151.
+Although we describe in detail the specific case study, emphasis is
+placed on the methodological issues of design and control of the
+KDD process, to the purpose of identifying the similarities of a
+whole class of applications.
+
+3.1 Identification
+of Available Data Sources
+The dataset used in the case study consists of information from tax
+declarations, integrated with data from other sources, such as
+social benefits paid by taxpayers to employees, official budget
+documents, and electricity and telephone bills. Each tuple in the
+dataset corresponds to a (large or medium size) company that filed
+a tax declaration in a certain period of time: we shall use the word
+subject to refer to such companies. The initial dataset consists of
+80643 tuples, with 175 numeric attributes (or features), where
+only a few of those are categorical. From this dataset, 4103 tuples
+correspond to audited subjects: the outcome of the audit is
+recorded in a separate dataset with 4103 tuples and 7 attributes,
+one of which represents the amount of evaded tax ascertained by
+the audit: such feature is named recovery. The recovery attribute
+takes value zero if no fraud is detected.
+
+It is important to notice that the subset of 4103 audited subjects
+was selected for an audit by the tax authority on the basis of a
+formalized procedure, based on expert's knowledge. Therefore,
+the predictive models developed in the rest of this paper should be
+correctly understood as the final part of an overall, replicable
+process of audit selection and planning. Despite its relatively
+small size, the dataset of audited subjects has therefore a
+remarkable value.
+
+3.2 Identification
+of a Cost Model
+Together with domain experts, a cost model has been defined, to
+be included in the predictive
+model. In fact, audits are very
+expensive in both human and financial resources, and therefore it
+is important to focus audits on subjects that presumably return a
+high recovery. The challenging
+goal is therefore to build a
+classifier, which selects those interesting subjects.
+
+An intuitive example to explain the adopted cost model can be
+found in the marketing domain. Consider the problem of building
+the customer profile in a mail order company: a possibility is to
+assign either a cost or a profit to the customer reaction to a
+promotion of the kind "who replies gets a gift":
+
+-
+if customer replies with an order, then there is a profit (=
+value of order-mailing cost-gift cost);
+
+-
+if customer replies without an order, then there is a cost (=
+mailing cost + gift cost);
+
+-
+if customer does not reply, then there is a cost (= mailing
+cost).
+
+The cost model in our case study is developed, according to this
+approach, as follows. First, a new attribute audit-cost is defined,
+as a derived attribute,
+i.e., a function
+of other attributes.
+audit-cost
+represents an estimation, provided by the domain
+expert, of the cost of an audit in proportion to the size and the
+complexity of the subject to be audited. Next, we define another
+derived attribute actual-recovery,
+as the recovery of an audit after
+the audit costs. Therefore, for each tuple i, we define:
+actual-recovery(i)
+= recovery(i) - audit-costs(i).
+
+The attribute actual-recovery
+is used to discriminate between
+subjects with a positive or negative value for such attribute. The
+key point is in using the cost model within the learning process
+itself, and not only in the evaluation phase. It is our conviction
+that this approach scales to a whole class of applications, namely
+whenever we are faced with the problem of detecting frauds "a
+posteriori", by analyzing historical audit data, to the purpose of
+planning effectively future audits.
+
+The
+target
+variable
+of
+our
+analysis
+is constructed
+from
+actual-recovery,
+by defining the class of actual recovery - cur in
+short - in such a way that, for each tuple i:
+negative if actual-recovery(i)
+IO
+cur(i) =
+positive
+if actual-recovery
+(i) > 0.
+The goal is a predictive model able to characterize the positive
+subjects, which are eligible to be audited. It should be noted that
+the proposed cost model does not consider such things as
+limitations on number of feasible audits or resources to perform
+audits. Indeed, the adaptation to limitations
+on resources and
+particular
+audit
+strategies
+is demanded
+to the phases of
+construction and tuning of the predictive model, described in the
+rest of the paper.
+
+3.3 Preparation
+of Data for Analysis
+Data trunsfotmation.
+Although out of the scope of the present
+paper, it is worth noting that this phase was extremely time
+consuming,
+due to the presence of legacy
+systems, huge
+operational databases (hierarchical
+and relational), inconsistent
+measure units and data scales.
+
+Data cleaning (row removal.)
+Noisy tuples, i.e., those with
+excessively deviating attribute values, have been removed, as well
+as those tuple with too many null attribute values. After data
+cleaning, the dataset consisted of total 3880 tuples: 3183 in
+negative car (82%), and 697 in positive car (18%).
+Attribute selection (column removal.) The selection of relevant
+attributes is a crucial step, which was taken together with domain
+experts. The available
+175 attributes
+were reduced 20, by
+removing irrelevant, derived ones.
+Choice of training-set and test-set. The correct size of the training
+set is an important parameter in a classification experiment. While
+the size of the training set increases, the complexity of the induced
+model
+also
+increases,
+as
+the
+training
+error
+(i.e.,
+the
+misclassification rate on training-set tuples) decreases. This does
+not imply that large training-sets are necessarily better: a complex
+model, with a low training error, may behave poorly on new
+tuples. This phenomenon is named overfitting:
+the classifier is
+excessively specialized on the training tuples, and has a high
+misclassification rate on new (test) tuples. The classical remedies
+to overfitting include downsizing the training-set, and increasing
+the pruning level.
+
+In our case study, we adopted an incremental samples approach
+[12] to sizing the training-set, consisting in training a sequence of
+classifiers over increasingly larger, randomly generated subsets of
+the dataset - lo%, 20%, 33%, 50%, 66%, 90% of the total
+dataset. We discovered that the resulting classifiers improve with
+increasing training-sets, independently from the pruning level. In
+other words, and not unsurprisingly, there is no risk of overlitting,
+
+
+
+
+177
+
+since the size of the dataset is relatively small with respect to the
+complexity of the knowledge to be extracted.
+
+As a consequence, the 3880 tuples in the dataset were partitioned
+as follows:
+
+-
+training set: 35 14 tuples;
+
+-
+test set: 366 tuples.
+
+3.4 Model Construction
+We recall here that our goal is a binary classifier with the attribute
+cur (class of actual recovery) as target variable. The decision trees
+are trained to distinguish between positive cur (fruitful audits) and
+negative cur (unfruitful audits). Once the training phase is over,
+the test-set is fed to the classifier, to check whether it is effective
+in selecting on the new tuples. In our case, it is relevant not only
+the misclassification rate of the classifier on the test-set, but also
+the actual-recovery
+(= ascertained evaded tax - audit cost)
+obtained from the audits of the subjects from the test-set which
+are classified as positive. This value can be matched against the
+real case, where all (366) tuples of the test-set are audited. This
+case, which we call Real, is characterized by the following
+(throughout the paper, #S denotes the cardinality of the set S):
+.
+audit#(Real) = #(test-set) = 366
+
+.
+actual~recovety(Real)
+=
+Lttw-set
+actual-recovery(i)
+=
+159.6 M Euro
+
+.
+audit-costs(Rea1) = c. ,EleS,ser_ audit-costs(i) = 24.9 M Euro
+
+where recovery and costs are expressed in million euro's. As the
+whole dataset consists of audited subjects, by comparing the
+previous values of the Real case with those of the subjects
+classified as positive by the various classifiers, it is possible to
+evaluate
+the potential
+improvement
+of using data mining
+techniques to the purpose of planning the audits.
+
+Therefore, the classifiers resulting
+from our experiments
+are
+evaluated according to the following
+metrics, which represent
+domain-independent (1 and 2) and domain-dependent (3 through
+6) indicators of the quality of a classifier X:
+
+1.
+confusion-matrix(X),
+2.
+rnisclassijication-rate(X),
+
+3.
+actual-recovery(X),
+
+4.
+audit-costs(X),
+
+5.
+projtubility(X),
+6.
+relevance(X),
+
+where:
+
+1.
+the confusion matrix, which summarizes the prediction of
+classifier X over the test-set tuples, is a table of the form:
+where the sets TN, TP, FN, FP are defined as follows, using
+the notation predx(i) to denote the cur (either positive or
+negative) of a tuple i predicted by classifier X:
+
+-
+TN = (i 1predx(i) = cur(i) = negative)
+is the set of tuples
+with negative class of actual recovery which are classified as
+such by classifier X (true negative subjects);
+
+-
+FP = (i 1predx(i) = positive A cur(i) = negative)
+is the set
+of tuples with negative class of actual recovery which are
+misclassified
+as positive
+by classifier
+X (@se positive
+subjects); these are non fraudulent subjects which will be
+audited, according to X, with a negative actual recovery (an
+audit at a loss);
+
+-
+FN = (i 1predx(i) = negative A car(i) = positive]
+is the set
+of tuples with positive class of actual recovery which are
+misclassified
+as negative by classifier X (false negative
+subjects); these are fraudulent subjects which will not be
+audited, according to X, although the audit would have a
+positive actual recovery (a loss for missing a fruitful audit);
+
+-
+TP = {i 1predx(i) = car(i) = positive}
+is the set of tuples
+with positive class of actual recovery which are classified as
+such by classifier X (true positive subjects);
+
+2.
+the misclassification
+rate of X is the percentage of
+misclassified test-set tuples. More precisely, it is the ratio
+between the cardinahty of FPUFN
+and the cardinality of the
+test-set:
+
+misclassiJication_rate(X)=
+# (FPUFN)
+x 100 / # (test-set);
+
+3.
+the actual recovery of X is the total amount of actual
+recovery for all tuples classified as positive by X:
+
+
+actual-recovery(X)
+= ZiCp actual-recovery(i),
+
+where P = TPUFP;
+
+4.
+the audit costs of X is the total amount of audit costs for all
+tuples classified as positive by X:
+
+
+actual~recovery(X)
+= CiEP actual-recovery(i);
+
+5.
+the profitability
+of X is the average actual recovery per audit,
+i.e., the ratio between the total actual recovery and the
+number of audits suggested by X:
+
+profitability(X)
+= actual-recovery(X)
+I # P,
+
+6.
+finally, the relevance of X relates profitability
+(a domain-
+dependent metric)
+and misclassification
+rate (a domain-
+independent metric):
+
+relevance(X) = 10 x profitability(X)
+I misclassijication-rate(X).
+
+3.4.I Class$er Construction
+We considered two distinct approaches to classifier construction,
+each driven by two different policies in audit planning: on one
+hand, we can aim at keeping FP as small as possible, in order to
+minimize wasteful costs. On the other hand, we can aim at
+keeping FN as small as possible, in order to maximize evasion
+recovery. Unless extremely precise (nearly ideal) classifiers' are
+
+
+' An ideal classifier is one where FP = FN = 0.
+
+
+
+
+178
+
+reached, which is rather unlikely in practice, the two policies are
+clearly conflicting:
+in order to keep FP small, we have to
+unbalance the tree construction procedure towards negatives, and
+therefore TP shrinks accordingly,
+while
+both FN
+and TN
+inevitably become larger. The situation is dual when we aim at
+keeping FN small. The first policy is preferable when resources
+for audits are limited, the second when resources are in principle
+infinite. In practice, it is needed to find an acceptable trade-off
+between the two conflicting
+policies, by balancing the level of
+actual recovery with the resources needed to achieve it. The
+classifier construction method is therefore presented highlighting
+the parameters that may be adequately tuned to reach the desired
+trade-off.
+
+3.4.2 Parameter Tuning
+The following is the list of main tuning methods used in our case
+study, which we perceive as most relevant for the whole class of
+applications.
+
+-
+The pruning level: the absence of overfitting enabled us to
+use a low pruning level (less than 10%) in all experiments:
+the resulting trees are therefore as large as at least 90% of the
+corresponding trees obtained without pruning.
+-
+The misclussifica~ion weights: these are constants that can be
+attached to the misclassification errors - FP and FN in our
+case. The tree construction algorithm uses the weights to
+minimize
+errors
+associated
+with
+greater
+weights,
+by
+modifying
+the
+probability
+of
+misclassification
+rate.
+Misclassification weights are the main tool to bias the tree to
+minimize ether FP or FN errors.
+
+-
+The replication
+of minority
+class in the training-set:
+typically, a classifier is biased towards the majority class in
+the training-set. In our case study the majority class is that
+with car = negative. Thus, another approach to minimize FN
+is to artificially replicate the positive tuples, up to achieving
+a balance between the two car's
+
+-
+The adaptive boosting: the idea is to build a sequence of
+classifiers, where classifier k is built starting from the errors
+of classifier k-l [7]. The majority of votes casted by the
+different classifiers establishes the classification of a new
+tuple. Votes are weighted with respect to the accuracy of the
+classifiers. This technique yields a sensible reduction of
+misclassification rate.
+
+3.5 Model Evaluation
+We now present four classifiers, as an illustration to the above
+construction techniques, and assesstheir quality and adequacy to
+the objectives. The first two classifiers follow the "minimize FP"
+policy, whereas the other two classifiers follow the "minimize
+FN" policy.
+
+3.5.I Classifier A
+Experiment A simply uses the original training-set, and therefore
+we obtain a classifier construction biased towards on the majority
+class of training-set, i.e., the negative car. As a consequence, we
+enforce the "minimize FP" policy without using misclassification
+weights. To reduce errors, we employ lo-trees adaptive boosting;
+the number of voting trees was selected after trying different
+values. The confusion matrix of the obtained classifier is the
+following:
+negative
+I
+positive
+I
+f-
+classified as
+I
+237
+!
+11
+car = negative
+
+70
+48
+car = positive
+
+Classifier A prescribes 59 audits (11 of which wasteful), and
+exhibits the following quality indicators:
+
+-
+misclassification-rate(A)
+= 22% (81 errors)
+
+-
+actual-recovery(A)
+= 141.7 M Euro
+
+-
+audit-costs(A) = 4 M Euro
+
+-
+profitability(A)
+= 2.401
+
+-
+relevance(A) = 1.09
+
+Profitability
+of model A is remarkable:
+141.7 M euro are
+recovered with only 59 audits, which implies an average of 2.401
+M euro per audit. If compared with the case Real, model A allow
+to recover 88% of the actual recovery of Real with 16% of audits.
+The following chart compares recovery
+the two cases.
+and number of audits in
+
+
+
+
+Model A
+Real
+
+
+
+
+3.5.2 Classifier B
+Experiment B brings to an extreme the "minimize FP" policy, by
+using the dataset with negative majority
+in conjunction
+with
+misclassification
+weights that make FP errors count twice as
+much as FN errors (i.e., weight of FP = 2 and weight of FN = 1).
+Adaptive boosting (3 trees) is also adopted. Again, the value of
+misclassification
+weights and the number of voting trees was
+selected after trying different values. The confusion matrix of the
+obtained model B is the following:
+
+negative
+positive
+t
+classified as
+J
+
+246
+2
+car = negative
+
+108
+10
+car = positive
+
+Classifier B prescribes only 12 audits (2 of which wasteful), and
+exhibits the following quality indicators:
+-
+misclassification-rate(B)
+= 30% (110 errors)
+
+-
+actuuZ-recovery(B) = 15.5 M Euro
+
+-
+audit-costs(B) = 1.1 M Euro
+
+-
+profitability(B)
+= 1.291
+-
+relevance(B) = 0.43
+
+The following chart compares recovery and number of audits in
+the Real case and model B.
+
+
+
+
+179
+
+Model B
+Real
+actual recovery (in M
+euro)
+
+
+
+n # audits
+
+
+
+
+The small actual recovery of model B is due to the very small
+number of audits, and the accordingly large number of fruitful
+audits missed. This model, however,
+may be useful when
+resources for carrying out audits are very limited,
+or when
+combined with other models.
+
+3.5.3 Classifier C
+Experiment C adopts the "minimize FN" policy, and tries to bias
+the classification towards the positive car. A training-set with
+replicated positive tuples is prepared, with a balanced proportion
+of the two classes, in conjunction with misclassification weights
+that make FN errors count thrice as much as FP errors (i.e.,
+weight of FP = 1 and weight of FN = 3). Adaptive boosting (3-
+trees) is also adopted. The confusion matrix of the obtained model
+B is the following:
+
+negative
+positive
+t
+classified as
+I
+150
+98
+car = negative
+
+28
+90
+car = positive
+
+Classifier C prescribes 188 audits (more than 50% of which
+wasteful), and exhibits the following quality indicators:
+
+-
+misclassification-rate(C)
+= 34% (126 errors)
+
+-
+actual-recovery(C)
+= 165.2 M Euro
+
+-
+audit-costs(C) = 12.9 M Euro
+
+-
+profitability(C)
+= 0.878
+
+-
+relevance(C) = 0.25
+The following chart compares recovery and number of audits in
+the Real case and model C.
+
+
+
+
+EJactual recovery (in M
+euro)
+
+
+
+n # audits
+
+
+
+
+-I
+-
+Model C
+Real
+
+
+Surprisingly
+enough, the actual recovery of model C is higher
+than that of the Real case, despite only 50% of audits are
+prescribed. This is due to the high number of subjects classified
+TN, which avoids many wasteful audits. Profitability
+is however
+sensibly lower than that of the models adhering to the "minimize
+FP" policy.
+
+3.5.4 ClassijTer D
+Experiment D brings to an extreme the "minimize FN" policy, by
+using the replicated dataset with balanced classes in conjunction
+with misclassification
+weights that make FN errors count four
+times as much as FP errors (i.e., weight of FP = 1 and weight of
+FN = 4.) No boosting was adopted here. The confusion matrix of
+the obtained model D is the following:
+
+negative
+positive
+t
+classified as
+
+135
+113
+car = negative
+
+21
+97
+car = positive
+
+Classifier D prescribes 210 audits (50% of which wasteful), and
+exhibits the following quality indicators:
+
+-
+misclassification-rate(D)
+= 36,6%
+(134 errors)
+
+-
+actual-recovery(D)
+= 163.5 M Euro
+
+-
+audit-costs(D) = 14.4 M Euro
+
+-
+profitability(D)
+= 0.778
+
+-
+relevance(D) = 0.21
+
+Compared with model C, FN has shrunk, so less fraudulent
+subjects escape an audit. Nevertheless,
+the actual recovery
+decreases, due to a larger FP. The following
+chart compares
+recovery and number of audits in the Real case and model D.
+
+
+
+400,o
+
+300,o
+
+200,o
+
+100,o
+
+o/o
+Model D
+Real
+
+
+3.5.5 Combined Classifiers
+actualrecovery (in M euro)
+
+
+
+n # audits
+
+
+
+
+More
+sophisticated
+models can be constructed by suitably
+combining diverse classifiers together. For instance, predictions of
+two classifiers
+can be put in conjunction,
+by considering
+fraudulent the subjects classified as positive by both classifiers.
+Conversely, predictions can be put in disjunction, by considering
+fraudulent the subjects classified as positive by either classifiers.
+The following
+are the indicators for the model A A C, which
+prescribes 58 audits:
+
+-
+actual-recovety(A
+A C) = 141.7 M Euro
+
+-
+audit-costs(A A C) = 3.9 M Euro
+
+-
+projitability(A
+A C) = 2.44
+
+
+
+
+180
+
+and the indicators for the model A V C, which prescribes 189
+audits:
+
+-
+actual-recovety(A
+V C) = 16.5.1M Euro
+
+-
+audit-costs(A V C) = 13.0 M Euro
+
+-
+projitability(A
+V C) = 0.87
+
+Clearly, conjunction is another means to pursue the "minimize
+FP" policy, and conversely disjunction for the "minimize FM
+policy. The first policy usually yields more profitable models, as
+the examples show. This form of combination may be iterated,
+e.g. combining the classifier A A C with another classifier E (a
+
+trade-off between B and D), obtaining a model A A C A E which
+prescribes 43 audits:
+
+-
+actual-recovety(A
+A C A E) = 56.0 M Euro
+
+-
+audit-costs(A A CA E) = 3.2 M Euro
+
+-
+profitability(A
+A C A E) = 1.3
+
+and a model (A A C)V E which prescribes 80 audits:
+
+-
+actual-recovery((A
+A C) V E) = 144.0 M Euro
+
+-
+audit-costs((A A C) V E) = 5.2 M Euro
+
+-
+projitability((A
+A C) V E) = 1.8
+
+Classifiers can be combined also by voting. The following model
+is constructed by letting A, B, C and D cast a vote. Classifier E
+acts as the tiebreaker, if no majority is reached by the votes of A,
+B, C and D.
+The resulting
+model
+E-arbitrates(A,B,C,D)
+prescribes 80 audits:
+-
+actual-recovery(E-arbitrates(A,B,
+C,D)) = 145.4 M Euro
+
+-
+audit-costs(E-arbitrates(A,
+B,C,D)) = 5.3 M Euro
+-
+profitability(E-arbitrates(A,B,C,
+D)) = 1.81
+
+In the final example, the combined classifier considers fraudulent
+the subject classified as positive by at least 3 classifiers out of a
+set of 4. The resulting model at_least_3(A,B,C,D)
+prescribes 61
+audits:
+
+-
+actualgecovety(atJeast_3(A,B,C,D))
+= 143.8 M Euro
+
+-
+audit_costs(at_least_3(A,B, C,D)) = 4.2 M Euro
+
+-
+profitability(atJeast_3(A,B,
+C,D)) = 2.35
+
+4. AUDIT PLANNING
+WITHIN
+A LOGIC-
+BASED DATABASE
+LANGUAGE
+The objective of this Section is to demonstrate how a logic-based
+database language, such as LDL++ [I, 13, 231, can support the
+various steps of the KDD process described in Section 3. We
+sketch how the methodology described in the previous Section
+can be systematically
+developed
+in a uniform,
+integrated
+environment using the deductive capabilities of LDL++. For lack
+of space, we shall omit a presentation of LDL++, and confine
+ourselves to mention that it is a rule-based language with a
+Prolog-like syntax, and a semantics that extends that of relational
+database query
+languages
+with
+recursion.
+Other
+advanced
+mechanisms, such as non-determinism [9], non-monotonicity
+[8,
+221, and external calls [l],
+make LDL++
+a highly expressive
+query language,
+and a viable
+system for knowledge-based
+applications.
+Two
+extensions
+of LDL++
+with
+data mining
+capabilities
+have been proposed, and experimented
+in market
+basket analysis [IO, 11, 171.
+
+4.1 Data Preparation
+The original datasets are organized in two tables, or relations: the
+table general-subject containing the tuples with all their features,
+say Fl, . . , F20, and the table audited-subject containing the
+historical records of auditing outcomes. Subjects in the two tables
+are connected through the primary key ID. The LDL++ database
+schema is defined as follows:
+
+database({ audit(lD:integer, Recovery:integer),
+
+subject(lD:integer, Fl:integer, . . ,FZO:integer)
+
+According to the methodology of Section 3.2, we need to join the
+two tables on the ID key, and to add the cost model as a new
+attribute. This can achieved through the following rule:
+
+audited-subject(lD, Fl,
+., F20, Recovery, Actual-Recovery, CAR)t
+
+audit(lD, Recovery),
+
+subject(lD, Fl, . ., F20),
+
+audit-cost(F1 , . ., F20, Audit-Cost),
+
+Actual-Recovery = Recovery - Audit-Cost,
+
+if (Actual-Recovery>0 then CAR= pos else CAR= neg).
+
+The effect of this rule is to create a new relation (or view)
+audited-subject, which is the join of relations audit and subject on the
+ID key, extended with a derived attribute Actual-Recovery computed
+as specified in Section 3.2. Here, the audit-cost relation, whose
+rules are omitted, computes the cost of an audit as a function of
+the other attributes. Finally, the target feature CAR is added as
+another derived attribute,
+defined as the class (positive
+or
+negative) of actual recovery. The other phases of data preparation,
+such as data cleaning and attribute selection, are not described in
+detail here, although easily expressible in LDL++. For instance,
+the detection of noisy tuples (see Section 3.3) is readily expressed
+in LDL++ using recursion and counting over the list of attributes;
+a similar operation is rather awkward in SQL and other relational
+query languages. As an example, the following
+recursive rules
+define a relation count-null-values (N, ID, [ 1)which holds when N is
+the number of null features of the tuple ID.
+
+count-null..yalues (0, ID, [Fl, . ... F20]) t
+
+audited-subject(lD, Fl, . ., F20, Recovery, Actual-Recovery, CAR).
+
+count-null-values(J+l,
+ID,T) t
+count-null-values(1, ID, [H ] T]), H = 0.
+
+count-null-values&
+ID,T) t
+count-nulLvalues(J, ID, [H ] T]), H -= 0.
+
+4.2 Choice of Training-set
+and Test-set
+The construction of the training set can be automated by defining
+a relation training-set(P, S) that, given a percentage P, returns non
+deterministically
+a sample S of the dataset, whose size is P% of
+total tuples. The definition of the relation, which uses the non-
+deterministic
+construct and the set mechanism, is omitted. It
+suffices to observe here that, to keep the set Sas small as possible,
+only the keys are recorded in it.
+
+training-set(P, S) t
+. .
+
+
+
+
+181
+
+The tuples that are not
+member
+of the training-set
+are
+automatically chosen for the test-set, as follows:
+
+test-subject(P, ID, Fl, . ., FZO,Recovery, Actual-Recovery, CAR)t
+
+training-set(P, S),
+
+audited-subject(lD, F1, . , F20, Recovery, Actual-Recovery, CAR),
+
+- member(lD, S).
+
+Using LDL++,
+it is possible to define rules for automatic
+incremental tuning of parameters. For instance, we can specify a
+predicate that initially calls the induction of a tree using 10% of
+the tuples for training and evaluates the tree. The induction of a
+new tree using 20% of tuples is then invoked. If the quality of the
+new tree is better, then the induction of another tree using 30% of
+tuples is invoked. The process stops when tree quality stops
+improving.
+Such iterative tuning process can be used for all
+parameters (pruning factor, boosting, misclassification costs).
+
+4.3 Model Construction
+The open architecture of LDL++ allows the use of external calls
+to other software packages, database systems, etc. We use this
+feature to interface to the external classification algorithm (C5.0),
+which is invoked by the tree-induction predicate, with the following
+parameters: pruning factor level (PF), misclassification costs (MC)
+and boosting (60). The following rule manages the process by first
+constructing a training-set of a specified size, and then calls the
+external induction program on the training-set.
+
+tree-rules(Tree-name, P, PF, MC,BO,Rules-list) t
+
+training-set(P, Cases-list),
+
+tree-indudion(Cases-list,
+PF, MC,BO,Rules-list).
+
+The tree is returned to the tree-rules relation in the form of a list of
+rules, in a standard format for the employed
+classification
+algorithm. The last element of the list representing the tree is the
+default class, i.e. the class assigned to the subjects that satisfy no
+rules. Therefore the list of rules representing a tree has the
+following form:
+
+Rules-list = [Rule,, Rulea,. , , , RuleN,Default-CAR]
+
+where each rule is in turn a list. In our case study, each subject has
+20 features, so each rule is a list of 21 elements, one element for
+each feature and the final element for the predicted class. In
+general, Rulei = [Cl, Ca, ,. , CZO,Predicted-CAR], where:
+-
+for j=l,..., 20, Clis either a condition on feature Fj, if such
+condition occurs in the precondition
+of rule Rule,, or nil if
+feature F,is not involved in the precondition of rule Rulei;
+
+-
+Predicted-CAR is the class (pos or neg) in the conclusion of rule
+Rule,.
+
+For instance, the rule:
+
+if feature2 > 12000 and feature5 <= 4300 then class pos
+
+is represented by the following list:
+
+[nil, (>,I 2000), nil, nil, (<=, 4300), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+nil, nil, nil, pas].
+
+4.4 Test-set Classification
+Once a tree has been built, we want its rules to classify test cases.
+The predicate prediction establishes the class predicted by a given
+tree (Tree-name) for the test tuple identified by ID, and the rule
+(PredictionRule) which is used to classify the tuple.
+prediction(Tree-name, ID, CAR,Predicted-class, PredictionRule) t
+
+tree-rules(Tree-name,
+_ , _ , _ , Rules-list),
+
+test-subject(lD, Fl, %.., F20, Recovery, Actual-Recovery, CAR),
+
+classify(Rules-list, PredictionRule, [Fl , . ., F20], Predicted.Jass).
+
+
+The relation classify looks for the first rule in the tree, if any, whose
+precondition is satisfied by the feature values of a test-set tuple.
+Check of rule preconditions
+is performed through the relation
+satisfy, whose (simple) definition
+is omitted. To our purposes, it
+suffices to know that satisfy(Rule, Features, CAR)holds iff the Features
+satisfy the precondition of the Rule, and CARis the class predicted
+by the Rule.We initially try to classify the tuple according first rule
+of the list:
+
+classify( [Rule1 j RestRules], Rule1, Features, Predided&ss)
+t
+
+satisfy(Rule1, Features, Predicted-class).
+
+If the first rule does not succeeds in classifying the tuple, we
+recurse over the remaining rules:
+
+classify( [Rule1 j RestRules], R, Features, Predicted-class) t
+
+- satisfy(Rule1, Features, J
+
+classify(RestRules, R, Features, Predicted-class),
+
+Finally, if no rule succeeds in classifying the tuple, the default
+class is assigned:
+
+classify( [DefaultClass], default, Features, DefaultClass]).
+
+4.5 Quality Indicators
+The quality indicators of a classifier discussed in Section 3.4 may
+be conveniently
+defined by using the aggregates provided by
+LDL++.
+
+-
+# misclassification
+errors: count the tuples where predicted
+class and actual class differ
+
+tree-errors(Tree-name,
+count<lD>) t
+
+prediction(Tree-name, ID, CAR,Predicted-class, -),
+
+CAR-=
+Predicted-class.
+
+-
+# audits: count the tuples classified as positive
+
+tree-audits(Tree-name,
+count<lD>) t
+
+prediction(Tree-name, ID, CAR,pos, J
+
+-
+actual recovery: sum actual recovery of all tuples classified
+aspositive
+
+tree-actual-recovery(Tree-name,
+sum<Actual-Recovery>)
+t
+
+prediction(Tree-name, ID, CAR,pos, -),
+
+test-subject(lD, Fl, . , ,, F20, Recovery, Actual-Recovery, CAR).
+
+-
+relevance:
+
+tree-relevance(Tree-name,
+Rel) c
+
+tree-errors(Tree-name,
+E),
+
+tree-audits(Tree-name,
+A),
+
+tree-recovery(Tree-name,
+R),
+
+Rel= (10 * R) / (E * A).
+
+-
+# Tp: count positive tuples classified aspositive
+
+
+
+
+182
+
+tree-TP(Tree-name, count<lD>) t
+
+prediction(Tree-name, ID, pos, pos, J
+
+-
+# FP: count negative tuples classified as positive
+
+tree-FP(Tree-name, count<lD>) t
+
+predidion(Tree-name, ID, neg, pos, J.
+
+-
+# FN: count positive tuples classified as negative
+
+treeJN(Tree-name,
+count<lD>) t
+
+prediction(Tree-name, ID, pos, neg, .J
+
+-
+# TN: count negative tuples classified as negative
+
+tree-TN(Tree-name, count<lD>) t
+
+prediction(Tree-name, ID, neg, neg, J
+
+4.6 Combined Classifiers
+Model combination, as described in Section 3.55, is conveniently
+formalized in LDL++. For instance, the following rules specify
+tree conjunction: a tuple is classified as positive by Tl A T2 iff
+both Tl and T2 predict the tuple aspositive.
+
+tree-conjunction(T1, T2, ID, CAR,pos) c
+
+prediction(T1, ID,CAR,pos, -),
+
+prediction(T2, ID,CAR,pos, J
+
+
+
+tree-conjunction (Ti, T2, ID, CAR,neg) t
+
+test-subject(lD, Fl, . ., F20,0, C,E, CAR),
+
+- tree-conjunction(T1, T2, ID, CAR,pos).
+
+Beyond the various model combinations
+described in Section
+3.5.5, we used LDL++ to perform model evaluation using cross
+validation, which confirmed the results discussed earlier.
+
+4.7 Meta-learning
+Beyond the techniques used in this paper, more sophisticated
+combinations of classifiers can be also accommodated, such as the
+meta-learning
+method [4]. In meta-learning,
+we consider a
+number of base classifiers and a test-set whose tuples are modified
+by incorporating the predictions of the base classifiers as new
+features. This modified test-set is then used the as a training-set
+for inducing a meta classifier. Two variants of meta-learning are
+usually considered:
+
+-
+class combiners: the tuples in the meta training-set have as
+features only the predictions of base classifiers;
+
+-
+class-attribute combiner: the tuples in the meta training-set
+have the original features extended with the predictions of
+base classifiers.
+
+The rules for constructing the two variants of meta training-sets
+are the following.
+
+cc-training-subject(T1, T2, T3, T4,ID, Pl, P2, P3, P4, CAR)t
+
+test-subject(lD, Fl,
+. ., F20, Recovery, Actual-Recovery, CAR),
+
+prediction(T1, ID, CAR,Pl, -),
+
+prediction(T2, ID,CAR,P2, J,
+
+prediction(T3, ID, CAR,P3, -),
+
+prediction(T4, ID, CAR,P4, J.
+cat-training-subject(T1,
+T2, T3, T4,ID, Fl, . . ., F20, Pl, P2, P3, P4, CAR)f-
+
+test-subject(lD, Fl, . .., F20, Recovery, Actual-Recovery, CAR),
+
+prediction(T1, ID, CAR,Pl, J,
+
+prediction(T2, ID, CAR,P2, J,
+
+prediction(T3, ID, CAR,P3, -),
+
+prediction(T4, ID, CAR,P4, J.
+
+5. CONCLUDING
+REMARKS
+In this paper, a methodology
+for constructing
+profiles
+of
+fraudulent taxpayers is presented, aimed at supporting
+audit
+planning. The reference paradigm is that of the KDD process, in
+the version
+of direct knowledge
+extraction.
+The employed
+technique is that of classification, using decision trees. Although
+we described in detail the specific case study, emphasis was
+placed on the methodological issues of design and control of the
+KDD process, to the purpose of identifying
+the similarities of a
+whole class of applications. Briefly, the proposed methodology
+focuses on the following issues:
+
+a method to define an audit cost model;
+
+methods to monitor the training-set construction;
+
+methods to measure the quality of a classifier;
+methods to tune the classifier construction with respect to the
+policy for audit planning.
+
+The first consideration coming from the experience sketched in
+this paper is about the complexity of the KDD process. While the
+objectives of the various phases of the KDD process are clear,
+little support is provided to reach such objectives. Two main
+issues are, and will remain in the near future, the hot topics of
+KDD community research agenda:
+
+-
+the first point is methodology: it is crucial to devise methods
+tailored to relevant classes of similar applications;
+
+-
+the second point is the need to identify the basic features of
+an integrated development environment, able to support the
+KDD process in all its phases.
+
+This paper tried to demonstrate how a suitable integration of
+deductive reasoning, such as that supported by logic database
+languages, and inductive reasoning, such as that supported by
+decision trees, provides a viable solution to many high-level
+problems in a particular class of applications. In particular, we
+showed how useful such integration is in the phase of model
+evaluation, where the uniform representation in the same logic
+formalism of data for the analysis and the results of the analysis
+itself allows a high degree of expressiveness.
+Put another way, we believe
+that the key to succeed in
+constructing effective decision support systems is the ability of
+integrating the results of knowledge extraction with expert rules -
+in our cases the cost model and the domain-dependent quality
+indicators. We then maintain that a logic database framework is
+the right basis for constructing such integration, in such a way that
+the flexibility
+of a general-purpose
+programming
+language is
+combined with the simplicity of a rule-based language.
+In [lo,1 I] Datasift is presented, a prototype system that integrates
+the deductive capabilities
+of a logic-based database language,
+LDL++ [ 11,with the inductive capabilities of diverse data mining
+algorithms and tools, notably association rules, clustering and
+
+
+
+
+183
+
+decision trees. One of the goals of our future work is in improving
+the Datasift system. One of the crucial choices is the form of
+coupling between the database and the data mining tools. So far,
+we have different coupling strategies for the various data mining
+tools, namely tight coupling
+for association rules and loose
+coupling for classification and clustering. Work in progress is
+trying to reach a better trade-off between a tighter coupling of
+querying and classification, and efficiency of execution. Another
+issue for future research is a thorough formalization
+of the
+methodology for the class of applications discussed in this paper,
+using the logic-based approach. However, our first necessary
+further step is to scale up both the environment
+and the
+methodology to larger datasets - in particular to larger sets of
+taxpayers.
+
+6. ACKNOWLEDGMENTS
+We are indebted with Maurizio Verginelli
+(SOGEI, Rome), the
+domain expert who made our study possible. Many thanks are
+owing to our colleagues Giuseppe Manco, Mirco Nanni and
+Domenico (Mimmo) Sac&, who collaborated in the project, for
+many fruitful discussions. We are also grateful to Ross J. Quinlan
+for his comments on an earlier version of this paper, and to the
+referees for careful reviewing. This research has been carried out
+within a collaboration between the Italian Ministry of Finance and
+the PQE2000 program, and has been partially
+supported by
+SOGEI s.p.a. under grant n. A07C981137, Intelligent systemsfor
+the detection of tax evasion.
+
+7.
+HI
+
+
+PI
+
+
+
+[31
+
+
+
+[41
+
+
+
+PI
+
+
+[61
+
+
+[71
+REFERENCES
+Ami, N., Ong, K., Tsur, S., Zaniolo, C. LDL++: A Second
+Generation Deductive Databases System. Technical report,
+MCC Corporation, 1993. Available from [13].
+
+Berry,
+M.,
+Linoff,
+G. Data
+Mining
+Techniques for
+Marketing, Sales and Customer Support, Wiley Computer
+Publishing, 1997.
+
+Breiman, L., Friedman, J.H., Olshen, R.A., Stone, C.J.
+ClassiJication and Regression Trees. Wadsworth Publishing
+Company, Statistics/Probability
+Series, 1984.
+
+Chan, P., Stolfo, S. Experiments on multistrategy learning by
+meta-learning.
+In Proc. Second Intl.
+Con5 Info. Know.
+Manag., pages 314-323, 1993.
+
+Fawcett, T., Provost, F. Robust Classification
+Systems for
+Imprecise Environments. In Proc. Fifieenth Int. Conference
+on Artificial Intelligence (AAAI-98),
+1998.
+
+Fawcett, T., Provost, F. Adaptive
+Fraud Detection. Data
+Mining and Knowledge Discovery, Vol. 1. No. I, pp. 291-
+316,1997.
+
+Freund, Y. Boosting
+a Weak Learning
+Algorithm
+by
+Majority.
+Information
+and Computation,
+121(2), pp. 256-
+285, 1995.
+PI
+
+
+
+[91
+Giannotti, F., Manco, G., Nanni, M., Pedreschi, D. Query
+Answering
+in Non deterministic,
+Non monotonic, Logic
+Databases. In Proc. of the Workshop on Flexible
+Query
+Answering, LNAI, n. 1395, 1998.
+Giannotti, F., Greco, S., Sac&, D., Zaniolo C. Programming
+with Non-Determinism
+in Deductive Databases. Annals of
+Mathematics and Artificial
+Intelligence, 19:97-125, 1997
+
+[lo] Giannotti, F., Manco, M., Pedreschi, D., Turini, F. Using
+Experiences with a logic-based knowledge discovery support
+environment. In Proc. ACM-SIGMOD
+1999 Workshop on
+Data
+Mining
+and
+Knowledge
+Discovery
+DMKD-99,
+Philadelphia, 1999.
+
+[I l] Giannotti, F., Manco, G., Nanni, M., Pedreschi, D., Turini,
+F. Integration
+of Deduction
+and Induction
+for Mining
+Supermarket Sales Data. In Proc. PADD99, Int. Con& On
+Practical
+Applications
+of
+Knowledge
+Discovery
+in
+Databases, London, April 1999.
+
+[12] Indurkhya,
+N., Weiss, S. M. Predictive
+data mining:
+a
+practical guide, Morgan Kaufman, 1998.
+
+[13] LDL++ web site. htto://www.cs.ucla.edu/ldl/
+
+[14] Quinlan,
+J. R. Simplifying
+decision trees. International
+Journal ofMan-Machine
+Studies, No 27, pp. 221-234, 1987.
+
+[15] Quinlan,
+J. R. C4.5: Programs for Machine
+haming.
+Morgan Kaufman, 1993.
+
+[16] Rulequest Research web site. httn://www.ruleouest.com/
+
+[17] Shen, W., Ong, K., Mitbander, B., Zaniolo, C. Metaqueries
+for Data Mining. In Advances in Knowledge Discovery and
+Data
+Mining,
+G. Piatesky-Shapiro
+P. Smyth
+and R.
+Uthurusamy (eds.), AAAI Press/The MIT Press, 1996.
+
+[18] Stolfo, S., Fan, D., Lee, W., Prodromidis,
+A., Chan, P..
+Credit Card Fraud Detection Using Meta-learning:
+Issues
+and Initial Results. In Working Notes AAAZ-97, 1997.
+
+[19] Tanzi, V., Shome, P. A Primer on Tax Evasion. In ZMF Staff
+Papers, No 4, 1993.
+
+[20] Uthurusamy, R. From Data Mining to Knowledge Discovery:
+Current Challenges and Future Directions.
+In Knowledge
+Discovery
+in Databases,
+Piatesky-Shapiro
+and Frawley
+(eds.), AAAI Press, 1991.
+
+[21] Winston P. H., Artificial
+Intelligence (3rd Edition). Addison
+Wesley, 1992.
+[22] Zaniolo, C., Ami, N., Ong, K. Negation and Aggregates in
+Recursive Rules: The LDL++ Approach. In Proc. 3rd Znt.
+Con&
+on
+Deductive
+and
+Object-Oriented
+Databases
+(DOOD93), LNCS n. 760, 1993.
+
+[23] Zaniolo,
+C., Ceri,
+S., Faloutsos,
+C., Snodgrass, R.T.,
+Subrahmanian, V.S., Zicari, R. Advanced Database Systems,
+Morgan Kaufman, 1997.
+
+
+
+
+184
+

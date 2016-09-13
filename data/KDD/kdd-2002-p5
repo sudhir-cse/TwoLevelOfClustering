@@ -1,0 +1,1282 @@
+Bayesian analysis of massive datasets via particle filters
+
+
+Greg Ridgeway
+RAND
+PO Box2138
+Santa Monica,CA 90407-2138
+gregr@ rand.org
+David Madigan
+Departmentof Statistics
+477 HillCenter
+Rutgers University
+Piscataway,NJ 08855
+madigan @stat.rutgers.edu
+
+
+ABSTRACT
+Markov Chain Monte Carlo (MCMC) techniques revolution-
+ized statistical practice in the 1990s by providing an essen-
+tial toolkit for making the rigor and flexibility of Bayesian
+analysis computationally practical. At the same time the
+increasing prevalence of massive datasets and the expansion
+of the field of data mining has created the need to produce
+statistically sound methods that scale to these large prob-
+lems. Except for the most trivial examples, current MCMC
+methods require a complete scan of the dataset for each it-
+eration eliminating their candidacy as feasible data mining
+techniques.
+In this article we present a method for making Bayes-
+ian analysis of massive datasets computationally feasible.
+The algorithm simulates from a posterior distribution that
+conditions on a smaller, more manageable portion of the
+dataset. The remainder of the dataset may be incorporated
+by reweighting the initial draws using importance sampling.
+Computation of the importance weights requires a single
+scan of the remaining observations. While importance sam-
+pling increases efficiency in data access, it comes at the ex-
+pense of estimation efficiency. A simple modification, based
+on the "rejuvenation" step used in particle filters for dy-
+namic systems models, sidesteps the loss of efficiency with
+only a slight increase in the number of data accesses.
+To show proof-of-concept, we demonstrate the method on
+a mixture of transition models that has been used to model
+web traffic and robotics. For this example we show that
+estimation efficiency is not affected while offering a 95% re-
+duction in data accesses.
+
+
+1.
+INTRODUCTION
+The need for rigorous statistical analysis has not gone un-
+noticed in the data mining community. Statistical concepts
+such as latent variables, spurious correlation, and problems
+involvingmodel search and selection have appeared in widely
+noted data mining literature [6, 12]. However, algorithms,
+model fitting methods that actually work on massive data-
+
+
+
+Permissionto makedigitalor hardcopiesof all or part of this workfor
+personalor classroomuse is grantedwithoutfee providedthatcopiesarc
+not made or distributed for profit or commercial advantage and that copies
+bearthisnoticeandthefullcitation on the first page. To copy otherwise, to
+republish,topostonserversortoredistributeto lists,requirespriorspecific
+permissionand/ora fee.
+SIGKDD '02Edmonton,Alberta,Canada
+Copyright2002ACM1-58113-567-X/02/0007...$5.00.
+sets, have been slow to appear.
+Bayesian analysis is a widely accepted paradigm for es-
+timating unknown parameters from data. In applications
+with small to medium sized datasets, Bayesian methods have
+found great success in statistical practice. In particular, ap-
+plied statistical work has seen a surge in the use of Bayes-
+ian hierarchical models for modeling multilevel or relational
+data [3] in a variety of fields includinghealth and education.
+Spatial models in agriculture, image analysis, and remote
+sensing often utilize Bayesian methods and invariably re-
+quire heavy computation (see [1] for an overview). As shown
+in [7], kernel methods also have a convenient Bayesian for-
+mulation, producing posterior distributions over a general
+class of prediction models. The power of Bayesian analysis
+comes from the transparent inclusion of prior knowledge, a
+more natural probabilistic interpretation of parameter esti-
+mates, and greater flexibility in model specification.
+While Bayesian models and the computational tools be-
+hind them has revolutionized the field, they continue to rely
+on algorithms that perform thousands even millions of laps
+through the dataset in order to produce estimates of the
+posterior distribution of the model parameters. For massive
+datasets Bayesian methods still begin by a "load data into
+memory" step, make compromising assumptions, or resort
+to subsampling to skirt the issue.
+If the most severe penalty comes when requesting data,
+algorithms might exist that only use a small manageable
+portion of the dataset at any one time. This paper proposes
+such an algorithm. It performs a rigorous Bayesian compu-
+tation on a small, manageable portion of the dataset and
+adapts those calculations with the remaining observations.
+The adaptation attempts to minimize the number of times
+the algorithm loads each observation into memory.
+
+
+2.
+TECHNIQUES FOR BAYESIAN
+COMPUTATION
+Except for the simplest of models and regardless of the
+style of inference, estimation algorithms almost always re-
+quire repeated scans of the dataset.
+We know that for
+well-behaved likelihoods and priors, the posterior distribu-
+tion converges to a multivariate normal [4, 15]. For large
+but finite samples this approximation Works rather well on
+marginal distributions and lower dimensional conditional
+distributions but does not always provide an accurate ap-
+proximation to the full joint distribution [8l. The normal
+approximation also assumes that one has the maximum like-
+lihood estimate for the parameter and the observed or ex-
+
+pected information matrix. Even normal posterior approx-
+imations and maximum likelihood calculations can require
+heavy computation. Newton-Raphson type algorithms for
+maximum likelihood estimation require several scans of the
+dataset, at least one for each iteration. When some observa-
+tions also have missing data, the algorithms (EM, for exam-
+ple) likely will demand even more scans. For some models,
+dataset sizes, and applications these approximation meth-
+ods may work and be preferable to a full Bayesian analysis.
+This will not always be the case and so the need exists for
+improved techniques to learn accurately from massive data-
+sets.
+Summaries of results from Bayesian data analyses often
+are in the form of expectations such as the marginal mean,
+variance, and covariance of the parameters of interest. We
+compute the expected value of the quantity of interest, h(O),
+using
+
+XN) = f h(O)f(Olxx,..., xN)dO
+(1)
+E(h(O)lxl
+
+where f(01x), is the posterior distribution of the parame-
+ters given the observed data. Computation of these expec-
+tations requires calculating integrals that, for all but the
+simplest examples, are difficult to compute in closed form.
+Monte Carlo integration methods sample from the posterior,
+f(0lx), and appeal to the law of large numbers to estimate
+the integrals,
+
+lim ~h(O~) =
+h(O).f(OlXl..... x~r)dO
+(2)
+
+where the Oi compose a sample from f(OIx).
+The ability to compute these expectations efficiently is
+equivalent to being able to sample efficiently from f(OIx).
+Sampling schemes are often difficult enough without the bur-
+den of large datasets. The additional complexity of massive
+datasets usually causes each iteration of the Monte Carlo
+sampler to be slower. When the number of iterations already
+needs to be large, efficient procedures within each iteration
+are essential to timely delivery of results.
+
+2.1
+Importance sampling
+Importance sampling is a general Monte Carlo method for
+computing integrals. As previously mentioned, Monte Carlo
+methods approximate integrals of the form (1). The approx-
+imation in (2) depends on the ability to sample from f(0lx).
+When a sampling mechanism is not readily available for the
+"target distribution," f(01x), but one is available for an-
+other "sampling distribution," g(O), we can use importance
+sampling. Note that for (1) we can write
+
+f h(O)f(Olxl,...,xN)dO
+= f h(O)Yg~o~)g(O)dO(3)
+
+M
+=
+nLnEw, h(0,/
+(4)
+i=1
+
+where 0, is a draw from g(O) and w, = f(O, lx)/g(Oi). Note
+that the expected value of w~ under g(O) is i. Therefore, if
+we are able to compute the importance sampling weights, wl,
+only up to a constant of proportionality, we can normalize
+the weights to compute the integral.
+
+E~l w,h(O,)
+f h(O)f(OlXl.... ,xN)dO :
+(5)
+lim
+M~
+E~i w,
+Naturally, in order for the sampling distribution to be
+useful, drawing from g(O) must be easy. We also want our
+sampling distribution to be such that the limit converges
+quickly to the value of the integral. If the tails of g(O)decay
+faster than f(0[x) the weights will be numerically unstable.
+If the tails of g(O) decay much more slowly than f(01x) we
+will frequently sample from regions where the weight will be
+close to zero, wasting computation time. Second to sampling
+directly from f(01x), we would like a sampling distribution
+slightly fatter than f(01x).
+In section 2.3 we show that when we set the sampling den-
+sity to be f(O[xl,..., x~), where n << N so that we condition
+on a manageable subset of the entire dataset, the importance
+weights for each sampled 0~ require only one sequential scan
+of the remaining observations. Before beginning that dis-
+cussion, the next section introduces the most popular com-
+putational method for Bayesian analysis of complex models.
+
+
+2.2
+Markov chain Monte Carlo
+While a large group of statisticians have long felt that
+Bayesian analysis is appropriate for a wide class of prob-
+lems, practical estimation methods were not available un-
+til Markov chain Monte Carlo (MCMC) techniques became
+available. Importance sampling is a useful tool, but for com-
+plex models crafting a reasonable sampling distribution can
+be extremely difficult. The excellent collection [11] contains
+a more detailed introduction to MCMC along with a variety
+of interesting examples and applications.
+As with importance sampling, the goal is to generate a
+set of draws from the posterior distribution f(0[x). Rather
+than create independent draws and reweight, MCMC meth-
+ods build a Markov chain, a sample of dependent draws,
+01..... OM,that have stationary distribution f(0lx). It turns
+out that it is often easy to create such a Markov chain with
+a few basic strategies. However, there is still a bit of art in-
+volved in creating an efficient chain and assessing the chain's
+convergence.
+Figure 1 shows the Metropolis-Hastings algorithm [13, 17],
+a very general MCMC algorithm. Assume that we have a
+single draw 01 :from f(01x) and a proposal distribution for
+a new draw, q(0101). If we follow step 2 of the MCMC
+algorithm then the distribution of 02 will also be f(01x).
+This is one of the key properties of the algorithm. Iterating
+this algorithm we will obtain a sequence 01,.. ·, 0M that has
+f(01x) as its stationary distribution.
+MCMC methods have two main advantages that make
+them so useful for Bayesian analysis. First, we can choose
+q's from which sampling is easy. Any q that does not de-
+terministically propose values and is capable of eventually
+visiting any value of 0 will make the algorithm sample from
+the desired distribution. Special choices for q, which may
+or may not depend on the data, simplify the algorithm. If
+q is symmetric., for example a Gaussian centered on 0~-1,
+then the entire proposal distributions cancel out in (6). If
+we choose a q that proposes values that are very close to
+0~-1 then it will almost always accept the proposal but the
+chain will move very slowly and take a long time to converge
+to the stationary distribution. If q proposes new draws that
+are far from 0~-1 and outside the region with most of the
+posterior mass, the proposals will almost always be rejected
+and again the chain will converge slowly. With a little tun-
+ing the proposal distribution can usually be adjusted so that
+proposals are not rejected or accepted too frequently. The
+
+
+
+
+6
+
+second advantage is that there is no need to compute the
+normalization constant of f(/91x) since it cancels out in (6).
+The Gibbs sampler [9] is a special case of the Metropolis-
+Hastings algorithm and is especially popular. If/9 is a multi-
+dimensional parameter, the Gibbs sampler sequentially up-
+dates each of the components of/9 from the full conditional
+distribution of that component given fixed values of all the
+other components and the data. For many models used in
+common practice, even the ones that yield a complex pos-
+terior distribution, sampling from the posterior's full condi-
+tionals is often a relatively simple task. Conveniently, the
+acceptance probability (6) always equals 1 and yet the chains
+often converge relatively quickly. The example in section 4
+utilizes a Gibbs sampler and goes into further detail of the
+example's full conditionals.
+MCMC as specified, however, is computationally infeasi-
+ble for massive datasets. Except for the most trivial ex-
+amples, computing the acceptance probability (6) requires
+a complete scan of the dataset. Although the Gibbs sam-
+pler avoids the acceptance probability calculation, precal-
+culations for simulating from the full conditionals of f(/91x)
+require a full scan of the dataset, sometimes a full scan for
+each component! Since MCMC algorithms produce depen-
+dent draws from the posterior, M usually has to be very
+large to reduce the amount of Monte Carlo variation in the
+posterior estimates. While MCMC makes fully Bayesian
+analysis practical it seems dead on arrival for massive data-
+set applications.
+Although this section has not given great detail about the
+MCMC methods, the important ideas for the purpose of this
+paper are that
+
+1. MCMC methods make Bayesian analysis practical,
+
+2. MCMC often requires an enormous number of laps
+through the dataset, and
+
+3. given a /9 drawn from f(/91x) we can use MCMC to
+draw another value,/9', from the same distribution.
+
+The last point will be the key to implementing a particle
+filter solution that allows us to apply MCMC methods to
+massive datasets. We will use this technique to switch the
+inner and outer loops in figure 1. The scan of the dataset
+will become the outer loop and the scan of the draws from
+f(/91x) will become the inner loop.
+
+2.3
+Importance sampling for analysis of
+massive datasets
+So far we have two tools, MCMC and importance sam-
+pling, to draw samples from an arbitrary posterior distribu-
+tion. In this section we discuss a particular form of impor-
+tance sampling that will help perform Bayesian analysis for
+massive datasets.
+Ideally we would like to sample efficiently and take ad-
+vantage of all the information available in the dataset. A
+factorization of the integrand of the right hand side of (3)
+shows that this is possible when the obseryations, xi, are
+independent given the parameters, 0. Such conditional in-
+dependence is often satisfied, like in the class of hierarchical
+models, even when the observations are marginally depen-
+dent. Let D1 and D2 be a partition of the dataset so that
+every observation is in either D1 or D2. As noted for (1) we
+would like to sample from the posterior conditioned on all
+of the data, f(OID1 , D2). Since sampling from f(OlD1, D2)
+1. Initialize the parameter/91
+
+2. For i in 2,...,M do
+Step (a) and/or (b) requires a scan of the dataset
+
+(a) Draw a proposal 0' from q(/91/9,-~),
+
+(b) Loop through the dataset to compute the
+acceptance probability
+
+f(/9,lx)q(/gi_xl/9,)
+a(/9',/9i-1) = rain 1, f(/9,-llx)q(/9'l/9,-x)]
+
+(c) With probability a(/9',/9~_~) set/9~ =/9'.
+Otherwise set/9i =/91-x
+(6)
+
+
+
+
+Figure 1: The Metropolis-Hastings algorithm
+
+
+
+
+is difficult due to the size of the dataset, we consider set-
+ting g(/9) = f(/91D1) for use as our sampling distribution
+and using importance sampling to adjust the draws. If 0i,
+i = 1,..., M, are draws from ff(/91D1) then we can estimate
+the posterior expectation (1) as
+
+t~(h(/9)[D1, 02) = ~iM=lwih(/9i)
+(7)
+w,
+
+where the wi's are the importance sampling weights
+
+f(/9,lD1,D2)
+w~=
+f(/giiD1 )
+(8)
+
+Although these weights still involve.f(/9ilDl, D2), they great-
+ly simplify.
+
+w,
+=
+f(Dl,D21/9~)f(/9,)
+f(D1)
+(9)
+f(D1,D2)
+f(Dll/9~)f(/g,)
+
+_-
+f(DliO~)f(D2[Oi)f(Dx)
+(10)
+f(D~ I/9,)f(D1,D2)
+f(D21/gl)
+f(O21D1)
+,x f(Ozl/9,)= I~ f(x~l/9,)
+(11)
+zjED2
+
+Line (9) follows from applying Bayes' theorem to the numer-
+ator and denominator. Equation (10) follows from (9) since
+the observations in the dataset partition D1 are condition-
+ally independent from those in Dz given /9. Conveniently,
+(11) is just the likelihood of the observations in D2 evalu-
+ated at the sampled value of/9. Figure 2 summarizes this
+result as an algorithm. The algorithm maintains the weights
+on the log scale for numerical stability.
+So rather than sample from the posterior conditioned on
+all of the data, D1 and D2, which slows the sampling proce-
+dure, we need only to sample from the posterior conditioned
+on D1. The remaining data, D2, simply adjusts the sampled
+parameter values by reweighting. The for loops in step 5 of
+figure 2 are interchangeable. The trick here is to have the in-
+ner loop scan through the draws so that the outer loop only
+needs to scan D2 once to update the weights. Although the
+
+
+
+
+7
+
+same computations take place, in practice physically scan-
+ning a massive dataset is far more expensive than scanning a
+parameter list. However, massive models as well as massive
+datasets exist so that in these cases scanning the dataset
+may be cheaper than scanning the sampled parameter vec-
+tors. We will continue to assume that scanning the dataset
+is the main impediment to the data analysis.
+We certainly can sample from f(0[D1) more efficiently
+than from f(OID1,D2 ) since simulating from f(0[D1) will
+require a scan of a much smaller portion of the dataset. We
+also assume that, for a given value of 0, the likelihood is read-
+ily computable up to a constant, which is almost always the
+case. When some data are missing, the processing of an ob-
+servation in D2 will require integratingout the missing infor-
+mation. Since the algorithm handles each observation case
+by case, computing the observed likelihood as an importance
+weight will be much more efficient than if it was embedded
+and repeatedly computed in a Metropolis-Hastings rejection
+probability computation. Placing observations with missing
+values in D2 greatly reduces the number of times this inte-
+gration step needs to occur, easing likelihood computations.
+
+
+
+1. Load as much data into memory as possible to form
+D1, taking into account space requirements for the
+Monte Carlo algorithm
+
+2. Draw M times from f(OID1) via Monte Carlo or
+Markov chain Monte Carlo
+
+3. Purge the memory of D1
+
+4. Create a vector of length M to store the logarithm of
+the weights and initialize them to 0
+
+5. Iterate through the remaining observations. For each
+observation, xj, update the log-weights on all of the
+draws from f(OiD1)
+
+for x~ in the partition D2 do
+{
+for i in 1,...,M do
+{
+log wl ~- log wi + log f (xj[Oi)
+}
+}
+
+6. Rescale to compute the weights
+
+wi ~--exp (log wi - max(log wl))
+
+
+
+Figure
+2: Importance sampling for massive datasets
+
+
+
+
+2.4
+Efficiency and the effective sample size
+The algorithm shown in figure 2 does have some draw-
+backs. While it makes great gains in reducing the number
+of times the data need to be accessed the Monte Carlo vari-
+ance of the importance sampling estimates grows quickly.
+The problem is easily demonstrated graphically as shown in
+figure 3. The wide histogram represents the sampling dis-
+tribution f(O[D1) that generates the initial posterior draws.
+,'0
+°;
+,;
+,'~
+
+Figure 3: Comparison of f(OID1, D2) and f(O]D1)
+
+
+However, the target distribution, f(OID1,D2), shown as the
+density plot, is shifted and narrower. About half of the
+draws from f(OID1) will be wasted. Those that come from
+the right half will have importance weight near zero. Since
+all of the terms are positive in the familiar variance relation-
+ship
+
+Var(01D1) = E(Var(01D1, n2)) + Var(E(01D1,D2)),
+(13)
+
+the posterior variance with the additional observations in
+D2 on average "willbe smaller than the posterior variance
+conditioned only on D1. The addition of D= can increase
+the variance (see [22] for an example) but usually D2 is large
+enough so that the averaging effect dominates. Therefore,
+although the location of the sampling distribution should be
+close to the target distribution, its spread will most likely
+be wider than that of the target. As additional observations
+become available, f(O]D1, Da) becomes much narrower than
+f(OID1). The result of this narrowing is that the weights of
+many of the original draws from the sampling distribution
+approach 0 and. so we have few effective draws from the
+target density.
+As in [14], the effective sample size (ESS) is the number of
+observations from a simple random sample needed to obtain
+an estimate with Monte Carlo variation equal to the Monte
+Carlo variation obtained with the M weighted draws of 0i.
+
+
+Var |~--- Z01~
+=
+Vat
+(14)
+
+
+=,, ~ar(o)gl~s~
+=
+Var(O) ~/M--1Mw/2 2
+(15)
+
+
+
+Therefore,
+
+ESS
+=
+(~w')2
+(16)
+
+M
+--
+(17)
+1 + Var(w)
+
+H61der's inequality implies that ESS is always less than or
+equal to M. With a little algebra, the ESS is also expressible
+in terms of the sample variance of the wi as shown in (17),
+which facilitates the study of its properties in Theorem 1. If
+the 0/are dependent from the start, as will be the case for
+MCMC draws, the effective sample size will further decrease
+in addition to reductions due to unequal importance weights.
+When the MCMC algorithm "mixes well" so that the set of
+0i are not too dependent, this is not too much of a problem.
+
+
+
+
+8
+
+Figure 4 shows the decay of the effective sample size for a
+simulated example. The data come from a three-dimensional
+Gaussian with mean 0 and covariance equal to the identity
+matrix. The posterior therefore concerns the three mean and
+the six covariance parameters. We sampled M = 1000 times
+from the posterior conditioned on n = 100 observations. Af-
+ter 300 additional data points the ESS has dropped to 10,
+a 99% loss in estimation efficiency from the initial Monte
+Carlo sample of M = 1000. At this point 65 of the initial
+1000 draws account for 99% of the total weight. Figure 4
+also overlays the ESS curve assuming a known covariance
+and the expected ESS curve derived next.
+The following theorem concerning the variance of the im-
+portant sampling weights can help us gauge the effect of
+these problems in practice. The theorem assumes that we
+observe a finite set of multivariate normal data, xi.
+As
+before we will partition the xi's into two groups, D1 and
+D2. To get accurate estimates of the mean, #, we will be
+concerned about the variance of the importance sampling
+weights, ¢(#[D1, D2, ~)/¢(#[D1, ~), where ¢(.) is the nor-
+mal density function. The theorem gives the variance of
+these importance sampling weights averaged over all possi-
+ble datase.ts with a flat prior for p.
+
+THEOREM 1. If, for j = 1.... , N,
+
+1. Xj ~ Nd(#, ~) with known covariance ~,
+
+
+2. D1 = {xl .... ,x,~} and D2 = {x,~+t.... ,XN}, and
+
+
+3. p'~'Nd(po, Ao)
+
+then
+
+
+lim ED2ED,Var,iD,,E (¢(#ID1,D2,E)'~
+A~~o
+k ¢(~~"
+)
+(18)
+
+
+=
+- i
+(19)
+
+
+Proof: The most straightforward proof of the theorem in-
+volves simply computing the big multivariate Gaussian in-
+tegral in (18).
+[]
+Theorem 1 basically says that in the multivariate normal
+case with a flat prior the variance of the importance sam-
+pling weights is on average (19). These results may hold
+approximately in the non-normal case if the posterior dis-
+tributions and the likelihood are approximately normal. As
+we should expect, when n -- N the variance of the weights
+is 0. As N increases relative to n the variance increases
+quickly. This is unfortunate in our case since we would like
+to use this method for large values of N and high dimen-
+sional problems. Looking at this result from the effective
+sample size point of view we see that
+
+
+
+
+If we draw M times from the sampling distribution when
+the size of the second partition D2 is equal to the size of the
+first partition D1, the effective sample size is decreased by
+a factor of 2d.
+Although things are looking grim for this method, recent
+advances in particle filters sidestep this problem by a simple
+"rejuvenation" step.
+~D
+.N
+to
+
+
+E
+
+
+
+¢:
+LU
+
+
+
+
+i
+i
+i
+i
+100
+200
+300
+400
+
+Additionalobservations
+
+
+Figure 4: The reduction in effective sample size with
+the addition of 1,000 observations.
+The top jagged
+curve assumes a known covariance while the bottom
+jagged also estimates the covariance.
+The smooth
+curve is the expected ESS with a known covariance.
+
+
+
+3.
+PARTICLE
+FILTERING
+FOR MASSIVE
+
+DATASETS
+
+The efficiency of the importance sampling scheme descr-
+ibed in the previous section deteriorates when the impor-
+tance weights accumulate on a small fraction of the initial
+draws. These 0i with the largest weights are those parameter
+values that have the greatest posterior mass given the data
+absorbed so far. The remaining draws are simply wasting
+space.
+Sequential Monte Carlo methods [5] aim to adapt esti-
+mates of posterior distributions as new data arrive. Particle
+filtering is the often used term to describe methods that use
+importance sampling to filter out those "particles," the 01,
+that have the least posterior mass after incorporating the ad-
+ditional data. All of the methods struggle with maintaining
+a large effective Monte Carlo sample size while maintaining
+computational efficiency.
+The "resample-move" or "rejuvenation" step developed
+in [10] greatly increases the sampling efficiency of particle
+filters in a clever fashion. We can iterate step 5's outer loop
+shown in figure 2 until the ESS has deteriorated below some
+tolerance limit, perhaps 10% of M. Assume that this occurs
+after absorbing the next nl observations. At that point we
+have an importance sample from the posterior conditioned
+on the first n-t-nl data points. Then resample M times
+with replacement from the 0i where the probability that 8i
+is selected is proportional to wl.
+Note that these draws
+still represent a sample, albeit a dependent sample, from
+the posterior conditioned on the first n -t- nz data points.
+Several of the 91 will be represented multiple times in this
+new sample. For the most part this refreshed sample will be
+devoid of those 0~ not supported by the data.
+Remember that the basic idea behind MCMC was that
+given a draw from f(O]xl .... , x,~+,Q ) we can generate an-
+other observation from the same distribution by a single
+Metropolis-Hastings step. Although this new draw will still
+be dependent, it will have less dependence than leaving it
+
+
+
+
+9
+
+"
+i
+I
+. . . .
+i
+
+
+4
+"2
+0
+2
+~
+4
+0
+2
+a
+I
+I
+IH
+II
+i Ill
+II
+I|
+I
+I
+I
+
+0
+2
+
+
+
+Figure 5: The resample-move step. 1) generate an initial sample from f(OID~). The ticks mark the particles,
+the sampled 0i. 2) Weight based on f(OiD1,D2) and resample, the length of the vertical lines indicate the
+number of times resampled. 8) For each 0i perform an MCMC step to diversify the sample.
+
+
+
+so that it has duplicates in the set of draws.
+Additional
+MCMC steps will decrease that dependence, increase the
+ESS, but also increase the number of times the algorithm
+accesses the first n + nl observations. Therefore, to reju-
+venate thesample, for each of these new 0i's we can per-
+form a single Metropolis-Hastings step "centered around"
+01 where the acceptance probability is based on all n + nl
+data points. Our rejuvenated 0i's now represent a more di-
+verse set of parameter values with an effective sample size
+closer to M again. Figure 5 graphically walks through the
+resample-move process step-by-step.
+After rejuvenating the set of 0i, we can continue where
+we left off, on observation n + nl + 1, and continue ab-
+sorbing additional observations until either we include the
+entire dataset or the ESS again has dropped too low and we
+need to repeat a rejuvenation step. As opposed to standard
+MCMC, the particle filter implementation also admits an
+obvious path toward parallelization.
+The next section demonstrates the method on a simulated
+dataset.
+
+
+4.
+EXAMPLE: MIXTURES OF
+TRANSITION MODELS
+In this section we present a small example to demonstrate
+proof-of-concept. While it uses a dataset that can easily fit
+in main memory, it demonstrates the notion that the par-
+ticle filter approach greatly reduces the number of data ac-
+cesses. At least for this example, additional observations
+would change the posterior slightly so that they can be ab-
+sorbed by linearly scanning only the newest observations one
+or two times.
+Mixtures of transition models have been used to model
+users visiting web sites [2, 19, 20] and unsupervised training
+of robots [18]. In [2], the authors also develop visualization
+tools (WebCANVAS) for understanding clusters of users and
+apply their methodology to the msnbc.com web site.
+Transition models [21], or finite state Maxkov chains (al-
+though related, in this context these are not to be confused
+with Markov chain Monte Carlo), are useful for describing
+discrete time series where an observed series switches be-
+tween a finite number of states. A particular sequence, for
+example (A,B,A,A,C,B) might be generated by a first-order
+transition model where the probability that the sequence
+moves to a particular state at time t + 1 depends only on
+the state at time ~. Perhaps web users traverse a web site
+in such a manner.
+Given a set of sequences we can estimate the underlying
+probability transition matrix, the matrix that describes the
+probability of specific state to state transitions. In fact the
+posterior distribution is computable in closed form with a
+single pass through the dataset by simply counting the num-
+ber of times the sequences moves from state A to state A,
+state A to state B, and so on for all pairs of states.
+However, a paxticulax set of sequences may not all share
+a common probability transition matrix. For example, visi-
+tors to a web site are heterogeneous and may differ on their
+likely paths through the web site depending on their pro-
+fession, their Internet experience, or the information that
+they seek. The mixture of transition models assumes that
+the dataset consists of sequences, each generated by one of
+C transition matrices. However, neither the transition ma-
+trices nor the group assignments nor the number from each
+group are known.
+The goal, therefore, is to understand the shape of the
+posterior distribution of the elements of the two transition
+matrices and the mixing fraction given a sample of observed
+users' paths. Independent samples from this posterior dis-
+tribution axe not easily obtained directly but the full con-
+ditionals, on the other hand, are simple enough so that the
+Gibbs sampler is easy to implement (see [19] for complete
+details).
+Let C be the number of clusters and S be the
+number of possible states. The unknown parameters of this
+model are the C S x S transition matrices, P1,..., Pc, the
+mixing vector a: of length C containing the fraction of ob-
+servations from each cluster, and the N cluster assignments,
+z~ E {1,..., C}. Placing a uniform prior on all parameters,
+the Gibbs sampler proceeds as follows. First randomly ini-
+tialize the cluster assignments, z~. Given the cluster assign-
+ments, the full conditional of the i th row of the transition
+matrix Pc is
+
+Dirichlet(1 + n, lc, 1 + ni2c, 1 + n,3c,..., 1 + n~sc),
+(21)
+
+where nile, for example, is the number of times sequences
+for which zj = c transition from state i to state 1. The
+mixing vector is updated with a draw from
+
+Dirichlet(1 + ~
+I(zi = 1),..., 1 + ~
+I(zj = C)),
+(22)
+
+where ~ I(zj ==c) counts the number of observations as-
+
+
+
+
+l0
+
+signed to cluster c. Lastly we update the cluster assign-
+ments conditional on the newly sampled values for the tran-
+sition matrices. The new cluster assignment for sequence
+j is drawn from a Multinomial(pl,p2,...,pc) where pc is
+the probability that transition matrix Pc generated the se-
+quence. With these new cluster assignments we return to
+(21) and so the Gibbs sampler iterates.
+As noted in section 2.2, each iteration of the MCMC al-
+gorithm requires a full scan of the dataset, in this case two
+scans, one for the matrix update and one for the cluster
+assignment update. To test the improvement available us-
+ing the particle filtering approach, we generated 10,000 se-
+quences of length between 5 and 15 from two 4 x 4 transition
+matrices. We used the first n -~ 100 sequences to obtain the
+initial sample of M ----150 draws, step 1 of the algorithm
+shown in figure 2. We then sequentially accessed the ad-
+ditional sequences, reweighting the M draws until the ESS
+dropped below 15. At that point, we resampled and applied
+the rejuvenation step to the set of draws and continued again
+until the ESS dropped too low.
+Figure 6 shows the results for the number of times the
+particle filtering algorithm accessed each observation. The
+lower curve indicates the number of accesses. The first 100
+observations show the greatest number of accesses (348 for
+this example) since they were also used to generate the ini-
+tial sample. However, the additional observations were ac-
+cessed infrequently. For example, the algorithm accessed
+observation #2000 only 14 times and observation #10000
+only twice.
+
+
+
+
+|
+
+"d5
+
+
+
+
+unllilnll~r~l
+III
+I
+I
+I I
+I
+I
+I
+I
+[
+I
+;
+J
+n
+o
+~
+~
+6o(3o
+8(300
+
+OtJur,,ralion
+
+
+
+
+Figure
+6:
+The
+frequency
+of access
+by observation.
+The horizontal
+line at 300 refers to the full MCMC
+run and the lower curve refers to the particle filter.
+The marks along the x-axis refer to occurrences
+of
+the rejuvenation
+step.
+
+
+For comparison, the line at 300 in figure 6 indicates the
+number of times the Gibbs sampler, conditioned on the en-
+tire dataset, needed to access each observation. Each of the
+150 iterations required one scan for the cluster assignments
+and a second scan for the parameter updates (21) and (22).
+The slightly larger values for the first 100 observations are
+due to their usage in determining the starting values for the
+Gibbs sampler. This starting value selection process was the
+same for both the particle filter and the full Gibbs sampler.
+Figure 6 shows a 95% reduction in the total number of data
+accesses when using the particle filter.
+The tick marks along the bottom mark the points at which
+a rejuvenation step took place. Note that they are very fre-
+quent at first and decrease as the algorithm absorbs addi-
+tional observations.
+The marginal posterior standard de-
+viation approximately decreases like O(1/x/~) so that the
+target is shrinking at a slower rate as we add more data.
+From the ESS approximation in (20) we can estimate the
+frequency of rejuvenation. As before, let n be the size of the
+initial sample. Now let Nk be the total number of obser-
+vatious accommodated at the kth rejuvenation step. If we
+rejuvenate the ~'s when the ESS drops to p x M then the
+Nk are approximately related according to
+
+
+
+
+Unraveling the recursion implies that
+
+k
+
+
+
+where d is the dimension of the parameter vector from the-
+orem 1. When we let the ESS get very small before re-
+juvenation, equivalently setting p to be small, the Nk can
+become large quickly. Naturally, there will be a balance be-
+tween loss in computing efficiency and estimation efficiency.
+Fortunately Nk grows exponentially in k, so that once k ex-
+ceeds d, the effective number of parameters we are trying
+to estimate, Nk will grow quickly. Therefore, after approx-
+imately k ---- d rejuvenations the algorithm has absorbed
+enough data points so that it can withhold future rejuve-
+nations until many more observations have been accommo-
+dated. While N~ grows exponentially with k it grows only
+linearly with n, the number of observations in D1. This
+implies that it may be better to spend more computational
+effort on the rejuvenation steps than the initial posterior
+sampling effort.
+For the mixture example, the effective number of parame-
+ters is no more than 25. Each transition matrix is 4 x 4 with
+the constraint that the rows sum to 1. So each of the two
+transition matrices has 12 free parameters. With the single
+mixing fraction parameter the total parameter count is 25.
+With additional correlation amongst the parameters the ef-
+fective number of parameters could be less. In fact in our
+example we found that equation (24) matches the observed
+frequency of rejuvenation to near perfection when d = 17.
+While efficiency as measured with the number of data ac-
+cesses is important in the analysis of massive datasets, pre-
+cision of parameter estimates is also important.
+Figure 7
+shows the marginal posterior distributions for the 16 transi-
+tion probabilities from the firstcluster'stransition matrix.
+The histogram is based on the M
+= 150 draws using the
+particle filteringmethod. The overlaid density is based on a
+rigorous MCMC
+run with 3000 draws. The histogram and
+density plots are nearly identical except for small fiuctua-
+tious. The posterior means from the two methods virtually
+overlap for each parameter. The figure also marks the loca-
+tion of the parameter value used to generate the data. All of
+these values are within range of the posterior mean to the ex-
+tent that we would expect from sampling variability. While
+achieving a 95~0 reduction in the number of data points ac-
+
+
+
+
+11
+
+0.145
+0.150
+0,155
+0.160
+0.090
+0.095
+0.100
+0.108
+0.390
+0.400
+0.410
+0.420
+0.335
+0.345
+0.355
+
+
+
+
+0.55
+0.56
+0.57
+0.58
+0.025
+0.030
+0.035
+0.37
+0.38
+0.39
+0.40
+0.41
+0.010
+0.014
+0.018
+
+
+
+
+0,180
+' 0.190
+0.200
+0.185
+0.195
+0.205
+02~0
+0250
+0~0
+02;0
+0~4
+085
+0;8
+037
+
+
+
+
+0.415
+0.425
+0.435
+0.115
+0.120
+0.125
+0.130
+0.055
+0.060
+0.065
+0.380
+0.390
+0.400
+
+
+
+Figure 7: The posterior distribution of the transition probabilities for one of the transition matrices.
+The
+histogram is based on the particle filter while the black curve is the estimated density based on a rigorous
+3000 draw MCMC run. The two darker vertical lines are the posterior means based on the particle filter and
+the rigorous run and are nearly identical if not overlapping. The dashed vertical line, which may be further
+away, is the true value used to simulate the dataset.
+
+
+cessed, the algorithm shows little if any loss in the estimation
+of the posterior distribution and the posterior mean. Note
+that increasing M does not change the number data accesses
+for the particle filter while each additional draw represents
+yet another scan for the standard implementation.
+If for some reason one was not confident in the particle
+filter results, one could generate additional MCMC itera-
+tions utilizing the entire dataset initiated from the particle
+filter draws. If the densities change little then that would
+be evidence in favor of, but not necessarily proof of, the
+algorithm's estimation accuracy.
+The example described involves a fairly small dataset. In
+additional experimentation we sampled 1000 draws using the
+particle filter from the posterior distribution conditioned on
+a dataset containing 1,406,000 observed processes. We ob-
+served similar performance metrics. The number of total
+observations accessed using the particle filter was 99.4~0 less
+than if we had used the standard MCMC implementation.
+At the same time, equation (24) maintains its prediction of
+the refresh rate for a model with d = 17 effective parame-
+ters. To condition on 1.4 million processes the particle filter
+had to refresh 56 times, the last refresh after incorporating
+136,000 processes with a single linear scan. We continue to
+observe no loss in estimation precision as all the true param-
+eter values used to simulate the data always lie in regions of
+high posterior probability.
+
+
+5.
+DISCUSSION
+MCMC methods have been almost completely absent from
+data mining research while they are widely used in modern
+statistical analysis of complex models. Indeed when work-
+ing with massive datasets the first order of business may
+be obtaining simple point estimates for unknown parame-
+ters. Inevitably', analysts want to explore other aspects of
+the posterior distribution besides simply the posterior mean
+or mode. But to date MCMC methods have simply been
+computationally infeasible for massive datasets.
+Likelihood based data squashing [16] is also a potential
+tool for making Bayesian analysis in massive datasets com-
+putationally feasible. It too uses the factorization of the
+likelihood (11) to avoid too many scans of the dataset. Like-
+lihood based data squashing locates a small number of data
+points or pseudo-data points with appropriate weights so
+that a weighted analysis of the pseudo-dataset would pro-
+
+
+
+
+12
+
+duce the same results as the unweighted analysis of the mas-
+sive dataset. It is possible that a posterior conditioned on
+the pseudo-dataset may offer a good importance sampling
+distribution so that some combination of data-squashing,
+importance sampling, and particle filtering could provide a
+coherent solution.
+While clearly the method needs to undergo more empiri-
+cal work to test the boundaries of its limitations, the deriva-
+tion and preliminary simulation work shows promise. If we
+can generally reduce the number of data accesses by 95%
+MCMC becomes viable for a large class of models useful in
+data mining. The sequential nature of algorithm also allows
+the analyst to stop when uncertainty in the parameters of
+interests has dropped below a required tolerance limit. Par-
+allelization of the algorithm is rather straightforward. Each
+processor manages a small set of the weighted draws from
+the posterior and is responsible for updating their weights
+and computing the refresh step. The last advantage that
+we discuss here involves convergence of the MCMC sam-
+pler. As noted in section 2.2, the key to MCMC begins with
+assuming that we have an initial draw from f(01x). While
+in practice the analyst usually just starts the chain from
+some reasonably selected starting point, the particle filter
+approach 'allows us to sample directly from the prior to ini-
+tialize the algorithm. Sampling from the prior distributions
+often used in practice is usually simple. Then the particle
+filter can run its course starting with the first observation.
+Even though subsequent steps introduce dependence, the
+algorithm will always generate new draws from the correct
+distribution without approximation.
+Bayesian analysis coupled with Markov chain Monte Carlo
+methods continues to revitalize many areas of statistical
+analysis. Some variant of the algorithm we propose here
+may indeed make this pair viable for massive datasets.
+
+
+6.
+REFERENCES
+
+[1] J. Besag, P. Green, D. Higdon, and K. Mengersen.
+Bayesian computation and stochastic systems (with
+discussion). Statistical Science, 10:3-41, 1995.
+[2] I. Cadez, D. Heckerman, C. Meek, P. Smyth, and
+S. White. Visualization of navigation patterns on a
+web site using model-based clustering. Technical
+Report MSR-TR-00-18, Microsoft Research, March.
+[3] B. Carlin and T. Louis. Bayes and Empirical Bayes
+Methods for Data Analysis. Chapman and Hall, Boca
+Raton, FL, 2nd edition, 2000.
+[4] M. DeGroot. Optimal Statistical Decisions.
+McGraw-Hill, New York, 1970.
+[5] A. Doucet, N. de Freitas, and N. Gordon. Sequential
+Monte Carlo Methods in Practice. Springer-Verlag,
+2001.
+[6] J. Elder and D. Pregibon. A statistical perspective on
+knowledge discovery in databases. In U. M. Fayyad,
+G. Piatetsky-Shapiro, P. Smyth, and R. Uthurusamy,
+editors, Advances in Knowledge Discovery and Data
+Mining, chapter 4. AAAI/MIT Press, 1996.
+[7] M. Figueiredo. Adaptive sparseness using Jeffreys
+prior. In Neural Information Processing Systems -
+NIPS ZOO1,2001.
+[8] A. Gelman, J. Carlin, H. Stern, and D. Rubin.
+Bayesian Data Analysis. Chapman Hall, New York,
+1995.
+[9] S. Geman and D. Geman. Stochastic relaxation, Gibbs
+distributions and the Bayesian restoration of images.
+IEEE Transactions on Pattern Analysis and Machine
+Intelligence, 6:721-741, 1984.
+[10] W. Gilks and C. Berzuini. Following a moving target -
+Monte Carlo inference for dynamic Bayesian models.
+Journal of the Royal Statistical Society B,
+63(1):127-146, 2001.
+[11] W. Gilks, S. Richardson, and D. J. Spiegelhalter,
+editors. Markov Chain Monte Carlo in Practice.
+Chapman and Hall, 1996.
+[12] C. Glymour, D. Madigan, D. Pregibon, and P. Smyth.
+Statistical themes and lessons for data mining. Data
+Mining and Knowledge Discovery, 1(1):11-28, 1997.
+[13] W. K. Hastings. Monte Carlo sampling methods using
+Markov chains and their applications. Biometrika,
+57:97-109, 1970.
+[14] A. Kong, J. Liu, and W. Wong. Sequential imputation
+and Bayesian missing data problems. Journal of the
+American Statistical Association, 89:278-288, 1994.
+[15] L. Le Cam and G. Yang. Asymptotics in Statistics:
+Some Basic Concepts. Springer-Verlag, New York,
+1990.
+[16] D. Madigan, N. Raghavan, W. DuMouchel, M. Nason,
+C. Posse, and G. Ridgeway. Instance construction via
+likelihood-based data squashing. In H. Liu and
+H. Motoda, editors, Instance Selection and
+Construction - A data mining perspective, chapter 12.
+Kluwer Academic Publishers, 2001.
+[17] N. Metropolis, A. Rosenbluth, M. Rosenbluth,
+A. Teller, and E. Teller. Equations of state
+calculations by fast computing machine. Journal of
+Chemical Physics, 21:1087-1091, 1953.
+[18] M. Ramoni, P. Sebastiani, and P. Cohen. Bayesian
+clustering by dynamics. Machine Learning,
+47(1):91-121, 2002.
+[19] G. Ridgeway. Finite discrete Markov process
+clustering. Technical Report MSR-TR-97-24,
+Microsoft Research, September.
+[20] G. Ridgeway and S. Altschuler. Clustering finite
+discrete Markov chains. In Proceedings of the Section
+on Physical and Engineering Sciences, pages 228-229,
+1998.
+[21] S. M. Ross. Probability Models. Academic Press, 5th
+edition, 1993.
+[22] D. Spiegelhalter and R. Cowell. Learning in
+probabilistic expert systems. In J. Bernardo,
+J. Berger, A. Dawid, and A. Smith, editors, Bayesian
+Statistics, volume 4, pages 447-466. Clarendon Press,
+Oxford, 1992.
+
+
+
+
+13
+

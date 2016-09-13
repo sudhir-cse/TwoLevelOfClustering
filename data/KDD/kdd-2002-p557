@@ -1,0 +1,1174 @@
+Clustering Seasonality Patterns in the Presence of Errors
+
+
+Mahesh Kumar
+OperationsResearchCenter
+MIT
+Cambridge,MA 02139
+maheshk@mit.edu
+Nitin R. Patel
+Sloan Schoolof Management
+MIT
+Cambridge, MA 02139
+nitinrp @mit.edu
+Jonathan Woo
+ProfitLogicInc.
+Cambridge,MA 02142
+jwoo @profitlogic.com
+
+
+
+
+ABSTRACT
+Clustering is a very well studied problem that attempts to
+group similar data points. Most traditional clustering algo-
+rithms assume that the data is provided without measure-
+ment error. Often, however, real world data sets have such
+errors and one can obtain estimates of these errors.
+We
+present a clustering method that incorporates information
+contained in these error estimates.
+We present a new dis-
+tance function that is based on the distribution of errors in
+data. Using a Gaussian model for errors, the distance func-
+tion follows a Chi-Square distribution and is easy to com-
+pute. This distance function is used in hierarchical cluster-
+ing to discover meaningful clusters. The distance function is
+scale-invariant so that clustering results are independent of
+units of measuring data. In the special case when the error
+distribution is the same for each attribute of data points, the
+rank order of pair-wise distances is the same for our distance
+function and the Euclidean distance function. The cluster-
+ing method is applied to the seasonality estimation problem
+and experimental results are presented for the retail indus-
+try data as well as for simulated data, where it outperforms
+classical clustering methods.
+
+
+Keywords
+clustering, distance function, forecasting, Gaussian distribu-
+tion, product life cycle, seasonality, time-series.
+
+
+1.
+INTRODUCTION
+Definition of a good distance or dissimilarity function is a
+critical step in any distance based clustering method. Most
+of the work in this field assumes that a distance function
+defined on pairs of objects is available [3, 4].
+Sometimes
+these distances are directly measured as pair-wise differences
+among objects, but often they are computed from measure-
+ments of a number of attributes for each object. Most tra-
+ditional clustering methods assume that these distances (or
+dissimilarities) can be computed from the data in hand with-
+out any error. However, in certain applications such as the
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on thefirst page. To copy otherwise,to
+republish, to post on serversor to redistributeto lists, requires prior specific
+permission and/or a fee.
+KDD '02 Edmonton, Alberta, Canada
+Copyright2002 ACM 1-58113-567-X/02/0007 ...$5.00.
+seasonality estimation problem described below, data repre-
+senting each object is not observable. A statistical method
+is applied to estimate the data. For example, if one wishes to
+cluster various geographical regions based on per household
+income and expenditure, one might represent each geograph-
+ical region by the average household income and average
+expenditure. A sample average by itself is inadequate and
+can be misleading unless the variation around the average
+is negligible. In some applications (e.g., random sampling)
+it is easy to obtain an estimate of the deviation along with
+the average.
+These deviations, which are measures of er-
+ror for the averages, may be very different for different data
+points. In this paper we present a method of clustering using
+information about the errors in data. Although our study
+and results are focused on time-series clustering in the retail
+industry, the concept can be extended to other clustering
+applications where measurement errors are significant.
+Numerous approaches to clustering include statistical, ma-
+chine learning and optimization perspectives [2, 3, 4]. To the
+best of our knowledge, all these approaches assume that each
+data point is observed without any error. The fundamental
+difference of our approach is that we model measurement
+errors.
+We assume that we are given n points in the T-dimensional
+real space and there is an observation error associated with
+each data point. The observation errors may come from dif-
+ferent distributions.
+We assume that we are given a value
+and a standard error for each data point.
+Our goal is to
+group these data points into clusters so that it is very likely
+that points in the same cluster have the same true value
+whereas it is quite unlikely for points in different clusters to
+have the same true value (likelihood being defined with re-
+spect to the probability distributions of the errors associated
+with the data points).
+In contrast to standard clustering
+solutions, in this case, two points that differ significantly
+in their observed values might belong to the same clus-
+ter if they have high errors associated with them whereas
+two points that do not differ much in their observed val-
+ues might belong to different clusters if they have small er-
+rors. The above argument is illustrated in Figure 1. Four
+points A, B, C and D are the observed values of four objects
+and these values have Gaussian errors associated with them
+as represented by the ellipse surrounding each data point.
+Clustering that recognizes errors will put points A and B
+into one cluster and points C and D in another, whereas a
+clustering method that does not consider errors will cluster
+A and C together and B and D together.
+In this exam-
+ple the clustering result from error-based clustering makes
+
+
+
+
+557
+
+more sense because the x values have large error in their
+measurements, whereas, y value measurements are accurate
+and should therefore dominate the clustering decision.
+
+
+
+
+A
+S
+
+
+
+
+Figure 1: Data points along with errors
+
+Our research was motivated by the problem of estimat-
+ing seasonality for retailers based on the sales data from
+the previous year.
+In retail merchandizing it is very im-
+portant to understand the seasonal behavior in the sales
+of different items to correctly forecast demand and make
+appropriate business decisions. We model the seasonality
+estimation problem as a time-series clustering problem in
+the presence of errors and present the experimental results
+when applied to point-of-sale retail data. We were able to
+discover meaningful clusters of seasonality whereas classical
+methods which do not take account of errors did not ob-
+tain good clusters. To the best of our knowledge, this is not
+only the first attempt to cluster data while incorporating
+information about errors in data, we have not come across
+any work that attempts to find seasonal patterns in retail
+marketing using time-series clustering.
+Although our studies and results can be extended to ar-
+bitrary probability distributions, we assume that each point
+comes from a multidimensional Gaussian distribution with
+diagonal covariance matrix since this distribution is appro-
+priate for our application. Under this assumption we present
+a new distance function that is based on the distribution of
+error in data, Under a Gaussian model for errors, the dis-
+tance function follows a Chi-Square distribution and is easy
+to compute.
+The distance function is used in hierarchical
+clustering to develop a clustering method that is used in the
+seasonality estimation problem.
+The rest of the paper is organized as follows. In section
+2 we briefly describe the seasonality estimation problem. In
+section 3 we provide a time-series representation of season-
+ality that models associated errors. In section 4 we define a
+distance function based on the distribution of errors in data.
+In section 5 we describe a hierarchical clustering algorithm
+using this distance function.
+In section 6 we present ex-
+perimental results based on real as well as simulated data.
+Finally in section 7 we present concluding remarks along
+with future research directions.
+
+
+2.
+SEASONALITY
+ESTIMATION
+
+Seasonality is defined as the normalized underlying de-
+mand of a group of similar merchandize a~ a function of
+time of the year after taking into account other factors that
+impact sales such as discounts, inventory, promotions and
+random effects. Seasonality is a numeric index of seasonal
+buying behavior that is consistent from year to year. For ex-
+ample, a Christmas item will have high seasonality indices
+during the month of December, whereas shorts will have
+consistently high seasonality indices during summer and low
+indices during winter.
+There are many different possible
+seasonal patterns (see figures 6 & 7). In the retail indus-
+try, practical concerns regarding logistic complexity require
+that we handle i1o more than a few (5-15) seasonal patterns.
+Therefore, our goal is to identify a small set of seasonal pat-
+terns that model the items sold by the retailer and relate
+each item to one of these seasonal patterns.
+Considerable work has been done on how to account for
+the effect of price, promotions inventory and random ef-
+fects[6, 8]. In our retail application, weekly sales of an item
+i are modelled as products of several factors that affect sales
+as described in equation (1).
+
+Salel, = f1(I~t)*fp(Pit)*fQ(Q,t)*fR(R~t)*PLCi(t-t~)*Seasit
+(1)
+Here, Iit,Pit,Qit and Rat are the quantitative measures of
+inventory, price, promotion and random effect respectively
+for an item i during week t. f~, fp, fo and fa model the
+impact of inventory, price, promotion and random effect on
+sales respectively. PLC is the Product Life Cycle coefficient
+which is defined as the sale of an item in the absence of
+seasonality as well as the factors discussed above. The shape
+and duration of the PLC curve depends on the nature of
+the item. For example, a fashion item will sell out very fast
+compared to a non-fashion item as shown in the figure 2.
+Saleit, Seaslt and PLCi(t-t~) are the sale value, seasonality
+coefficient and PLC coefficient of item i during week t where
+t0 is the week when the item is introduced. For convenience
+we define the PLC value to be zero during weeks before
+the item is introduced and after it is removed. Seasonality
+coefficients are relative. To compare seasonality coefficients
+of different items on the same scale, we assume that sum of
+all seasonality coefficients for an item over a year is constant,
+say equal to the total number of weeks, which is 52 in this
+
+case.
+
+
+
+
+PLC of a non-f~shion item
+PLC of a f~hion item
+
+
+
+
+Figure 2: PLCs for non-fashion and fashion items
+
+
+In this paper we will assume that our data has been pre-
+processed by using (1) to remove the effects of all these non-
+seasonal factors.
+We also assume that the data has been
+normalized to enable comparison of sales of different items
+on the same scale. After pre-processing and normalization
+the sale of an item, Salei, is determined by the PLC and
+seasonality as described below.
+
+Salelt = PLCi(t - t~) * Seaslt.
+(2)
+
+Since adjusted, sales of an item is the product of PLC and
+seasonality, it is not possible to determine seasonality just
+by looking at the sale values of an item. The fact that items
+having the same seasonality pattern might have different
+PLCs complicates the analysis.
+Initially, based on domain knowledge from merchants we
+group items that are believed to follow similar seasonality
+
+
+
+
+558
+
+over the entire year. For example, one could group together
+a specific set of items that are known to be selling during
+Christmas, all items that are known to be selling during
+summer and not during winter, etc.
+The idea is to get
+a set of items following similar seasonality that are intro-
+duced and removed at different points of time during the
+year. This set, say S, consists of items having a variety of
+PLCs differing in their shape and time duration. If we take
+the weekly average of all PLCs in S then we would have a
+somewhat flat curve as shown in figure 3. This implies that
+weekly average of PLCs for all items in S can be assumed
+to be constant as shown in theorem 1.
+
+
+
+
+l~..l~a m~ ~
+WccklJI~¢rlg¢ ofadl~sc pLCs
+mlz~dmcedlid I'e~4o~J~ d~ell~t~fl~
+
+
+
+
+Figure 3: Averaging
+effect on a set of uniformly dis-
+tributed PLCs
+
+
+
+THEOREM 1. For a large number of PLCs that have their
+introduction dates uniformly spread over different weeks of
+year, the weekly average of PLCs is approximately constant,
+i.e.,
+
+-~-EPLC~(t-t~)~c
+Vt=l .... ,52
+(3)
+ISl its
+
+
+PROOF. Let us consider a given week, say week t. Since
+only those PLCs that have starting time between week t-51
+and week t will contribute to the weekly average for week t,
+we consider only those PLCs that have t~ between week t-51
+and week t. Let pl be the probability of t~ = l. Because of
+equally likely starting times, pl = ~ for I = t-51, t-50, ..., t.
+
+
+1 EE(PLCi( t- t~))
+E( ~SI E PLC,(t - t~)) =
+{ES
+iES
+
+
+1
+s
+5x
+= T~ E
+~
+p:,PLCi(t-l) -
+1_
+E E PLCi(l) = c
+its ~=~-51
+52 · ISl its t=o
+(4)
+where c is a constant that does not depend on t. The vario
+ance of ~ Ties PLCi(t-t~) is inversely proportional to [S[
+as in equation (8). If IS[ is large, the variance will be small
+and the weekly observed values of ~
+Ties PLCi(t-t~) will
+be approximately constant and hence the result.
+[]
+
+If we take the average of weekly sales of all items in S
+then it would nullify the effect of PLCs as suggested by the
+following equations.
+Let Sales be the average sale during
+week t for items in S then
+
+
+Sales = ~1 EiesSaleit = ~-sIE. ies
+· PnCi(t- t~). (5)
+
+Since all items in S are assumed to have the same season-
+ality, Seasis is the same for all items i E S, say equal to
+Seast, i.e.,
+
+Seasit = Seast
+Vi E S,
+t = 1, 2, .., 52.
+(6)
+Therefore,
+
+
+Salet
+iSI
+= Seast*--
+PLCi(t-to) ~ Seast*e
+t = 1, ..., 52.
+
+(7)
+The last equality follows from theorem 1. Thus seasonality
+values, Seast, can be estimated by appropriate scaling of
+weekly sales average, Sales.
+The average values obtained above will have errors associ-
+ated with them. An estimate of the standard error in Sales
+is given by the following equation.
+
+·
+1 E(Sale,, _ Salet) 2
+(8)
+O's ~
+~
+iES
+
+
+The above procedure provides us with a large number of
+seasonal patterns, one for each set S, along with estimates
+of associated errors.
+The goal is to form clusters of these
+seasonal patterns based on their average values and errors.
+Each cluster of seasonal patterns is finally used to estimate
+seasonality of the cluster. This estimate will have smaller
+error than if we estimated seasonality for each pattern in S.
+One might attempt to estimate seasonality using stan-
+dard time-series clustering, but the danger of not incorpo-
+rating knowledge of errors in the clustering method is that
+the information on variability of the data points is ignored.
+Knowledge of errors would lead us to be more careful in as-
+signing a low error data point to a cluster than a high error
+data point. Errors and associated probability distributions
+capture the variability of a data point and, in the rest of the
+paper, we will present how explicit treatment of errors can
+be used to discover better clusters.
+
+
+3.
+REPRESENTATION
+OF TIME-SERIES
+
+Time-series data differs from other data representations
+in that a data point in time-series is represented by a se-
+quence typically measured at equal time intervals. Various
+time-series representations have been proposed in [1, 5] for
+data with no errors. In this section we present a time series
+representation that models errors associated with data.
+In our model a time-series sampled at T points is repre-
+sented by a sequence of T distributions.
+We assume that
+each of these T samples are independent of each other and
+are distributed according to one-dimensional Gaussian dis-
+tributions. A time-series is represented as A = {(xl, al),
+(x2, a2) ..... (XT, aT)} where the tth sample of A is normally
+distributed with mean xs and standard deviation at.
+We assume that all the T samples of a time-series are
+normalized, i.e., ~t xt = T. For seasonality estimation we
+have T equal to 52 corresponding to the number of weeks in
+a year. xs is the normalized value of seasonality estimate,
+Sales, obtained in equation (7). at is the standard error in
+the estimated value of xt as in equation (8).
+
+
+4.
+DISTANCE
+FUNCTION
+Like most clustering methods we assume that the rela-
+tionships among a set of n objects is described by an n x n
+matrix containing a measure of dissimilarity between the i th
+and the jsh data points. In clustering parlance it is referred
+to as the distance function between a pair of points. Vari-
+ous distance functions have been considered for the setting
+where data has no measurement errors [3, 4]. In this section
+
+
+
+
+559
+
+we develop a probability based distance function for data
+with errors.
+
+4.1
+Distance Function Definition
+Consider two seasonal/ties A~ = {(xlx, ai,), (x~2, a~2).... ,
+(X/T, qiT)} and As = {(x~l, 0"Sl), (zS2, os2), ..., (2ST, aST)}.
+A/ and As are the estimated values of two seasonal/ties as
+described in section 2. Let the corresponding true seasonal/-
+ties be {/z~,, #~a..... piT} and {PSi,/-LS2.... , PST}. This means
+that x% are the observed values that come from distributions
+with true means of/z's. We define similarity between two
+seasonal/ties as follows. If the null hypothesis Ho : A~ ,~ As
+is true then similarity between A/ and Aj is the probabil-
+ity of accepting the hypothesis.
+Here, A/ ~ As denotes
+pit =PSt for t = 1, ...,T. The distance dis between Ai and
+As is defined as (1-similarity), which is the probability of
+rejecting the above hypothesis. This distance function sat-
+/sties the following desirable properties.
+d/st(A, B) = d/st(B, A)
+d/st(A, B) > 0
+dist(A, A) = 0
+d/st(A, B) = 0 ¢~ A = B
+d/st(A, B) < 1.
+Let N(#, a) denote a Gauss/an distribution with mean/z
+and standard deviation a.
+Consider t th samples of both
+seasonal/ties, Ale = (xlt,alt) and ASl = (xst,asl).
+We as-
+sumed that Air and Ast come from independent Gauss/an
+distributions with means pit and /zst and standard devi-
+ations air and ast respectively.
+This implies that xit ,.~
+N(I.tit,fflt ) and xst ,~, N(pst,ast)
+so that (xlt -xst)
+"~
+
+N(pit
+#St, ~/a~t
+-
++
+
+If Ai ~ As then pit = pit and consequently the statistic
+· ,-~ t
+follows a t-distribution, but if a large amount of
+
+data is used in the estimation of xlt and xst then it can be
+approximated by the standard Gaussian distribution N(0, 1)
+
+[7]. Therefore, ~
+wiU follow the Chi-Square distri-
+
+bution with one degree of freedom.
+Since the T samples
+
+are assumed to be independent the statistic ~tT=l ~
+~Z,*a3t
+follows the Chi-Square distribution with T-
+1 d~grees of
+freedom (1 degree less because of the constraint: ~=1 xit =
+1
+2
+/(~"-~)2
+~tT= *xs*)" Therefore,
+- XT- 1~-~-
+] is the probability
+
+of accepting two seasonal/ties as the same in spite of having
+the observed differences. Consequently,
+
+2
+/(x"-xs~) 2
+dij = XT-lk
+"~'-'~ ~"
+).
+(9)
+Ult "1" u jr
+
+
+4.2
+Comparison with Euclidean Distance
+Since X~(X) is a monotonically increasing function w.r.t, x
+for any degrees of freedom f, dis is monotonically increasing
+
+E T
+with respect to
+t=x
+~t+~ t . Therefore, among all pair-
+
+wise distances between the given time-series sequences, the
+
+rank order of dis is the same as that of i~:_L~.
+If all a's
+¢Zt-~cgt
+were the same and equal to a then it would become the rank
+order of ~x EtT=l(Xit - xst) 2 which is the same as the rank
+
+order of the Euclidean distance, ~tT=l(xlt --xSt) 2. There-
+fore, when all the errors are equal, the proposed distance
+function has the same rank order as the Euclidean distance.
+Popular distance-based hierarchical clustering methods use
+single linkage and complete linkage. For these methods it
+is the rank order of distances that matters and not the ac-
+tual distances. Therefore, a clustering method based on the
+proposed distance function will be identical to a clustering
+
+method based on ~tT=i ~
+which is a weighted Eu-
+a[tta~t
+clidean distance function where each sample is weighted with
+the inverse of its pooled error. This makes intuitive sense
+because it gives smaller weight to the data that have higher
+error and large weight to samples that have small error.
+
+4.3 Scale Invariant Clustering
+Many distance functions used in clustering change non-
+linearly with change in scale of measuring data and subse-
+quently the clustering results might also change [3]. The
+distance function we have proposed is independent of scale.
+When we change units of measurement of data, the observed
+x values and corresponding errors a's are multiplied by the
+
+same factor. Therefore, ~tT=l (=~t~)2
+is unit-free and so
+
+dis is scale inw~riant.
+
+5.
+CLUSTERING
+
+5.1
+Clustering Algorithm
+Definition of a good distance function is the most critical
+step in any distance based clustering method.
+Having de-
+cided on a distance function we use a hierarchical clustering
+method that is similar to Ward's method [9]. In this method,
+we start with each data point being a singleton cluster and
+at each stage combine the closest pair of clusters into a sin-
+gle cluster until a threshold value is reached or a predefined
+number of clusters is obtained. At each intermediate stage
+two clusters are combined into a single cluster using a merge
+operation defined in section 5.2. The clustering algorithm is
+formally described below.
+
+Algorithm hError( A, G)
+Input: Ai = {(Xil, Uii), (Xi2, cri2)..... (XiT, CriT)}, i -= 1, 2, ...n
+G = number of clusters.
+Output:
+Cluster(i), i = 1, 2, ..., G.
+Start
+for i = 1 to n
+Cluster(i)
+=
+{i}
+seas(i) = Ai
+end
+NumClust = n
+while NumClust > G
+for 1 <_i < j _<NumClust
+calculate d~s = d/st(seas(i), seas(j)) using
+equation (9)
+end
+(I, J) = argminl_<i<S_<N~,mcz~,~t dis
+Cluster(I) = Cluster(I) t3 Cluster(J)
+seas(l) =: merge(seas(l), seas(J)) using
+equations (10) and (11)
+Cluster(J) = Cluster( NumClust )
+seas(J) =: seas( gumelust)
+NumClust = NumClust - 1
+end
+return Cluster(i), i = 1, 2, ..., G
+end
+
+
+
+
+560
+
+5.2
+Merging time-series
+The merge operation is used in the Algorithm hError to
+combine information from a pair of time-series to produce a
+new time-series that is an interpolation between the time-
+series used to produce it. The shape of the resulting time-
+series depends not only on the sample values of individual
+time-series but also on errors associated with them.
+Consider two time-series, A = {(x11, alx), (x12, a12) .....
+(x~, air)) and B = {(x21,a2~),(~, a~), ..., (x2r, o~)).
+Let C =
+{(xl,al), (x2, a2), ..., (xT, aT)} be the resulting
+time-series when A and B are merged. Let A and B come
+from the same true seasonality with means {pl, #2, ..., #T}-
+A natural choice for the components of C are the maximum
+likelihood estimates of #'s and associated standard devia-
+tions. From the maximum likelihood principle [7] and the
+Gauss,an distribution assumption, it is easy to show that
+
+
+=
+1
+__[Xlt
+X2t)
+zt
+~at_t_~2t,a12
++a~---~
+t=l,2
+..... T.
+(10)
+
+
+1
+t = 1,2 ..... T.
+(11)
+
+
+
+6.
+EXPERIMENTAL RESULTS
+In this section we present experimental results using Al-
+gorithm hError on simulated data and also on data from a
+leading national retail chain.
+
+6.1
+Simulated Data
+We generated artificial data using ten PLCs that differ in
+their peaks and shapes as shown in figure 4. The PLC data
+is randomly generated by choosing one of these ten PLCs
+with equal probability and a uniformly distributed starting
+time over a period of one year.
+Using three different sea-
+sonalities corresponding to Christmas, summer seasonality
+and winter seasonality (see figures 6 & 7 ), we generated
+sales data by multiplying each generated PLC with one of
+the three seasonal,ties. We constructed 12 instances, where
+each instance consists of 25-35 PLCs.
+Sales data for each
+instance was generated by multiplying all the PLCs in that
+instance with one of the above seasonal,ties chosen at ran-
+dom. We hide the information about true seasonal,ties and
+use Algorithm hError to recover three seasonal,ties.
+We obtain an estimate of seasonality and associated errors
+for each instance by averaging weekly sales data in that in-
+stance as described in section 2. The estimated seasonal,ties
+and associated errors are shown in figure 5 with vertical bars
+representing standard errors. It can be seen from the figure
+that some of the seasonaiities do not correspond to any of
+the original seasonal,ties, for example, the middle one in
+the last row. Moreover, each of them has large errors. We
+ran hError and obtained the three cluster centers shown in
+figure 6. The resulting seasonal,ties match original season-
+alities very well as can be seen from this figure. We com-
+pared our result against k-means and Ward's method that
+do not consider the information about errors. The number
+of misclassifications were higher when we used these cluster-
+ing methods. The clusters were identical for both of them
+and the cluster centers are shown in figure 7.
+We assess the quality of a clustering result by computing
+its Average Estimation Error. Let there be r true seasonal,-
+0.18
+
+
+016
+
+
+O14
+
+
+0.12
+
+
+O1
+
+
+
+008
+
+
+0.~
+
+
+
+
+0
+
+
+
+
+Figure 4: Ten different PLCs.
+
+
+
+
+2O
+4O
+
+
+
+
+20
+40
+
+
+
+
+Soamr~day ~s~matoa ~zaherrors
+
+
+
+
+Figure 5: Individual (prior to clustering) seasonality
+estimates with a.~sociated errors.
+
+
+ties, Seas1, Seas2, ..., Seas~. r is 3 in the above experiment.
+Let the estimated seasonal,ties be Estimate1, Estimate2,
+..., Estimater then the Average Estimation Error is defined
+a$
+
+
+
+AverageEstimationError = 1 fi
+iSeas, _Estimate, i
+r
+/=1
+(12)
+where ISeasi -Estimatei I is the total absolute difference
+between the true seasonality indices and the estimated sea-
+sonality indices defined as below.
+
+52
+
+ISeas, - Estimate, [= E
+ISeas" - Estimate,, I
+(13)
+
+t=l
+
+In the above experiment the Average Estimation Error
+was 4.9758 using kmeans or Ward's method, whereas it was
+only 1.7780 using hError.
+We replicated the above experiment 100 times. Table 1
+shows the average number of misclassifieations and Average
+Estimation Error made by different clustering methods on
+a set of 12 seasonaiities when clustered into 3 groups.
+
+6.2
+Retailer Data
+In order to investigate the usefulness of our technique in
+practice, we carried out comparative analysis on real data
+from a major retail chain.
+Retail merchandize is divided
+into several departments (examples: shoes, shirts, jewelry.)
+
+
+
+
+561
+
+4
+,
+,
+,
+/l
+,
+,
+l
+° - : OMinll
+m~Jlt/
+
+
+
+
+,I
+.
+.
+.
+.
+.
+
+
+
+
+2
+-.-
+
+
+
+
+Figure 6: Seasonalities
+obtained
+by hError.
+
+
+
+
+0
+10
+2O
+3O
+4O
+EO
+6O
+
+
+
+
+%
+,0
+~o
+.
+.
+.
+.
+
+
+
+
+1
+" _.
+"
+
+
+00
+10
+2O
+SO
+4O
+6O
+eo
+Weekl
+
+
+
+
+Figure 7:
+Seasonaiities obtained by kmeans and
+Ward's method using Euclidean distances.
+
+
+
+which are further classified into several classes (example:
+men's winter shoes, formal shirts, etc.). Each class has a
+varying number of items for which sales data is available.
+For this experiment we considered only those classes that
+have sales data for at least 20 items. The data used con-
+sisted of two years of sales data.
+One year of data was
+used to estimate seasonalities. Using these estimated sea-
+sonalities, we forecast sales for the next year and compare
+it against the actual sales data. We considered 6 different
+departments (greeting cards, books, music and video, toys,
+automotive, and sporting goods). Each department has 4-15
+classes and we used data from a total of 45 classes across all
+6 departments. First we estimated seasonalities and asso-
+ciated errors for each class based on the method described
+in section 2. Having estimated seasonalities, we applied Al-
+gorithm hError to reconstruct seasonalities for each class.
+Using these seasonality estimates, we predicted sales for the
+items in the books department. We chose the hooks de-
+partment because the effects such as price, promotions and
+inventory were small for this department, thereby, weekly
+change in sales for the books department was mainly be-
+cause of seasonality. We assessed the quality of forecast by
+calculating average Forecast Error, which is the ratio of the
+Table 1: Average -~ misclassiflcations and Average
+Estimation
+Error for different clustering
+methods.
+Clustering Method
+Average #
+mis-
+Average Esti-
+classifications
+mation Error
+hError
+0.87
+2.0182
+Ward's method
+2.63
+4.7021
+kmeans
+2.94
+5.0337
+
+
+
+total difference between actual sale and forecast sale to the
+total actual sale, as defined below.
+
+ForecastError =
+
+E~T=i IactualSalet - ForecastSaletl
+(14)
+
+~tT=l ActualSalet
+
+We compared our result against kmeans and Ward's method
+based on the Euclidean distance. We also compared our
+forecast when no clustering was used, i.e., when the forecast
+was based on the seasonality estimates for each class using
+average of weekly sales data as described in section 2. We
+found that forecasts using hError were substantially better
+than forecasts using kmeans or Ward's method or forecasts
+without using (:lustering. Table 2 compares average Forecast
+Error in these four situations for 17 different items in the
+books department.
+
+
+Table 2: Average Forecast Error
+Clustering Method
+Average Forecast Error %
+hError
+18.7
+Ward's
+23.9
+kmeans
+24.2
+No clustering
+31.5
+
+
+
+
+20
+6
+10
+1$
+
+
+'
+'
+
+
+
+
+~0
+S
+10
+15
+
+
+
+
+200
+$
+10
+lS
+
+
+
+
+Figure 8: Sales forecast against actual sales
+-
+-
+: actual sales
+---I---
+: forecast using hError
+--c
+- : forecast using Ward's
+method
+--~--
+: forecast without
+clustering
+
+
+Figure 8 shows graphs comparing these forecasts for one
+item in the books department. This item was sold for a
+total of 33 weeks during January through September 1997.
+
+
+
+
+562
+
+The price for the item was constant during this period and
+there was no promotion on this item, therefore we ignored
+all external factors and made our forecast using only PLC
+and seasonality coefficients.
+Seasonality of the class that
+contains this item is estimated using past year's sales data
+of all the items in the class. The first 18 weeks of sales data
+of this item is used to estimate the PLC. PLC is estimated by
+simple curve fitting from a set of predefined PLCs. Using
+the seasonality estimates from past year's data and PLC
+estimate from the first 18 weeks of data, we forecast sales
+for the remaining 15 weeks. The graphs show that forecasts
+using hError are significantly better than the others.
+In figure 8 we observe that seasonality estimates without
+clustering failed to capture the sales pattern.
+Clustering
+using Euclidean distance succeeded in making a better fore-
+cast but clustering using error-based distance function was
+even better. The reason is that the books department has
+5 classes. Because very few items are used to estimate sea-
+sonality for each class, each seasonality estimate has large
+errors and therefore the forecast based on this seasonality
+estimate (without clustering) does not match actual sales.
+On close inspection of the data we found that there are two
+groups of 3 and 2 classes having similar seasonalities. Clus-
+tering identifies the right clusters of 3 and 2 seasonalities.
+The combined seasonality of each cluster has higher accu-
+racy because more items are used to estimate it. Cluster-
+ing using the error-based distance function does better than
+Euclidean distance based clustering because it gives more
+weight to seasonality with smaller errors obtained by using
+larger number of items.
+We restricted our forecast analysis to only a small section
+of books items that had small fluctuation in price over their
+selling period. This helped us eliminate effects due errors in
+estimation of the factors relating to price or promotion.
+
+
+7.
+DISCUSSIONAND FUTURE RESEARCH
+In this paper we have developed a clustering method that
+incorporates information about errors associated with data.
+Traditional clustering methods are inadequate when differ-
+ent data points have very different errors. We introduced a
+new distance function which is based on Gaussian distribu-
+tion of errors. We showed that this distance function can
+be viewed as a generalization of the classical Euclidean dis-
+tance. The distance function also has the property that it is
+invariant under different scales for data. Finally, we demon-
+strated the utility of our method, on both simulated and
+real data sets, in improving estimates of seasonality in the
+retail industry.
+Although we developed the distance function for time-
+series clustering, the concept of incorporating information
+about error in the distance function is very general and can
+be used in many other clustering applications. In our re-
+search we made a basic assumption that the T samples of
+a time-series come from independent distributions. In time-
+series data, it is common to encounter positive correlations
+in consecutive sample values. Less often we also encounter
+negative correlations. Therefore, while incorporating the
+concept of dependence can be difficult, it can improve the
+test statistic developed in section 4 and subsequently give
+more accurate measure of the distance function. We have
+generalized our approach to accomodate correlated obser-
+vations. We have a working paper under development with
+this theme. In the case of seasonality estimation problem we
+deal with seasonality values that are obtained by taking av-
+erage of sales data of a group of items. Dependency among
+samples of a time-series might not be a serious problem for
+seasonality estimation because the averaging process might
+dampen the effect of dependency.
+In this paper we have provided a hierarchical clustering
+heuristic that recognizes errors associated with data. The
+next step would be to formulate a model for the problem and
+let the model provide a basis for a natural heuristic to solve
+the problem. We have already developed a model that jus-
+titles the work presented here and extended it to correlated
+data. We are in the process of developing and comparing
+several heuristics that arise from our model. We are also
+exploring other applications of error-based clustering. We
+have already identified that the method works very well in
+clustering of regression coefficients. We expect to be able to
+report this work in progress soon.
+Errors are natural in any data measurement. Often er-
+rors contain very useful information and should be consid-
+ered an important part of data. We feel that a clustering
+method using the information contained in errors is an im-
+portant conceptual step in the field of cluster analysis and
+data mining.
+
+8.
+ACKNOWLEDGEMENT
+This work was supported by ProtltLogic Inc. and the
+e-business Center at Sloan MIT. The authors gratefully ac-
+knowledge the contributions of James B. Orlin in this work.
+
+
+9.
+REFERENCES
+[1] Rakesh Agrawal, King-Ip Lin, Harpreet S. Sawhney,
+Kyuseok Shim. Fast similarity search in the presence
+of noise, scaling, and translation in time-series
+databases. VLDB, 490-501, 1995.
+[2] Scott Gafney, Padhraic Smyth. Trajectory clustering
+with mixtures of regression models. Proceedings of the
+A CM SIGKDD International Conference on
+Knowledge Discovery and Data Mining, 1999.
+[3] A. K. Jain, R. C. Dubes. Algorithms for Clustering
+Data. Prentice-Hall, 1988.
+[4] A. K. Jain, M. N. Murty, P. J. Flynn. Data
+Clustering: A Review. ACM Computing Surveys,
+Volume 31, No. 3, 264-323, 1999.
+[5] Eamonn J. Keogh, Michael J. Pazzani. An enhanced
+representation of time-series which allows fast and
+accurate classification, clustering and relevance
+feedback. Fourth conference on Knowledge Discovery
+in Databases and Data Mining, 1998.
+[6] Praveen K. Kopalle, Carl F. Mela, Lawrence Marsh.
+The dynamic effect of discounting on sales: Empirical
+analysis and normative pricing implications.
+Marketing Science, 317-332, 1999.
+[7] John A. Rice. Mathematical Statistics and Data
+Analysis. Second Edition. Duxbury Press.
+[8] Jorge M. Silva-Risso, Randolph E. Bucklin, Donald G.
+Morrison. A decision support system for planning
+manufacturers' sales promotion calendars. Marketing
+Science, 274-300, 1999.
+[9] J. H. Ward Jr. Hierarchical Grouping to Optimize an
+Objective Function. Journal of the American
+Statistical Association Volume 58, Issue 301, 236-244,
+1963.
+
+
+
+
+563
+

@@ -1,0 +1,1543 @@
+Breaking the Barrier of nansactions:
+Mining Inter-Transaction
+Association Rules
+
+
+Anthony
+K. H. Tung'
+Hongjun
+Lu2
+Jiawei
+Han1
+Ling Feng3
+
+
+`Simon Fraser University,
+British
+Columbia,
+Canada.
+{khtung,han}@cs.sfu.ca
+2The Hong Kong University
+of Science and Technology,
+Hong Kong, China. luhj@cs.ust.hk
+3The Hong Kong Polytechnic
+University,
+Hong Kong, China. cslfeng@comp.polyu.edu.hk
+
+
+
+
+Abstract
+
+Most of the previous studies on mining association rules are
+on mining
+intro-transaction
+associations,
+i.e., the associa-
+tions among items within
+the same transaction,
+where the
+notion of the transaction
+could be the items bought by the
+same customer, the events happened on the same day, etc.
+In this study, we break the barrier of transactions
+and extend
+the scope of mining association rules from traditional
+intra-
+transaction
+associations to inter-transaction
+associations.
+Mining
+inter-transaction
+associations
+poses more chal-
+lenges on efficient processing than mining intra-transaction
+associations
+because the number
+of potential
+association
+rules becomes extremely
+large after the boundary
+of trans-
+actions is broken. In this study, we introduce
+the notion of
+inter-transaction
+association rule, define its measurements:
+support and confidence, and develop an efficient algorithm,
+FITI
+(an acronym for "First
+Intra
+Then Inter"),
+for min-
+ing inter-transaction
+associations.
+We compare
+FITI
+with
+EH-Apriori,
+the best algorithm
+in our previous proposal, and
+demonstrate
+a substantial
+performance gain of FITI over EH-
+Apriori.
+
+
+1
+Introduction
+
+As an important
+theme on data mining,
+association
+rule mining
+research [AIS93] has progressed in var-
+ious directions,
+including
+efficient,
+Apriori-like
+min-
+ing methods
+[AS94, KMR+94,
+Toi96],
+mining
+gen-
+eralized, multi-level,
+or quantitative
+association rules
+[SA95, SA96, KHC97], mining sequential patterns and
+episodes [SA95, MTV97],
+association rule mining query
+languages [MPC96] and constraint-based
+rule mining
+[SVA97, NLHP98, LNHP99] etc.. However, there is an
+important
+form of association rules which are useful but
+could not be discovered within
+the existing association
+rule mining framework.
+
+Permission
+to make digital or hard copies of all or part ofthis
+work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the first page. TO copy
+otherwise, to republish, to post on servers or to redistribute 10 his.
+requires prior specific permission and/or a fee.
+KDD-99
+San Diego CA USA
+Copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+Taking stock market database as an example, associ-
+ation rule mining can be used to analyze the share price
+movements.
+Suppose a database registers the price of
+every stock at the end of each trading day. Association
+mining may find rules like
+
+RI : When the prices
+of IBM
+and SUN go up, at 80%
+of probability
+the price
+of Microsoft
+goes up on the
+same day.
+
+While RI reflects some relationship
+among the prices,
+its role in price prediction
+is limited;
+and traders may
+be more interested in the following type of rules:
+
+Rz : If the prices
+of IBM
+and SUN go up, Microsoft's
+will most likely (80% of probability)
+go up the next
+day and then drop four
+days later.
+
+Unfortunately,
+current association rule miners cannot
+discover this type of rules as there is a fundamental
+difference between the rules like Ra and those like RI.
+A classical association
+rule like RI expresses the as-
+sociations
+among items within
+the same transaction.
+On the other hand, rule R2 represents some associa-
+tion relationship
+among
+the field
+values from
+different
+transaction
+records.
+To distinguish
+these two types of
+association, we name the classical association rules as
+intra-transaction
+associations
+and the latter as inter-
+transaction
+associations.
+Inter-transaction
+associa-
+tions are different from the mining sequential patterns
+in transaction
+data [AS95], and the mining of episodes
+by Mannila,
+et al. [MTV97],
+although all of them in-
+volve a temporal component.
+This is because both the
+mining of sequential patterns and episodes involve form-
+ing transactions
+from given data before mining
+take
+place.
+Based on the above example,
+a new type of rules
+call inter-transaction
+association
+rules is proposed and
+an efficient algorithm
+for mining them is described in
+this paper. An interesting
+property,
+"A frequent
+inter-
+transaction
+itemsets
+must be made up of frequent
+intra-
+transaction
+itemsets"
+is observed and is used to mine
+inter-transaction
+association
+rules from large databases
+efficiently.
+
+
+
+
+297
+
+The remaining of the paper is organized as follows.
+In Section 2, inter-transaction
+association rules will be
+defined formally.
+In Section 3, an efficient algorithm
+call FIT1 ("First
+Intra, Then Inter")
+is introduced
+for
+mining inter-transaction
+association rules. A prelimary
+performance study is presented in Section 4 and the
+study will conclude with Section 5.
+
+2
+Problem
+Description
+Let's first
+introduce
+the notion
+of inter-transaction
+association rules.
+
+Definition
+2.1
+Le2 c
+= {el, e2, . . . , e,}
+be a set of lit-
+erals, called items.
+Let D be an attribute
+and Dam(D)
+be the domain
+of D.
+A transaction
+database
+is a
+database
+containing
+transactions
+in the form
+of (d, E)
+where d E Dam(D)
+and E c C.
+0
+
+The attribute
+D in the transaction
+database is called
+a dimensional
+attribute.
+It describes the properties
+associated with the items, such as time and location.
+It
+is assumed that the domain of the dimensional attribute
+is ordinal and can be divided into equal length intervals.
+For example, time can be divided into day, week, month
+etc. These intervals can be represented by integers 0, 1,
+2, etc., without
+loss of generality.
+When an association rule involves items which are
+m intervals
+apart, the association rule is said to have
+spanned across m intervals.
+A mining parameter called
+maxspan
+(or sliding-window-size)
+denoted by w is
+introduced
+and only rules which span less than or equal
+to w intervals will be mined. Using w, a sliding window
+in the transaction
+database is defined as follows.
+
+Definition
+2.2
+A sliding
+window
+W in a transac-
+tion
+database
+T is a block of w continuous
+intervals
+along
+domain
+D,
+starting
+from
+interval
+do such that
+T contains
+a transaction
+at interval
+do. Each interval
+dj in W is called a subwindow
+of W denoted as W[j]
+where j = dj - do. We call j the subwindow
+number
+of
+dj within
+W.
+cl
+
+Every sliding
+window' in the transaction
+database
+forms a mega-transaction
+defined below.
+
+Definition
+2.3
+Let
+W
+be a sliding
+window
+with
+w
+intervals
+and u be the number
+of literals
+in C.
+We
+deJine a mega-transaction
+M contained
+within
+W to
+be M = {ei(j)]ei
+E W[j],
+1 < i 5 u,O < j 5 w- 1).
+0
+
+As can be seen from the definition,
+a mega-transaction
+in a sliding window W is just the set of items in W, each
+appended with the corresponding subwindow number of
+the interval that contains the item.
+To distinguish
+the items in a mega-transaction
+from
+the items in a traditional
+transaction,
+the items in
+a mega-transaction
+are called extended-items.
+We
+denote the set of all possible extended-items
+as C'.
+Given C and w, we will have
+
+C' = {e;Q,
+. . . , el(w -
+l>,ez(O>,
+. . . , e2(w
+-
+9"`) e,(O), . . . ,eu(w - 1))
+
+Next we will introduce
+two terms: intra-transaction
+itemset
+and inter-transaction
+itemset.
+
+
+Definition
+2.4
+An intra-transaction
+itemset
+is a
+set of items A E c.
+An inter-transaction
+itemset
+is a set of extended
+items B s C'
+such that 3ei(O)
+E
+B, 1 5 i < u.
+0
+
+Now we are ready to define the concept of inter-
+transaction
+association
+rule.
+
+
+Definition
+2.5
+An
+inter-transaction
+association
+rule
+is an implication
+of the form
+X + Y, where
+I. x g C',Y
+c c'.
+2. 3ed(O) E X, 1 5 i 5 u.
+3. 3ei(j) E Y, 1 5 i 5 u,j # 0.
+4. XnY
+= 0.
+cl
+
+Similar
+to the studies in mining
+intra-transaction
+association rules, we introduce
+two measures of inter-
+transaction
+association rules: support
+and confidence.
+
+Definition
+2.6
+Let S be the number
+of transactions
+in
+the transaction
+database.
+Let Tzy be the set of mega-
+transactions
+that contain
+a set of extended-items
+X U Y
+and T,
+be the set of mega-transactions
+that
+contain
+X.
+Then
+the support
+and confidence
+of an inter-
+transaction
+association
+rule X + Y are defined as '
+
+
+support
+= 7,
+confidence
+= #
+I
+
+cl
+
+
+Given
+a minimum
+support
+level minsup
+and a
+minimum
+confidence level minconf,
+our task is to mine
+the complete
+set of inter-transaction
+association rules
+from the transaction
+database with support
+1 minsup
+and confidence
+2 minconf.
+
+
+3
+The FIT1 Algorithm
+The problem
+of mining
+inter-transaction
+association
+rules can be decomposed into two subproblems:
+
+1. Find
+all inter-transaction
+itemsets
+with
+support
+higher
+than
+minsup.
+We call these itemsets
+frequent
+inter-transaction
+itemsets.
+
+*Notice
+that
+in our
+definition,
+we also
+count
+the
+last
+several
+transactions
+in
+sequence
+which
+do
+not
+cover
+the
+full
+sliding
+window,
+i.e.,
+those
+not
+containing
+the full
+maxspan
+of the sliding
+window.
+
+2.
+For
+every frequent inter-transaction
+itemset F and
+for all possible combination
+of X C F, output
+a
+rule X + (F - X) if its confidence is higher than
+minconf.
+
+We will only focus on subproblem
+1 in this paper
+as solving subproblem 2 is trivial.
+Two algorithms
+are
+derived for solving subproblem
+1. The first algorithm,
+EH-Apriori
+was described in [LHF98].
+In this section,
+the second algorithm,
+FIT1 will be introduced.
+Unlike EH-Apriori
+which is modified from the Apriori
+algorithm,
+FIT1 is an algorithm designed specifically for
+discovering frequent inter-transaction
+itemsets.
+FIT1
+makes use of the following
+property to enhance its ef-
+ficiency in discovering frequent inter-transaction
+item-
+sets.
+
+Property
+3.1 Let F be a frequent
+inter-transaction
+itemset.
+Let Ai
+= {ej]l
+5 j 5 u, ej(i)
+E F}
+where
+0 < i 5 (w - 1). For all i, 0 < i 5 (w - l), Ai must be
+a frequent
+intra-transaction
+itemset.
+cl
+
+Property 3.1 is an important
+property as it provides
+a different
+view of mining frequent
+inter-transaction
+itemsets.
+Instead of viewing
+mining
+as an attempt
+to identify
+frequently
+occurring
+patterns formed from
+the extended-items,
+we can view it as an attempt
+to discover frequently
+occurring
+patterns formed from
+frequent intra-transaction
+itemsets.
+As such in FITI,
+we first try mine frequent intra-transaction
+itemsets
+and then mine frequent inter-transaction
+itemsets from
+them. This gives rise to the name of FIT1 which stands
+for First Intra
+Then Inter.
+Generally, FIT1 consists of
+the following phases.
+
+1. Phase I : Discovering Frequent Itemsets and Database
+Transformation
+
+2. Phase II: Mining
+Frequent Inter-Transaction
+Item-
+sets
+
+3.1
+Phase I: Discovering
+Frequent
+Itemsets
+and Database
+Transformation
+In this phase, frequent intra-transaction
+itemsets are
+first mined using the Apriori algorithm
+and then stored
+in a data structure, called Frequent-Itemsets
+Linked
+Table,
+or simply FILT
+which is depicted in Figure 1.
+The data structure consists of an ItemSet
+Hash Table,
+with
+nodes linked
+by several kinds of links.
+The
+following four kinds of links are built in FILT.
+
+1. Lookup
+Links:
+Each frequent
+intra-transaction
+itemset
+is assigned a unique
+ID
+number
+that
+corresponds to a row number in the ItemSet
+Hash
+Table.
+Each itemset is stored in a node pointed to
+by a lookup
+link from the corresponding row in the
+table.
+(a) Lookup
+Links
+
+
+
+
+(c) Subset
+Links
+(b)
+Generator
+and
+Ex-
+tension
+Links
+
+
+
+
+(d)
+Descendant
+Link
+
+
+
+Figure 1: Data Structure for Storing Intra-Transaction
+Itemsets
+
+
+Generator
+and Extension
+Links:
+Given a node
+NF that contains an intra-transaction
+k-itemset F,
+the generator links of NF point to the two (k - l)-
+itemsets that are combined to form F in the Apriori
+algorithm.
+
+Subset
+Links:
+Given a node NF that contains an
+intra-transaction
+k-itemset F, the subset links of NF
+point to all subsets of F with size k - 1.
+
+Descendant
+Links:
+As mentioned earlier, FILT
+is composed of an array and a hash-tree.
+Given
+a node NF that contains
+an intra-transaction
+k-
+itemset F, the descendant links of NF point to all of
+its descendants in the hash-tree. If F = {er , . . . , erc},
+then its descendants will be a set of (k + 1)-itemsets
+of the form {ei,. . . , ek, ek+i}.
+0
+
+After FILT is formed, the database is transformed
+into a set of encoded Frequent-Itemset
+Tables,
+(called
+FIT
+tables).
+We have in total
+m=k
+FIT
+tables,
+{Fl,...,Fmark)t
+h
+w ere rnuzk is the maximum
+size of
+the intra-transaction
+itemsets discovered.
+Each table
+Fk will be of the form {di, IDseti}
+where di is the value
+of the dimensional
+attribute
+and IDseti
+is the IDS of
+frequent k-itemsets that are found in the transaction.
+
+3.2
+Phase II: Mining
+Frequent
+Inter-Transaction
+Itemsets
+In this phase, inter-transactions
+itemsets are repre-
+sented by their ID encoding defined below.
+
+
+
+299
+
+Definition
+3.1
+Let F be an inter-transaction
+itemset.
+Let Ai
+=
+{ej]l
+5 j 5 u,ej(i)
+E F},
+where
+0 2
+i 5 (w - 1).
+The ID
+encoding
+of F is of the form
+I = {IO,. . . , I,-I},
+where Ii is the ID ofAi
+if(AiI
+> 0,
+and 0 otherwise.
+
+Following
+the Apriori
+principle
+[AS94], level-wise
+mining is performed by using inter-transaction
+frequent
+k-itemsets
+(for L 2 2) to form candidate
+frequent
+(k + 1)-itemsets.
+The generation
+of frequent 2-itemsets is similar
+to
+EH-Apriori
+in which a hashing approach introduced
+in
+[PCY95] is used to prune off candidate inter-transaction
+itemsets.
+To generate candidate frequent inter-transaction
+k-
+itemsets for k > 2, frequent (k - 1)-itemsets are first
+joined to form a set of k-itemsets. Their counts are then
+generated by scanning the relevant FIT tables once.
+Two kinds of joins can be performed
+to create new
+candidate
+itemsets:
+intra-transaction
+join
+and cross-
+transaction
+join.
+These two joins are defined as follow.
+
+Definition
+3.2
+Let I
+=
+{lo, II,.
+. . , I~-l}
+and J =
+{Jo, JI,. . .,
+&-I}
+be two frequent
+intra-transaction
+item-
+sets. An intra-transactions
+join
+can be performed
+on
+I and J iff both of the following
+conditions
+are true.
+1.
+There
+exists
+a p such
+that
+IP and
+Jr
+are
+the generators
+of a frequent
+intra-transaction
+itemset
+KP .
+2.
+For allq,
+qfp,
+I9 = J,.
+If I and J can be intra-transaction
+joined,
+the resulting
+candidate
+itemset
+will be K = {Ko, . . . , Kr, . . . , KW-l},
+where K, = Iq = Js for p # q.
+
+Definition
+3.3
+Let I
+=
+{lo, II,.
+. .,I+l}
+and J =
+{Jo,Jl,...
+, J,-1)
+be two frequent
+intra-transaction
+item-
+sets. A cross-transaction
+join
+can be performed
+for
+I and J iff all the following
+conditions
+are true:
+1.
+There exists a p such that I, # 0 and Jr = 0.
+2.
+There
+exists
+a q, q # p such that I* = 0 and
+Jp #O.
+3.
+Forallr,r#p,r#q,I,.=Jr.
+4.
+IP and Jq are the last non-zero
+subwindows
+in
+I and J respectively.
+5.
+All
+subwindows
+of I and J either
+contain
+no
+itemset
+or only frequent
+intra-transaction
+.I-
+itemsets.
+If the above conditions
+are satisfied,
+the resulting
+candidate
+itemsets
+will
+be K
+=
+{Ka, . . ., Kr, . . . ,
+Ka,...,
+I(,-I},
+where K,, = I,,, K, = JQ and for all r,
+r#p,r#q,Kr=Ir=J,-.
+
+To implement
+the defined joins, we first observe the
+following property:
+
+Property
+3.2
+If two itemsets
+I and J can be intra-
+transaction
+or cross-transaction
+joined,
+then they will
+become an equivalent
+itemset
+if each of them has a
+relevant
+subwindow
+set to 0.
+
+With this observation,
+we came up with the hash-
+table method for generating candidate (k + 1)-itemsets
+from frequent inter-transaction
+k-itemsets.
+Each hash
+bucket in the table points to a linked list of frequent
+inter-transaction
+k-itemset that is hashed to the hash
+bucket. A k-itemset will be hashed multiple times, each
+time with one of its subwindows being set to 0. When
+a k-itemset,
+I,
+is hashed to a particular
+linked list,
+FIT1 will go through the linked list to perform intra-
+transaction join or cross-transaction
+join between I and
+itemsets that satisfied the joining condition.
+I will then
+be added to the end of the list.
+While the candidate itemsets are being generated,
+they are inserted into a hash-tree to facilitate
+efficient
+counting of support [AS94].
+
+
+4
+Prelimary
+Performance
+Study
+
+To assess the performance of the proposed algorithms,
+experiments were conducted using synthetic data. The
+method
+used by this
+study
+to generate
+synthetic
+transactions
+is similar to the one used in [AS941 with
+some modifications
+noted below.
+To generate the synthetic
+data, We first generate a
+set L of potentially
+frequent inter-transaction
+itemsets
+chosen from
+C
+items.
+The size of each itemset
+in IL1 follows a Poisson distribution
+with
+mean III.
+When generating
+the transactions,
+the size of each
+transaction
+is determined
+from a Poisson distribution
+with
+mean IT].
+Itemsets
+are then assigned to the
+transaction.
+These assigned itemsets are either newly
+picked from the set IL( or are picked when generating
+earlier transactions.
+Since itemsets may span multiple
+transactions,
+they may be stored in a list for inclusion
+in subsequent transaction.
+Using the method above, we generated a set of syn-
+thetic data with 10000 transactions
+using the following
+setting:
+]T]=5, IL(=lOOO,
+]1]==5, (C I=500 and R=4.
+To compare the performance of EH-Apriori
+and FITI,
+we vary the support level and run the two algorithms
+on the data set with
+maxspan equal to 4 intervals.
+The running
+time of EH-Apriori
+and FIT1 against the
+support level are shown in Figure 2. The experiment
+shows that FIT1 outperforms
+EH-Apriori
+by a large
+margin for the data set. This is not surprising
+because
+FIT1 avoids a large amount of recomputation
+by making
+use of FILT
+and the FIT
+tables.
+Due to the fact
+that FIT1 is a clear winner,
+our next experiment
+on
+scalability
+is performed only on FITI.
+We test the scalability
+of FIT1 by increasing
+the
+number of transactions
+in the dataset from 10k to
+lOOOkwith support=O.l%
+and maxspan=4.
+The result
+in Figure
+3 shows that
+the running
+time of FIT1
+
+
+
+300
+
+Figure 2: Comparison of FIT1 and EH-Apriori
+
+
+increases linearly
+with the number of transactions
+in
+the database.
+
+
+
+
+Figure 3: Effect of increasing the no. of transactions
+
+
+
+5
+Conclusion
+In this paper,
+the concept and definition
+of inter-
+transaction
+association rules are introduced.
+Two al-
+gorithms,
+EH-Apriori
+and FIT1 were implemented
+for
+mining inter-transaction
+association rules. FITI proves
+to be much faster than EH-Apriori
+and its perfor-
+mance was found to be acceptable for real life appli-
+cations.
+While we believe that the present form of
+inter-transaction
+association rules will prove to be use-
+ful in providing
+prediction
+capability
+along a single di-
+mension, we feel that this usefulness can be further en-
+hanced if prediction
+along multiple
+dimensions is possi-
+ble. The success of FIT1 provides us with the necessary
+ground work for mining this new form of association
+rules.
+
+Acknowledgmemt:
+The first and third author were
+partially
+supported by Natural Science and Engineering
+Research (NSERC) of Canada and Networks of Centres
+of Excellence (NCE) of Canada.
+
+References
+[AISQ3]
+R.
+Agrawal,
+T.
+Imielinski,
+and
+A.
+Swami.
+Mining
+association
+rules between
+sets of items
+in large databases.
+In Proc.
+1993
+ACM-SIGMOD
+Int.
+Conj.
+Management
+of Data,
+pages 207-216,
+Washington,
+D.C.,
+May
+1993.
+
+[AS941
+R. Agrawal
+and R. Srikant.
+Fast
+algorithms
+for mining
+association
+rules.
+In Proc.
+1994
+Int.
+Conj.
+Very
+Large
+[ASS51
+
+
+
+[KHC97]
+
+
+
+
+[KMR+Q4]
+
+
+
+
+[LHF98]
+
+
+
+
+[LNHP99]
+
+
+
+
+[MPC96]
+
+
+
+
+[MTV97]
+
+
+
+[NLHP98]
+
+
+
+
+[PCY95]
+
+
+
+
+[SAQ5]
+
+
+
+[SAQ6]
+
+
+
+
+[SVA97j
+
+
+
+
+[ToiQ6]
+Data
+Bases,
+pages 487-499,
+Santiago,
+Chile,
+September
+1994.
+
+R. Agrawal
+and R. Srikant.
+Mining
+sequential
+patterns.
+In Proc.
+1995
+Int.
+Conj.
+Data
+Engineersng,
+pages 3-14,
+Taipei,
+Taiwan,
+March
+1995.
+
+M. Kamber,
+J. Han,
+and J. Y. Chiang.
+Metarule-guided
+mining
+of multi-dimensional
+association
+rules
+using
+data
+cubes.
+In Proc.
+3rd Int.
+Conj.
+Knowledge
+Discovery
+and
+Data
+Mining
+(KDD'97),
+pages 207-210,
+Newport
+Beach,
+California,
+August
+1997.
+
+M. Klemettinen,
+H. Mann&,
+P. Ronkainen,
+H. Toivonen,
+and A.I.
+Verkamo.
+Finding
+interesting
+rules
+from
+large
+sets of discovered
+association
+rules.
+In Proc.
+3rd
+Int.
+Conj.
+Information
+and Knowledge
+Management,
+pages
+401-408,
+Gaithersburg,
+Maryland,
+Nov.
+1994.
+
+H. Lu,
+J. Han,
+and
+L. Feng.
+Stock
+movement
+and
+n-
+dimensional
+inter-transaction
+association
+rules.
+In Proc.
+1998
+SIGMOD
+Workshop
+on Research
+Issues
+on Data
+Mining
+and
+Knowledge
+Discovery
+(DMKD'98),
+pages
+12:1-12:7,
+Seattle,
+Washington,
+June
+1998.
+
+L. V.
+S. Lakshmanan,
+R.
+Ng,
+J. Han,
+and
+A.
+Pang.
+Optimization
+of constrained
+frequent
+set queries
+with
+2-
+variable
+constraints.
+In Proc.
+1999
+ACM-SIGMOD
+Int.
+Conj.
+Management
+of Data,
+pages
+157-168,
+Philadel-
+phia,
+PA, June
+1999.
+
+R. Mea,
+G. Psaila,
+and S. Ceri.
+A new SQL-like
+operator
+for mining
+association
+rules.
+In Pox.
+1996
+Irat.
+Conj.
+Very
+Large
+Data
+Bases,
+pages 122-133,
+Bombay,
+India,
+Sept.
+1996.
+
+H. Mannila,
+H Toivonen,
+and A. I. Verkamo.
+Discovery
+of
+frequent
+episodes
+in event
+sequences.
+Data
+Mining
+and
+Knowledge
+Discovery,
+1:259-289,1997.
+
+R. Ng,
+L. V.
+S. Lakshmanan,
+J. Han,
+and
+A.
+Pang.
+Exploratory
+mining
+and
+pruning
+optimizations
+of con-
+strained
+associations
+rules.
+In
+Proc.
+1998
+ACM-
+SIGMOD
+Int.
+Conj.
+Management
+of Data,
+pages 13-24,
+Seattle,
+Washington,
+June
+1998.
+
+J.S. Park,
+M.S.
+Chen,
+and P.S. Yu.
+An effective
+hash-
+based
+algorithm
+for
+mining
+association
+rules.
+In Proc.
+1995
+ACM-SIGMOD
+Int.
+Conj.
+Management
+of Data,
+pages 175-186,
+San Jose, CA,
+May
+1995.
+
+R. Srikant
+and R. Agrawal.
+Mining
+generalized
+associa-
+tion
+rules.
+In Proc.
+1995
+Int.
+Conj.
+Very
+Large
+Data
+Bases,
+pages 407-419,
+Zurich,
+Switzerland,
+Sept.
+1995.
+
+R. Srikant
+and R. Agrawal.
+Mining
+quantitative
+associa-
+tion
+rules in large relational
+tables.
+In Proc.
+1996 ACM-
+SIGMOD
+Int.
+Conj.
+Management
+of Data,
+pages 1-12,
+Montreal,
+Canada,
+June
+1996.
+
+R. Srikant,
+Q. Vu, and R. Agrawal.
+Mining
+association
+rules
+with
+item
+constraints.
+In
+Proc.
+3rd
+Int.
+Conj.
+Knowledge
+Discovery
+and
+Data
+Mining
+(KDD'97),
+pages 67-73,
+Newport
+Beach,
+California,
+August
+1997.
+
+H. Toivonen.
+Sampling
+large
+databases
+for association
+rules.
+In Proc.
+1996
+Int.
+Conj.
+Very
+Large
+Data
+Bases,
+pages 134-145,
+Bombay,
+India,
+Sept.
+1996.
+
+
+
+
+301
+

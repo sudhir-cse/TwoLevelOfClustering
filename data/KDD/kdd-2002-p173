@@ -1,0 +1,1519 @@
+Shrinkage Estimator Generalizations of Proximal Support
+Vector Machines
+
+
+Deepak K. Agarwal
+AT&TLabs-Research
+180 ParkAvenue
+FlorhamPark, NJ 07932, USA
+dagarwal @research.att.com
+
+
+ABSTRACT
+
+We give a statistical interpretation of Proximal Support Vec-
+tor Machines (PSVM) proposed at KDD2001 as linear ap-
+proximaters to (nonlinear) Support Vector Machines (SVM).
+We prove that PSVM using a linear kernel is identical to
+ridge regression, a biased-regression method known in the
+statistical community for more than thirty years.
+Tech-
+niques from the statistical literature to estimate the tuning
+constant that appears in the SVM and PSVM framework
+are discussed. Better shrinkage strategies that incorporate
+more than one tuning constant are suggested. For nonlin-
+ear kernels, the minimization problem posed in the PSVM
+framework is equivalent to finding the posterior mode of a
+Bayesian model defined through a Gaussian process on the
+predictor space. Apart from providing new insights, these
+interpretations help us attach an estimate of uncertainty
+to our predictions and enable us to build richer classes of
+models.
+In particular, we propose a new algorithm called
+PSVMMIX which is a combination of ridge regression and a
+Gaussian process model. Extension to the case of continu-
+ous response is straightforward and illustrated with example
+datasets.
+
+
+Categories and Subject Descriptors
+G.3 [Probability and Statistics]: Correlation and regres-
+sion analysis, Stochastic processes.
+
+
+General Terms
+Algorithms.
+
+
+Keywords
+
+Bayesian models, classification, correlation, kernel, bias-variance
+tradeoff, regression.
+
+
+1.
+INTRODUCTION
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the firstpage. To copy otherwise, to
+republish, to post on serversor to redistributeto lists, requires prior specific
+permission and/or a fee.
+SIGKDD02Edmonton, Alberta, Canada
+Copyright 2002 ACM 1-58113-567-X/02/0007 ...$5.00.
+Fung and Mangasarian[13] introduced proximal support
+vector machine (PSVM) classification as a variation on clas-
+sical support vector machines (SVM). Their method is based
+on replacing an inequality by an equality in the defining
+structure of the SVM framework, and also on replacing ab-
+solute error by squared error in the defining minimization
+problem.
+The result of these changes is to replace a non-
+linear algorithm with complexity similar to that of linear
+programming to a linear least squares algorithm. The au-
+thors claim that this great decrease in computing complexity
+is achieved with no discernible loss of classification accuracy
+and robustness. The standard SVM has both "linear" and
+"nonlinear" variants, where in the latter the matrix product
+AB is replaced by a nonlinear kernel function K(A, B) in
+part of the defining framework. They also provide a nonlin-
+ear variant of PSVM that can accept an arbitrary kernel K 0
+but still computes as a noniterative least squares algorithm.
+In this paper we show that PSVM with a linear kernel
+is equivalent to ridge regression, a technique that has been
+extensively studied by statisticians [4, 7, 17, 19, 28]. With
+nonlinear kernels, we show PSVM is equivalent to a Bayesian
+model defined through a Gaussian process on the predictor
+space with the kernel determining the correlation function
+of the process.
+The separating hyperplane in this case is
+given by the posterior predictive distribution of the foregoing
+Bayesian model.
+These statistical interpretations provide evidence that some
+commonly used data mining algorithms are simple shrinkage
+estimation techniques used in statistics. Shrinkage estima-
+tion is known to be a powerful variance reduction technique
+and has been successfully applied to data mining problems
+(see [10] for an example). Some other commonly used vari-
+ance reduction techniques are bagging [5] and boosting (See
+[12] and references therein). All these methods inflate bias
+and work well when the reduction in variance is substan-
+tial compared to the increase in bias, leading to an over-
+all reduction in mean squared error. Moreover, working in
+a statistical framework enables us to attach a measure of
+uncertainty to our predictions.
+In particular, we can ob-
+tain 95% predictive intervals for each point in our test set.
+This can potentially help the data analyst build better al-
+gorithms. For instance, if most predictive intervals of mis-
+classified points are statistically significant, it is perhaps in-
+dicative of overfitting. On the other hand, if most of these
+predictive intervals are insignificant, it perhaps means we
+require a better algorithm or need to explore the predictor
+space more thoroughly.
+
+
+
+
+173
+
+Another benefit of our statistical interpretation is that
+it provides guidance into building richer classes of models.
+By using combinations of linear and nonlinear kernels, we
+introduce a new algorithm, PSVMMIX, and indicate how
+it could be implemented by a slight modification of PSVM.
+Similarly we show how the methodology easily extends itself
+to regression with continuous response variables.
+The paper is organized as follows: In Section 2 we prove
+the equivalence of PSVM with linear kernel and ridge regres-
+sion and discuss some commonly used statistical methods
+used to determine the tuning parameter [17, 28] which may
+prove useful when implementing SVMs or PSVMs for data
+mining tasks. In Section 3 we show that the minimization
+task posed by PSVM with nonlinear kernels is equivalent to
+finding the posterior mode of a Bayesian model. Section 4
+discusses PSVMMIX followed by data examples in Section
+5. Section 6 concludes the paper with some discussion and
+scope for future work.
+A word about our notation.
+All vectors will be column
+vectors. The transpose of a matrix or a vector will be indi-
+cated by the superscript ~T'. For an m x n matrix A and n × k
+matrix B, K(A, B) is an m x k matrix. In particular, if x and
+y are vectors, K(x T, y) is a real number, K(x T, A T) is a row
+vector and K(A, A T) is an mxm matrix. For a matrix A, Ai.
+and A 4 will denote the ith row and jth column respectively.
+All probability distributions will be denoted by a single func-
+tion f(.). For example, f(y) will denote the probability dis-
+tribution of a random variable Y, f(y; z, w) will denote the
+conditional distribution of Y given (Z, W).
+E(.) and V(.)
+will denote the expectation and variance of a probability
+distribution respectively. So E(g(Y); Z, W) denotes the ex-
+pectationf g(y)f(y; z, w)dy and Y(g(Y); Z, W) denotes the
+variance f (g(y) - E(g(Y); Z, W) )2f(y; z, w)dy of g(Y) with
+respect to the conditional distribution of Y given (Z, W).
+For any two random variables (X, Y), marginalizing over Y
+will mean obtaining the marginal density f(x) by integrating
+out y from the joint density f(x, y). X ~ N(m, V) means
+the random variable X follows a normal or Gaussian prob-
+ability distribution with expectation m, dispersion matrix
+V and density given by f(x) = 1/V~(27r)PlVDexp(-½(x -
+m)TV-l(x-
+m)), where p is the dimension of X. For each
+x, Jxl will denote the euclidean distance of x from the origin.
+
+2.
+PSVM WITH LINEAR KERNELS ARE
+RIDGE REGRESSIONS
+The following development shows that the linear version of
+PSVM is equivalent to ridge regression where the dependent
+variable, z, is defined as +1 or -1 depending on the class
+assignment of each of the m items in the training set. From
+equation (9) of [13], the objective is to minimize,
+
+
+~uru/2 + (wrw+ ~2)/2'
+(1)
+subject to
+D(Aw-e~)+y
+=
+e,
+
+where,
+D is a diagonal m x m matrix with diag(D) = z;
+A is the m x n matrix of numeric predictors .(features);
+e is an m × 1 vector of all l's;
+w is an n x 1 vector of coefficients, one for each feature, to
+be determined;
+is a scalar, to be determined;
+v is an arbitrary positive tuning constant for the algorithm
+that plays a role whenever perfect classification is impossi-
+ble;
+y is an 'm × 1 vector of absolute "residuals" where the ele-
+ments of y are defined implicitly by the equality in equation
+(i).
+
+We convert this into the statisticians' notation for ridge
+regression using the following equivalencies. Let
+r = Dy (interpreted as signed residuals);
+rTr = yTy (since D 2 = I);
+z = De (e is a vector of ls);
+Aw + eta + r = z **(multiply both sides of equality in (1)
+by D; ta = -~);
+X = [e A] (prepend a column of ls to A);
+/3 = [taw] (ta is the coefficient of the constant term);
+Xj3 = eta TAw (from the previous two definitions);
+r = z - Xf~ (from **, justifying calling r the signed resid-
+ual);
+~Tf~ ~- wTw _4_ta2 (squared length of coefficient vector).
+
+Finally, we see that the entire objective in (1) can be
+written as a ridge regression:
+minimize rTr -.I-j3Tj3/U, subject to r = z - X/~.
+A Bayesian interpretation of ridge regression is given by
+the following model:
+
+f(z;/3) ~ g(xf~, a2I); f(j3) ~ g(0, v0-2I);
+(2)
+
+where 0-2 is the variance of the residuals and I is an identity
+matrix. Note that the minimization problem posed in (1) is
+exactly equivalent to finding the posterior mode of j3 in (2).
+In fact, the posterior distribution of ~ is given by
+
+f(f~; z, u, 0-2) ~ N(LXTz, 0-2L) '
+(3)
+
+where L = (xT x + ~I) -l.
+The separating hyperplane for a point xo not in the train-
+ing sample is x~ E (B;z) = xoT(X TX + ~ I )- IX Tz and hence
+the predictive variance V(xo) at xo is given by
+
+V(xo) = 0-2xoTLXT XLxo.
+(4)
+
+Note that the predictive variance involves an unknown pa-
+rameter 0-2 which can be estimated quite reliably in data
+mining applications by the predictive mean squared error
+for the test dataset.
+Due to the Gaussian assumption, a
+95% predictive confidence interval at x0 is given by
+
+xoTE(~; z).Yr-l.96v/(V(xo) ).
+
+The prior precision k = 1/u is sometimes called the "ridge
+parameter" and determines by how much the least squares
+coefficients are shrunk toward 0. If u ~ c<~ (or equivalently
+k --~ 0), we have a diffuse prior on j3 and ridge regression co-
+incides with ordinary least squares. On the other extreme,
+if v ~
+0 (or equivalently k ~
+c~), j3 ~
+0 and hence the
+predictors don't play any role at all in classification result-
+ing in a totally useless classifier.
+A Bayesian might even
+have a subjective prior distribution for/~, perhaps leading
+to shrinkage toward values other than f~ = 0.
+Also, the
+magnitude of shrinkage for all parameters need not be the
+same. For instance, if the matrix of numeric predictors is
+composed of all possible terms defined by a polynomial of
+degree p (p > 1), we may want to shrink the higher or-
+der terms more than the lower order terms. In most data
+mining applications, the foregoing Bayesian interpretation
+allows the analyst the flexibility to try different shrinkage
+
+
+
+
+174
+
+strategies perhaps based on domain knowledge instead of
+using just one tuning parameter. Such strategies are effec-
+tive if the data is linearly separable but contaminated with
+a lot of noise. As an extreme case, we can have a different
+ridge parameter for each predictor. However, this will lead
+to an algorithm with too many tuning constants that will
+be difficult to implement in practice. In a Bayesian frame-
+work one can assume the ridge parameters have a common
+probability law i.e. j3 ,~ N(0, o'2diag(~l, ... , ~'n)) and the
+~,~s are shrunken further by assuming they are identically
+and independently distributed with common distribution
+f(~,; a) where a is known.
+For instance, a possible choice
+of f(~,;a = {C~,C2}) is a uniform distribution on [C1,C2]
+or even a uniform distribution on a unidimensional grid.
+Finally we remark that extension to the case of continu-
+ous response variable is trivial in the statistical framework.
+Ridge regression was originally invented by statisticians as
+an alternative to ordinary least squares. They argued that
+even though the ridge estimator was biased, a small bias can
+often be compensated by much lower variance, such that the
+overall mean square error of the ridge estimator is smaller
+than it's ordinary least squares counterpart. Ridge estima-
+tion has been generalized for binary response data by [21,
+20]. References [23, 27, 25] extend it further for generalized
+linear models. These models are fitted by means by an it-
+erative procedure which is computationaily more intensive.
+A subtle point to remember while implementing ridge re-
+gression for continuous response is to make sure that the
+response variable is centered at zero. An alternate strategy
+is to assume [/z : w] ~ N((c~,0) T,va2I) where ct is some
+measure of central tendency of the response variable (gen-
+erally the sample mean or sample median).
+
+2.1
+Estimating the tuning parameter
+In most data mining applications, the ridge parameter u is
+chosen by cross-validation, in which some part of the train-
+ing sample is held back and the value that best predicts this
+held-back data is our estimate. While there's nothing wrong
+with this grid search in low dimensions, getting the right
+scale for the parameter (or the interval of grid search) might
+turn out to be a difficult task in most data mining applica-
+tions. The ridge regression literature discusses a plethora of
+methods to estimate ~, from the training data. In practice,
+it may be a good idea to use them first to get the correct
+scale for the parameter followed by cross-validation. We dis-
+cuss some of these methods now and point out the relevant
+literature.
+The simplest method is to graph the coefficients as func-
+tions of the ridge parameter k leading to a choice of ~, that
+seem to give "sensible" coefficient estimates. See [30] for fur-
+ther discussion on these plots called "ridge trace plots" in the
+statistics literature. For data mining applications, although
+these trace plots may not give us the exact estimate of v, it
+certainly helps us to decide on a sensible range [C1, C2] in
+which to confine our grid search to. While [13] mention esti-
+mating u by using a validation sample, they.do not say how
+they conduct the grid search. The authors in [7] compare
+several methods of estimating k through a simulation study.
+Their RIDGM method uses an empirical Bayes approach to
+estimate k. Efron and Morris in their discussion of [7] sug-
+gest a further refinement based on EBMLE discussed in [11].
+Reference [17] compares ten different methods of estimating
+k using a Monte Carlo study and identify three estimators
+- HKB, RIDGM, and GHW as giving the best overall per-
+formance.
+We give a brief description of these estimators
+below.
+
+2.2
+Hoerl, Kennard and Baldwin estimator
+If n is the number of predictors, the HKB estimator is
+given by k = ncr2/13T/~.
+Let j3 denote the ordinary least
+squares (OLS) estimator of fl and o~ = (z - X/~)r(z -
+X/~)/(n - m - 1), an estimate of a s.
+Let j3(k*) denote
+
+the ridge estimate of j3 at k = k*.
+At the tth iteration,
+~2
+^
+T
+^
+kt = na /~(kt-1)
+l~(kt-1) with ko = n~2//~rl~. The iter-
+ated algorithm has been implemented by applying a 10-4
+convergence criterion to successive k values and defaulting
+to least squares estimator if convergence is not obtained in
+30 iterations.
+
+2.3
+RIDGM estimator
+Let GTxTxG
+=
+diag(A1, · .- , An) denote the spectral de-
+composition of xTx
+and 'y = GTfl. The RIDGM approach
+is to choose k so that
+
+E ~/(l/k
++ l/A,) = ~;2n,
+(5)
+
+where ~ = GT/~. In practice, the solution is obtained by
+computing the left hand side of equation (5) for a mesh of
+k values.
+
+2.4
+Golub, Heath, and Wahba estimator
+Both HKB and RIDGM estimators depend explicitly on
+least squares estimates of fl which may not be available in
+practice due to singularity of the feature matrix. GHW es-
+timator is attractive in the sense that it does not depend
+on the OLS estimates.
+A solution for k is determined by
+mlmmmmg
+
+V(k) = [[I - C(k)]zl2/(trace[I - C(k)]) 2,
+where
+C(k) = X(XTX
++ kI)-lX T.
+(6)
+
+In practice, the minimization is implemented by evaluating
+V(k) for a mesh of k values. The computations are facili-
+tated by the fact that (xTx
++ kI) -~ = XG(diag(1/(A~ +
+k),... , 1/(An q- k)))GTX T requiring just one matrix inver-
+sion for all values of k.
+
+2.5 Bayesian estimate
+Finally, it is possible to get a Bayesian estimate by putting
+a prior on ~, and carrying out the estimation process us-
+ing Markov Chain Monte Carlo (MCMC) algorithms. The
+MCMC algorithm most commonly used in statistics is Gibbs
+sampling, popularized by [15]. Such an approach can easily
+incorporate richer shrinkage strategies ass discussed earlier
+in Section 2. However, MCMC algorithms are iterative in
+nature and it may be hard to scale them up to massive
+data mining tasks. With linear kernels, the complexity of
+MCMC depends mainly on n (the number of predictors).
+If n is not too large (say < 200), it is feasible to run an
+MCMC algorithm on the entire training dataset to estimate
+all the shrinkage parameters in the model. Needless to say,
+one should only consider taking such an approach if the
+number of tuning parameters involved is large.
+For large
+number of predictors, if one has to rely on MCMC tech-
+niques, it should be done after marginalizing over/~ in (2)
+i.e. z ..~ N(O, a2(l + vxxT)).
+Since the dispersion matrix
+
+
+
+
+175
+
+is of order m x m, for large m the MCMC algorithm should
+be implemented on a small subsample of the training set.
+
+
+3.
+PSVM WITH NONLINEAR KERNELS
+We now give a statistical interpretation of PSVM with
+nonlinear kernels. From equation (18) of [13], the objective
+is to minimize (w.r.t. u, #)
+
+vrTr/2 + (uTu + /Z2)/2'
+(71
+subject to r=z-AATDu-pc.
+
+Fung and Mangasarian[13] convert this into an algorithm
+for nonlinear kernel K by replacing AA T with K(A, A T) in
+equation (7). Motivated by [22, 24], a more general version
+of this minimization problem can be obtained by replacing
+uTu in equation(7) with uTHu, where H is a positive defi-
+nite matrix. In fact, if we replace w in equation (9) of [13]
+by ATDu in their equation (18), we should have uTDAATu
+in equation (7). We restate the general version of the mini-
+mization problem: minimize(w.r.t, u, #)
+
+urTr/2 + (uT DT HDu + #2)/2'
+(8)
+subject to
+r = z - KDu -/ue.
+
+Consider the transformation O(A) = K(A, AT)Du.
+Then
+equation (8) can be rewritten in terms of 0 as minimize
+(w.r.t. 0, ~)
+
+vrT r/2 + (O(A)TK-i(A, AT)HK-I(A, AT)o + l.~)/2,
+subject to
+r=z-0-#e.
+(9)
+This is immediately seen to be equivalent to finding the pos-
+terior mode of the following Bayesian model:
+
+f(z; 0(A),/.z) ,~ N(#e + 0(A), 0"2I);
+f(a(A), ~) = f(O(A))f(tz);
+(10)
+f(O(A)) ~ N(0, v0"2K(A, AT)H-1K(A, AT));
+f(/~) ~ N(0, vo'2).
+
+If we assume H = K -1 (we will get this with PSVM if we
+make the correction to equation (18) of [13] as discussed
+earlier), 0 is a mean zero Gaussia~ process on the predictor
+space 2d with correlation between any two points x, y E 2d
+given by K(x T, y). We will stick to this formulation in the
+rest of the paper unless mentioned otherwise. The tuning
+parameter v has a different interpretation in this context
+which we explain. For simplicity, let's assume that K(x T, x)
+is constant for each x E 2(.
+This is true for all kernels
+K(x T, y) which depend on x and y only through ]x - y].
+Then the variance of the Gaussian process is v0-2 where 0-2
+is the variance of the residuals. Thus, v is the ratio of the
+variance of the Gaussian process to that of the residuals. In
+fact, obtaining better performance with a small value of v
+would indicate the Gaussian process fails to explain most of
+the variability in the data indicating that we need a better
+model. Note that the constant term p also shrinks toward
+zero as in ridge regression. This motivates us to replace #e
+with MB in the foregoing model where M is a known feature
+matrix and/~ ,-~ N(0, v0"2I). With this extension, large val-
+ues of u combine nonlinearity with ordinary least squares.
+With small values of v, the effect of the Gaussian process
+weakens and ridge regression takes over. If we always want
+ridge regression to work irrespective of the influence of the
+Gaussian process (e.g. if M is nearly singular), we need to
+introduce an additional tuning constant into our algorithm
+by assuming/~ ~ N(0, VVf~a2I). We will discuss fitting these
+richer classes of models later in the paper. To obtain the sep-
+arating hyperplane at a point x not in the training sample,
+note that marginalizing over (0,/z), we obtain
+
+f(z(x), z) ~ g(o, va2(~I + K(B, B T) + eeT)),
+(11)
+where B T = (xT : AT).
+Hence, the separating hyperplane and the predictive vari-
+ance at x are given by the following equations:
+
+E(z(x); z) =: K(x T, AT)v + eTv,
+where
+v = (~I + K(A,A T) + eeT)-lz.
+Y(z(x); z) =:a2(1 + 2v -- v(((g(x T, A T) + eT)
+(I/v + K(A, A T) + eeT)-l(K(x, A) + e))).
+(12)
+A conservative estimate of a 2 can be obtained by taking
+the ratio of predictive MSE to (1 + 2v) enabling us to com-
+pute predictive confidence intervals. Note that we only need
+to perform an extra matrix multiplication to compute the
+predictive variance.
+
+3.1
+Richer classes of models: PSVMMIX
+As discussed earlier, we can enrich the class of statistical
+models by replacing/ze in equation (101 with Mf~, where M
+is a known feature matrix of order m × L and assuming j3 ,.~
+N(O, u~va2I). Note that the predictors used in forming M
+may or may not overlap with those used to form K. We shall
+call this the PSVMMIX(v~) model.
+A special important
+case is the PSVMMIX(1) model in which the shrinkage of
+the linear and nonlinear terms are controlled by a single
+tuning constant v. With M = e, PSVMMIX(1) reduces to
+PSVM with nonlinear kernel.
+The separating hyperplane
+and the predictive variance at a point x not in the training
+sample are given as follows:
+Let XoM and xog denote subsets of x that enter the linear
+and nonlinear part of the algorithm respectively. Then,
+
+E(z(x); z) = K(xoTK, AT)v + V~XoMMT
+TV,
+where v = (~I + K + v~MMT)-lz.
+T
+(13)
+V(z(x); z)---- o'2(1 @ .1212~XoMXoM+ v
+--vt~T(I/v + K + vaMMT)-lt%
+where
+~T = g(xoTg, A T) + VBXoMMT
+T.
+
+Fitting PSVMMIX requires an additional tuning parameter
+v~. Ideally, if we have l tuning parameters, they should be
+estimated in one sweep by conducting a grid search in an l
+dimensional space. In practice, it may be a good idea to first
+fit PSVMMIX(1) followed by a one dimensional grid search
+for u# in a neighborhood of v optimal for PSVMMIX(1). So
+far, the latter has worked well for us.
+
+
+4.
+FITTING PSVMMIX TO A LARGE TRAIN-
+ING SET
+Computing the separating hyperplane from equation (13)
+requires the inversion of an m x m matrix V = (~I + K +
+MM T). For large values of m the inversion of Q = (~ I + K)
+is usually facilitated by using compactly supported kernel
+functions (See [16] and references therein).
+These kernels
+make K a sparse matrix with a much smaller bandwidth
+b~ than m enabling us to compute the inverse using mb~
+flops. However, the presence of MM T completely destroys
+this sparsity. ~/Venow express E(z(x); z) and V(z(x); z) in
+
+
+
+
+176
+
+terms of Q enabling us to exploit the sparsity of K for large
+m. Equation (13) can be rewritten as follows:
+
+E(z(x); z) = E(E(z(x); z,/3); z) =
+xT E(z; 3) + K(x T, AT)Q -1 (z -- ME(z; 3)),
+where
+E(z;fl)=(MTQ-tM+
+1 i~-iMTO-iz
+and
+V(z(x); z) = E(Y(z(x); z.fO,z ) + V(E(z(x); z, ~), z).
+(14)
+Assuming the number of predictors L involved in M is small,
+the expressions in (14) can be evaluated easily once we have
+inverted Q using efficient inversion routines for sparse ma-
+trices (See [18] for details on using these routines in MAT-
+LAB). The limit on the size of L is not too restrictive for
+practical applications. Using a very large L would kill the
+contribution of the Gaussian process to a large extent and
+we may end up approximately implementing a linear version
+of PSVM. On the other hand, if we shrink the linear terms
+too much by making u~ small, we end up approximately im-
+plementing a nonlinear version of PSVM and unnecessarily
+wasting computational time in the process.
+
+4.1
+Implementation Details
+Since Q is positive definite, the actual estimation process
+is carried out by using a sparse Cholesky decomposition of
+Q; i.e. Q : GGT where G is a lower triangular matrix and
+solving a system of linear equation Qx = b for a bunch of
+unknown b's. Once the factorization is known, solving this
+system for any known b involves m forward substitutions
+followed by m backward substitutions.
+All our computa-
+tions were done on an SGI server with 195 MHz processor
+using sparse matrix routines in the meschach library, a nu-
+merical library of C routines for performing calculations on
+matrices and vectors [29]. A pseudo code for implement-
+ing PSVMMIX for known values of u, s (tuning parameter
+associated with the kernel) and u~ at a point xo not in the
+training sample is given below. The two main functions used
+are spCHfactor(P) (returns the Cholesky factorization of a
+sparse input matrix P) and spCHsolve(W, w) (returns the
+solution of Px = w using the sparse Cholesky factorization
+W = spCHfactor(P) of P). The corresponding functions for
+dense matrices are CHfactor and CHsolve. %*% will denote
+matrix multiplication and t(.) will denote the transpose op-
+erator for vectors and matrices.
+1. G = spCHfactor(Q);
+2. xx = t(M)%*%spCHsolve(G,z);
+3. for(i in i:L) OUT.i = spCHsolve(G,M.i);
+4. WORK = t(M)%*%OUT + (1/vZ)*I;
+5. temp -- CHfactor(WORK);
+6. Betaest = CHsolve(temp,xx);
+7. ee -- z - M%*%Betaest;
+8. xx = spCHsolve(G,ee);
+9. kk
+K(xoTK, AT);
+10. Predictor = t(XoM)% * %Betaest + kk% · %xx;
+
+Note that in step 5 we have to do a Cholesky factoriza-
+tion of an L × L dense matrix. This shows clearly why we
+can't afford to use too many predictors in the linear part of
+PSVMMIX. To implement a grid search for (u, s, v~), note
+that at each fixed value of (u, s), steps 1 to 3 are imple-
+mented once followed by looping steps 4 to 10 over values of
+
+Memory requirements for the algorithm are facilitated by
+Table 1: Training and ten-fold cross validation ac-
+curacy for the Ionosphere
+dataset for two different
+models
+Model
+Training
+Test
+set accuracy
+set accuracy
+PSVM
+93.73%
+89.14%
+PSVM2
+94.59%
+i
+90.57%
+
+
+
+use of sparse kernels. Instead of storing an m x m matrix Q
+we have to only store the non-zero entries of the sparse ma-
+trix Q which is of order O(mbw). Loosely speaking, we can
+think of b~, as the maximum number of nearest neighbors
+used by the training algorithm. Storing the dense matrix M
+is of order O(mL) and hence the total memory requirement
+is of order O(m max(L, b~,)). The main computationally in-
+tensive tasks performed by the algorithm are the inversion
+of Q which is of order O(mb~) and inversion of the L x L
+dense matrix in step 5 of the psuedo-code which is of order
+O(La). Hence, for small values of bw and L, the algorithm
+scales linearly both in space and time approximately. Note
+that the predictors used in the nonlinear part only enter
+the algorithm through the pairwise distance matrix used to
+compute the kernel matrix K which is computed at the be-
+ginning. Thus, we can have a very large number of predic-
+tors in the nonlinear part without affecting the performance
+of the algorithm both in terms of time and space. In sec-
+tion 5.6 we illustrate the performance of the algorithm on a
+dataset consisting of large number of observations. We have
+recently applied the algorithm to a dataset consisting of a
+large number of predictors (1200 approximately). However,
+we won't report that analysis here due to space constraint
+but can provide details on request.
+
+
+5.
+DATAEXAMPLES
+
+5.1
+Ionosphere Data
+This publicly available dataset from the UCI Machine
+Learning Repository [26] consists of 351 observations and
+34 predictors.
+All the predictors are continuous.
+The re-
+sponse variable is binary.
+We fitted a PSVM model with
+linear kernel using 69 predictors [1,
+Xl,
+"'"
+, X34,Xl, """2
+,
+X324].
+The value of u was estimated by doing a grid search for
+k E {1, 2,... ,50}. Our final estimator was u = 1/37. We
+also computed the GHW estimate for u which was 1/14 in
+this case. Figure 1 shows separate ridge trace plots (/3 vs
+k = l/u). The trace plots for the linear and quadratic terms
+are different. The latter looks like a funnel with a bigger
+radius indicating it may require more shrinkage.
+We fit-
+ted a second model which we call PSVM2 with two distinct
+shrinkage parameters ul and v2 for the linear and quadratic
+terms. The parameters were estimated by means of a two
+dimensional grid search. The estimated values in this case
+were ul = 1/5, v2 -- 1/25 indicated by vertical lines in figure
+1. The ten-fold cross-validation accuracy was computed by
+randomly dividing the entire data into 10 random subsets of
+equal size (one of them had an extra observation) and con-
+glomerating 9 parts into a training set while the 10th part
+was used as a test set. This was done 10 times (each part
+taken as a test set once) and the average accuracy reported
+in table 1. PSVM2 gives us better test set accuracy than
+the PSVM model in this case.
+
+
+
+
+177
+
+ridge trace plot for linear terms for ionosphere data
+
+
+I1
+
+
+
+
+g
+
+
+0
+10
+20
+30
+40
+50
+k
+
+ridgetraceplotforquadratictermsforionospheredata
+
+®o
+
+
+
+
+,,¢
+
+
+0
+10
+20
+30
+40
+50
+k
+
+
+Figure
+i:
+Ridge Trace Plots for the
+Ionosphere
+Data. Estimated shrinkage parameters are indicated
+by vertical lines.
+
+
+5.2
+Adult dataset
+We analyzed the "Adult" dataset, which is publicly avail-
+able from the Silicon Graphics website [1]. Before pro-
+ceeding with the analysis, all records with missing informa-
+tion were removed. A 2/3, 1/3 training and test data split
+was used as discussed in [1]. Our training set consisted of
+30161 observations while the test dataset consisted of 15060
+records. A total of 96 predictors were used. We performed a
+fully Bayesian analysis with a linear kernel assuming a sepa-
+rate shrinkage parameter for each component of/3. A priori,
+we assumed the common distribution of u's is uniform on
+a grid spanning from .01 to 6 with intervals of length .01
+between .01 and 1 and of length .1 between 1 and 6. The
+grid design was constructed after examining the ridge trace
+plots of the predictors. Figure 2 shows the histogram of the
+posterior medians of u~'s. In 95% of the cases, the medi-
+ans were between .3 and .53, indicating there is not much
+variability among the ui's and we would not gain much by
+using a different shrinkage parameter for each component of
+ft. This was further endorsed by the test accuracy which
+was 83.84%, close to those reported for SVM, PSVM and
+other standard classifiers (Table 1 in [13])
+
+5.3
+Spiral Dataset
+We analyzed the spiral dataset [16] using a Gaussian ker-
+nel K(x T, y) = exp(-slx - y[2). The dataset consists of 194
+black and white points intertwined in the shape of a spi-
+ral. All accuracy results for this dataset are reported using
+the leave-one-out method. Private communication with the
+authors of [13] led us to use u = 105 and s = 4.0.
+This
+gave us a classification accuracy of 76.3% which is quite
+poor compared to the performance of some other data min-
+ing algorithms on this dataset.
+For instance, [14] report
+an accuracy of 88.14%.
+On reducing the value of s to .4,
+il,ll,,,,
+o
+!
+o. o
+o.35
+o. o
+o. 5
+o. o
+o. 5
+o. o
+posteriormedian
+
+
+Figure
+2:
+dataset
+Posterior
+median
+of u's for the adult
+
+
+
+
+the accuracy went up to 98.97%. Intuitively, since K(x T, y)
+denotes the correlation between x and y (which is a decreas-
+ing function of Ix - Yl), reducing the value of s is equivalent
+to increasing the number of nearest neighbors.
+Thus, re-
+ducing s from 4.0 to .4 is roughly equivalent to a 3 fold
+increase in the number of nearest neighbors. On reducing
+s to .04 (approximately 10 fold increase in the number of
+nearest neighbors compared to s = 4.0), the accuracy drops
+down to 46.39%. Apart from inducing positive association
+between like colored points, such a small value of s also in-
+duce positive association between opposite colored points
+resulting in degraded performance.
+With s = .4, there is
+strong correlation between like colored points and negligible
+correlation between points of different colors. This simple
+dataset is a good example where statistical intuition helps us
+better understand a problem and achieve excellent perfor-
+mance. Figure 3 shows the 95% predictive intervals for each
+of the 194 points. None of the predictive intervals contain
+0 showing that all our predictions are statistically signifi-
+cant. Also, as we move away from the centroid (0, 0) of the
+dataset, predictive variability tends to become larger. This
+is a common phenomenon in most stat estimation problems
+- accuracy diminishes near the boundary of the predictor
+space.
+
+5.4
+Boston housing data
+To illustrate the extension of PSVM to continuous re-
+sponse data, we analyzed the Boston housing data publicly
+available from UCI machine learning repository [26]. This
+data was also anMyzed in [8] using Support vector regres-
+sion machines. Our response variable here is MEDV, median
+house price. The dataset consists of 12 continuous predictors
+and one nominal valued predictor called CHAS which indi-
+cates the proximity of a house to Charles river. The latter
+was not used by [8] in their analysis. We randomly parti-
+
+
+
+
+178
+
+Q
+
+
+
+
+to
+6 ¸
+
+
+
+o
+d'
+
+
+
+to
+4 ¸
+
+
+
+
+q
+'7'
+[
+till[Ill i,''w .....................................................
+...
+/ .Itill
+ttl
+
+
+
+I
+iiiiiiItFll,,
+I
+] I I
+ItlJlJl~,, ......................................
+,...,,,.'
+
+
+
+50
+100
+150
+200
+Table 2: Predictive and Training set MSE's for the
+Boston housing data
+Model
+TrainMSE
+Pred MSE
+
+-
+7.2
+SVR
+PSVM(w/o CHAS)
+2.423
+6.359
+PSVM(with CHAS)
+4.152
+6.659
+centered and scaled
+PSVM(with CHAS)
+3.671
+5.548
+(original scale)
+PSVMMIX
+2.423
+6.106
+(response centered)
+PSVMMIX
+3.964
+2.457
+(response on
+original scale)
+
+
+
+Table 3: BUPA Liver data
+Model
+Training set I Test set
+
+
+PSVM
+PSVMMIX
+g set
+accuracy
+78.95%
+78.95%
+accuracy
+72.65%
+72.46%
+
+
+
+Figure 3:
+95%
+predictive confidence intervals for spi-
+ral data. Horizontal axis denotes the observation id
+sorted in descending order by distance from the cen-
+troid (0, 0).
+
+
+
+tioned the database consisting of 506 records into a training
+sample (401 records), validation sample(80 records) and test
+sample (25 records) as in [8]. All continuous predictors were
+centered at 0 and scaled by its standard deviation. We first
+fit PSVM using only the continuous valued predictors and a
+Gaussian kernel. Values of (~, s) were chosen by considering
+a mesh of values { 10, 20, 30,... , 100 }x {.005, .01, ... , 1 }
+and choosing the pair that gives the minimum prediction er-
+ror on the validation sample. For PSVM excluding CHAS,
+our estimates were (40,085). Next, we centered CHAS at
+0 and scaled it to have a standard deviation of 1. We now
+fit PSVM with all 13 predictors. Estimates of u and s in
+this case were 40 and .035 respectively.
+We fit another
+version of PSVM without centering or'scaling CHAS. Our
+parameter estimates in this case were 40 and .045 respec-
+tively. Finally, we fit PSVMMIX by putting CHAS in the
+linear part and the continuous predictors in the nonlinear
+part. We centered our response variable at 0. On conduct-
+ing cross-validation on the validation set we observed that
+for each fixed (~,,s), the value of ua was almost equal to
+0 showing that presence of CHAS in the linear part does
+not help much. We tried another version without center-
+ing the response variable. Our estimates in this case were
+u = 50, s = .085 and ua = .015. Table 2 report training
+and test MSE's for all the models. PSVM without CHAS
+does better than SVR. On introducing CHAS (centered and
+scaled) into PSVM, the performance deteriorates. Without
+any transformation, PSVM with CHAS does well compared
+to PSVM without CHAS. PSVMMIX (response centered at
+0) gives results almost identical to PSVM (without CHAS)
+as discussed above. In all cases, the MSE on the training set
+is smaller than the test set which is expected. However, the
+training MSE relative to test MSE for PSVM without CHAS
+is smaller compared to PSVM's with CHAS. The training
+MSE for SVR was not reported by [8] for comparison. Sur-
+prisingly, we get better performance on the test set shrinking
+the response toward 0.
+
+5.5
+BUPA Liver Dataset
+The BUPA Liver Disorders dataset from Irvine Machine
+Learning Database Repository [26]consists of 345 data points
+with 6 continuous predictors and a selector field used to split
+the data into 2 sets with 145 and 200 instances respectively.
+We fitted two models to this dataset, PSVM with a Gaussian
+kernel and PSVMMIX with all the 6 predictors in the linear
+and nonlinear part. Tuning parameters were all selected by
+means of a small validation set. In table 3 we report the ten-
+fold cross validation accuracy for the two models. Adding
+all the predictors both in the linear and nonlinear part does
+not help much here. We get almost identical accuracies but
+end up wasting computational time fitting PSVMMIX since
+it involves an additional Cholesky decomposition of an L x L
+matrix with L = 7 (6 predictors and one intercept).
+
+5.6
+PSVMMIX on a large dataset
+To exemplify fitting PSVMMIX to large datasets, we used
+a database consisting of 15277 transactions of single-family
+homes sold in Dallas, Texas during 1996. The primary
+source of information is the Dallas Central Appraisal Dis-
+trict (DCAD). Attached to each house in Dallas are its
+structural characteristics and address. The addresses were
+geocoded enabling us to attach a latitude and longitude to
+each house in our database. Each house was assigned to an
+independent school district (ISD). The data had a total of 13
+ISD's. The natural logarithm of selling price of houses was
+used as our response variable since it looked more Gaussian
+than the raw selling price verified using quantile plots (See
+figure 4). We give a list of predictors in our database with
+a brief description of each:
+Continuous predictors:
+1)LAT
+and
+LONG
+-
+Geocoded
+co-ordinates.
+2)LIVAREA
+total
+living
+area
+in
+square
+feet.
+
+
+
+
+179
+
+qqplot for selling price in thousands of dollars for Dallas dat~
+
+1
+o
+
+
+
+
+-4
+-2
+0
+2
+4
+
+
+qqplot for log of selling price for Dallas data
+
+
+
+
+-4
+-2
+0
+2
+4
+
+
+
+
+Figure ,l: qqplots for selling price on the original
+and log scale for Dallas data
+
+
+
+3)AGE
+Age
+of
+the
+dwelling
+in
+decades.
+4)BATHS - Number of baths in the house. Two half bath-
+rooms are counted as one.
+Nominal predictors:
+5) ISD - Independent School District to which the house be-
+longs.
+There
+are
+13 such districts
+in the database.
+6) pool - A 0/1 valued variable with 1 denoting the presence
+of a pool in the house.
+7)wetbar - A 0/1 valued variable with 1 denoting presence.
+Thus, including a dummy variable for each school district,
+we have a total of 20 predictors in our database.
+All con-
+tinuous predictors were centered at zero and scaled by their
+respective standard deviation. Motivated by [2], we decided
+to use LAT and LONG in the nonlinear part of PSVMMIX
+with the remaining 18 predictors used in the linear part.
+To make Q sparse, we worked with the following compactly
+supported kernel [16]
+
+
+BY(xT, y) = exp(-s]x - yl2)max((1 - J-~"='Y'J"~0)
+(15)
+where 5 > (n + 1)/2 and 0 > 0. Note that smaller values of
+will encourage sparsity. The value of P controls the rate
+at which the correlations approach zero.
+To fit PSVMMIX using kernel defined by equation (15) re-
+quires estimating constants u, s, ~, 0 and v~. Fitting PSVM-
+MIX to several small subsamples from the training and val-
+idation set using a Gaussian kernel helped us narrow down
+our grid search for u, s and u~.
+For the current dataset,
+we decided to use s E {.1,.6, .9, 1.0}, u E {20, 50, 100} and
+u~ E {.3, .7, 1.0}. Since we have n = 2 predictors in the non-
+linear part, P must be > 1.5. We used ~ = 2. If Ni denotes
+the number of non-zero correlations of the ith data point in
+the training set (i.e. number of non-zero entries in the ith
+row of K(A, AT) or the number of nearest neighbors for the
+Table 4: Predictive MSE and computational time in
+seconds for different bandwidths
+for Dallas data.
+OlD
+b~
+predMSE
+time
+.025
+349
+.196
+752.77
+.020
+257
+.217
+392.19
+.015162
+.243
+142.58
+.01
+88
+.275
+44.56
+.005
+38
+.317
+16.53
+.001
+27
+1.333
+15.1
+
+
+
+Table
+5:
+Predictive
+MSE
+for test
+and
+training
+dataset for Dallas data
+Model
+
+
+PSVMMIX(u~ = .3)
+Training set
+Test set
+accuracy
+accuracy
+.0013
+.1655
+
+
+
+ith data point), bandwidth b~ is given by b~, = max~Ni. The
+computational time required to do a Cholesky factorization
+of Q increases approximately quadratically with b~. Also,
+the memory requirement is proportional to the number of
+non-zero entries in Q. From equation (15), it's clear that 0 is
+an increasing function of b~,. Higher values of 0 would give
+us good predictions but increase computational time.
+We
+divided our dataset into three random subsets viz a training
+set consisting of 10000 points, a test set consisting of 3277
+points and a validation set consisting of 2000 points. With
+0 = .001D (where D is the maximum pairwise distance), the
+value of b~ was 27. Our grid search for s, v and u~ on the
+validation set was done for this value of bw to speed up com-
+putations and we finally decided to use s = .1, u = 50 and
+v~ = .3. Fixing s, u, u~ and PPat .1,50,.3 and 2 respectively,
+we conducted a grid search to select a "sensible" value of 0.
+Table 4 reports the predictive rose and computational time
+for different values of b~, computed for the validation set.
+Based on the results, we decided to use 0 = .02D. In table
+5 we report the predictive MSE for PSVMMIX(vo). Table
+6 gives coefficient estimates and p-values for some impor-
+tant predictors in the linear part.
+Increase in living area,
+presence of more bathrooms and presence of a pool all lead
+to an increase in house price.
+On the other hand, house
+prices tend to depreciate with age. Wetbar turns out to be
+statistically insignificant.
+
+
+
+
+Table 6:
+Coefficient estimates for PSVMMIX
+for
+Dallas data. Numbers
+in parantheses are estimated
+standard deviations rounded to three decimal places
+coeff
+estimate
+p-value
+LIVAREA
+.198
+0.000
+(.002)
+AGE
+-.030
+0.00
+(.002)
+BATH
+.044
+0.00
+(.oo3)
+POOL
+.086
+0.00
+(.003)
+WETBAR
+-.002
+.559
+(.004)
+
+
+
+
+180
+
+6.
+DISCUSSION AND FUTURE WORK
+We have given a statistical interpretation of PSVM with
+linear and nonlinear kernels. These interpretations provide
+further evidence that shrinkage estimators are perhaps the
+best data mining tools around. The equivalence of ridge
+regression and PSVM with linear kernels enable us to take
+advantage of the rich statistics literature to estimate the tun-
+ing parameter more effectively, an issue that was ignored
+in earlier work. Better shrinkage strategies to control the
+bias-variance tradeoff in our predictions can be considered
+by increasing the number of tuning parameters. This may
+lead to better classification as illustrated by the Ionosphere
+dataset. With a small number of predictors, the tuning con-
+stants could be estimated using MCMC methods as illus-
+trated with the adult dataset. With nonlinear kernels, we
+showed PSVM is equivalent to a Bayesian model defined
+through a Gaussian process on the predictor space with the
+correlations determined by the kernel. We then introduced
+a new class of models called PSVMMIX that were combina-
+tions of linear and nonlinearPSVM's. We demonstrated how
+these models could be fitted to large datasets by exploiting
+the sparsity in K(A, AT). However, more methodological re-
+search is needed to efficiently choose the tuning parameters
+for very large datasets. This is an issue that pops up even in
+the context of PSVM's and SVM's and needs further investi-
+gation. For instance, [9] report on an empirical study where
+they compare several functionals that were used to tune the
+parameters (called hyperparameters by them) for SVM's. In
+our case, we used the cross-validation MSE to tune the pa-
+rameters which is an expensive functional to compute. We
+are currently investigating proxies that are cheap to com-
+pute and would enable us to estimate the tuning constants
+quicker for large datasets.
+One possibility is to use Ker-
+nelized Locally Linear Embeddings (KLLE) proposed in [6].
+Although not exemplified, extension to the case of multi-
+category data with nominal categories is trivial. With k
+categories (k > 2), the classification problem is solved by
+implementing k 2-class problems. With ordinal categories
+(e.g. User satisfaction on a 3 point scale: bad, satisfactory
+and good) the classification problem could be solved using
+an ordinal response model (see [3] and references therein).
+Another issue is selecting predictors to go in the linear
+part and nonlinear part of PSVMMIX. Putting everything
+in the linear and nonlinear part may not help n,uch as il-
+lustrated with the B3PA dataset. Increasing the number
+of predictors L that goes in the linear part increases com-
+putational time cubicly in L since the algorithm involves a
+Cholesky decomposition of an L x L dense matrix. In gen-
+eral, if there are predictors that are known to have a casual
+relationship with the response variable, our recommendation
+is to put them in the linear part. The coefficient estimates
+which we obtain at the end of the day would enable us to
+check whether the causality is respected by the algorithm
+or not. If we have a combination of nominal valued and
+continuous valued predictors (very common in data min-
+ing applications), our recommendation is to put all nominal
+valued predictors in the linear part. Centering and scaling
+predictors may sometime lead to bad performance as seen
+in the Boston Housing data example. On the other hand,
+it is known to work well in many situations. In complex
+multivariate problems, this is always an issue that pops up
+and there isn't any clear answer to this problem. The best
+thing is to try both versions and see the difference. In all
+our data examples with PSVMMIX(v~), we assumed v~ is a
+scalar. However, as with the linear case, this could very well
+be a vector. Further research would be needed to figure out
+an efficient method to estimate the extra tuning parameters.
+We are currently working on this and hope to report on this
+at KDD2003.
+Next, we showed that the statistical interpretationsenable
+us to extend methodologies from the classification literature
+to the regression scenario without any extra effort. We also
+demonstrate the usefulness of attaching an estimate of vari-
+ability to our predictions.
+To sum up, we feel the fundamental contribution of this
+paper is to show that some well known KDD algorithms
+turn out to be equivalent to some commonly used shrinkage
+estimation techniques used in statistics. This equivalence
+opens up new research opportunities both for statisticians
+and computer scientists. The challenge to the statistical
+community is to develop methodologies that can work for
+massive datasets by taking advantage of the KDD litera-
+ture. On the other hand, the statistical insights should help
+the computer science community better understand their al-
+gorithms and improve upon them.
+
+
+7.
+ACKNOWLEDGMENTS
+I thank William DuMouchel for all his support and help
+without which this work would not be possible. It was Bill
+who initiated this work by pointing out the equivalence be-
+tween PSVM with linear kernel and ridge regression. I thank
+Daryl Pregibon for stimulatingdiscussions from time to time
+that helped improve the quality of the paper. Finally, I
+thank Professor C.F.Sirmans and T.G.Thibedeau for pro-
+viding the Dallas house price data.
+
+
+8.
+REFERENCES
+
+[1] US census bureau. Adult dataset. Publicly available
+from: www.sgi.com/Technology/mlc/db.
+[2] D. Agarwal. Bayesian spatial regression analysis with
+large datasets, ph.d dissertation, university of
+connecticut, www.research.att.com/~dagarwal. 2001.
+[3] J. Albert and S. Chib. Bayesian analysis of binary and
+polychotomous response data. Journal of the
+American Statistical Association, 88:669-679, 1993.
+[4] H. Arthur and K. Robert. Ridge regression: Biased
+estimation for nonorthogonal problems.
+Technometrics, 12:55-67, 1970.
+[5] L. Brieman. Bagging predictors. Machine Learning,
+26:123-140, 1996.
+[6] D. DeCoste. Visualizing mercer kernel feature spaces
+via kernelized locally-linearembeddings. In The 8th
+International Conference on Neural Information
+Processing, 2001.
+[7] A. Dempster, M. Schatzoff, and N. Wermuth. A
+simulation study of alternatives to ordinary least
+squares. Journal of the American Statistical
+Association, 72:77-106, 1977.
+[8] H. Drucker, C. J. Burges, L. Kaufman, A. Smola, and
+V. Vapnik. Support vector regression machines. In
+Michael C. Mozer, Michael L Jordan, and Thomas
+Petsche editors, Advances in Neural Information
+Processing Systems -9-, pages 155-161. The MIT
+Press, Cambridge, MA, 1997.
+
+
+
+
+181
+
+[9] K. Duan, S. Keerthi, and A. Poo. Evaluation of simple
+performance measures for tuning SVM
+hyperparameters. Technical Report, Department of
+Mechanical Engineering, National University of
+Singapore, 2001.
+[10] W. DuMouchel and D. Pregibon. Empirical bayes
+screening for multi-item associations. In Proceedings of
+the Seventh ACM SIGKDD International Conference
+on Knowledge Discovery and Data Mining, pages
+67-76. San Francisco, CA, USA, August 2001.
+[11] B. Efron and C. Morris. Data analysis using stein's
+estimator and its generalizations. Journal of the
+American Statistical Association, 70:311-319, 1975.
+[12] J. Friedman, T. Hastie, and R. Tibshirani. Additive
+logistic regression: A statistical view of boosting. The
+Annals of Statistics, 38(2):337-374, April 2000.
+[13] G. Fung and O. Mangasarian. Proximal support
+vector machine classifiers. In Proceedings of the
+Seventh ACM SIGKDD International Conference on
+Knowledge Discovery and Data Mining, pages 77-86.
+San Francisco, CA, USA, August 2001.
+[141 3. Garcke and M. Griebel. Data mining with sparse
+grids using simplicial basis functions. In Proceedings of
+the Seventh ACM SIGKDD International Conference
+on Knowledge Discovery and Data Mining, pages
+87-96. San Francisco, CA, USA, August 2001.
+[15] A. Gelfand and A. Smith. Sampling based approaches
+to calculating marginal densities. Journal of the
+American Statistical Association, 85:398-409, 1990.
+[16] M. Genton. Classes of kernels for machine learning: A
+statistics perspective. Journal of Machine Learning
+Research, 2:299-312, 2000.
+[17] D. Gibbons. A simulation study of some ridge
+estimators. Journal of the American Statistical
+Association, 76:131-139, 1981.
+[18] J. Gilbert, C. Moler, and R. Schreiber. Sparse
+matrices in MATLAB: Design and implementation.
+SIAM Journal on Matrix Analysis and Applications,
+13(1):333-356, 1992.
+[19] T. Hsalng. A bayesian view on ridge regression. The
+Statistician, 24:267-268, 1975.
+[20] S. le Cessie and J. van Houwelingen. Ridge estimators
+in logistic regression. Applied Statistics, 41:191-201,
+1992.
+[21] A. Lee and M. Silvapulle. Ridge estimation in logistic
+regression. Communications in Statistics, Part
+B-Simulation and Computation, 17:1231-1257, 1988.
+[22] Y. Lee and O. Mangasarian. Ssvm: A smooth support
+vector machine. Computational Optimization and
+Applications, 20(1):to appear, 2001.
+[23] M. J. Mackinnon and M. L. Puterman. Collinearity in
+generalized linear models. Communications in
+Statistics, Part A - Theory and Methods,
+18:3463-3472, 1989.
+[24] O. Mangasarian. Generalized support vector
+machines. In A. Smola, P. Bartlett, B.SchSlkopf, and
+D.Schuurmans, editors, Advances in Large Margin
+Classifiers, pages 135-146. The MIT Press,
+Cambridge, MA, 2000.
+[25] B. Marx, P. Eilers, and E. Smith. Ridge likelihood
+estimation for generalized linear regression. In P. van
+der Heijden, W. Jensen, B. Francis, and G. Seeber,
+editors, Statistical Modeling, pages 227-238. North
+Holland Publishing Company (Elseviers), Amsterdam,
+1992.
+[26] P. Murphy and D. Aha. UCI repository of machine
+learning databases.
+www.ics.uci.edu/~mlearn/MLRepository.html.
+[27] B. Segerstedt. On ordinary ridge regression in
+generalized linear models. Communications in
+Statistics, Part A - Theory and Methods,
+21:2227-2246, 1992.
+[28] G. Smith and F. Campbell. A critique of some ridge
+regression methods (with discussion). Journal of the
+American Statistical Association, 75:74-81, 1980.
+[29] D. Stewart and Z. Leyk. Meschach: Matrix
+computations in C. www.netlib.org/c/meschach/.
+[30] R. Thisted. Comments on 'a critique of some ridge
+regression methods'. Journal of the American
+Statistical Association, 75:81-86, 1980.
+
+
+
+
+182
+

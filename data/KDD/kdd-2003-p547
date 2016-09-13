@@ -1,0 +1,1217 @@
+Navigating Massive Data Sets via Local Clustering
+
+
+Michael E. Houle
+IBM Research, Tokyo Research Laboratory
+Shimotsuruma 1623-14, Yamato-shi
+Kanagawa-ken 242-8502, Japan
+
+meh@trl.ibm.com
+
+
+
+ABSTRACT
+This paper introduces a scalable method for feature extrac-
+tion and navigation of large data sets by means of local clus-
+tering, where clusters are modeled as overlapping neighbor-
+hoods. Under the model, intra-cluster association and ex-
+ternal differentiation are both assessed in terms of a natural
+confidence measure. Minor clusters can be identified even
+when they appear in the intersection of larger clusters. Scal-
+ability of local clustering derives from recent generic tech-
+niques for efficient approximate similarity search. The clus-
+ter overlap structure gives rise to a hierarchy that can be
+navigated and queried by users. Experimental results are
+provided for two large text databases.
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications--
+Data mining; H.3.3 [Information Storage and Retrieval]:
+Information Search and Retrieval--Clustering
+
+
+Keywords
+Soft clustering, nearest neighbor, association, confidence
+
+
+1. INTRODUCTION
+Much of the data available online is unstructured, with
+the relationships among contents or attributes little under-
+stood. For such data, the knowledge discovery process starts
+with an attempt to understand the relationships as they ex-
+ist within the data collection itself. This process, sometimes
+referred to as feature extraction or data prospecting, assumes
+no a priori knowledge of the data distribution. When suc-
+cessful, feature extraction provides the raw patterns needed
+for categorization and further correlation.
+In this paper, we will primarily be concerned with the
+problem of feature extraction from text-based data sets by
+means of clustering, one of the most basic forms of pat-
+tern identification. Traditional clustering techniques, how-
+ever, are generally not well-suited for extracting small (but
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA
+Copyright 2003 ACM 1-58113-737-0/03/0008 ...$5.00.
+important) clusters from document sets. Partition-based
+techniques such as K-means and other squared-error heuris-
+tics, expectation maximization heuristics [17], agglomera-
+tive methods such as DBSCAN [6], and many hierarchical
+hybrid methods all attempt to classify data points by as-
+signing each to a single cluster (or in some cases, to reject it
+as `noise'). Text data, however, can often be meaningfully
+classified in more than one way. Any attempt to assign such
+data to a single cluster would unjustifiably weaken any oth-
+ers to which it also relates. Soft clustering methods do allow
+membership in more than one cluster [2, 16]; however, they
+tend to dissipate the contribution of individual data items
+among several clusters through fractional assignment.
+Partitional clustering techniques, as well as soft cluster-
+ing methods, typically rely on the global minimization of
+classification error in distributing data points among a fixed
+number of disjoint clusters. Larger clusters have propor-
+tionately greater influence on the final partition, and their
+size allows them to resist the influences of other elements
+and clusters. Valuable minor clusters, on the other hand,
+tend to be broken up or combined with other clusters. For
+more background on the many clustering techniques for data
+mining contexts, see (for example) [10, 14].
+This paper introduces a general model for clustering that
+borrows from both information retrieval and association rule
+discovery. The patch model assumes that data clusters can
+be represented as the results of neighborhood queries based
+on elements from the data set, according to some measure
+of (dis)similarity appropriate to the domain. These patch
+clusters can be represented very compactly by their query
+elements plus their sizes; when needed, the cluster elements
+themselves can be retrieved by means of a similarity query.
+Under the model, the relationship between two patch clus-
+ters Ci and Cj is assessed according to a natural confidence
+measure resembling that of association rule discovery [1]:
+
+
+conf (Ci,Cj)
+
+=
+|Ci  Cj|
+|Ci|
+.
+
+
+That is, the confidence in the strength of the relevance of
+concept Cj to concept Ci is expressed as the proportion of
+elements forming Ci that also contribute to the formation
+of Cj. The model also assesses intra-cluster association and
+external differentiation in terms of confidence values.
+This paper also provides a generic local clustering strat-
+egy based on the patch model, PatClust, that measures
+the intra-cluster association within expanding sequences of
+neighborhoods, or `patches', about each data element. For
+each element, as the size of its patch increases, a substan-
+
+
+
+547
+
+tial drop in intra-cluster association indicates a transition
+from a cluster to its background. The transition is iden-
+tified and its magnitude determined using maximum likeli-
+hood estimation techniques. PatClust then ranks the patch
+cluster candidates and selects a collection with high inter-
+nal association and high external differentiation relative to
+the elements in their immediate vicinity. Finally, the graph
+structure of confidence relationships between clusters can be
+presented to the user for navigation.
+The distinctive features of the proposed framework in-
+clude:
+
+· Quantitative measures of both cluster quality and con-
+fidence of inter-cluster relationships.
+
+· A quantitative measure of the confidence of relation-
+ship between an individual element and a cluster, al-
+lowing clusters themselves to be retrieved via queries.
+
+· The ability to navigate a clustering by means of a
+graph of the confidence relationships between clusters.
+
+· The ability to find many meaningful minor clusters
+(consisting of as few as 25 elements, regardless of the
+size of the data set), including smaller clusters in the
+intersection of two or more larger clusters.
+
+· Automatic determination of the appropriate number
+of clusters from a user-supplied threshold on minimum
+cluster quality.
+
+· The ability to generate meaningful clusters individu-
+ally, without computing a total clustering.
+
+· The ability to cope with polysemy in text data.
+
+· Scalability to large high-dimensional data sets through
+the judicious use of random sampling techniques and
+fast yet accurate neighborhood approximation.
+
+
+2. SIMILARITY SEARCH
+Traditionally, nearest-neighbor clustering techniques have
+been regarded as being unsuitable for large multi-dimensional
+data sets, due to the lack of efficient methods for computing
+neighborhoods in higher-dimensional settings. As the di-
+mension increases, the distances to the data elements from
+any given point in space tend to concentrate sharply about
+their mean value, for all known distance measures. This
+concentration effect, sometimes referred to as `the curse of
+dimensionality', severely limits the ability to organize data
+to support efficient search [3].
+In an attempt to circumvent the curse of dimensionality,
+researchers have considered sacrificing some of the accuracy
+of similarity queries in the hope of obtaining a speed-up
+in computation. Several recently-proposed methods claim
+speedups of one to two orders of magnitude over sequen-
+tial search, although there is considerable variation in the
+accuracies reported [8, 13, 20].
+One approximate similarity search structure for large multi-
+dimensional data sets that allows control over the accuracy-
+speed tradeoff is the spatial approximation sample hierarchy
+(SASH) [12]. The SASH organizes the data into a multi-level
+structure of random samples, in which objects at a given
+level are connected to several approximate nearest neigh-
+bors drawn from the level immediately above. In contrast
+with the partition-based methods proposed to date, most
+query result objects are reachable via multiple paths through
+a relatively compact portion of the structure. This use of
+multiple paths and random sampling allows the SASH to au-
+tomatically shape itself to the data set even when the under-
+lying distribution is completely unknown, a greatly desirable
+feature for clustering applications. The SASH metric index
+can achieve speedups of nearly two orders of magnitude even
+at average accuracy rates in excess of 90%, where accuracy is
+measured as the proportion of true k-nearest-neighbors ap-
+pearing in the result. For more details regarding the SASH
+structure, its features and its uses, see [12].
+
+
+3. THE PATCH MODEL
+Let S be a database drawn from some domain D, and let
+dist be a pairwise distance function defined on D. In the
+model employed by the proposed PatClust method, each
+cluster is represented by a neighborhood based on dist, as
+measured from one of its constituent elements. The clus-
+tering method must form a description of the data set by
+selecting only a small number of candidate neighborhoods.
+Let R be a subset of the database S. For every query
+pattern q drawn from D, let NN(R,q,k) denote a k-nearest
+neighbor set of q, drawn from R according to dist. The
+neighbor sets of q must be consistent with a single fixed
+ranking q1,q2,...,q|
+R|
+of the points of R, such that q1 = q,
+and dist(q,qi)  dist(q,qj) for all 1  i < j  |R|. We will
+sometimes refer to NN(R,q,k) as the k-patch of q (relative
+to R), or simply as a patch of q.
+
+3.1 Inter-Cluster Association
+Consider now the situation in which two potential clusters
+within R are represented by patches Ci = NN(R,qi,ki)
+and Cj = NN(R,qj,kj). As stated in the introduction, the
+relevance of Cj to Ci can be assessed in much the same way
+as for association rules, according to the confidence measure
+
+conf (Ci,Cj)
+
+=
+|CiCj|
+|Ci|
+=
+1
+ki
+|NN(R,qi,ki)  NN(R,qj,kj)|.
+
+If this confidence value is small, then there is little evidence
+of any impact of the concept represented by Cj upon the one
+represented by Ci. If the confidence is large, Cj is strongly
+related to Ci. However, if ki is too small, the suitability of
+Ci as a cluster candidate is cast into doubt.
+In practice, given a choice of thresholds 0  - < +  1
+on confidence values, we can declare several forms of inter-
+cluster relationships:
+
+· Inclusion: Ci is contained in Cj if conf(Ci,Cj)  +.
+
+· Equivalence: conf(Ci,Cj)  +  conf(Cj,Ci)  +.
+
+· Relevance: conf(Ci,Cj)  -  conf(Cj,Ci)  -.
+
+· Irrelevance: conf(Ci,Cj) < -  conf(Cj,Ci) < -.
+
+The confidence measure can also be regarded as an ex-
+ample of a so-called shared-neighbor distance metric. Such
+measures have previously found application as merge cri-
+teria for agglomerative clustering [5, 11, 15]. However, all
+share the same essential characteristics of agglomerative al-
+gorithms, in that they permit the formation of large, loosely-
+associated clusters. The patch model differs from other
+
+
+
+548
+
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+
+
+
+
+0
+25
+50
+75
+100
+125
+150
+175
+200
+225
+250
+275
+300
+325
+350
+375
+400
+RSCONF
+
+
+
+
+ESTIMATED CLUSTER SIZE: 144
+1/2 SAMPLING
+
+
+
+
+Top 10 Keywords
+0.710
+landfill
+0.406
+dump
+0.325
+canyon
+0.207
+trash
+0.112
+waste
+0.110
+county
+0.108
+expansion
+0.106
+sanitation
+0.092
+garbage
+0.092
+sunshine
+ER
+PR
+Document Title
+1
+1
+COUNCIL STUDIES ZONING AS WAY TO BLOCK SUNSHINE LANDFILL EXPANSION
+9
+5
+DIGEST LOCAL NEWS IN BRIEF: HEARING POSTPONED ON LANDFILL EXPANSION
+17
+9
+COUNTY PLANNERS DELAY VOTE ON DUMP EXPANSION; LANDFILLS: . . . ALTERNA-
+TIVES TO THE SUNSHINE CANYON SITE. . . .
+25
+13
+CITY TO FIGHT STATE CURBS ON KEY DUMP
+33
+17
+LOPEZ CLOSURE WOULD STRAIN OTHER DUMPS
+41
+21
+COUNTY BRACES FOR TENSE, PACKED LANDFILL HEARING
+49
+25
+STATE ACTION COULD CLOSE KEY L.A. DUMP
+57
+29
+STATE AGENCY HAD TO RESTRICT LANDFILL, OBSERVERS SAY
+65
+33
+LOPEZ CANYON LANDFILL
+73
+37
+TRASH DUMP WILL BECOME A LIVING LAB FOR SCIENTISTS
+81
+41
+LANDFILL HEARINGS
+89
+45
+TASK FORCE LISTS CHOICES FOR LANDFILLS
+97
+49
+BACKER OF ELSMERE DUMP PLAN DISPUTES NEGATIVE FINDINGS
+105
+53
+. . . DUMPING PLAN SOUGHT FOR HOUSEHOLD WASTES
+113
+57
+NO DANGEROUS GAS LEAKS FOUND AT DUMP
+121
+61
+DIGEST . . . : BERNARDI ASKS FOR COST STUDY ON DISPOSAL COSTS AT . . .
+129
+65
+PILOT PROGRAM TESTS FEASIBILITY OF RECYCLING SAN DIEGO'S ORGANIC WASTES
+137
+69
+DIGEST / LOCAL NEWS IN BRIEF: BERNARDI ASKS L.A. TO REVOKE DUMP'S PERMIT
+145
+73
+PROJECT IN WALNUT HITS OPPOSITION; HOMEOWNERS COOL TO DEVELOPER'S PLAN
+153
+77
+CITY MAY TRASH BUSY BUT NOISY RECYCLING CENTER
+161
+81
+'SWAMP GAS' ELECTRIC PLANT IS READY TO LOG IN
+169
+85
+. . . SAN CLEMENTE; CITY STUDIES ISSUE OF HOME HEIGHT LIMITS
+177
+89
+FIRM ACCUSED IN CHEMICAL DUMPING CASE; ENVIRONMENT: PAINT COMPANY HID
+HAZARDOUS MATERIALS THE GARBAGE FOR 2 1/2 YEARS, . . .
+185
+93
+DOZEN WELLS TO BE BUILT NEAR CLOSED ARLETA DUMP; WATER: RESIDENTS FEAR
+THAT TOXIC MATERIALS COULD SEEP FROM THE DUMP INTO . . .
+193
+97
+NEW TRASH CZAR SAYS THE FUTURE IS NOW FOR SOLID-WASTE SOLUTION
+201
+101
+BRIEFLY
+209
+105
+POLICE EXPANSION SCALED BACK; COUNCIL POISED TO PASS $956.5-MILLION BUDGET
+217
+109
+ORANGE COUNTY FOCUS: DANA POINT; HOMEOWNERS SUE TO PROTECT VIEWS
+225
+113
+FOR THE RECORD
+233
+117
+CITY COUNCIL TO RECONSIDER PERMIT FOR QUARRY IN AZUSA
+
+
+Figure 1: Details of a RSCM patch cluster. Every fourth patch element is listed. PR denotes the rank of the
+document in the patch; ER denotes the estimated neighbor rank in the full set.
+
+
+shared-neighbor approaches in that it evaluates the rela-
+tionship between two entire clusters. Moreover, it uses the
+notion of confidence to assess the internal association and
+external differentiation of a single cluster.
+
+3.2 Intra-Cluster Association
+Measuring intra-cluster association solely according to the
+dist similarity to a common element can lead to problems,
+as distance-based criteria tend to greatly favor clusters in
+regions of higher density over those in regions of lower den-
+sity. The following confidence-based criteria are relatively
+insensitive to variations in density, due to their reliance on
+neighborhood membership information alone.
+The level of association between an individual element v
+and a patch cluster candidate Cq = NN(R,q,k) can be ex-
+pressed in terms of the confidence between Cq and a neigh-
+borhood based at v of comparable size:
+
+conf (v,Cq)
+
+= conf (Cv,Cq), where Cv = NN(R,v,k).
+
+If v is also a neighbor of Cq, then Cv shall be called a con-
+stituent patch of Cq.
+If Cq has a high degree of internal association, then one
+can reasonably expect strong relationships between Cq and
+its constituent elements v  Cq. On the other hand, low in-
+ternal association would manifest itself as weak relationships
+between Cq and its constituents. We therefore measure in-
+ternal association within a patch cluster candidate in terms
+of its self-confidence, defined as the average confidence of
+the candidate with respect to its constituents:
+
+sconf (Cq)
+
+=
+1
+|Cq|
+P
+vCq
+conf (v,Cq)
+
+A self-confidence value of 1 indicates perfect association
+among the elements of a cluster, whereas a value approach-
+ing 0 indicates little or no internal association.
+Note that the confidence conf (v,Cq) is meaningful even
+when v is not a member of R. The confidence measure can
+thus be used as a similarity measure for cluster queries based
+on a supplied query object.
+3.3 Cluster Boundary Determination
+Assume for the moment that element q is associated with
+some cluster within R that we want to estimate. Using
+the notion of self-confidence, we wish to determine the k-
+patch based at q that best describes this cluster, over some
+range of interest a  k  b. The evaluation focuses on
+two patches: an inner patch Cq,k = NN(R,q,k) of size k
+indicating a candidate patch cluster, and an outer patch
+Cq,
+(k)
+= NN(R,q,(k)) of size (k) > k that provides the
+local background against which the suitability of the inner
+patch will be judged.
+For a given k, we examine the neighbor sets of each ele-
+ment of the outer patch. Consider the neighbor pair (v,w)
+with v in the outer patch, and w in the outer constituent
+patch NN(R,v,(k)). If v also lies in the inner patch, and w
+is also a member of the inner constituent patch NN(R,v,k),
+then we refer to (v,w) as an inner neighbor pair.
+Ideally, the k-patch best describing the cluster containing
+q would achieve a high proportion of inner pairs that con-
+tribute to the self-confidence of the inner patch, and a high
+proportion of neighbor pairs (not necessarily inner) that do
+not contribute to the self-confidence of the outer patch. A
+high proportion of the former kind indicates a high level of
+association within the k-patch, whereas a high proportion
+of the latter kind indicates a high level of differentiation
+with respect to the local background. As both consider-
+ations are equally important, these proportions should be
+accounted for separately. We achieve this by maximizing,
+over all choices of k in the range a  k  b, the sum of the
+two proportions: that is, sconf (Cq,k) and 1-sconf (Cq,
+(k)
+).
+The relative self-confidence maximization (RSCM) prob-
+lem can thus be formulated as follows:
+
+maxa
+kb
+rsconf (Cq,k), where
+rsconf (Cq,k)
+
+= sconf (Cq,k) - sconf (Cq,
+(k)
+)
+
+shall be referred to as the relative self-confidence of the k-
+patch Cq,k with respect to R and . The k-patch at which
+the maximum is attained shall be referred to as the patch
+
+
+
+549
+
+0.106 FAT
+0.252 SPINE
+0.462 LUMBAR
+0.473 DISC
+SIZE = 54
+
+
+
+
+SIZE = 43
+SIZE = 108
+
+
+
+
+0.226 BONE DENSITY
+0.374 OSTEOPOROSIS
+0.653 FRACTURE
+0.481 SCOLIOSIS
+
+
+
+
+SIZE = 25
+0.197 SPINE
+0.342 BONE DENSITY
+0.376 BMD
+0.394 LEPTIN
+
+
+0.194 LUMBAR
+SIZE = 50
+0.447 BONE 0.274 BMD 0.227 SPINESIZE = 232
+
+
+
+
+0.185 DISC
+
+
+
+
+SIZE = 33
+0.309 LUMBAR
+0.457 SPINE
+
+
+
+
+0.794 LEPTIN
+SIZE = 100
+
+
+
+
+0.132 OBESE
+0.179 BMD
+0.235 OSTEOPOROSIS
+0.578 BONERSCONF = 0.218
+
+
+
+
+RSCONF = 0.156
+RSCONF = 0.158
+
+
+
+
+RSCONF = 0.198
+RSCONF = 0.167
+
+
+
+
+RSCONF = 0.191RSCONF = 0.163
+
+
+
+
+RSCONF = 0.216
+
+
+
+
+Figure 2: Portion of the MedLine-A cluster relationship graph.
+
+
+cluster of q over the range [a,b]. RSCM can be regarded as
+a form of maximum likelihood estimation (MLE), in which
+neighbor pairs are classified as to whether or not they sup-
+port the choice of a particular value of k.
+Although it would seem that rsconf values are expensive
+to compute, with a careful implementation the costs can
+be kept low. This is achieved through the efficient computa-
+tion of a profile of values of sconf (NN(R,q,k)) for k ranging
+from 1 to (b). Instead of producing sconf (NN(R,q,k)) via
+direct computation, it is obtained from sconf (NN(R,q,k -
+1)) by computing only the differential resulting from the ex-
+pansion of the patch by one item. Not including the precom-
+putation of neighbor lists, the total time required for finding
+rsconf values is proportional to O((b)2). An example of a
+patch profile appears in Figure 1.
+
+
+4. PATCH CLUSTERING
+
+4.1 Generating Clusters of Arbitrary Size
+The quadratic cost of computing a patch profile greatly
+restricts the size of clusters that can be discovered using the
+RSCM method, if applied directly upon the full data set.
+However, these restrictions can be circumvented through the
+use of random sampling techniques. Instead of accommo-
+dating large clusters by adjusting the limits of the range
+a  k  b, we can instead search for patches of sizes in a
+fixed range, taken with respect to a collection of data sam-
+ples of varying size. Upper bounds on the probability of
+failing to catch a given cluster with respect to all samples
+can be computed using standard Chernoff techniques [18];
+these bounds can then be used to guide the choices of a and
+b. The details are omitted due to space limitations.
+Although RSCM may promote a patch NN(Ri,q,ki) as a
+cluster estimator, there is no precise way of inferring the size
+of the underlying `true' cluster in S. However, following the
+principle of maximum likelihood estimation, the value c =
+E[k]
+|S|
+|Ri|
+at which E[k] = ki constitutes a natural estimate.
+
+4.2 Patch Cluster Relationship Graph
+The proposed total clustering strategy, PatClust, builds a
+cluster relationship graph (CRG) drawn from a collection of
+uniform random samples {R0,R1,R2,...} such that |Ri| =
+|S|
+2i
+for 0  i < log2 n. The graph is hierarchical, with
+nodes at level i corresponding to patch clusters from sample
+Ri. Two cluster nodes are joined by an edge if a sufficiently-
+strong confidence relationship exists between them.
+The graph structure depends on several parameters re-
+sembling the confidence and support thresholds used in as-
+sociation rule generation:
+
+· (cluster quality) each cluster node C must satisfy a
+minimum threshold on its relative self-confidence: 
+ rsconf(C);
+
+· (cluster differentiation) each cluster node pair Ci, Cj
+must satisfy a maximum threshold on the lesser of the
+two confidences between them:  > min{conf (Ci,Cj),
+conf (Cj,Ci)};
+
+· (association quality) each edge (Ci,Cj) must satisfy
+a minimum threshold on the greater of the two con-
+fidences associated with it:   max{conf (Ci,Cj),
+conf (Cj,Ci)};
+
+· (association scale) each edge (Ci,Cj) -- with endpoint
+clusters from samples Ri  Ci and Rj  Cj -- must
+satisfy a maximum threshold on the difference in scale
+between its endpoint clusters:   |i - j|.
+
+Each level of the graph can be viewed as a rough slice of
+the set of clusters, consisting of those with estimated sizes
+falling within a band depending upon the level, and upon a
+and b. Within each level, candidates are chosen greedily ac-
+cording to their rsconf values, with new candidates accepted
+only if they are sufficiently distinct from previously-accepted
+candidates. Pairs of candidates from different levels are then
+checked to ensure that they are sufficiently distinct; if not,
+the one from the higher level (that is, the smaller sample)
+is eliminated. The remaining candidates become the final
+clusters. Edges are generated between each pair of clusters
+for which at least one of the two confidence values is suffi-
+ciently high, provided that their levels are not too far apart.
+The full details are omitted in this version of the paper.
+
+4.3 Asymptotic Complexity
+Excluding the time needed to build (b)-nearest-neighbor
+patches for each of the elements of S, the asymptotic time
+required by PatClust is in O(|S|log |S| + 2), where 
+S
+is the number of clusters produced. The former term covers
+the cost of generating cluster nodes, including the produc-
+tion and ranking of candidate clusters, and elimination of
+duplicates at the same hierarchical level. The latter term
+covers the cost of producing the edges of the CRG, and the
+elimination of duplicate clusters at differing levels.
+
+
+550
+
+Michael Jordan
+Kingdom of Jordan
+Jordan Ranch
+size = 78
+rsconf = 0.227
+size = 34
+rsconf = 0.296
+size = 25
+rsconf = 0.152
+0.755
+jordan
+0.129
+mvp
+0.728
+jordan
+0.095
+iraqi
+0.655
+jordan
+0.146
+land
+0.294
+bull
+0.128
+detroit
+0.531
+iraq
+0.075
+israel
+0.458
+ranch
+0.129
+annex
+0.280
+nba
+0.123
+rebound
+0.256
+kuwait
+0.073
+baghdad
+0.222
+park
+0.122
+ventura
+0.191
+chicago
+0.095
+utah
+0.165
+hussein
+0.065
+embargo
+0.190
+annexation
+0.117
+oak
+0.168
+point
+0.087
+coach
+0.098
+king
+0.064
+u.s.
+0.160
+project
+0.113
+valley
+
+Figure 3: Three polysemous minor clusters found by LATimes-A.
+
+conf
+Level Size rsconf
+Keyword 1
+Keyword 2
+Keyword 3
+0.519
+3
+616
+0.248
+0.810
+oil
+0.193
+exxon
+0.181
+tanker
+0.456
+3
+736
+0.463
+0.799
+china
+0.415
+beijing
+0.325
+chinese
+0.424
+6
+2112
+0.180
+0.608
+iraq
+0.253
+iran
+0.251
+kuwait
+0.364
+2
+296
+0.278
+0.889
+china
+0.270
+beijing
+0.269
+chinese
+0.285
+4
+896
+0.161
+0.515
+exxon
+0.474
+oil
+0.418
+bird
+0.214
+4
+896
+0.157
+0.688
+china
+0.400
+beijing
+0.387
+chinese
+0.185
+8
+6912
+0.175
+0.451
+iraq
+0.449
+bush
+0.255
+israel
+0.133
+3
+240
+0.159
+0.728
+price
+0.380
+oil
+0.156
+increase
+
+Figure 4: Results of LATimes-A cluster query on document "P.M. Briefing; China Finds `Major' Oil Field".
+
+
+5. EXPERIMENTATION
+
+5.1 Data Sets and Execution Parameters
+The patch clustering methods were evaluated using two
+document sets:
+
+· LATimes:
+A data set consisting of 127,738 real-valued feature
+vectors on 6590 attributes, each vector representing oc-
+currences of keywords in news articles from the TREC-
+6 L.A. Times database. TF-IDF (term frequency / in-
+verse document frequency) term weighting was used to
+generate the vector coordinate values [19]. The vectors
+were represented implicitly, as the set had an average
+of roughly 140 non-zero attributes per vector. The
+distance metric used was the size of the angle between
+two point vectors, measured in radians.
+
+· MedLine:
+A data set consisting of 53,629 real-valued feature vec-
+tors on 257,498 attributes, each vector representing
+occurrences of keywords in MEDLINE medical jour-
+nal paper abstracts drawn from the U.S. National Li-
+brary of Medicine's PubMed database. TF-IDF term
+weighting and the vector-angle metric were used. The
+vectors had an average of approximately 75 non-zero
+attributes.
+
+For each set, PatClust ran using exact neighborhood compu-
+tation (LATimes-X and MedLine-X), and approximate com-
+putation (LATimes-A and MedLine-A) using a SASH.
+For each of the four experiments, the following RSCM and
+CRG parameter settings were used:
+
+· An inner patch size range of k  [a,b] = [25,95].
+
+· An outer patch size of (k) = 2k.
+
+· Threshold choices  = 0.15,  = 0.6,  = 0.15,  = 6.
+
+The experiments were performed using Java (JDK1.3) on
+an IBM Intellistation E Pro with 1GHz processor speed and
+512Mb main memory.
+In the examples discussed below, all clusters are labeled
+with keywords having the greatest contributions to the nor-
+malized average of all document vectors of the cluster.
+5.2 Outcomes
+An example of a patch profile from the LATimes-A ex-
+periment is shown in Figure 1. The vertical line in the plot
+indicates the cluster size as estimated by the RSCM method;
+the length of the line is the rsconf value. The sampling rate
+|R|
+|S|
+is indicated above the plot. The title of every fourth doc-
+ument is listed (some of the titles have been abbreviated).
+A portion of the CRG produced by PatClust is shown in
+Figure 2 for the MedLine-A experiment, spanning clusters
+involving `bone', `spine', `disc', and so forth. Each clus-
+ter node is labeled with its rsconf score, its estimated size,
+and its top three keywords. For simplicity, edge conf scores
+are not shown. Of particular interest is the triangular re-
+lationship among clusters on bone, spine and fracture, and
+the prominence of the osteoporosis keyword. The example
+shows the ability of patch clustering to discover minor clus-
+ters even when `masked' by larger ones.
+Patch clustering has the power to resolve polysemy in
+text databases, as the example of Figure 3 shows. The
+three LATimes-A clusters shown center on the basketball
+player Michael Jordan, the Kingdom of Jordan and issues
+surrounding it during the 1990 Gulf War, and a ranch in the
+Los Angeles area, Jordan Ranch, that was the subject of a
+controversial annexation proposal. Despite the polysemy
+problem with the dominant keyword `jordan', each context
+had a sufficiently rich set of keywords not shared by the
+other two, which allowed the the neighborhood-based confi-
+dence measure to differentiate between them. Due to their
+partitional nature, clustering approaches based on term clas-
+sification are unlikely to resolve such ambiguities.
+Figure 4 shows an example of a cluster query based on a
+document of the LATimes-A experiment. The result clus-
+ters are ranked in order of query-to-cluster confidence. Each
+result cluster is listed with its CRG hierarchy level, its es-
+timated size, its rsconf value, and its top three keywords.
+Note that the query returned clusters concerning the 1990
+Gulf War and the Exxon-Valdez tanker spill, both related to
+the query via the concept of `oil'. The query required only
+93 ms of execution time.
+Figure 5 lists the time and space costs associated with
+the four clustering experiments. Time was measured both
+in terms of elapsed time and the number of vector distance
+
+
+
+551
+
+Time Costs
+LATimes-X
+LATimes-A
+MedLine-X
+MedLine-A
+SASH Build Compar's (×106)
+--
+53.8
+--
+17.8
+NN Search Compar's (×106)
+21,756.0
+897.6
+3834.8
+382.7
+SASH Build Time (s)
+--
+446.8
+--
+167.9
+NN Search Time (s)
+174,949.7
+9216.1
+35,967.0
+4327.6
+CRG Build Time (s)
+1933.4
+149.6
+264.5
+14.8
+Total Time (s)
+176,883.1
+9812.5
+36,231.5
+4510.3
+Total Time (hr)
+49.1
+2.7
+10.1
+1.3
+Storage
+LATimes
+MedLine
+Costs
+Data (Mb)
+204.6
+46.0
+SASH (Mb)
+27.8
+11.7
+Patches (Mb)
+199.5
+83.8
+Total (Mb)
+431.9
+141.5
+
+
+
+
+SASH Average
+LATimes-A
+MedLine-A
+Performance
+Accuracy (%)
+76.3
+64.3
+Time (ms)
+43.8
+44.9
+Time (exact) (ms)
+1125.6
+527.8
+Dist Comps
+3876.8
+4060.2
+Dist Comps (exact)
+127,738.0
+53,629.0
+Cluster Size
+LATimes-X
+LATimes-A
+MedLine-X
+MedLine-A
+6400 -- 24,320
+1
+1
+1
+1
+3200 -- 12,160
+1
+2
+0
+0
+1600 -- 6080
+18
+12
+0
+0
+800 -- 3040
+34
+33
+5
+4
+400 -- 1520
+78
+69
+14
+12
+200 -- 760
+162
+130
+26
+18
+100 -- 380
+299
+229
+97
+65
+50 -- 190
+543
+431
+223
+142
+25 -- 95
+1542
+1177
+707
+434
+
+Figure 5: PatClust execution statistics.
+
+
+computations. Measurement began once document and at-
+tribute vectors had been loaded into main memory, and
+ended with the computation of a total clustering and its
+cluster structure graph. The time cost for CRG construc-
+tion assumes that all nearest-neighbor patches have already
+been precomputed.
+The numbers of clusters produced in the four experiments
+are also listed, as well as the average time and accuracy
+of SASH queries (as estimated by performing 200-nearest-
+neighbor queries 100 times over each data set, and noting
+the proportion of true neighbors appearing within the ap-
+proximate result). It should be noted that the potential for
+any cluster element to serve as the representative means that
+accuracies in the 60% to 80% range are sufficient to capture
+the majority of the clusters found using exact queries, at a
+fraction of the execution time. For further discussion of the
+scalability of the SASH, see [12].
+
+
+Acknowledgments
+Many thanks to Masaki Aono for preparing the L.A. Times
+data set for use in these experiments.
+
+
+6. REFERENCES
+[1] R. Agrawal and R. Srikant, Fast algorithms for mining
+association rules, Proc. 20th VLDB Conference, Santiago,
+Chile, 1994, pp. 487­499.
+[2] J. C. Bezdek, Pattern Recognition With Fuzzy Objective
+Function Algorithms, Plenum Press, New York, USA, 1981.
+[3] E. Ch´avez, G. Navarro, R. Baeza-Yates and J. L.
+Marroqu´in, Searching in metric spaces, ACM Computing
+Surveys 33(3):273­321, 2001.
+[4] S. Deerwester, S. T. Dumais, G. W. Furnas, T. K.
+Landauer, and R. Harshman, Indexing by latent semantic
+analysis, J. American Society for Information Science
+41(6):391­407, 1990.
+[5] L. Ert¨oz, M. Steinbach and V. Kumar, A new shared
+nearest neighbor clustering algorithm and its applications,
+Proc. Workshop on Clustering High Dimensional Data and
+its Applications, Arlington, VA, USA, 2002, pp. 105­115.
+[6] M. Ester, H.-P. Kriegel, J. Sander and X. Xu, A
+density-based algorithm for discovering clusters in large
+spatial databases with noise, Proc. 2nd Int. Conf. on
+Knowledge Discovery and Data Mining (KDD), Portland,
+OR, USA, 1996, pp. 226­231.
+[7] U. Fayyad, C. Reina, and P. S. Bradley. Initialization of
+iterative refinement clustering algorithms, Proc. 4th Int.
+Conf. on Knowledge Discovery and Data Mining (KDD),
+New York, USA, 1998, pp. 194­198.
+[8] H. Ferhatosmanoglu, E. Tuncel, D. Agrawal and A. El
+Abbadi, Approximate nearest neighbor searching in
+multimedia databases, Proc. 17th Int. Confon Data
+Engineering (ICDE), Heidelberg, Germany, 2001, pp.
+503­514.
+[9] A. Gionis, P. Indyk and R. Motwani, Similarity search in
+high dimensions via hashing, Proc. 25th VLDB
+Conference, Edinburgh, 1999, pp. 518­529.
+[10] J. Grabmeier and A. Rudolph, Techniques of cluster
+algorithms in data mining, Data Mining and Knowledge
+Discovery 6:303­360, 2002.
+[11] S. Guha, R. Rastogi and K. Shim, ROCK: a robust
+clustering algorithm for categorical attributes, Information
+Systems 25(5):345­366, 2000.
+[12] M. E. Houle, SASH: a spatial approximation sample
+hierarchy for similarity search, IBM Tokyo Research
+Laboratory Report RT-0517, 16 pages, March 5, 2003.
+[13] P. Indyk and R. Motwani, Approximate nearest neighbors:
+towards removing the curse of dimensionality, Proc. 30th
+ACM Symp. on Theory of Computing, Dallas, 1998, pp.
+604­613.
+[14] A. K. Jain, M. N. Murty and P. J. Flynn, Data clustering:
+a review, ACM Computing Surveys 31(3):264­323, 1999.
+[15] R. A. Jarvis and E. A. Patrick, Clustering using a
+similarity measure based on shared nearest neighbors,
+IEEE Transactions on Computers C-22(11):1025­1034,
+November 1973.
+[16] K.-I. Lin and R. Kondadadi, A similarity-based soft
+clustering algorithm for documents, Proc. 7th Int. Conf. on
+Database Systems for Advanced Applications (DASFAA),
+Hong Kong, China, 2001, pp. 40­47.
+[17] T. Mitchell, Machine Learning, McGraw-Hill, New York,
+USA, 1997.
+[18] R. Motwani and P. Raghavan, Randomized Algorithms,
+Cambridge University Press, New York, USA, 1995.
+[19] G. Salton, The SMART Retrieval System -- Experiments
+in Automatic Document Processing, Prentice-Hall,
+Englewood Cliffs, NJ, USA, 1971.
+[20] P. Zezula, P. Savino, G. Amato and F. Rabitti,
+Approximate similarity retrieval with M-trees, The VLDB
+Journal 7:275­293, 1998.
+
+
+
+
+552
+

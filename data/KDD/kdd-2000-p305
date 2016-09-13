@@ -1,0 +1,693 @@
+Application of Neural Networks to Biological Data Mining:
+A Case Study in Protein Sequence Classification
+
+Jason T. L. Wang, Qic heng Ma
+Department of Computer and
+Information Science
+New Jersey Institute of Technology
+Newark, NJ 07102, USA
+f
+jason,qichengg@cis.njit.edu
+Dennis Shasha
+Courant Institute of Mathematical
+Sciences
+New York University
+New York, NY 10012, USA
+shasha@cs.nyu.edu
+Cathy H. Wu
+National Biomedical Research
+Foundation (NBRF-PIR)
+Georgeto wn Univ. Medical Ctr.
+Washington, DC 20007, USA
+wuc@nbrf.georgetown.edu
+
+
+ABSTRACT
+Biological data mining aims to extract signi cant informa-
+tion from DNA, RNA and proteins. The signi cant infor-
+mation may refer to motifs, functional sites, clustering and
+classi cation rules. This paper presents an example of bio-
+logical data mining: the classi cation of protein sequences
+using neural networks. We proposenew tec hniques to ex-
+tract features from protein data and use them in combina-
+tion with the Ba yesianneural network to classify protein
+sequences obtained from the PIR protein database main-
+tained at theNational Biomedical ResearchFoundation. To
+evaluatetheperformanceoftheproposedapproach,wecom-
+pare it with other protein classi ers built based on sequence
+alignment and machine learning methods. Experimental re-
+sults sho w the high precision of the proposed classi er and
+the complementarity of the tools studied in the paper.
+
+Keywords
+Bioinformatics, biological data mining, machine learning,
+neuralnetworks,sequencealignment,featureextractionfrom
+protein data
+
+1. INTRODUCTION
+As a result of the Human Genome Project and relatedef-
+forts, DNA, RNA and protein data accumulate at an accel-
+erating rate. Mining these biological data to extract useful
+knowledge is essentialin genome processing. This subject
+has recen tly gained signi cant attention in the data mining
+community 8]. We presenthere a case study of the sub-
+ject: the application of neural networks to protein sequence
+classi cation.
+The problem studied here can be stated formally as follows.
+Given are an unlabeled protein sequence S and a kno wn
+superfamily F. We want to determine whether or not S
+belongs to F. (We refer to F as the target class and the set
+of sequences not in F as the non-target class.) In general,
+a superfamily is a group of proteins that share similarity
+in structure and function. If the unlabeled sequence S is
+detected to belong to F, then one can infer the structure
+andfunctionofS. Thisprocessisimportantinmanyaspects
+of computational biology. For example,in drug discovery,
+if sequence S is obtained from some disease X and it is
+determined that S belongs to the superfamily F, then one
+may try a combination of the existing drugs for F to treat
+the disease X.
+
+1.1 Feature Extraction from Protein Data
+From aone-dimensional point of view, a protein sequence
+contains characters from the 20-letter amino acid alpha-
+bet A = fA, C, D, E, F, G, H, I, K, L, M, N, P, Q,
+R, S, T, V, W, Y
+g. An important issue inapplying neu-
+ral networks to protein sequence classi cation is how to en-
+code protein sequences, i.e., howto represent the protein
+sequences as the input of the neural networks. Indeed, se-
+quences may not be the best representation at all. Good
+input representations make it easier for the neural networks
+torecognizeunderlyingregularities. Th us,goodinputrepre-
+sentations are crucial to thesuccess of neuralnetworklearn-
+ing.
+Weproposeherenewencodingtechniquesthatentailtheex-
+traction of high-level features from protein sequences. The
+besthighlevelfeatures shouldbe\relevant".By\relevant,"
+we mean that there should be high mutual information be-
+tween the features and the output of the neural networks,
+where the mutual information measures the average reduc-
+tion in uncertainty about the output of the neural networks
+given the v alues of the features.
+Another way to look at these features is that they capture
+both the global similarity and the local similarity of protein
+sequences. The global similarity refers to the overall simi-
+larity amongmultiplesequences whereas thelocal similarity
+refers to motifs (or frequently occurringsubstrings) in the
+sequences. Sections 2 and 3 elaborate onhow to nd the
+global and local similarity of the protein sequences. Section
+4 presentsour classi cation algorithm, which employs the
+Bayesian neural network originated from Mackay 5]. Sec-
+tion 5 ev aluates the performance of the proposed classi er.
+Section 6 compares our approach with other protein classi-
+ers. Section 7 concludes the paper.
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+305
+
+2. GLOBALSIMILARITYOFPROTEINSE-
+QUENCES
+To calculate the global similarity of protein sequences, we
+adopt the 2-gram encoding method proposed in 9]. The 2-
+gram encoding method extracts and counts the occurrences
+of patterns of two consecutive amino acids (residues) in a
+protein sequence. For instance, given a protein sequence
+PVKTNVK, the 2-gram amino acid encoding method gives the
+following result: 1 for PV (indicating PV occurs once), 2 for
+VK (indicating VK occurs twice), 1 for KT, 1 for TN, 1 for NV.
+We also adopt the 6-letter exchange group fe1 e2 e3 e4 e5
+e6gtorepresentaproteinsequence,wheree1 2fH
+R K
+g,e
+2
+2
+fD
+E N Q
+g, e
+3
+2 fCg, e
+4
+2 fS
+T P A G
+g, e
+5
+2 fM
+I L V
+g,
+e6 2 fF
+Y W
+g. Exchange groups represent conservative re-
+placements through evolution. For example, the above pro-
+teinsequencePVKTNVKcanberepresentedase4e5e1e4e2e5e1.
+The 2-gram exchange group encoding for this sequence is: 1
+for e4e5, 2 for e5e1, 1 for e1e4, 1 for e4e2, 1 for e2e5.
+For each protein sequence, we apply both the 2-gram amino
+acid encoding and the 2-gram exchange group encoding to
+the sequence. Thus, there are 20 20+6 6 = 436 possible
+2-gram patterns in total. If all the 436 2-gram patterns are
+chosenastheneuralnetworkinputfeatures, itwouldrequire
+many weight parameters and training data. This makes it
+di cult to train the neural network|a phenomenon called
+\curse of dimensionality." Di erentmethodshavebeenpro-
+posed to solve the problem by careful feature selection and
+by scaling of the input dimensionality. We propose here to
+select relevant features (i.e. 2-grams) by employing a dis-
+tancemeasuretocalculatetherelevanceofeachfeature. Let
+X be a feature and let x be its value. Let P(xjClass = 1)
+and P(xjClass = 0) denote the class conditional density
+functions for feature X, where Class 1 represents the tar-
+get class and Class 0 is the non-target class. Let D(X)
+denote the distance function between P(xjClass = 1) and
+P(xjClass = 0). The distance measure rule prefers feature
+X to feature Y if D(X) > D(Y), because it is easier to
+distinguish between Class 1 and Class 0 by observing fea-
+ture X than feature Y. In our work, each feature X is a
+2-gram pattern. Let c denote the occurrence number of the
+feature X in a sequence S. Let l denote the total number
+of 2-gram patterns in S and let len(S) represent the length
+of S. We have l = len(S);1. De ne the feature value x
+for the 2-gram pattern X with respect to the sequence S
+as x = c=(len(S);1). For example, suppose S = PVKTNVK.
+Then the valueof thefeature VK with respect to S is 2/(7-1)
+= 0.33.
+Because a protein sequence may be short, random pairings
+can have a large e ect on the result. D(X) can be ap-
+proximated by the Mahalonobis distance 6] as D(X) =
+(m1;m0)2=(d21+d20), where m1 and d1 (m0 and d0, respec-
+tively) are the mean value and the standard deviation of
+the feature X in the positive (negative, respectively) train-
+ing dataset. The mean value m and the standard deviation
+d of the feature X in a set S of sequences are de ned as
+m = (
+PNi
+=1
+xi)=N, d =
+q(PNi
+=1
+(xi;m)2)=(N ;1), where
+xi is the value of the feature X with respect to sequence Si
+2 S, and N is the total numberof sequences in S.
+Let X1 X2 ::: XNg, Ng 436, be the top Ng features
+(2-gram patterns) with the largest D(X) values.1 Intu-
+itively, these Ng features occur more frequently in the pos-
+itive training dataset and less frequently in the negative
+training dataset. For each protein sequence S (whether it is
+atrainingoratestsequence),weexaminetheNg featuresin
+S, calculate the feature values, and use the Ng feature val-
+ues as input feature values to the Bayesian neural network
+for the sequence S.
+To compensate for the possible loss of information due to
+ignoringtheother2-grampatterns,alinearcorrelation coef-
+cient(LCC)betweenthevaluesofthe4362-grampatterns
+with respect to the protein sequence S and the mean value
+of the 436 2-gram patterns in the positive training dataset
+is calculated and used as another input feature value for S.
+Speci cally, the LCC of S is de ned as:
+LCC(S)=
+436
+P436
+j=1xjxj
+;
+P436
+j=1xj
+P436
+j=1xj
+r
+436
+P436
+j=1x2j
+;(
+P436
+j=1xj)2
+r
+436
+P436
+j=1xj2
+;(
+P436
+j=1xj)2
+(1)
+
+where xj is the mean value of the jth 2-gram pattern, 1
+j 436,inthepositivetrainingdatasetandxj isthefeature
+value of the jth 2-gram pattern with respect to S.
+
+3. LOCAL SIMILARITY OF PROTEIN SE-
+QUENCES
+The local similarity of protein sequences refers to frequently
+occurringmotifsintheproteinsequences. LetTp =fS1,:::
+, Skg be the positive training dataset. We use a previously
+developed sequence miningtool Sdiscover 7] to ndthereg-
+ular expression motifs of the forms X and X Y where
+each motif has length Len and approximately matches,
+within Mut mutations, at least Occur sequences in Tp.
+Here, a mutation could be a mismatch, an insertion, or a
+deletionofaletter(residue) Len, Mut, andOccur areuser-
+speci ed parameters. X and Y are segments of a sequence,
+i.e., substrings made up of consecutive letters, and is a
+variable length don't care (VLDC) symbol. The length of
+a motif is the number of the non-VLDC letters in the mo-
+tif. When matching a motif with a sequence Si, a VLDC
+symbolin themotif isinstantiated intoanarbitrary number
+of residues in Si at no cost. For example, when matching
+a motif VLHGKKVL with a sequence MNVLAHGKKVLKWK, the
+rst is instantiated into MN and the second is instanti-
+ated into KWK. The number of mutations between the motif
+and the sequence is 1, representing the cost of inserting an
+A in the motif.
+Often, the number of motifs returned by Sdiscover is enor-
+mous. It'susefultodevelopameasuretoevaluatethesignif-
+icance ofthesemotifs. Wepropose heretousetheminimum
+descriptionlength(MDL)principle 3,8]tocalculatethesig-
+ni cance of amotif. TheMDL principlestates thatthe best
+model (a motif in our case) is the one that minimizes the
+sum of the length, in bits, of the description of the model
+and the length, in bits, of the description of the data (the
+positive training sequences in Tp in our case) encoded by
+the model.
+
+1
+Our experimental results show that choosing Ng 30 can
+yield a reasonably good performance provided one has suf-
+cient (e.g. > 200) training sequences.
+
+
+
+306
+
+3.1 Evaluating the Significance of Motifs
+We adopt information theory in its fundamental form3, 8]
+to measure the signi cance of di erent motifs. The theory
+takesintoaccounttheprobabilityofanaminoacidinamotif
+(or sequence) when calculating the description length of the
+motif (or sequence). Speci cally, Shannon showed that the
+length in bits to transmit a symbol b via a channel in some
+optimalcoding is ;log2Px(b), wherePx(b)istheprobability
+with which the symbol b occurs. Given the probability dis-
+tribution Px over an alphabet x =fb1 b2 ::: bng, we can
+calculate the description length of any string bk1bk2:::bkl
+over the alphabet x by ;
+Pli
+=1
+log2Px(bki).
+In our case, the alphabet x is the protein alphabet A
+containing 20 amino acids. The probability distribution P
+can be calculated by examining the occurrence frequencies
+of amino acids in the positive training dataset Tp. One
+straightforward way to describe (or encode) the sequences
+in Tp, referred to as Scheme 1, is to encode sequence by se-
+quence, separated by a delimiter $. Let dlen(Si) denote the
+description length of sequence Si 2 Tp. Then dlen(Si) =
+;
+P
+20
+j=1
+najlog2P(aj) where aj 2 A, 1 j 20 naj is the
+number of occurrences of aj in Si. For example, suppose Si
+= MNVLAHGKKVLKWK is a sequence in Tp. Then dlen(Si) =
+;(log
+2
+P(M)+log2P(N)+2log2P(V)+2log2P(L)+log2P(A)+
+log2P(H)+log2P(G)+4log2P(K)+log2P(W)) Let dlen(Tp)
+denote the description length of Tp = fS1 ::: Skg. If we
+ignore the description length of the delimiter $, thenthede-
+scription lengthof Tp isgivenbydlen(Tp) =
+Pki
+=1
+dlen(Si)
+Another method to encode the sequences in Tp, referred to
+asScheme2, istoencodearegularexpressionmotif,sayMj,
+and then encode the sequences in Tp based on Mj. Specif-
+ically, if a sequence Si 2 Tp can approximately match Mj,
+then we encode Si based on Mj. Otherwise we encode Si
+using Scheme 1. Let us use an example to illustrate Scheme
+2. Consider, forexample,Mj = VLHGKKVL . WeencodeMj
+as1, , V,L,H,G,K,K,V,L, , $0where1indicatesonemuta-
+tionisallowed inmatchingMj withSi, and$0 isadelimiter
+to signal the end of the motif. Let
+P
+1
+denote the alpha-
+bet fa1 a2 ::: a20 $0g, where a1 a2 ::: a20 are the 20
+aminoacids. LetP1 denotetheprobabilitydistributionover
+the alphabet
+P
+1
+. P1($0) can be approximated by the re-
+ciprocal of the average length of motifs. P1( )=n(P1($0)),
+P1(ai)=(1;(n+1)P1($0))P(ai),wherendenotesthenum-
+berofVLDCsinthemotifMj. Foramotifoftheform X ,
+n is 2 for a motif of the form X Y , n is 3.
+Given P1, we can calculate the description length of a motif
+as follows. Let Mj = aj1aj2 ::: ajk . Let dlen(Mj) de-
+note the description length, in bits, of the motif Mj. Then,
+dlen(Mj)=;(2log2P1( )+log2P1($0)+
+Pki
+=1
+log2P1(aji)).
+For instance, consider again Mj = VLHGKKVL . We have
+dlen(Mj)=;(2log2P1( )+log2P1($0)+2log2P1(V)+
+2log2P1(L)+log2P1(H)+log2P1(G)+2log2P1(K)). Sequences
+that are approximately matched by the motif Mj can be
+encoded with the aid of the motif. For example, consider
+again Mj = VLHGKKVL and Si = MNVLAHGKKVLKWK. Mj
+matches Si with one mutation, representing the cost of in-
+serting an A in the third position of Mj. The rst VLDC
+symbolis instantiatedintoMNandthesecondVLDCsymbol
+is instantiated into KWK. We can thus rewrite Si as MN SSi
+KWK where
+SSi is
+VLAHGKKVL and denotes the concate-
+nation of strings. Therefore we can encode Si as M, N, $1
+1, (OI, 3, A) K, W, K, $1. Here $1 is a delimiter, 1 indicates
+that one mutation occurs when matching Mj with Si and
+(OI, 3, A) indicates that the mutation is an insertion that
+adds the letter A to the third position of Mj. In general, the
+mutation operations involved and their positions can be ob-
+served using approximate string matching algorithms. The
+description length of the encoded Si based on Mj, denoted
+dlen(Si Mj), can be calculated easily.
+Suppose there are h sequences Sp1:::Sph in the positive
+training dataset Tp that can approximately match the mo-
+tif Mj. The weight (or signi cance) of Mj, denoted w(Mj),
+is de ned as w(Mj)=
+Phi
+=1
+dlen(Spi);(dlen(Mj)+
+Phi
+=1
+dlen(Spi Mj)). Intuitively, the more sequences in Tp ap-
+proximatelymatchingMj andtheless bits we useto encode
+Mj and to encode those sequences based on Mj, the larger
+weight Mj has.
+Using Sdiscover, one can nd a set S of regular expression
+motifsoftheforms X and X Y fromthepositivetrain-
+ing dataset Tp where the motifs satisfy the user-speci ed
+parameter values Len, Mut and Occur. We choose the top
+Nl motifs with the largest weight. Let R denote this set of
+motifs. Suppose a protein sequence S (whether it is a train-
+ing sequence or a test sequence) can approximately match,
+within Mut mutations, m motifs in R. Let these motifs
+be M1 ::: Mm. The local similarity (LS) value of S, de-
+noted LS(S), is de ned as LS(S) = max1 i mfw(Mi)g, if
+m 6= 0 LS(S) = 0, otherwise. This LS value is used as
+an input feature value of the Bayesian neural network for
+the sequence S. Note that we use the max operator here
+to maximize discrimination. In general, positive sequences
+will have large LS values with high probabilities and have
+small LS values with low probabilities. On the other hand,
+negativesequenceswillhavesmallLS valueswithhighprob-
+abilities and have large LS values with low probabilities.
+
+4. THE BAYESIAN NEURAL NETWORK
+CLASSIFIER
+We adopt the Bayesian neural network (BNN) originated
+from Mackay 5] to classify protein sequences. There are
+Ng + 2 input features, including Ng 2-gram patterns, the
+LCC feature described in Section 2 and the LS feature de-
+scribedinSection3. Thus,aproteinsequenceisrepresented
+as a vector of Ng +2 real numbers. The BNN has one hid-
+denlayercontainingmultiplehiddenunits. Theoutputlayer
+hasoneoutputunit,whichisbasedonthelogisticactivation
+function f(a) = 1=(1+e;a). The BNN is fully connected
+between the adjacent layers.
+LetD =fx(
+m)
+tmg 1 m N,denotethetrainingdataset
+includingbothpositiveandnegativetrainingsequences. x(
+m)
+is an input feature vector including the Ng+2 input feature
+values, and tm is the binary (0/1) target value for the out-
+put unit. That is, tm equals 1 if x(m) represents a protein
+sequence in the target class, and 0 otherwise.
+Letxdenotetheinputfeaturevectorforaproteinsequence,
+whichcouldbeatrainingsequenceoratestsequence. Given
+the architecture A and the weights w of the BNN, the
+output value y can be uniquely determined from the in-
+
+
+
+307
+
+put vector x. Because of the logistic activation function
+f(a) of the output unit, the output value y(x w A) can be
+interpreted as P(t = 1jx w A), i.e., the probability that
+x represents a protein sequence in the target class given
+w, A. The likelihood function of the data D given the
+modeliscalculatedbyP(Djw A)=
+N
+m=1
+ytm(1;y)1
+;tm
+=
+exp(;G(Djw A)). Here G(Djw A) is the cross-entropy er-
+ror function, i.e. G(Djw A) = ;
+PNm
+=1
+tmlog(y) + (1 ;
+tm)log(1;y).
+The G(Djw A) is the objective function in a non-Bayesian
+neural networktraining process andis minimized. This pro-
+cess assumes all possible weights are equally likely. The
+weight decay is often used to avoid over tting on the train-
+ing data and poor generalization on the test data by adding
+a term
+2
+Pqi
+=1
+w2i to the objective function, where is the
+weight decay parameter (hyperparameter),
+Pqi
+=1
+w2i is the
+sum of the square of all the weights of the neural network,
+and q is the number of weights. This objective function
+is minimized to penalize the neural network with weights of
+large magnitudes. Thus, itpenalizes anover-complexmodel
+and favors a simplemodel. However, there is no precise way
+to specify the appropriate value of , which is often tuned
+o ine. In contrast, in the Bayesian neural network, the hy-
+perparameter is interpreted as the parameter of a model,
+and is optimized online during the Bayesian learning pro-
+cess. We adopt the Bayesian training of neural networks
+described in 5] to calculate and maximize the evidence of
+, namely P(Dj A). The training process employs an it-
+erative procedure each iteration involves three levels of in-
+ference.
+In classifying an unlabeled test sequence S represented by
+its input feature vector x, the output of the BNN, P(t =
+1jx w A), is the probability that S belongs to the target
+class. If the probability is greater than the decision bound-
+ary 0.5, S is assigned to the target class otherwise S is
+assigned to the non-target class.
+
+5. PERFORMANCE OF THE BNN CLASSI-
+FIER
+We carried out a series of experiments to evaluate the per-
+formanceoftheproposedBNNclassi eronaPentiumIIPC
+running the Linux operating system. The data used in the
+experiments were obtained from the International Protein
+Sequence Database 2], release 62, in the Protein Informa-
+tion Resource (PIR) maintained by the National Biomedi-
+cal Research Foundation (NBRF-PIR) at the Georgetown
+University Medical Center. This database, accessible at
+http://www-nbrf.georgetown.edu, currently has 172,684
+sequences.
+Fourpositivedatasets were considered theywereglobin, ki-
+nase, ras, and ribitol superfamilies, respectively, in the PIR
+protein database. The globin superfamily contained 831
+protein sequences with lengths ranging from 115 residues
+to 173 residues. The kinase superfamily contained 350 pro-
+tein sequences with lengths ranging from 151 residues to
+502 residues. The ras superfamily contained 386 protein
+sequences with lengths ranging from 106 residues to 322
+residues. The ribitol superfamily contained 319 protein se-
+quenceswithlengthsrangingfrom129residuesto335residues.
+Thenegativedatasetcontained1,650proteinsequences,also
+takenfromPIRproteindatabase, withlengthsranging from
+100 residues to 200 residues these negative sequences did
+not belong to any of the four positive superfamilies. Both
+the positive and negative sequences were divided into train-
+ing sequences andtest sequences where thesize of the train-
+ingdataset equaledthesize of thetestdatasetmultipliedby
+an integer r. Withthesame training data, we tested several
+BNN models with di erent numbers of hidden units. When
+there were 2 hidden units, the evidence obtained was the
+largest, so we xedthe numberof hiddenunits at 2. Models
+with more hidden units would require more training time
+while achieving roughly the same performance.
+The parameter values used in the experiments were as fol-
+lows. Ng (numberof 2-grampatternsusedbyBNN)was 60
+Nl (numberof motifs used by BNN) was 20 Len (length of
+motifs for Sdiscover)was 6 Mut(mutationnumberfor Sdis-
+cover)was2 Occur (occurrencefrequencyofmotifsfor Sdis-
+cover) was 1/10 r (size ratio) was 2. The measure used to
+evaluate the performance of the BNN classi er is precision,
+PR,whichisde nedasPR=(NumCorrect=NumTotal)
+100%, where NumCorrect is the number of test sequences
+classi ed correctly and NumTotal is the total number of
+test sequences. We present the results for the globin su-
+perfamily only the results for the other three superfamilies
+were similar.
+
+5.1 Results
+In the rst experiment, we considered only 2-gram patterns
+and evaluated their e ect on the performance of the pro-
+posed BNN classi er. The performance improves initially
+as Ng increases. The reason is that the more 2-gram pat-
+terns we use, the more precisely we represent the protein
+sequences. However, when Ng is too large (e.g. > 90), the
+training data is insu cient and the performance degrades.
+In the second experiment, we considered only motifs found
+by Sdiscover and studied their e ect on the performance of
+the classi er. 1,597 motifs were found, with lengths ranging
+from 6 residues to 34 residues. The more motifs one uses,
+the better performance one achieves. However, that would
+also require more time in matching a test sequence with the
+motifs. We experimented with other parameter values for
+Len, Mut and Occur used in Sdiscover. The results didn't
+change as these parameters changed. We also tested the
+e ects made by each individual feature and their combina-
+tions. Wefoundthatthebestperformanceis achievedwhen
+all the features are used, in which case the PR of the BNN
+classi er is 98%.
+
+6. COMPARISON OF THREE PROTEIN
+CLASSIFIERS
+ThepurposeofthissectionistocomparetheproposedBNN
+classi er with the commonlyused BLAST classi er 1] built
+basedonsequencealignmentandtheSAMclassi er 4]built
+based on hidden Markov models. The BLAST version num-
+berwas2.0.10. Weuseddefaultvaluesfor theparametersin
+BLAST.TheSAMversionnumberwas3.0 weusedinternal
+weighting method 2 as suggested in 4].
+For BLAST, we aligned an unlabeled test sequence S with
+thepositivetrainingsequences(i.e. thoseinthetargetclass,
+
+
+
+308
+
+e.g., the globin superfamily) and the negative training se-
+quences in the non-target class using the tool. If S's score
+was below the threshold of the e value which was xed at
+10, then S was undetermined. Otherwise, we assigned S to
+the class containing the sequence best matching S.
+For SAM, we employedthe program buildmodelto build the
+HMM model by using only the positive training sequences.
+We then calculated the log-odds scores for all the training
+sequencesusingtheprogramhmmscore. Thelog-oddsscores
+were all negative real numbers the scores (e.g. -100.3) for
+the positive training sequences were generally smaller than
+the scores (e.g. -4.5) for the negative training sequences.
+The largest score Sp for the positive training sequences and
+the smallest score Sn for the negative training sequences
+were recorded. Let Bhigh = max fSp Sng and Blow = min
+fSp Sng. Wethencalculated thelog-odds scores for all the
+test sequences using the program hmmscore. If the score
+of an unlabeled test sequence S was smaller than Blow, S
+was classi ed as a member of the target class, e.g., a globin
+sequence. If the score of S was larger than Bhigh, S was
+classi ed as a member of the non-target class. If the score
+of S was between Blow and Bhigh, S was undetermined.
+In addition to the three basic classi ers BNN, BLAST and
+SAM, we developed an ensemble of classi ers, called COM-
+BINER, that employs an unweighted voter and works as
+follows. If the BNN, BLAST, and SAM agree on the classi-
+cation results, theresult of COMBINERis thesameas the
+results of the three classi ers if two classi ers agree on the
+classi cation results, the result of COMBINER is the same
+as theresultsofthesetwoclassi ers ifnoneof theclassi ers
+agreesontheclassi cationresults,theresultofCOMBINER
+isundetermined. WefoundthatincomparisonwithBLAST
+and SAM, the BNN classi er is faster, without yielding any
+undetermined sequence. COMBINER achieves the highest
+precision (> 99%) among all the classi ers for all the four
+superfamilies globin, kinase, ras, and ribitol.
+
+7. CONCLUSION
+In this paper we have presented a Bayesian neural network
+approach to classifying protein sequences. The main con-
+tributions include (i) the development of new algorithms
+for extracting the global similarity and the local similar-
+ity from the sequences that are used as input features of
+the Bayesian neural network (ii) the development of new
+measures for evaluating the signi cance of 2-gram patterns
+and frequently occurring motifs used in classifying the se-
+quences (iii) experimental studies in which we compare the
+performance of the proposed BNN classi er with two other
+classi ers, namely BLAST and SAM, on four di erent su-
+perfamilies of sequences in the PIR protein database.
+Themain ndingsofourworkincludethefollowing. (1)The
+three studied classi ers, BNN, SAM and BLAST, comple-
+ment each other combining them yields better results than
+using the classi ers individually. (2) The training phase,
+which isdone onlyonce, of thetwo learning-based classi ers
+BNNandSAMmaytakesometime. Aftertheclassi ers are
+trained, theyrunsigni cantlyfasterthanthealignmenttool
+BLAST in sequence classi cation.
+8. ACKNOWLEDGMENTS
+ThisworkwassupportedinpartbyNSFgrantsIRI-9531548
+and IRI-9531554, and by a grant from Novartis Pharmaceu-
+ticals Corporation. We thank SIGKDD reviewers for their
+thoughtful comments. We also thank Dr. David Mackay
+for sharing the Bayesian neural network software with us,
+and Dr. Richard Hughey for providing us with the SAM
+software.
+
+9. REFERENCES
+1] S. F. Altschul, T. L. Madden, A. A. Scha er, J. Zhang,
+Z. Zhang, W. Miller, and D. J. Lipman. Gapped Blast
+and PSI-Blast: A new generation of protein database
+search programs. Nucleic Acids Research,
+25(17):3389{3402, 1997.
+2] W. C. Barker, J. S. Garavelli, D. H. Haft, L. T. Hunt,
+C. R. Marzec, B. C. Orcutt, G. Y. Srinivasarao, L. S. L.
+Yeh, R. S. Ledley, H. W. Mewes, F. Pfei er, and
+A. Tsugita. The PIR-international protein sequence
+database. Nucleic Acids Research, 26(1):27{32, 1998.
+3] A. Brazma, I. Jonassen, E. Ukkonen, and J. Vilo.
+Discovering patterns and subfamilies in biosequences.
+In Proceedings of the Fourth International Conference
+on Intelligent Systems for Molecular Biology, pages
+34{43, 1996.
+4] R. Karchin and R. Hughey. Weighting hidden Markov
+models for maximum discrimination. Bioinformatics,
+14(9):772{782, 1998.
+5] D. J. C. Mackay. The evidence framework applied to
+classi cation networks. Neural Computation,
+4(5):698{714, 1992.
+6] V. V. Solovyev and K. S. Makarova. A novel method of
+protein sequence classi cation based on oligopeptide
+frequency analysis and its application to search for
+functional sites and to domain localization. Computer
+Applications in the Biosciences, 9(1):17{24, 1993.
+7] J. T. L. Wang, G. W. Chirn, T. G. Marr, B. A.
+Shapiro, D. Shasha, and K. Zhang. Combinatorial
+pattern discovery for scienti c data: Some preliminary
+results. In Proceedings of the ACM SIGMOD
+International Conference on Management of Data,
+pages 115{125, 1994.
+8] J. T. L. Wang, B. A. Shapiro, and D. Shasha (eds.).
+Pattern Discovery in Biomolecular Data: Tools,
+Techniques and Applications. Oxford University Press,
+New York, 1999.
+9] C. H. Wu and J. McLarty. Neural Networks and
+Genome Informatics. Elsevier Science, 2000.
+
+
+
+
+309
+

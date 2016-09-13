@@ -1,0 +1,740 @@
+Discovery of Fraud Rules for Telecommunications
+-
+Challenges and Solutions
+Saharon Rosset, Uzi Murad, Einat Neumann, Yizhak Idan, Gadi Pinkas
+
+
+
+Email : {saharonr,
+Amdocs (Israel) Ld.
+8 Hapnina St.
+Ra'anana 43000, Israel
+uzimu, einatn, yizhaki }@amdocs.com
+
+ABSTRACT
+Many fraud analysis systemshave at their heart a rule-based
+enginefor generatingalertsaboutsuspiciousbehaviors.The rules
+in the systemareusually basedon expert knowledge. Automatic
+rule discovery aims at using past examples of fraudulent and
+legitimateusageto find new patternsandrules to help distinguish
+betweenthe two. Someaspectsof the problem of finding rules
+suitable for fraud analysis make this problem unique. Among
+themarethe following: the needto find rules combining both the
+propertiesof the customer(e.g., credit rating) and propertiesof
+the specific "behavior" which indicates fraud (e.g., number of
+international calls in one day); and the needfor a new definition
+of accuracy: We need to find rules which do not necessarily
+classify correctly each individual "usage sample" as either
+fraudulentor not, but ensuretheidentification, with aminimum of
+wasted cost and effort, of most of the fraud "cases" (i.e.,
+defraudedcustomers).
+Theseaspectsrequireaspecial-purposerule discoverysystem.We
+presentasan examplea two-stagesystembasedon adaptationof
+the C4.5 rule generator, with an additional rule selection
+mechanism.Our experimental results indicate that this route is
+very promising.
+Keywords
+Telecommunications,Fraud,Rule discovery.
+
+1. INTRODUCTION
+The two matureapplications developedat Amdocs, which make
+widespreaduse of data mining techniques and algorithms are
+Chum ManagementandFraudAnalysis.
+In this paper we first give a brief review of the data mining
+aspectsof our Chum Managementapplication. We devote the
+bulk of the discussionto the analysis and solution of one of the
+interesting data-mining problems, which arosewithin the Fraud
+Analysis application.
+
+2. CHURN MANAGEMET
+In general "chum" refers to the processof customersswitching
+
+permission to make digital or hard copies of all or part ot`this
+work
+fb
+personal or classroom USCis granted without fee provided that topics
+are not made or distributed for profit or commercial advantage and that
+co@iesbear this notice and the full citation ~1 the first page. To CWY
+otherwise, to republish, to post on servers or to redistribute to lists.
+requires prior specific permission and/or a ~CC.
+KDD-90 San Diego CA USA
+Copyright ACM 1999 I-58113-l43-7/99/08...$5.00
+their carrier or service provider. The Chum Management
+application aimsatthe dual purposesof understandingthe driving
+forces and reasonsbehind chum and predicting the likely future
+churners.
+Using "white-box"
+methods of rule-discovery, the system
+generatesrules or segmentsthat describethe patternsrelevant to
+chum. Theserules can help an analystunderstandthe reasonsfor
+chum and devise preventive measures.Thus the analyst can
+combinethe automatically generatedknowledge with his domain
+expertise.An examplesof automatically generatedpatterns(this is
+a slightly modified "real life" example):
+.
+Customerswho make many international calls, and whose
+overall usage is low, tend to chum. This pattern had an
+explanation, as it was cheaperto make international calls
+from oneof the competitors.
+The secondstageof the Chum Managementprocessinvolves the
+building of a prediction model, which servesto predict the chum
+likelihood for current customers in the next month (or few
+months). Our experienceshows that a prediction model enables
+the operatorto find between20% and 50% of all churnersin the
+top 2% of the list of customers,rankedby their chum prediction
+scores.
+
+3. FRAUD IN TELECOMMUNCATIONS
+The telecommunications industry suffers major losses due to
+fraud. The various types of fraud may be classified into two
+categories:
+Subscription
+fraud
+- fraudsters obtain an account without
+intention to pay the bill. In such cases,abnormal usageoccurs
+throughout the active period of the account. The account is
+usually usedfor call selling or intensive self-usage.Casesof bad
+debt, where customerswho do not necessarily have fraudulent
+intentions never pay a single bill, also fall into this category.
+These cases,while not always considered as "fraud", are also
+interestingandshouldbeidentified.
+Superimposedfraud
+- fraudsters"take over" a legitimate account.
+In such cases,the abnormal usage is superimposedupon the
+normalusageof the legitimate customers.Examplesof suchcases
+include cellular cloning, calling card theft and cellular handset
+theft.
+Call details alone are not enough to establish casesof fraud. A
+certain call maybe perfectly normal in one situation, but indicate
+fraud in another.For example,a call to a PremiumRate Service
+may be normal if the customer usually makessuch calls, but
+suspicious otherwise. Usage volume (total number, duration or
+rated value of calls over a certain period) is also crucial in
+
+
+
+
+409
+
+establishinga fraud case.Finally, customerdetails, such asprice
+plan and credit rating, areimportant in fraud analysis,especially
+in the analysisof subscriptionfraud. For example,customerswith
+a poor credit rating may need to be monitored with tighter
+thresholds, and new customerscan be monitored with unique
+fraud patterns.The use of customer data can refine the fraud
+patterns, and increase the accuracy of these patterns. A fraud
+detectionsystemshould thereforeconsiderthe context of the call
+(customer details and representation of customer's normal
+behavior)andusagevolume,in addition to call details.
+Previous work in the field of fraud detection has concentrated
+mainly on identifying superimposed fraud. Most techniques
+describedin literature use CDR (call detail record) datato create
+behavior profiles for the customer, and detect deviations from
+theseprofiles. [6] describea rule basedsystemthat monitors the
+averageand standarddeviation of the daily number and duration
+of calls of certain characteristics(e.g., international calls), and
+comparescases against a user-defined threshold in terms of
+standarddeviations. [5] usesimilar profiles, but learn from known
+cases a fraud model (combination of monitors and monitor
+thresholds) using a neural network. [3] do not use predetined
+monitors, but learn from historical data which monitors are
+relevant to fraud. Other methods profile customer behavior
+without using specific predelined patterns([4], [2]). None of the
+mentioned techniques usescustomerdata in the fraud analysis.
+None of the systems is aimed at or capable of identifying
+subscriptionfraud.
+
+4. RULE BASED FRAUD DETECTION
+Many commercialfraud analysisapplications am basedon rules.
+In a rulebased fraud detection system,fraud patternsaredefined
+asrules. Rules may consist of one or moreconditions. When all
+conditions aremet,analertis raised.
+Data of 3 types may participate in rule conditions: call details,
+customerdetails and behavior monitors. Behavior monitors are
+summationsof number, duration or rated value of calls over a
+certain time window (e.g., the daily number of calls to mobile
+phones at off-peak hours). Any population of calls can be
+monitored. For identifying superimposed fraud, "normalized"
+monitors canbe used.Thesemonitors denotethe measuredvalue
+in termsof standarddeviationsfrom the averagevalue. High value
+of suchmonitor indicatesanextremeincreasein usage,andcanbe
+usedin asuperimposedfraud rule. Examplefor rules maybe:
+credit-rating=CANDdaily~intemationai~calls~duration>Phrs=>alert
+deposit=XANDnormalized-daily-duration>4standarddeviations=>
+alert
+The alerts are gathered into cases (a case for each account)
+togetherwith accountdata and CDRs. The casesarethe starting
+point of the manualinvestigation process,wherea human analyst
+determinesfor eachcasewhetherit is actually fraudulent or not.
+Traditionally, fraud rules are defined according to expert
+knowledge of the fraud analyst. However, new fraud techniques
+emergeconstantly,and somepatternsarenot intuitive. Therefore,
+it is important to completethe expertknowledgeby automatically
+discovering fraud patterns in historical data. In addition, rule
+discovery process can help in finetuning
+existing rules or
+thresholds,in order to minimize alerts. Rule discovery methods,
+which output lists of fraud rules ("white box"), enablethe analyst
+to easily interpret the results and understandthe reasonsbehind
+them (contrary to "black box" models,such asneural networks).
+This way, the analyst can incorporate the discoveredknowledge
+into the existing system. If an appropriate rule discovery
+procedureis used,the resulting discoveredrules maybe addedto
+the existing rule-setin the system,andenhanceit.
+In this paper,we aim atunderstandingtheunique problemof rule-
+discovery for fraud analysis. We show why standard rule-
+discovery methodologies,used in the classification context, are
+inappropriate for this problem, and suggestalternatives for both
+therule-discovery methodologyandthe algorithmsusedwithin it.
+
+5. UNIQUENESS OF THE PROBLEM
+The problem of finding fraud has some features that make it
+different from standardclassification andrule-discovery problems
+in other data-mining domains. An attempt to use the standard
+algorithms and methods will result in unsatisfactory results.
+Following aresomeof the main points, which makethis problem
+unique and require either special-purposealgorithms and new
+methodologies, or at least, significant adjustments to existing
+ones.
+
+5.1 Two Data Levels
+We must first tackle the problem of "where the patterns live".
+Thereareat leasttwo separatelevels of data,andsometimesmore.
+One level is the customerdata, Examples of such attributes are
+customer's age, ethnicity and family status, price plan and
+telephone model. The second level is what we have termed
+"behavior'`-level data.This termrefersto usagecharacteristicsin a
+short time frame (typically a single day). Typical behavior-level
+attributes arethe numberof international calls in a day and total
+duration of all calls in aday.They mayalsoinclude "normalized"
+behavior monitors detecting changesin behavior relative to the
+history of usageby this particular customer.
+Our goal is to find patternscombining elementsfrom both levels,
+giving rules suchasthe following: "`Peoplewho have a particular
+price plan that makes international calls expensive and who
+display a sharprise in international calls arelikely the victims of
+cloning fraud'.
+Finding such rules with standardclassification-rules generators,
+such as C4.5 [7] or CART [l] is problematic. If we try to use
+them, the data should first be arranged with one record per
+"behavior sample" (which can be, for example, a list of daily
+behavior monitors). Then, the customer properties are actually
+"duplicated" for all the recordsof the samecustomer.A standard
+rule-generationalgorithm, like C4.5, will then typically find rules
+using only customer-level attributes that will not representtrue
+patternsbut ratherresultsof the duplication effect.For example,a
+rule can state that a customer named X is likely to be the
+fraudulent, because the training data contains 100 records
+(behavior samples)for a single customernamedX, all classified
+as fraudulent due to subscription fraud. Thus this rule wilI have
+coverage of 100 "behavior samples" and accuracy of 100%.
+However, the true coverageof this rule is clearly one (customer)
+rather than 100 (records) - because it uses only customer
+attributes.Henceit hasno generalizationability.
+In section 6 we discuss the rulediscovery techniques that can
+tackle two-level data and assurethe generation of appropriate
+two-level rules.
+
+
+
+
+410
+
+5.2 Requirements
+from "Good" Rules
+In the fraud analysiscontext, the generatedrules will be usedas
+alarm-settersfor suspectedfraud. Therefore, we would like to
+generaterules that are appropriatefor this task, rather than for
+standardmachinelearning taskssuchasclassification or scoring.
+In a rule-basedfraud managementsystems,the alarms(or alerts)
+are usually not treated individually but rather combined at the
+customerlevel into "cases" of suspectedfraud. Thus, K alerts
+generatedfor the samecustomerresult in only one casebeing
+created,while K alertsgeneratedfor K different customers,result
+in K different casesbeing created.If wejust count the numberof
+true alarms (i.e., alerts that are actually fraudulent) and false
+alarms,the two situationswould beidentical. Thus, it is generally
+truethat accuracyshouldbecomputedatthe customer(case)level
+- the "higher" of the two levels mentionedabove.The successof
+a fraud rule is determinedby how many really fraudulent cases
+were identified andhow manycaseswerefalsealarms.
+`Ihe coverage of a rule should similarly be computed at the
+customerlevel, to indicate the variety of fraudulent casescovered
+by this pattern. However, the coveragein "records" (the total
+numberof alerts generatedby this rule) is also of interest, as it
+indicatesthe numberof alertspercase.A casewith manyalertsis
+likely to both appearearlier (i.e., the first alert for the casewill be
+generatedsoonafterthefraud starts)andbe treatedmorequickly.
+Thusthecriteria for thequality of arule are:
+.
+High accuracyin cases(=> specificity - mostcasesfound are
+really fraudulent).
+.
+High coverageof true fraud cases(=> sensitivity - most
+fraudulentcasesarefound).
+.
+High coverage of true fraud alerts (=> fraud cases are
+detectedquickly).
+
+5.3 Requirements from "Good" Rule-Sets
+Within a rulebased systemthe performanceof each individual
+rule is secondaryin importance.The main issueis, of course,the
+performanceof the rule-set selectedfor use in the system.Our
+ultimate goal in the rule-discovery processshould be to selecta
+rule-setthat maximizesthe threecriteria mentionedabove,rather
+thanindividual ruleswith desirableproperties.
+Another criterion of quality for a ruleset is its ability to reflect
+different patternsrelatedto fraud. We would like our rules to be
+different from eachother in the sensethat they reflect different
+kinds of "behavior" patterns.This difference should be reflected
+in a relatively small overlap between the sets of "behaviors"
+belonging to the rules within our sample of fraudulent and
+legitimate customer behaviors. In other words, difference in
+patternsshould be measuredat the "behavior" level (the lower of
+thetwo). So,two rules candescribecompletelydifferent patterns,
+with no overlap in the behavior samplesbelonging to the rules,
+but give alertsfor the samecustomers,becauseall thesecustomers
+haveboth patterns.In sucha case,we would considertheserules
+asdifferent, andwould like to find both rules.
+We would also like to have a relatively small numberof rules in
+the selectedrule-set. The rule-discovery results are supposedto
+serveonly asanincrementto the handcraftedrules, which arethe
+main setof rules in the rule-basedsystem.The analystsmanaging
+the systemshould be ableto understandthe rulediscovery results
+and integrate them into the system,while retaining their control
+over the whole process.Therefore, generating small rule-sets is
+essentialfor using rule-discoveryin this context.
+Thusour qualitative demandsfrom agoodruleset are:
+.
+High specificity andsensitivity atthe customer(case)level.
+.
+Largenumberof true alertsatthebehavior (record)level.
+.
+The rule-set should contain rules that are not "similar", i.e.
+rules thatcapturedifferent behaviorpatterns.
+.
+The numberof rulesin the rule-setshould besmall.
+
+6. BI-LEVEL
+RULE GENERATION
+There are severalpossible approachesto constructing correct bi-
+level rules.Oneis to abandonstandardrule-generationprocedures
+completely in favor of simpler ad-hocmethods.For example,we
+could use a standard procedure to build rules on customer
+attributes only, using a databasewith one record per customer,
+then run a separatesecondstagewith one record per "behavior
+sample" to add behavior attributes to the rules. This naive
+approachis unlikely to give goodresults,asit would belimited in
+its ability to find "interactions" between customer-level and
+behavior-level attributes(e.g.,that customersin a certain areaare
+likely to befraudulent if they makemanyinternational calls).
+Another approachis to modify the existing algorithms to ensure
+that they count the recordscorrectly, taking into accountthe issue
+of bi-level data.We have taken this approach,and have built a
+rule generatorbasedon a modification of the C4.5 algorithm.
+Section 6 presentsan example of rules generatedby the system
+prior to the modification, comparedto the resultswith thebi-level
+modification. We assumethatthe readeris familiar with theuseof
+C4.5asarule generationprogramandwith its basicalgorithms.
+The relevant changesin the algorithm are concentratedin three
+areaS- splitting criterion and stopping rule for tree construction
+and pruning signiticance tests.The splitting criterion is used to
+select the "best" greedy split in each stage during tree
+construction. It is basedon calculating the "information content"
+of eachof the suggestedsplits with regardto the classdistribution
+andchoosing the one with the highest content.The stopping rule
+dictatesthe size of groupswe arewilling to acceptas"leaves" in
+the tree.The goal of using a stoppingrule is to preventthe system
+from creatingrules representingsmall sampleswith no statistical
+generalizationability.
+For both of theseareasthe key to working on bi-level datais that
+the "size of groups" concepthasto be defined with respectto the
+level at which the attribute being split belongs.So,when splitting
+on a customer-level attribute, the amount of customersof each
+class found in each "leaf' is counted. When splitting on a
+behavior-level attribute we should count the numberof instances
+of behavior (i.e. the number of "records") of eachclass in each
+"leaf'.
+The idea of the necessarychangesfor the pruning significance
+testsis similar. The examplein section6, in fact,includes only the
+changesin the splitting criterion and stoppingrule, which in most
+experimentshavebeensufficient for creating good bi-level rules.
+Future development of special-purposealgorithms for b&level
+rule generationarediscussedin section9.
+
+
+
+
+411
+
+7. SOLUTION: TWO-STAGE PROCESS
+We havedevelopedan approachto handlethe unique problem of
+rule-discoveryfor fraud basedon a partition of the rule-discovery
+processinto two independentcomponents.This gives the system
+the maximumflexibility to adaptto the variouschallengesit faces.
+We have completely separatedthe rule-generationstagefrom the
+rule-selection (or rule-set selection) stage in the system. The
+generalarchitectureof thesystemcanbeseenin figure 1.
+
+
+
+
+I
+1
+Figure 1: Architecture of 2-stageSolution
+The rule-generation step is used to create a large number of
+candidate rules, and could include multiple rulegeneration
+applications, each of them generating a set of rules. All rule
+generatorsshouldbeableto handlethebi-level problemdiscussed
+in section6, aswasdonefor our versionof C4.5.
+
+7.1 Rule Selection Methodology
+The rule selection stagereceivesasinput all the candidaterules,
+generatedin thepervious stage,aswell asclassified customerand
+behavior data. It applies a selection procedurethat producesas
+output a rule-set with the desirable quality properties. The
+proceduredesignedhere is a greedyalgorithm, which is divided
+into two main sub-procedures.
+
+
+
+
+Rgure 2: Illustration of rule-selectionmethodology
+
+The first sub-proceduresorts all candidaterules according to a
+single rule quality criterion, while the secondperformsthe actual
+selection.It scansall the sortedrules sequentially,beginning with
+the "best" rule. Each rule is selected(or not) and addedto the
+rule-set according to rule-set quality criteria, defined in termsof
+thresholds on various quality measures.Thus, the selection
+decision is affectednot only by a rule's individual performance,
+but alsoby its incrementalperformancerelative to the previously
+selected rules. The predefined thresholds can be adjusted
+accordingto specific aims,e.g.,high accuracy,small rule-set,etc.
+Figure 2 illustrates the selectionprocedure.
+In our implementation,the criterion for sorting the rules wastheir
+accuracyin termsof cases,measuredat the customerlevel. The
+selection criteria used for deciding whether to add a new ruIe
+included incrementalfraud coveragein termsof cases,measured
+at the customer level, as well as the difference between rules,
+measuredat the behavior level. The difference betweentwo rules
+is indicated by their correlation (measuredat the behavior or
+recordlevel).
+So, when considering selecting a new rule (NR) we computeits
+additional fraud coverage (AFC) and its maximum correlation
+(MC) with the rules in the selectedgroup (SR) (FC refers to the
+fraud coverageof arule-setin cases):
+.
+AFCZ
+=
+FC
+(SR ,NR)
+-
+FC
+(SR)
+
+l
+MC = MAX{correlation (NR, SRi))
+SRrc SR
+If the rule's additional fraud coverageis at least TAFcand its
+maximum correlation with a previously selectedrule is at most
+TMcthen therule is selected.Wecanemphasizevarious aspectsof
+the desired properties for resulting rule-sets by tuning these
+thresholdlevels (T,.
+TMc).
+
+8. EXAMPLE: IDENIF'YING BAD DEBT
+The datafor theseexperimentscamefrom a cellular carrier with a
+considerabIenumber of bad debt ("never paid") customers,who
+usethe network andneverpay a single bill. Our datasetincluded
+afew hundred"legitimate" customersanda few hundredbaddebt
+customers.We used as "behavior samples" daily summariesof
+usageof the different kinds, suchastotal calls, local calls, calls to
+mobile,
+and international calls. As we were dealing with
+subscription fraud starting from day one, there was no need for
+monitoring changesin behavior. We alsohad customer-leveldata
+such as the customer'stype, his credit limit. residencearea,etc.
+Thus we had in our dama record for eachday of eachcustomer,
+with customerdatareplicatedfor all the daily recordsof the same
+customer,andwith daily behavior monitors.
+We first ran the data through the standardC4.5 rule-discovery
+system,trying to assessthe impact of not handling bi-level data
+correctly. Not surprisingly, the generatedrules, used customer
+featuresalmostexclusively, and someof them were assilly as"If
+a customer's nameis X and he lives in areaY he is likely to be
+fraudulent". The program failed in finding rules successfully
+combining customer-levelandbehavior-level attributes.
+Next we ran the same data through our %-level compliant"
+version of the c4.5 engine, making surethat the coverageof tree-
+leaves,henceof the generatedrules, wascalculatedcorrectly. The
+result wasnow numeroussensiblepatternsdescribing both single
+indicators andcombinationsof indicators of likely fraud. Someof
+the rules describednew, unexpectedpatterns.For confidentiality
+reasonswe cannot display the actual rules discovered. As an
+example,however, we give the structureof someof the rules we
+got:
+
+
+
+
+412
+
+credit-limite X ANDtotal-usage-type1> Y ANDtotal-usage-type2< 2
+=>alert
+For the purpose of evaluating the performance of the rule
+selectionstage,the setof cases(customers)wasdivided randomly
+into a training setand a test set.The selectionprocedurereceived
+47 candidaterules and was implemented solely on the training
+group. A total of 35 threshold contigurations were made,using
+TApcvalues in [O.Ol, 0.051and TMc values in [0.3, 0.91.Some
+threshold combinationsproduced the samerule-set. The results,
+i.e., the selectedrule-set, were testedagainstthe test group. For
+eachselectedset,four performanceattributesweremeasured:
+SetSize= Numberof selectedrules
+
+Numberof detected fraud customers
+Accuracy =
+Number of customers classified fraud
+
+Numberof detectedfraudcustomers
+FraudCoverage=
+Total numberof fraudcustomers
+Maximum Correlation = MAX{correlation (SRi, SRj)} i fj
+Table 1presentstheperformanceattributesof the selectedrule-set
+using different thresholds. For example, in iteration #l, loose
+thresholdswereused,demandingan additional coverageof only
+1%andallowing correlationbetweenselectedrules ashigh as0.9.
+The thresholdsproduceda rule set containing 5 rules, in which
+90.1% of the casesclassified as fraud were indeed fraudulent.
+This rule-set detected90.1% of the fraud casesbut at least two
+rules in the setrepresentthe samepattern, since they are highly
+correlated(0.89).It is clearthat the thresholdsusedin iteration #9
+producedabetterrule-set.This set,with fewer rules,hasthe same
+fraud coverage with higher accuracy and lower maximum
+correlation. However,the comparisonis not always that obvious.
+For example,set#2 detectsa higher fraud rate than set#l with
+lower maximum correlation but is less accurate.If we want to
+enable comparability between all rule-sets, the performance
+measuresshouldbeprioritized or assignedweights.
+#
+kC
+TMC
+Set
+ACCllraCy
+Fraud
+Max
+Size
+Coverage
+Cor.
+1
+1
+1%
+1 0.9
+1
+5
+1
+90.1%
+1
+90.1%
+1 0.89
+2
+1
+1%
+1 0.7
+1
+5
+1
+89.0%
+1
+92.7%
+1 0.65
+1 3
+1
+1%
+1 0.5
+1
+4
+1
+89.1%
+1
+89.1%
+1 0.47
+1
+1 4
+1 1%
+1 0.3
+1
+4
+1
+87.8%
+1
+89.6%
+1
+0.4
+1
+2%
+1 0.6
+1
+4
+15
+90.1%
+90.1%
+0.5
+6
+2%
+1 0.5
+1
+4
+1
+89.2%
+90.1%
+0.44
+7
+2%
+1
+OA
+i
+A
+1
+ROO%
+92.7%
+0.41
+8
+3%
+7aL
+85.4%
+0.4
+9
+4%
+9n.19h
+n-5
+V.-r
+7
+VS.
+
+0.3
+3
+92. I ,"
+. ,-
+0.6
+3
+91.5%
+,
+- -.- .-
+,
+-.-
+10 I
+5%
+0.4
+3
+90.4%
+1
+92.7%
+1 0.41
+1115%
+0.3
+2
+94.3%
+1
+85.4%
+1 0.17
+
+Table 1: Results of the rule-selection procedure
+
+9. CONCLUSION AND FUTURE WORK
+This paper illustrates the need for "vertical)' applications,
+analyzing a particular businessproblem in a particular industry,
+andtailoring aspecific solution for a specific problem,ratherthan
+attemptingto utilize standardtools and algorithms.In the caseof
+rule discoveryfor fraud, we believe that understandingthe unique
+featuresand identifying the points at which the standardtools
+were falling short were the key stepsto suggestinga successful
+alternativeapproach.
+In general,the contribution of this papercan be divided into two
+parts: description of the unique features of rule-discovery for
+telecommunicationsfraud (bi-level data,specialrule and rule-set
+quality criteria) and suggestion of solutions for the particular
+problemsandanappropriateframeworkfor the whole process.
+We believe that there is room for further research,especially
+concerning the design and implementation of new algorithms for
+rule-discoveryfor fraud. Among thedirections we arepursuing:
+Exhaustiverule generation: Usethe sparsenessof fraud examples
+within the datato build an exhaustive mechanismfor finding all
+possiblerules containing a substantialnumberof fraud examples.
+As the two-level problem is similar in structureto the hierarchy
+problem which [8] discuss, it seemsespecially appropriate to
+utilize someof the ideasfrom their domain of Association Rules
+discovery.The advantagehereis that the rule-generationstepwill
+not lose any of the possiblecandidatesfor "good" rules, and will
+not require complicated mechanisms.This would createa very
+large number of candidatetules, out of which select a "`good"
+subset of rules will be selected by an efficient rule-selection
+mechanism.
+Non-greedy rule-selection procedures: Optimization methods
+such as Simulated Annealing and Genetic Programmingcan be
+utilized to createa more robust selection process,with a better
+chanceof finding the "best" rule-set.
+
+10. REFERENCES
+VI
+
+El
+
+
+
+[31
+
+
+
+
+141
+
+
+
+
+[51
+
+
+
+El
+
+
+
+171
+
+b.31
+Breiman, L., J. H. Friedman,R. A. Olshen and C. J. Stone
+(1984).Classification andRegressionTrees.ChapmanHall.
+Burge, P. and J. Shawe-Taylor (1997). Detecting Cellular
+Fraud Using Adaptive Prototypes.Proceedingsof AAAI-97
+Workshop on AI Approachesto Fraud Detection and Risk
+Management,Providence,RI, 9-13.
+Fawcett, T. and F. Provost (1997). Adaptive Fraud
+Detection. Data Mining and Knowledge Discovery. U.
+Fayyad,H. Mannila andG. Piatetsky-Shapiro(Eds.),Kluwer
+AcademicPublishers,Boston,CA. voll,291-316.
+Kokkinaki, A. I. (1997). On Atypical DatabaseTransactions:
+Identification of ProbableFraudusing Machine Learning for
+User Profiling. Proceedingsof IEEE Knowledge and Data
+EngineeringExchangeWorkshop,107-l 13.
+Moreau, Y. and J. Vandewalle (1997). Detection of Mobile
+Phone Fraud using Supervised Neural Networks: A First
+Prototype. Available via fip://ftp.esat.kuleuven.ac.belpub/
+SISTA/moreau/reportScann97-TR97-44.ps.
+Moreau, Y., B. Preneel, P. Burge, J. Shawe-Taylor, C.
+StoernuumandC. Cook (1997).Novel Techniquesfor Fraud
+Detection in Mobile Telecommunication Networks. ACTS
+Mobile Summit,Grenada,Spain.
+Quinlan, J. R. (1993). C4.5 - Programs for Machine
+Learning.Morgan Kaufmann.
+S&ant, R. and R. Aggrawal (1995). Mining Generalized
+Association Rules. In Proceedingsof the 21st International
+Conference on Very
+Large Data Bases, 417-419.
+
+
+
+
+413
+

@@ -1,0 +1,1290 @@
+2PXMiner - An Efficient Two Pass Mining of Frequent XML
+Query Patterns
+
+
+Liang Huai Yang
+School of Electronics Engineering and
+Computer Science, Peking University, China
+
+yanglh@comp.nus.edu.sg
+Mong Li Lee, Wynne Hsu, Xinyu Guo
+School of Computing
+National University of Singapore
+
+{leeml,whsu,guoxinyu}@comp.nus.edu.sg
+
+
+
+ABSTRACT
+Caching the results of frequent query patterns can improve
+the performance of query evaluation. This paper describes a
+2-pass mining algorithm called 2P XMiner to discover fre-
+quent XML query patterns. We design 3 data structures to
+expedite the mining process. Experiments results indicate
+that 2P XMiner is both efficient and scalable.
+
+Categories & Subject Descriptors: H.2.8 [Database Man-
+agement]: Database Applications - Data Mining
+General Terms: Algorithms, Performance
+Keywords: XML Query Pattern, Tree Mining
+
+
+1.
+INTRODUCTION
+The efficient management and delivery of XML data has
+become a prominent focus of recent research. Tree pattern
+is a distinguishing characteristic in XML query languages.
+Matching tree patterns against XML data is a core operation
+in XML query processing. This operation can be expensive
+since it involves navigation through the hierarchical struc-
+ture of XML documents, which can be deeply nested. One
+approach to improve the performance of XML management
+systems is to discover frequent queries and to cache the re-
+sults of these queries [3, 5].
+By modelling XML queries as query pattern trees, we ob-
+tain a database of query pattern trees. Each query pattern
+tree is a transaction that is associated with a transaction
+ID. Mining frequent query patterns is equivalent to find-
+ing the rooted subtrees that occur frequently over the set
+of pattern trees. This mining process involves tree match-
+ing, which is expensive and is complicated by the presence
+of wildcards "*" and relative paths "//" in the XML query
+pattern trees. Given that the rooted subtrees are candidate
+patterns, the search space is exponential to the size of a pat-
+tern tree. Hence, an efficient mining algorithm will typically
+aim to minimize the number of tree matchings needed.
+[5] recently develop an algorithm called F astXMiner to
+discover frequent XML query patterns. While F astXMiner
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD'04, August 22­25, 2004, Seattle, Washington, USA.
+Copyright 2004 ACM 1-58113-888-1/04/0008 ...$5.00.
+is able to reduce the number of tree matchings required,
+there is no guarantee on the number of database scans re-
+quired. Further, the proposed method is applicable to XML
+queries on a class of XML documents that do not contain
+sibling repetitions.
+However, it is important to consider
+XML queries that involve sibling repetitions because they
+are widespread in many XML applications including authors
+in a publication database, and actors in a movie database.
+This paper describes a novel algorithm called 2PXMiner
+to discover frequent XML query patterns involving repeated
+sibling nodes. This method requires only two scans of the
+query pattern tree database. This is achieved by utilizing
+the following data structures:
+1. Transaction summary structure called T-GQPT. This
+is a global query pattern tree that summarizes the
+query patterns and keeps track of the transaction ID
+of each pattern.
+2. Equivalence Class Tree (ECTree). This is essentially a
+search tree that provides an infrastructure to generate
+candidate rooted subtrees.
+3. Index structure called RETrie. This provides for the
+storage and fast tracing of rooted subtrees that contain
+at least one node of repeated siblings.
+Based on the above data structures, we develop three op-
+timization techniques in 2P XMiner:
+1. Computing Upper Bound of Potential Frequent Pat-
+terns: We describe a scheme to compute the exact
+frequency for all paths in T-GQPT without accessing
+query pattern trees in the database. With this scheme,
+we can efficiently compute the upper bound frequency
+of the potential frequent query patterns from T-GQPT.
+2. Early Pruning: We prove that by exploiting the T-
+GQPT, we can remove subtrees in T-GQPT whose
+frequency counts are below the minimum support be-
+fore the candidate enumeration process. This tech-
+nique greatly reduces the amount of mining efforts.
+3. Tracing Repeated Candidates: The index tree RET rie
+canonizes unordered trees and provides for the tracing
+of repeated candidates caused by sibling repetitions in
+a query pattern tree. This effectively removes a large
+number of unnecessary computations.
+Experiment results indicate that the proposed 2P XMiner
+is very efficient and has good scalability.
+
+2.
+PRELIMINARIES
+Fig. 1(a) shows the query pattern tree of a query to re-
+trieve the title, author and price of books where "books/
+section//title" has value "XML Schema". A query pattern
+
+
+731
+Research Track Poster
+
+book
+
+
+author price
+title
+section
+
+
+
+title
+book
+
+
+author
+title
+
+
+
+(a)A Query Pattern Tree
+(b)A Rooted Subtree
+XML Schema
+
+
+
+Figure 1: A query pattern tree and a rooted subtree.
+
+
+tree may consist of not only element tag names but also
+wildcard "*" and relative path "//". The relative path "//"
+indicates zero or more labels (descendant-or-self). A descen-
+dant edge is denoted by a double-line.
+A subtree that has the same root as a query pattern tree is
+called a rooted subtree. An rooted subtree with k edges is
+called a k-edge rooted subtree, denoted as RSTk. Fig. 1(b)
+shows a 2-edge rooted subtree. A single-branch rooted
+subtree has a single leaf node.
+
+2.1
+Tree Inclusion
+[4] investigated the containment problem of query pattern
+trees, and proved that the containment problem of pattern
+trees is co-NP complete. They described a containment al-
+gorithm based on alternating tree automata which runs in
+exponential time. However, the algorithm is able to run in
+polynomial time in some special cases such as when the num-
+ber of "//"s is bounded by a constant, and when the pattern
+tree is a single-branch path. We implemented this tree in-
+clusion test as a procedure called Contains(QP T, RST) to
+determine whether a rooted subtree RST is included in a
+query pattern tree QP T. Two basic concepts are used in
+the containment test: subtree embedding/homomorphism
+and query containment.
+Homomorphism h: NODES(p )NODES(p) between
+two patterns p and p, where h is root-preserving, respect
+node labels, and obey edge constraints. That is,
+1. h(ROOT(p )) = ROOT(p);
+2. for each x  NODES(p ), LABEL(x) = * or LABEL(x)=
+LABEL(h(x));
+3. for each x, y  NODES(p ), if (x,y) is a child edge in
+p then (h(x),h(y)) must be a child edge in p. Other-
+wise, if (x,y) is a descendant edge in p , then (h(x),h(y))
+must be a path in p of length  0. The path may in-
+clude child edges or/and descendant edges. The length
+of a path is given by the number of intermediate nodes.
+The concept of embedding is a mapping from a query pat-
+tern tree to an instance tree. If there exists a homomorphism
+h which maps a rooted subtree RST to a query pattern tree
+QOT , then RST is structurally included in QP T , denoted
+as RSTQP T. From the perspective of query answering,
+this h indicates answer(QP T)answer(RST) since if there
+is an embedding e from QP T to a tree t, then eh is also an
+embedding from RST to t.
+
+2.2
+Frequent Query Pattern Trees
+Given a set of query pattern trees QDB={QP T1, . . . ,
+QP TN}, mining the frequent query pattern implies discov-
+ering the frequent rooted subtrees (RSTs) in the query pat-
+tern trees. If a rooted subtree RST is contained in a query
+QPT3
+book
+
+
+
+
+title
+section
+
+
+
+
+QPT1
+author
+price
+book
+
+
+title
+price
+
+
+
+fn
+book
+
+
+
+
+QPT2
+ln
+author
+title
+
+
+
+
+RST
+author
+price
+book
+
+title
+
+
+
+QPT4
+book
+
+
+
+
+title
+section
+
+
+
+3
+1
+
+Figure 2: Example of a frequent query pattern tree
+
+
+pattern tree qpt of QDB, we denote it as occqpt(RST)=1,
+otherwise occqpt(RST)=0. The total occurrence of an RST
+in QDB is denoted by freq(RST)=
+qptQDB
+occqpt(RST ).
+Let |QDB| denote the number of QP Ts in database QDB,
+the support level is defined as supp(RST)=freq(RST)/|QDB|.
+We say that RST is -frequent in QDB if supp(RST) ex-
+ceeds the minimum support  where 0<1. For conve-
+nience, we define minSupp=*|QDB|.
+Consider Fig. 2. The rooted subtree RST occurs in QP T1
+and QP T2 with a frequency and support of freq(RST)=2
+and supp(RST)=2/4 respectively.
+
+
+3.
+DATA STRUCTURES
+In this section, we describe three structures that are im-
+portant in the design of the two-pass mining algorithm.
+
+3.1
+T-GQPT
+Mining tree patterns requires the enumeration of all the
+rooted subtrees in the XML query pattern tree database.
+Each query pattern tree is associated with a transaction ID
+or T ID. For example, the query pattern trees QP T1, QP T2,
+QP T3 and QP T4 in Fig. 2 are associated with the T IDs 1,
+2, 3 and 4 respectively. We can merge all the query patterns
+to build a global query pattern tree called transaction global
+query pattern tree, or T-GQPT. This structure guides the
+enumeration of valid candidate rooted subtrees.
+Fig. 3(a) shows the T-GQPT obtained from the query pat-
+tern trees in Fig. 2. The child nodes of each internal node
+in the T-GQPT are stored in a lexicographically ascending
+order. The cost to insert a newly created node at the proper
+position is negligible while the cost to merge a QP T of size
+k is O(k). The nodes in a T-GQPT are numbered using
+a pre-order traversal. Since each RST is a rooted subtree
+of T-GQPT, each node in RST has the same number as
+the corresponding node in T-GQPT (see Fig. 3). The map-
+ping between RST3
+1
+and T-GQPT is given by a physical
+address-pointer, as indicated by the dashed lines between
+the T-GQPT and RST3
+1
+. RST3
+1
+can be represented com-
+pactly as "1, 2, -1, 5, -1, 9, -1" where -1 indicates an end
+tag. This numbering scheme reduces the amount of memory
+usage during mining and tree operations are transformed to
+string operations.
+
+3.2
+Equivalence Class Tree
+Next, we utilize the concept of equivalence class [7, 5] to
+further optimize the candidate enumeration scheme.
+Any two tree encodings Se1 and Se2 corresponding to
+RST k
+1
+and RSTk
+2
+can be transformed into the strings S1
+and S2 respectively by removing all the -1 from Se1 and Se2.
+The order of the tree encodings Se1 and Se2 is given by the
+order between S1 and S2, that is, Se1  Se2 iff S1S2. For
+example, "1,2,-1,6,7,-1,-1"<"1,2,-1,6,-1,9,-1". We also use
+
+
+732
+Research Track Poster
+
+book
+
+
+
+
+author
+price
+title
+1
+
+
+
+2
+5
+{1,2}
+6
+
+
+7
+1
+
+
+2
+9
+
+
+
+3
+4
+{1,2,3,4}
+
+
+
+{1,2}
+{1,2}
+
+{2}
+{2}
+{3}
+{3,4}
+book
+
+
+titleauthor
+section
+price
+
+
+
+
+(a)T-GQPT
+fn
+ln
+title
+8
+title
+5
+
+
+
+{4}
+9
+
+
+
+(b)RST1
+3
+
+
+Figure 3: Numbering scheme for T-GQPT and RST
+
+
+RST k
+1
+ RSTk
+2
+for Se1  Se2.
+The prefix of a rooted subtree's string encoding s with
+length i is defined as the prefix of s with i positive numbers,
+denoted as prefix(s, i), or prefix(RST, i). By removing the
+prefix from s, the suffix of a RST is obtained.
+Given two k-edge RSTs RSTk
+1
+and RSTk
+2
+, which share
+the same prefix and RSTk
+1
+< RST k
+2
+, the join result of RSTk
+1
+and RSTk
+2
+is denoted as RSTk
++1
+12
+= RSTk
+1
+RST k
+2
+, where
+RST k
++1
+12
+is a k+1-edge RST candidate. The join can be car-
+ried out using string operations. The first differing position,
+e.g., element n in RSTk
+1
+, is obtained, and {n,-1} is inserted
+into the corresponding position in RSTk
+2
+, yielding RSTk
++1
+12
+.
+Given two k-edge rooted subtrees RSTk
+1
+and RSTk
+2
+, let
+s1 and s2 denote their respective tree encodings. RST k
+1
+is
+equivalent to (denoted as =prefix) RSTk
+2
+if prefix(s1,k)=
+prefix(s2,k) holds. Let Pk denote a k-length prefix. Then
+a Pk induced equivalence class is denoted as [Pk].
+A k-
+edge candidate set Ck can be partitioned into equivalence
+classes according to =prefix. The findings from [5] is used
+to produce Ck
++1
+from Ck:
+Theorem 1. Given a k-edge RSTk
+i
+[Pk]={RSTk
+1
+, RST k
+2
+,
+. . . , RST k
+N
+} sorted in ascending order, let Grmlne(RSTk
+i
+)
+= {RST k
++1
+ir
+| RSTk
++1
+ir
+be the rightmost leaf node expan-
+sion of RST k
+i
+}, and Gjoin (RSTk
+i
+) = {RST k
++1
+ij
+| RSTk
++1
+ij
+RST k
+i
+RST k
+j
+, j = i+1, . . . , N}. Then [prefix(RST k
+i
+, k+1)]
+= Grmlne(RST k
+i
+)  Gjoin (RST k
+i
+) holds.2
+
+The search space is organized into an ECT ree. Each node
+in the tree corresponds to an equivalence class, organized as
+a linked list of rooted subtrees in ascending order. All the
+nodes at the kth level of the search tree form the k-edge
+candidate set Ck.
+
+3.3
+RETrie
+The number of rooted subtrees in the search space is
+exponential to the size of the T-GQPT. We observe that
+many candidate rooted subtrees will be repeatedly gener-
+ated when there are sibling repetitions in the query pattern
+trees. This will lead to many redundant tests against the
+query pattern trees. The repeated rooted subtrees cannot
+be simply pruned because they may participate to form new
+rooted subtrees. For example, two rooted subtrees with the
+encoding"a,b,-1,b,-1" can be joined to form a new candidate
+rooted subtree with the encoding "a,b,-1,b,-1,b,-1".
+We devise a trie structure to store and trace all the enu-
+merated rooted subtrees that contain at least one repeated
+sibling node. We call this trie a Repetition Elimination Trie,
+or RET rie in short. Fig. 4 shows an example RET rie. The
+nodes that are double-circled are called punctuator. The
+strings obtained from the root to these punctuators are the
+tree encodings of the corresponding rooted subtrees. Each
+punctuator keeps the information of the first rooted subtree
+a
+a
+
+
+
+
+d
+b
+
+
+
+
+-1
+b
+c
+
+-1
+-1
+....
+
+
+
+
+-1
+-1
+-1
+-1
+-1
+
+
+
+
+Figure 4: An index trie for tracing repeated RSTs
+
+
+that forms this node, including the frequency count of the
+rooted subtree. When a new rooted subtree with repeated
+sibling(s) is generated, the RET rie is looked up to check
+whether this rooted subtree has already been evaluated. If
+yes, then the pointer in the new rooted subtree is kept and
+the frequency count from the previous rooted subtree is ob-
+tained.
+Rooted subtree repetitions are due to the many isomor-
+phic representations of a tree. We use the canonical repre-
+sentation to obtain a unique representation of a tree. The
+lexicographically maximum representation is selected among
+all the depth-first-search representations of a tree.
+
+Lemma 1
+(Canonized Subtree). Let T be a canoni-
+cal tree and n be one of its node, and S denote the subtree
+rooted at n. Then S is also in canonical form.
+
+
+Lemma 2
+(Canonizing RST). Given a canonical tree
+T , and two rooted subtrees S1 and S2 of T . If S1 contains no
+sibling repetitions but S2 does, then S1 is also in canonical
+form, and S2 can be transformed into a canonical form by
+only comparing the order of the repeated siblings.
+
+Note that the child nodes of each node have been sorted in
+a lexicographically ascending order during the construction
+of the T-GQPT. Thus, canonizing T-GQPT involves only
+sorting the repeated siblings.
+
+
+4.
+MINING FREQUENT QUERY PATTERNS
+This section describes a two pass technique to discover
+the frequent query patterns from a set of XML queries. The
+following issues need to be handled, namely frequency count
+and early pruning of rooted subtrees. We design a new fre-
+quency counting technique by taking advantage of the T-
+GQPT and the ECT ree.
+
+4.1
+Computing TIDSet
+The mining algorithm requires the T IDSet for each single-
+branch rooted subtree. The T IDSet in T-GQPT contains
+only the T IDs of those query pattern trees that have been
+merged. It is not necessary to match all the possible paths
+in the T-GQPT against the query pattern trees. Each valid
+path in the T-GQPT can be matched against the other
+paths in the T-GQPT to obtain the T IDSets of single-
+branch rooted subtrees.
+Let pi denote a path from root to leaf in T-GQPT, and
+P ={p1, . . . , pN} denote the set of all such paths. The length
+of pi is the number of nodes in pi, denoted by|pi|. Let pi[m]
+denote the path of the first m nodes of pi, and pi[m].T IDSet
+denote the T IDSet of pi[m]. Given two paths p and q, if
+p[m](m = 1, .., |p|) is embedded in q, then find the mapping
+position k in q. Once the position is obtained, p[m].T IDSet
+
+
+733
+Research Track Poster
+
+Algorithm SBTIDSet(T-GQPT)
+Input: T-GQPT;
+Output: modified T-GQPT;
+
+P is the whole path set of T-GQPT;
+Q={q|q is a path of T-GQPT with at least one node as `*',
+ancestor-descendent edge, or repeated sibling};
+for pP do
+for qQ and qp do
+for m=1 to |p| do
+k=findEmbeding(p[m],q);
+if knull
+for i=1 to m do
+p[i].TIDSet= p[i].TIDSetq[k].TIDSet;
+else
+break;/*for n>m, p[n] will not be included in q*/
+
+Figure 5: Computing TIDSets of single-branch RSTs
+
+
+is given by the union of p[m].T IDSet and q[k].T IDSet. This
+union operation will propagate to the ancestor node of p[m].
+Consider the T-GQPT in Fig. 3. Let p="book,section,title,-
+1,-1" and q="book,section,//,title,-1,-1,-1".
+Then p[3] is
+embedded in position 4 of q, and p[3].T IDSet is {3,4} by
+taking the union of q[4].T IDSet. p[1] and p[2] will also union
+the new T IDSet.
+The following rule optimizes the above computation: If
+p[k] is not included in q, then p[m](m = k + 1, , |p|) will not
+be included in q.
+Fig. 5 gives the details of the algorithm SBT IDset to
+compute all the T IDSets of a T-GQPT. The function find-
+Embeding(p[m], q) determines the position of p[m] in q, which
+can be computed in PTIME [4].
+Theorem 2. After executing SBTIDset on T-GQPT, the
+T IDSet of every single-branch RST in T-GQPT is the same
+as the T IDSet of this RST matching against all the query
+pattern trees.
+
+4.2
+Filtering RSTs
+TIDs are often used to expedite the mining process [2]. We
+have the following upper bound properties for query pattern
+trees with sibling repetitions and wildcards.
+Lemma 3. Let rstk be the RST by expanding an edge of
+rstk
+-1
+. Then rstk.T IDSetrstk
+-1
+.T IDSet. 2
+
+Theorem 3
+(Upper Bound). Let RSTk
++1
+ij
+be a join
+of RST k
+i
+and RST k
+j
+. Let n1,n2,. . . ,nm be the leaf nodes
+of RST k
++1
+ij
+, and let ni.T IDSet denote the T IDSet of the
+single-branch RST pni (a path from root to the node ni) in
+T-GQPT. Then n1.T IDSet  n2.T IDSet  . . .  nm.T IDSet
+is an upper bound of RST k
++1
+ij
+.T IDSet.
+Since we use pointers to represent the nodes in the RST,
+the T IDSet of a single-branch RST can directly be obtained
+by accessing the node in T-GQPT corresponding to the leaf
+node of the RST without traversing the T-GQPT. Hence, we
+can compute the T IDSet for each RST on the fly without
+the need to materialize the T IDSet.
+When generating a new candidate RST, we count its up-
+per bound frequency immediately. If it is infrequent, then
+it will be pruned away. Lemma 3 ensures the Apriori prop-
+erty [2]: if a k+1-edge RST is frequent, then all its k-edge
+subtree RSTs must be frequent. Together with Theorem 3,
+we have the following corollary for early pruning:
+Algorithm: 2PXMiner(QDB, minSupp)
+Input: QDB--query pattern tree database
+minSupp--the minimum support
+Output: Sets of frequent RSTs in ECTree.
+/*Pass 1: Filtering */
+1. Scan the QDB, build T-GQPT;
+2. Compute TIDSet for T-GQPT: SBTIDSet(T-GQPT);
+3. Perform early pruning on T-GQPT;
+4. Enumerate candidate RSTs and compute the upper bound
+frequency of RST by using T-GQPT, prune those infrequent
+RSTs: UBCount(T-GQPT, F0), where F0 is the root of ECTree.
+/*Pass 2: Refining-Exactly counting the RST frequency */
+5. Scan the QDB, get the exact frequency count for RSTs:
+ExactCount(QPTBuffer, ECTree), where QPTBuffer stores the
+QPTs.
+
+Figure 6: Algorithm 2PXMiner
+
+
+
+Corollary 1
+(Early Pruning). Cutting off all those
+subtrees subtree(n) in T-GQPT, where |n.T IDSet|<minSupp,
+will not affect the result of frequent pattern trees.
+After computing the T IDSets of single-branch RSTs in
+T-GQPT, the early pruning strategy can be applied to T-
+GQPT to avoid enumerating a large number of RST s.
+
+4.3
+Refining Frequency Count
+Theorem 3 gives a upper bound of the frequency count.
+The exact frequency count of all rooted subtrees can be ob-
+tained by carrying out a database scan to match potentially
+frequent rooted subtrees against the query pattern trees in
+the database. However, it is not necessary to check all the
+currently frequent rooted subtrees.
+We observe that the
+T IDSet of a rooted subtree consists of two parts:
+(1) Original T IDs (oT IDSet) indicates the QP Ts that
+include this RST before executing SBTIDSet;
+(2) Gained T IDs(gT IDSet) indicates the QP Ts that in-
+clude this RST only after executing SBTIDSet.
+There is no need to match the rooted subtree against the
+query pattern trees in oT IDSet. Instead, the rooted sub-
+tree needs to be matched against the query pattern trees in
+gT IDSet. Thus, we can partition the T IDs in the T IDSet
+of single-branch rooted subtrees during the computation of
+SBT IDSet. The following corollary computes the T ID list
+for a rooted subtree:
+Corollary 2
+(Compute New TIDs). Let n1, n2, ...,
+nm be the leaf nodes of a RST . Let ni.T IDSet, ni.oT IDSet
+and ni.gT IDSet denote the all, original and new T IDs of
+the single-branch RST pni in T-GQPT.
+(a) RST.T IDSet = n1.T IDSet  n2.T IDSet  . . . 
+nm.T IDSet;
+(b) RST .oT IDSet = n1.oT IDSet  n2 .oT IDSet . . . 
+nm.oT IDSet;
+(c) RST.gT IDSet = RST.T IDSet - RST .oT IDSet.
+
+4.4
+Algorithm 2PXMiner
+Fig. 6 shows the framework of 2P XMiner. It consists of
+two passes.
+
+4.4.1 Pass 1: Filter RSTs
+The algorithm 2P XMiner first carries out a database
+scan to build the T-GQPT by merging the query pattern
+trees, and storing the T ID information. Next, 2P XMiner
+
+
+734
+Research Track Poster
+
+Algorithm: UBCount(T-GQPT, Fk)
+Input: T-GQPT--GQPT with trans. info.
+Fk --the frequent k-edge RSTs;
+Output: Sets of potentially frequent RSTs
+
+1.Fk
++1
+=;
+2.for each equivalence class ecFk do/*2~13 compute Fk
++1
+*/
+3.
+for i=0 to |ec| do
+4.
+rsti
+k
+=ec[i];
+5.
+Grmlne=rmlne(rsti
+k
+);
+6.
+for j=i+1 to |ec| do
+7.
+rstj
+k
+=ec[j];
+8.
+rstij
+k+1
+= rsti
+k
+rstj
+k
+;/*join two RSTs*/
+9.
+compute rstij
+k+1
+.TIDSet;
+10.
+if(|rstij
+k+1
+.TIDSet|minSupp)
+11.
+Gjoin rstij
+k+1
+;
+12.
+ec'= GrmlneGjoin;
+13. Fk
++1
+ec';
+14.if(Fk
++1
+)
+15.
+UBCount(T-GQPT, Fk
++1
+);
+
+Figure 7: Algorithm UBCount
+
+
+calls SBT IDset to compute the T IDSet for all the single-
+branch rooted subtrees. An early pruning on T-GQPT is
+also performed by removing infrequent subtrees.
+2P XMiner uses the T-GQPT to enumerate the candi-
+date rooted subtrees, count their frequencies and prune away
+the infrequent ones (see procedure UBCount in Fig.7). A
+special root node F0 is introduced in the ECT ree to store
+the 0-edge rooted subtrees.
+The procedure UBCount adopts the breadth first ap-
+proach. The RET rie is searched for rooted subtrees that
+involve repeated sibling(s). If they exist, then we use the
+pointer to get the frequency count instead of re-computing
+the T IDSet. Otherwise, we insert them into the index and
+store their pointers there.
+The notation Fk in the UBCount procedure denotes the
+set of frequent k-edge RSTs. We assume that Fk is a list of
+equivalence classes ecs, and that each ec is an array(sequence)
+of RSTs in ascending order of their tree encodings. |ec| de-
+notes the number RSTs in ec and ec[i] denotes the i th
+element(RST) of ec.
+UBCount works as follows: Lines 2-13 compute Fk
++1
+from Fk. For each ec in Fk, lines 3-12 generate k+1-edge
+ec's. For each rstki in ec, line 5 performs the right most
+leaf node expansions by calling the procedure rmlne. In-
+frequent RSTs are pruned. Grmlne stores the rmlne result.
+Lines 6-11 perform the join operation and obtain the join
+result Gjoin after pruning. A new equivalence class ec' is
+formed and is added to Fk
++1
+. The above procedure pro-
+ceeds recursively(lines 14-15).
+
+4.4.2 Pass 2: Refine RST Frequencies
+Algorithm 2P XMiner scans the database a second time
+to eliminate the frequency overestimation of some rooted
+subtrees. We only need to match a rooted subtree against
+those query pattern trees indicated by RST.gT IDSet. A
+"block", or a batch of query pattern trees is read to the
+buffer each time, and the matching of the rooted subtree is
+performed against the query pattern trees in the buffer. We
+also include an attribute isEmpty for each rooted subtree in
+the ECT ree to indicate if the gT IDSet of the rooted subtree
+Algorithm: ExactCount(QPTBuffer, ECTree)
+Input: QPTBuffer --buffered QPTs, with TIDSet for TID range
+ECTree --the tree of RST search space;
+Output: Sets of frequent RSTs with exact frequency
+
+1.P={sequence of RSTs by post-order traversal of ECTree};
+2.for i=0 to sizeof(P) do
+3.
+Let rst=P[i], compute rst.gTIDSet;
+4.
+rst.parent.mTIDSetrst.parent.mTIDSet rst.mTIDSet;
+5.
+for each tidrst.gTIDSetQPTBuffer.TIDSet
+and tidrst.mTIDSet do
+6.
+if(Contains(rst, QPTBuffer[tid]))/*check*/;
+7.
+rst.parent.mTIDSetrst.parent.mTIDSet{tid};
+8.
+else
+9.
+rst.count--;/*decrease the count*/
+10.
+prune rst if rst.count<minSupp;
+/*11. release the space of rst.gTIDSet, rst.mTIDSet; */
+
+Figure 8: Algorithm ExactCount
+
+
+
+is empty, thus avoiding the computation of the gT IDSet for
+such rooted subtrees.
+If a rooted subtree RST is included in a query pattern
+tree QP T, then all the prefix of RST will also be included
+in this QP T. We associate an attribute mT IDSet with each
+rooted subtree in the ECT ree to keep the T IDs of the query
+pattern trees in the current buffer that are exempted from
+matching. This well known "anti-monotone property" helps
+to avoid unnecessary tree inclusion tests.
+Since the portion of rooted subtrees with true overestima-
+tion is small, the procedure ExactCount in Fig. 8 utilizes
+a bottom-up matching strategy. A post-order traversal of
+the ECT ree is carried out. A list P is used to denote the
+post-order sequence of the rooted subtrees in the ECT ree.
+P [i] is the i th element. Line 3 computes the gT IDSet of
+a rst dynamically. Line 4 uses the anti-monotone property
+to propagate the T IDs up from child node rst to parent.
+Lines 5-10 perform the verification of the potential over-
+estimation of the rst. ExactCount only checks the T IDs
+related to current QP Ts in buffer and avoids those T IDs in
+rst.mT IDSet. If this rst is included in some QP T then lines
+6-7 add the T ID into the parent RST's mT IDSet. Oth-
+erwise, lines 9-10 decrease the frequency count of the rst
+and prune this rst if it becomes infrequent. The procedure
+Contain carries out the tree inclusion test.
+Note that in ExactCount, for RSTs with repeated sib-
+ling(s), we first check if the computed count already exists.
+If it does, then we obtain its count without performing the
+inclusion test. ExactCount releases gT IDSet after visiting
+a rst. As for mT IDSet, it only occupies a small amount
+of space since there are at most the number of rsts equal
+to the maximum height. It will also be released after a rst
+node has been visited.
+
+
+5.
+PERFORMANCE STUDY
+We evaluate the performance of 2P XMiner, and compare
+it with XQP Miner [6] and F astXMiner [5]. XQP Miner
+utilizes the rightmost branch expansion method [1] to gen-
+erate rooted subtrees and test them against the query pat-
+tern trees. F astXMiner employs T IDs of rooted subtrees
+to improve its efficiency. However, F astXMiner only con-
+siders query pattern trees without sibling repetitions. The
+
+
+735
+Research Track Poster
+
+algorithms are implemented in C++, and the experiments
+are carried out on a 2.4 GHz PC with 1 GB RAM running
+Windows XP.
+
+5.1
+Generation of Query Pattern Trees
+We develop a synthetic query pattern generator program
+that is based on an input schema tree by considering some
+probabilities to introduce the ancestor-descendant"//" and
+"*" edge, or to walk down or back the schema tree.
+Two sets of queries are used in the experiments. The first
+set is generated based on the DBLP schema, while the sec-
+ond set is generated based on the Shakespears' Play schema,
+or SSPlay for short.
+We expand the DBLP and SSPlay
+schemas into trees such that the former has 98 nodes and
+the latter has 67 nodes. Table 1 summarizes the properties
+of the datasets used. The number of nodes in T-GQPT, the
+maximum depth and fanout of QP Ts give an indication of
+the complexity of the dataset.
+
+
+Table 1: Properties of datasets
+Data sets
+T-GQPT size
+maxHeight
+maxFanout
+DBLP
+302
+6
+6
+SSPlay
+414
+5
+5
+
+
+
+5.2
+Comparative Experiments
+Fig.9(a) and (b) show the response times for the three
+algorithms under varying support from 2% to 10%. Since
+F astXMiner accepts only query pattern trees without sib-
+ling repetitions, the datasets are generated with this re-
+striction. We observe that 2P XMiner is about 362 times
+faster than XQP Miner for the DBLP dataset at 2%, and
+89 times faster at 10%. 2P XMiner is about 1.22.6 times
+faster than F astXMiner. Similar results are obtained for
+the SSPlay dataset: 2P XMiner is about 71196 times
+faster than XQP Miner, and about 1.54 times faster than
+F astXMiner.
+Recall that, in 2P XMiner, SBTIDSet obtains the T IDSets
+of all single-branch rooted subtrees without scanning the
+database. The early pruning strategy also enables 2P XMiner
+to prune a large number of rooted subtrees. Distinguish-
+ing between oT IDSet and gT IDSet further ensures that
+2P XMiner is superior over F astXMiner in handling query
+patterns with no repeated siblings. The results in Fig.9(c)
+and (d) for the 1 million query pattern trees confirms this.
+2P XMiner is about 49 times faster than F astXMiner
+for both DBLP and SSPlay datasets.
+
+5.3
+Scalability
+Finally, we investigate the impact of the number of query
+pattern trees on the response time by fixing the minimum
+support at 4%. Fig. 10 shows that 2P XMiner scales lin-
+early for both DBLP and SSPlay datasets. 2P XMiner is
+about 80 times faster than XQP Miner for DBLP and about
+61 times faster for SSPlay.
+
+
+6.
+CONCLUSION
+We have developed a two pass algorithm called 2P XMiner
+to find frequent XML query patterns. Since the search space
+is exponential to the size of the query pattern trees, it is im-
+portant to reduce the number of costly tree inclusion tests.
+We achieve this by developing structures and optimizations
+Time in logarithmic scale
+
+
+
+
+10
+100
+1000
+10000
+100000
+
+
+
+
+0.1
+0.5
+1
+1.5
+2
+support(%)
+Ti
+m
+e(s)
+XQPMiner
+
+FastXMiner
+
+2PXMiner
+Time in logarithmic scale
+
+
+
+
+10
+100
+1000
+10000
+
+
+
+
+0.1
+0.5
+1
+1.5
+2
+support(%)
+Ti
+m
+e(s)
+XQPMiner
+
+FastXMiner
+
+2PXMiner
+
+
+
+
+(a)DBLP (Size=200K)
+(b)SSPlay (Size=200K)
+
+Effectiveness of 2PXMiner
+
+
+
+
+0
+200
+400
+600
+800
+
+
+
+
+2
+4
+6
+8
+10
+Support(%)
+T
+ime
+(s
+)
+
+FastXMiner
+
+2PXMiner
+Effectiveness of 2PXMiner
+
+
+
+
+0
+100
+200
+300
+400
+500
+
+
+
+
+2
+4
+6
+8
+10
+Support(%)
+Tim
+e(s)
+FastXMiner
+
+2PXMiner
+
+
+
+
+(c)DBLP (Size=1000K)
+(d)SSPlay (Size=1000K)
+
+Figure 9: Comparison of XQPMiner, FastXMiner
+and 2PXMiner
+
+
+Scalability(log. scale, supp=4%)
+
+
+
+
+1
+10
+100
+1000
+10000
+100000
+
+
+
+
+200K
+400K
+600K
+800K
+1000K
+Number of QPTs in QPTDB
+Ti
+m
+e(s)
+XQPMiner(DBLP)
+XQPMiner(SSPlay)
+2PXMiner(DBLP)
+2PXMiner(SSPlay)
+Scalability(supp=4%)
+
+
+
+
+0
+200
+400
+600
+800
+1000
+1200
+1400
+1600
+
+
+
+
+200K
+400K
+600K
+800K 1000K
+
+Number of QPTs in QPTDB
+Ti
+m
+e(s)
+DBLP
+SSPlay
+
+
+
+
+(a)Compare to XQPMiner
+(b)Redraw 2PXMiner
+
+
+Figure 10: Scalability of 2PXMiner
+
+
+techniques such as the transaction summary structure (T-
+GQPT), early pruning, RET rie for repeated RST tracing,
+and filtering and refining RSTs. Experiments show that
+2P XMiner is both efficient and scalable.
+
+
+7.
+REFERENCES
+[1] T. Asai, K. Abe, S. Kawasoe, H. Arimura, H.
+Sakamoto, S. Arikawa. Efficient substructure discovery
+from large semistructured data. 2nd SIAM
+International Conference on Data Mining, 2002.
+[2] R. Agrawal and R. Srikant. Fast algorithms for mining
+association rules. VLDB, pp:487-499, 1994.
+[3] L. Chen, E. A. Rundensteiner, S. Wang. XCache-A
+Semantic Caching System for XML Queries. ACM
+SIGMOD, pp:618, 2002.
+[4] G. Miklau, D. Suciu. Containment and Equivalence of
+Tree Pattern Queries. ACM PODS, pp:65-76, 2002.
+[5] L.H. Yang, M.L. Lee, W. Hsu. Efficient Mining of XML
+Query Patterns for Caching. VLDB, pp:69-80, 2003.
+[6] L.H. Yang, M.L. Lee, W. Hsu, S. Acharya. Mining
+Frequent Query Patterns from XML Queries. DASFAA,
+pp:355-362, 2003.
+[7] M. Zaki. Efficiently Mining Frequent Trees in a Forest.
+ACM SIGKDD, pp:71-80, 2002.
+
+
+
+
+736
+Research Track Poster
+

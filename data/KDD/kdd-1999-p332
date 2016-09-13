@@ -1,0 +1,1150 @@
+Interestingness
+Via What
+Is Not Interesting
+
+Sigal Sahar
+Tel-Aviv University
+gales@math.tau.ac.il
+
+
+
+
+Abstract
+As the size of mined databases increases, the sheer volume of
+rules produced by data-mining
+algorithms
+often overwhelms
+their users.
+These users only want to be presented with a
+short list of interesting rules. Somework has been conducted
+on determining
+what is interesting,
+with an agreement
+that
+interestingness
+is ultimately
+subjective.
+While
+there is no
+single, formal definition of interestingness,
+there is a consensus
+that finding interesting rules is a very difficult
+problem,
+requiring
+domain
+knowledge
+and/or
+user interaction.
+Our
+objective is to take the first step to a comprehensive solution
+to this problem in any domain.
+We present a simple and short process of eliminating a
+substantial portion of uninteresting association rules in a list
+outputted by a data-mining algorithm.
+Instead of trying
+to establish what is interesting, we look for rules that are
+not interesting;
+more specifically, the simple rules whose
+elimination implies the automatic elimination of many other
+rules in the list. Thus, our processrequires very low-intensity
+user interaction: in three iterations, a user usually eliminates
+about 30% of the rules. A little over five iterations will usually
+halve the size of the problem. This elimination is a significant
+first step since size is the essenceof the problem. We present
+representative results of executions of the algorithm over three
+real databases: WWW logs, grocery store transactions and
+adult census data.
+
+1
+Introduction
+As the size of the mined
+databases increases,
+the
+number of rules outputted
+by data-mining
+algorithms
+also increases, and to such an extent
+that
+it often
+overwhelms the users. Users run data-mining
+algorithms
+in order to find the knowledge buried within the masses of
+data [3]. Inundating
+users with a multitude
+of patterns
+discovered in the data is counterproductive.
+In terms
+of patterns,
+a user seeks a short list of interesting-to
+the user-patterns
+and that is the list the Knowledge
+Discovery in Databases (KDD)
+process should output.
+To arrive at this list, we need to process the patterns
+
+
+Permission to make digital or hard copies of all or part of this work fat
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies bear this notice and the Ihll citation on the tirst page. To copy
+otherwise, to republish, to post on servers or to redistribute to lists.
+requires prior specific permission and/or a fee.
+KDD-99
+San Diego CA USA
+Copyright ACM 1999 I-58113-143-7/99/08...$5.00
+outputted
+by the data-mining
+algorithm
+according
+to
+their interestingness.
+Formalizing what qualities measure a user's interests is
+a difficult
+problem.
+[7] differentiate
+between objective
+measures
+of interestingness
+that depend only on the
+structure of the data and the patterns extracted from it,
+and subjective
+measures
+of interestingness
+that also
+depend on the specific needs and prior knowledge of the
+user. [6] make an empirical comparison of objective inter-
+estingness criteria.
+While objective interestingness
+crite-
+ria are important,
+subjective ones are ultimately
+needed
+to determine what is interesting
+to a particular
+user. In
+this work we concentrate
+on subjective
+interestingness
+measures.
+To determine what is subjectively
+interesting
+we need
+to incorporate
+the user's domain
+knowledge into our
+system. Modeling
+and incorporating
+domain knowledge
+has been the subject
+of intense
+research in many
+communities,
+and although
+the general problem is still
+far from being solved, it has been determined
+to be a
+very difficult
+one.
+The KDD
+literature
+provides two
+main approaches to this problem.
+The first approach
+requires a domain expert or advanced user to formally
+(even if vaguely) express on demand, using a predefined
+grammar, what he or she finds (not) interesting
+or what
+a domain user already knows.
+[4] define templates
+of
+patterns that describe the structure
+of interesting
+rules.
+[57define General Impressions, a more generalized form of
+templates permitting
+the expression of imprecise domain
+knowledge. The success of these strategies is conditioned
+upon the availability
+of a domain expert willing
+to go
+through
+the significant
+effort of completing
+this task.
+Unfortunately,
+acquiring such an expert for the duration
+of the process is a costly procedure.
+Oftentimes such an
+expert is not available. The second approach, taken in [8],
+constructs
+the knowledge base by having users classify
+every single rule. This approach requires very intensive
+user interaction,
+this time of a mundane nature.
+In some
+cases, the sheer amount of work involved may render it
+infeasible.
+Our approach is to quickly eliminate
+large families of
+rules that are not interesting,
+while limiting
+our user
+
+
+
+
+332
+
+interactions
+to a few, simple classification
+questions. We
+start with the list of rules outputted
+by the data-mining
+algorithm.
+This list is normally
+very long.
+If we were
+to present it for user classification,
+most rules would be
+classified as not interesting,
+indicating
+that they can be
+eliminated
+from the list.
+We ask a user to classify only
+a few rules, specifically
+chosen so that their elimination
+can bring about the automatic elimination
+of many other
+rules. This approach has several benefits: (1) We circum-
+vent the major difficulty
+of defining why a certain rule
+is interesting
+to a user. (2) We ask only classification
+questions.
+The questions are not descriptive
+in nature
+and therefore easier and quicker for a user to answer.
+(3) We make the classification process simpler by having
+a user classify only very simple rules: a -+ b where both
+a and b are literals.
+(4) Every classification a user makes
+can potentially
+eliminate
+an entire family of rules, not
+only a single rule, meaning that we need to ask fewer
+questions.
+(5) We do not require a domain expert to
+classify the rules; a na'ive user can successfully classify
+most of the rules we present due to their simplicity.
+For example, in the case of the Israeli grocery store
+transaction
+database, one of the first rules brought for
+classification
+was
+(cucumbers) + (tomatoes).
+Armed
+with the knowledge that salads are a staple food in Israel,
+commonly prepared from cucumbers and tomatoes, any
+user can make this rule classification.
+
+Thus, the process we present is very low-intensity
+in both the volume of work expected and the level of
+interaction
+required of a user.
+Our achievements from
+our user interactions
+are twofold: first, we incrementally
+construct
+a domain knowledge base by gathering
+the
+relevant knowledge gained from a user's classifications.
+The knowledge base is needed for future
+steps in the
+process of converging to the list of patterns
+that are
+interesting to a domain user. At the same time, we work
+towards the creation of a concise list of the potentially
+interesting
+rules by progressively
+eliminating
+rules we
+learn are not of interest to a user.
+This elimination
+process is very fast.
+Three iterations
+of our algorithm
+are usually sufficient to eliminate approximately
+30% of
+the rules. A little over five iterations
+will often reduce
+the list to half its original size.
+We stress that
+in this
+work we do not attempt
+to provide
+a complete
+solution
+to the problem
+of
+determining,
+in any domain, precisely which rules are
+subjectively interesting.
+The overall problem is currently
+beyond the scope of a single paper, and still requires a
+significant cooperative research effort on part of the KDD
+community.
+Instead, we present a novel approach that
+very quickly,
+using a few simple questions, drastically
+reduces the size of problem, size being the essence of the
+problem. This approach also aids us in the construction
+of a knowledge base.
+It is the first big step in the
+formation
+of a comprehensive solution to this universal
+(domain-independent)
+problem.
+In the following
+two sections we briefly describe the
+elements we will use in the algorithm.
+We outline the
+algorithm
+in Section 4 and provide experimental
+results
+over three real-life databases in Section 5.
+
+2
+Definitions
+and Preliminaries
+Let A be a set of literals over the boolean domain.
+A is
+the superset of all literals we discuss in this work.
+An
+attribute
+is any one of these literals.
+An attribute
+set
+or set of attributes
+is a set, A, such that A C_A. We
+use lower case letters to denote attributes
+and upper case
+letters to denote sets of attributes.
+An association rule is a specific kind of pattern that
+is very popular due to its many practical
+applications.
+Let A and B be sets of attributes
+such that A, B C A
+and A II B = 0. Let D be a set of transactions
+over
+A.
+A transaction
+is a subset of attributes
+of A that
+have the boolean value of TRUE. The association
+rule
+A + B is defined ([l]) to have support s and confidence
+c if s% of the transactions
+contain A A B, and c% of
+the transactions
+that contain A also contain B. Given
+a support
+and a confidence threshold,
+[11's algorithm
+outputs the exhaustive list of all association rules that
+have at least those support and confidence levels. This
+work deals with determining
+which association rules are
+interesting.
+For convenience, in a rule A + B, we will
+refer to A as the assumption
+of the rule and to B as
+the consequent
+of the rule.
+Let R be a list of association
+rules over A.
+Let
+a, b E A, and p = a -+ b. Note that p may or may
+not be in a. We define the coverage
+list of p in 0,
+CLn(p),
+as CLn(p)
+ef
+{r E stir = A + B,a E A,b E
+B}.
+The coverage list of p in Sz contains all the rules
+in s1 that have a in their
+assumption
+and b in their
+consequent (p # CL0 (p) when p $ 0).
+The family
+of p in a, familya(
+is defined as: familyn(p)
+Dsf
+coveragen(p) U {p}. We define the ancestor
+rule of the
+family of p in R to be p. An indicator
+of the size of
+the coverage list of p relative
+to 52 is RSCLn(p),
+the
+relative
+size of the coverage
+list of p in Q, defined
+as:RSCh(p) ef llCh(p) \ {p}Il/ll% whereIIXll is
+the number of elements in the set X. The proof of the
+following claim is omitted due to lack of space.
+
+Claim
+2.1 Let s1 be the exhaustive list of rules out-
+putted by the data-mining
+algorithm.
+A rule p = a + b $
+R may have RSCLn(p)
+> 0.
+
+3
+User Classifications
+Every time we present a rule for classification,
+we want
+a user to tell us whether:
+(1) the rule is true, and (2)
+the user is interested in any rule in the family of the
+classified rule. The first category, specifying whether a
+rule is true, is used in the construction
+of the knowledge
+
+
+
+
+333
+
+base. Many statistically
+significant rules may be common
+knowledge even to a na'ive user with no domain-specific
+experience (for example,
+(pregnant)
+-+ (woman)).
+We
+need
+to exclude these rules from the list of interesting
+rules we propose to present to the user.
+The second
+category is a broader one, characterizing
+the entire family
+of the rule, i.e., any association between the assumption
+and the consequent.
+These two categorizations
+define
+four possible classifications for each rule:
+
+3.1
+The
+True-Not-Interesting
+(TNI)
+r* = (husband) + (married+)
+is an example of a rule
+classified as TNI. The word "husband"
+is defined as the
+male partner in marriage. Any person familiar with this
+definition
+(not only a domain expert) can easily deduce
+that (1) r is a true and not interesting rule, and, (2) any
+rule specifying
+when a husband is a married person is
+not interesting.
+The first inference is the classification
+of r as "true",
+a knowledge nugget we can add to our
+knowledge base. The second inference is the classification
+of the entire rule's family as not-interesting,
+indicating
+that all the rules that have the attribute
+husband in
+their
+assumption
+and the attribute
+married
+in their
+consequent are to be classified automatically
+as not-
+interesting
+as well (see why in Section 4.3). Note that
+although a user is required to classify an entire family, it
+is a very easy classification
+to make.
+
+3.2
+Not-True-Interesting
+(NTI)
+This classification
+is perhaps the most confusing one. A
+user interested in researching married people may classify
+the rule r:! = (male) + (married)*
+as NTI, indicating
+it
+is not true in general. At the same time, this user may
+be interested in what qualifications
+on a male provide a
+higher confidence that the male is married (for example,
+(malel"\owns minivan)
++ (married)).
+In this case, the
+user will choose to have rules that contain the attribute
+male in the assumption
+and the attribute
+married
+in
+the consequent be presented to him or her in the future.
+Since the user determined the rule to be not true r2 is
+classified as NT1 by this user.
+
+3.3
+Not-true-Not-Interesting
+(NTNI)
+A user interested
+in the conditions
+for annual income
+greater than $50,000 classified the rule 7-s as NTNI.
+This rule was, again, determined
+to be untrue.
+The
+user in this example is not interested in the conditions
+that determine whether a person is married,
+and thus
+classified the family of the rule as not-interesting.
+In the
+previous example, this same rule family was classified, by
+a different user, as interesting.
+The subjective interests of
+the different users determine whether the rule is classified
+as NT1 or NTNI.
+
+*This
+rule was mined from the Adult
+Database
+[2].
+tDue to lack of space, we omit the married-subcategorizations
+that exist in the Adult
+Database
+[2].
+(1) R = {rules outputted
+by data-mining};
+
+pi
+
+process-classification(c,
+;, fl);
+
+
+
+Figure 1: The Algorithm-overview
+
+
+
+3.4
+True-Interesting
+(TI)/Interesting
+(I)
+A user classifies any valid rule he or she determines
+to be subjectively
+interesting
+as TI.
+Throughout
+our
+experiments,
+we have never had any domain expert use
+this classification.
+When a user could determine that an
+interesting
+rule was false, the rule was classified as NTI.
+Otherwise,
+further
+investigation
+was always warranted.
+For these cases we an additional
+classification,
+the
+unqualified
+"interesting."
+
+4
+The Algorithm
+The algorithm
+is outlined
+in Figure 1. We used [11's
+algorithm
+to initialize
+R in step (l), though any other
+association rule mining algorithm can be used. The body
+of the algorithm
+consists of three iterative
+steps, (3)-
+(5), that can continue
+as long as the list of rules we
+process, 0, is non-empty.
+Since both the elimination
+process and the construction
+of the knowledge base are
+incremental,
+a user can stop the process at any time (the
+user is notified
+when stopping
+may be advantageous).
+The iterative process starts by selecting an ancestor rule
+and presenting it to the user for classification.
+We call
+the chosen candidate
+the best
+candidate.
+A user's
+classification
+of the best candidate dictates the course of
+action we take, usually consisting of a partial or complete
+elimination
+of the best candidate's family from R.
+
+4.1
+Selecting
+the
+Best
+Candidate
+To ensure a low-intensity
+and low-level process on part
+of a user, we ask a few, simple questions,
+and try to
+remove as many rules as possible from fl with
+every
+classification
+made. As we will see in Section 4.3, user
+classifications
+provide enough information
+to allow us to
+eliminate
+the ancestor rule's family
+partially
+or in its
+entirety.
+The larger the family,
+the more patterns
+we
+will potentially
+remove from fl in a single step. Thus, we
+choose the best candidate to be the rule with the largest
+coverage list.
+Formally,
+the best candidate
+is chosen
+from Q = {u + bla, b E A, Vc, d E A, RSCLn(a
+-+ b) 2
+RSCLn(c
++ d)}.
+If more than one ancestor rule has
+the highest RSCL
+value, we give preference to rules
+a + b E Q such that b + a E \E. Note that the selected
+best candidate may or may not be in R (Claim 2.1). Our
+choice of the best candidate and its functionality
+are not
+affected by this factor.
+Our algorithm
+is implemented
+so that the best candidate
+is always found in a single
+
+
+334
+
+pass over 52(low complexity).
+We do this by calculating
+the RCSL value of only possibly ancestor rules, those in
+{~-,~~~~=A~BER,~EA,~EB}.
+
+4.2
+User Classification
+of Best Candidate
+Once selected,
+the best candidate
+is presented
+for
+user classification
+along with,
+if relevant,
+its support
+and confidence levels and any user defined objective
+interestingness criterion that may aid the user in making
+the classification
+(list of possible criteria
+in [6]).
+We
+ensure a fast and straightforward
+classification
+process
+by presenting the user with ancestor rules only: a user
+more readily interprets
+simple rules than complex ones,
+and can more easily identify the family of a simple rule.
+The RSCL
+of the rule is always presented with the
+best candidate, to be used by a user to determine when
+to stop the iterative process. More rules will usually be
+eliminated in the first few iterations of the algorithm than
+in future iterations.
+Once the RSCL falls below a given
+threshold for more than two consecutive iterations,
+the
+user is notified.
+At this time, the user decides whether
+it is still profitable
+to continue responding to questions
+when only a relatively
+small percent of the rules can be
+eliminated with each new classification
+made.
+
+4.3
+Processing
+of User Classification
+In this section, we detail the processing $l undergoes
+according to user classification,
+c, of the ancestor rule,
+r = a + b, other than the collection and storage of the
+information
+in the knowledge base we construct.
+To aid
+us in our analysis, we will use Claim 4.1. The claim is
+presented without
+its proof due to lack of space.
+
+Claim
+4.1 Let A, B,C
+c A and b E A such that
+A,B,C
+# 0 and {b} u C = B.
+Let R be the set of
+association rules mined by a data mining algorithm with
+minimum
+support threshold s and minimum
+confidence
+threshold c. If A -+ B E R then A + C E R.
+
+4.3.1
+Not-true-Not-interesting
+classification
+Labeling T as NTNI implies (see Section 3.3) that T can
+be deleted from R, and that any rule p = A + B E R
+such that a E A and b E B can be deleted from R. In
+other words, we perform R = 0 \ famiZyn(r).
+Note that
+we did not eliminate rules of the form a -+ c for c # b.
+We may have eliminated
+rules of the form a -+ C where
+b,c E C. Since the rule a -+ b is not true, the rule a + C
+contains as much interesting information
+to a user as the
+rule a + C \ {b}, which according to Claim 4.1 exists in
+the original R. Thus, this elimination
+does not discard
+any potentially
+interesting
+rules to the user.
+
+4.3.2
+Not-True-Interesting
+Classification
+Labeling T as NT1 indicates
+(see Section 3.2) that the
+rule is not true and at the same time expresses a user's
+interest in famiZys2(r).
+Let Tl = (a + BJb E B}, and
+Yz = {A + BJa E A, b E B : A\(a),
+B\(b)
+# @},so that
+familya
+= Ti U Tz. The rules in `Yr are characterized
+by a common, single-attributed
+assumption,
+a, and a
+consequent that contains the single attribute
+forming the
+ancestor rule's consequent. From the user's classification
+of T we know that the rule is not true, implying
+that all
+the rules in Tr are not true, either, and can be eliminated.
+Formally
+put, we perform R = R \ Y'r. Note that this
+elimination
+also rids us of the ancestor rule itself (for
+B = b), if T E R. The rules in T's are characterized
+by additional
+constraints
+in the assumption,
+which can
+convert the invalid rule into a valid one. For example,
+while the rule (male) -+ (husband)
+may not be valid,
+adding the constraint
+married
+will turn the rule into a
+valid one, (male A married)
++ (husband).
+The rules
+with additional
+constraints
+in their assumption may be
+true, and since a user expressed interest in them, they
+cannot be deleted. Note that rules of the form A -+ b E
+r2.
+
+4.3.3
+True-Not-Interesting
+Classification
+A TN1 user-classification
+of r indicates (see Section 3.1)
+that, the user is not interested in the association of the
+assumption
+a and the consequent b, implying
+(again,
+using Claim 4.1) that we can perform R = Q\familyn(r).
+We note that the difference between the classifications
+NTNI
+and TN1 is not in the processing of R, but in
+the incorporation
+of the information
+gained from the rule
+classification
+to our domain knowledge base.
+
+4.3.4
+True-Interesting/Interesting
+Class
+The goal of the algorithm
+we present in this section is to
+quickly remove not-interesting
+rules from R, and arrive
+at the list of interesting
+rules. Due to lack of space, we
+cannot elaborate in this presentation on the processing of
+the rules classified as interesting (qualified or otherwise).
+
+5
+Experiments
+With
+Real Data
+We ran our algorithm on several real databases, each with
+different characteristics
+(e.g., widely varying number of
+attributes)
+and different
+users.
+Representative
+results
+are briefly outlined below. We expected (see Section 1)
+most of the rules to be labeled as one of the two not-
+interesting
+classifications.
+This assumption was verified
+by our experiments below, resulting in more than a 50%
+decrease in the size of the problem within a few iterations.
+
+5.1
+World
+Wide
+Web (WWW)
+Database
+The first
+database is compiled
+from the logs of a
+WWW
+proxy
+server.
+It describes the accesses of
+the 2,336 heaviest users to 15 site categories (NEWS,
+PORNOGRAPHIC,
+etc.).
+We ran [11's association
+rule
+mining
+algorithm
+on this database, with 6%, 5% and
+3.5% support
+and confidence thresholds,
+to test our
+algorithms
+performance
+on varying
+sizes of rule lists.
+These runs yielded
+9,206,
+13,644 and 29,910 rules
+
+
+
+335
+
+respectively.
+Patterns were classified by the WebMaster
+who was our user in this case.
+After the first three
+.
+.
+
+ggj;gza;
+
+
+ly half the rules were
+eliminated
+after the
+fifth iteration.
+Only
+about a third of the
+rules originally
+out-
+putted
+by the data-
+Figure 2: WWW logs DB results
+mining a1gorithm rem
+mained following the
+tenth iteration.
+Af-
+ter the 20th iteration
+approximately
+16% of the rules
+remained, showing the fast elimination
+rate of the al-
+gorithm.
+A summary of the number of rules remaining
+after each of the first 20 iterations
+can be found in Fig-
+ure 2, where after the zeroth iteration
+we have 100% of
+the rules. Note that in some cases there is no decrease
+in the number of remaining rules between two iterations.
+Those are the iterations the domain expert classified the
+best candidate as "interesting".
+Most of the classifica-
+tions the domain expert provided us were TNI.
+
+
+5.2
+Grocery
+Database
+
+We complied this database from
+the transactions
+of an Israeli
+`1
+store that sells groceries via tele-
+I z
+phone, fax and the Internet.
+Each
+[:I
+one of the 67,470 entries in this
+P10
+B30
+database describes, using 1,757
+' ;z
+attributes,
+a single shopping bas-
+(2I415II 20
+I,.l,IIXInumtasr
+ket: its contents, money spent
+on it and where the order was
+Figure
+3:
+Grocery
+made.
+With so many different
+database results
+attributes
+in this database, we
+expected the mined rules to be more sparse, that is, that
+the ancestor rules would spawn smaller families.
+The
+outcome of the experiment
+supported
+our assumption.
+We found that only the first two ancestor rules had large
+families (with RSCL of over 10%). This brought about a
+more subdued decrease in the size of the list of rules, de-
+creasing by approximately
+30% after the third iteration,
+but reaching half its original size only after the fourteenth
+iteration.
+This is a good example of how useful the RSCL
+value is as the it indicates the profitability
+of continuing
+the iterative
+elimination
+process to the user.
+Figure 3
+summarizes the results of the first 20 iterations
+of the
+algorithms
+run over the set of 3,046 rules mined with
+support and confidence levels of 3.5%. Our user easily
+classified the rules we presented for classification,
+practi-
+cally all as TNI, reinforcing
+our comments in Section 1.
+5.3
+Adult
+Database
+This database is based on
+the Adult
+dataset from 121.
+We discretisized
+the 14 at-
+tributes
+into 171 boolean at-
+; 8,
+2II
+tributes,
+and used the 45,222
+h61
+entries that
+had no missing
+1:I
+values as the data for [11's
+j z
+mining algorithm.
+We mined
+11
+for rules using support
+and
+confidence threshold values of
+20% and 15%, yielding 13,906
+and 31,950 rules respectively.
+Figure 4: Adult DB
+
+
+Figure 4 summarizes the algorithm's
+first 20 iterations.
+
+6
+Conclusions
+The algorithm
+presented in this work is the first step
+towards a comprehensive tool, suitable for any domain,
+that discovers the subjectively
+interesting
+rules from the
+exhaustive
+list outputted
+by a data-mining
+algorithm.
+The algorithm
+uses a user's classifications
+of ancestor
+rules to (1) quickly eliminate
+the not-interesting
+rules,
+and (2) start the construction
+of the domain knowledge
+base.
+We determined
+that
+with
+these few, simple
+questions we can quickly eliminate many rules, yielding a
+dramatic decrease in the size of the original list outputted
+by the data-mining
+algorithm
+(as much as half its size
+after only 5 classification
+questions).
+Since size is the
+essence of the problem,
+this first step provides sound
+grounds for continued subjective interestingness research.
+
+References
+[l] R. Agrawal, Mannila H., R. Krikant, H. Toivonen, and
+A. I. Verkamo. Advances in Knowledae
+Discoveru
+and
+Data Mining,
+chapter 12, pages 307-328: 1996.
+y
+[2] C.
+Blake,
+Eof Keongihhinaend
+C.J.
+Merz. databases
+repository
+learning
+http://wuw.ics.uci.edu/~mlearn/MLRepository.html.
+[3] U. M. Fayyad,
+G. PiatetskyShapiro,
+and P. Smyth.
+Advances
+in Knowledge
+Discovery
+and Data
+Mining,
+chapter 1, pages l-34. 1996.
+[4] M. Klemettinen,
+H. Mannila,
+P. Ronkainen,
+H. Toivonen,
+and A. I. Verkam. Finding interesting
+rules from large sets
+of discovered association rules. In Proceedings of the Third
+International
+Conference on Information
+and Knowledge
+Management,
+pages 401-407, 1994.
+[5] B. Liu, W. Hsu, and S. Chen. Using general impressions
+to analyze discovered classification
+rules.
+In Proceedings
+of the Third
+International
+Conference
+on Knowledge
+Discovery
+and Data Mining,
+pages 31-36, 1997.
+[6] S. Sahar and Y. Mansour.
+An empirical
+evaluation
+of
+objective
+interestingness
+criteria.
+In SPIE
+Conference
+on Data Mining
+and Knowledge
+Discovery,
+pages 63-74,
+Orlando,
+Florida,
+1999.
+[7] A. Silberschatz
+and A. Tuzhilin.
+What
+makes patterns
+interesting
+in knowledge discovery systems. IEEE
+Frans-
+actions
+on Knowledge
+Discovery
+and Data Engineering,
+8(6):970-974,
+1996.
+[8] R. Subramonian.
+Defining diff as a data mining primitive.
+In Proceedings of the 4th International
+Conf. on Knowl-
+edge Discovery
+and Data Mining,
+pages 334-338, 1998.
+
+
+
+
+336
+

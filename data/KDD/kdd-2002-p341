@@ -1,0 +1,1584 @@
+Mining Product Reputations on the Web
+
+
+Satoshi Morinaga, Kenji Yamanishi
+NEC Corporation
+4-1-1, Miyazaki,Miyamae,Kawasaki,Kanagawa
+216-8555, JAPAN.TEL:81-44-856-2143
+morinaga@cw.jp.nec.com, k-yamanishi@cw.jp, nec.com
+Kenji Tateishi, Toshikazu Fukushima
+NEC Corporation
+8916-47, Takayama-cho,Ikoma,Nara
+630-0101,JAPAN.TEL: 81-743-72-3341
+k-tateishi@bq.jp.nec.com, t-fukushima@cj.jp, nec.com
+
+
+
+
+ABSTRACT
+
+Knowing the reputations of your own and/or competitors'
+products is important for marketing and customer relation-
+ship management.
+It is, however, very costly to collect
+and analyze survey data manually. This paper presents a
+new framework for mining product reputations on the Inter-
+net. It automatically collects people's opinions about target
+products from Web pages, and it uses text mining techniques
+to obtain the reputations of those products.
+On the basis of human-test samples, we generate in ad-
+vance syntactic and linguistic rules to determine whether
+any given statement is an opinion or not, as well as whether
+such any opinion is positive or negative in nature. We first
+collect statements regarding target products using a general
+search engine, and then, using the rules, extract opinions
+from among them and attach three labels to each opinion,
+labels indicating the positive/negative determination, the
+product name itself, and an numerical value expressing the
+degree of system confidence that the statement is, in fact, an
+opinion. The labeled opinions are then input into an opinion
+database.
+The mining of reputations, i.e., the finding of statistically
+meaningful information included in the database, is then
+conducted.
+We specify target categories using label val-
+ues (such as positive opinions of product A) and perform
+four types of text mining: extraction of 1) characteristic
+words, 2) co-occurrence words, 3) typical sentences, for in-
+dividual target categories, and 4) correspondence analysis
+among multiple target categories.
+Actual marketing data is used to demonstrate the validity
+and effectiveness of the framework, which offers a drastic re-
+duction in the overall cost of reputation analysis over that of
+conventional survey approaches and supports the discovery
+of knowledge from the pool of opinions on the web.
+
+
+1.
+INTRODUCTION
+
+1.1
+Motivation
+
+
+
+Permissionto makedigitalor hardcopiesof all or part of thisworkfor
+personalor classroomuseis grantedwithoutfee providedthatcopiesare
+notmadeordistributedforprofitorcommercialadvantageandthatcopies
+bearthisnoticeandthefullcitationonthefirstpage.Tocopyotherwise,to
+republish,topostonserversortoredistributeto lists,requirespriorspecific
+permissionand/ora fee.
+SIGKDD02Edmonton,Alberta,Canada
+Copyright2002ACM1-58113-567-X/02/0007...$5.00.
+Knowing the reputations of your own and/or competitors'
+products is important for marketing and customer relation-
+ship management. Questionnaire surveys are conducted for
+this purpose, and open questions are generMly used in the
+hope of gaining valuable information about reputations.
+One problem in dealing with survey data is that the man-
+ual handling of it is both cumbersome and very costly, es-
+peciaUy when it exists in large volume, and computerized
+mining of open answers (i.e., the answers to open questions)
+is crucial. For this purpose, we have previously proposed a
+text-classification-type survey analysis tool[15] that is par-
+ticularly well-suited to brand image analysis. Throughout
+this paper, we refer to this tool as SA 1.
+Another problem is that it is very costly to gather the
+large volume of high quality survey data, which is necessary
+for meaningful analysis of reputations. One approach which
+promises to reduce costs in this regard is the recently pro-
+posed opinion extraction [24], which is able to automatically
+extract opinions about specific products as expressed on the
+web. This can be thought of as a kind of information extrac-
+tion (see, e.g., [11, [41, [101, [81, [91, [7] or as a kind of question-
+answering (see e.g., [13],[6],[17],[22],[23],[12],[18],[19],[25]),both
+of which have extensively been explored in the field of web
+text retrieval.
+The purpose of this paper is to provide a general new
+framework for automatically collecting and analyzing opin-
+ions on the Internet. With it, it is possible to drastically
+reduce total costs for marketing research and analysis and
+to support the knowledge discovery on the Internet. This
+framework has been created by combining the opinion ex-
+traction technique developed in [24]with text mining method-
+ologies, two of which were previously employed in SA [15].
+The key to the combination of opinion extraction with text
+mining is opinion labeling. In the opinion extraction process,
+labels are attached to each of the opinions, and then, in the
+text mining process, supervised learning from labeled opin-
+ions is conducted to extract statistically meaningful knowl-
+edge, which we refer to here as reputation.
+Let us roughly illustrate how the proposed framework
+works. A user inputs, for example, three PDA(personal dig-
+ital assistants) product names (products A, B, and C). The
+system then collects people's opinions about them from the
+Internet and attaches three labels to each: 1) the name of
+the product referred to, 2) the positive/negative nature of
+the opinion, and 3) opinion-likeliness,i.e., a numerical value
+
+1This tool is available by the name of SurveyAnalyzer in
+Japan. SurveyAnalyzerTM is a trademark of NEC Corpo-
+ration in Japan.
+
+
+
+
+341
+
+the degree of system confidence that the extracted state-
+ment is, in fact, an opinion. These labeled opinions are then
+put into an opinion database.
+The next step is reputation analysis. Each possible com-
+bination of labels represents a category of the opinion data.
+A user specifies a target category for the analysis using the
+value of labels (e.g., [product A, positive]), and the system
+conducts text mining to extract reputations corresponding
+to the specified target. Text mining consists of the following
+four tasks:
+a) Rule analysis (extracting characteristic words): For a
+specified target category, we extract individual words and
+combinations of words that are characteristic of it. For ex-
+ample, for the category of [product A, positive], words such
+as "monochrome", "inexpensive", as well as such pairings as
+"fightweight" and "convenient," would be extracted if they
+appear significantly more frequently there than in other cat-
+egories. The information criterion used for this purpose is
+stochastic complexity [21], defined as the minimum code-
+length required to encode a sequence into a binary sequence
+under the prefix coding condition. By extracting character-
+istic words, a user is able to gain an overall sense of the
+features of the target category.
+b) Co-occurrence analysis: For each characteristic word
+extracted in Rule analysis a), we further extract a fist of
+words which significantly co-occur with it. For example, for
+the category of [product A, positive], for the word "monochrome,"
+we might obtain a fist of significantly co-occurring words
+that includes: "display," "text," "email," etc. This extrac-
+tion is also conducted on the basis of stochastic complexity.
+Extracting co-occurring words helps users better understand
+contexts in which characteristic words appear.
+c) Typical sentence analysis: For a specific category, we
+assign to each opinion in it a score that indicates how typ-
+ical its vocabulary is with respect to the other opinions in
+that category. Opinions are then output in descending or-
+der of these scores. Individual scores are calculated on the
+basis of the Baysian theory and the naive Bayes approach
+to posterior probability computation.
+d) Correspondence analysis[5]: We, next generate a two-
+dimensional positioning map that visually displays the cor-
+respondence relationships among target categories and the
+characteristic words extracted for them, with distance on
+the map being a representation of correspondence (close-
+ness).
+This is done by applying the statistical method of
+principal component analysis to frequency data for individ-
+ual extracted words.
+Analyzing correspondence relation-
+ships helps the user to understand what categories are close
+one another and what keywords are shared in common by
+different categories.
+We consider these four tasks to be the most fundamental
+for useful reputation analysis. They are all based on proba-
+bifistic modefing of mechanisms for text generation and are
+conducted on the basis of information-theoretical/statistical
+approaches. Analyses a) and d) were previously introduced
+in [15] as SA functions, b) and c) axe first being introduced
+here.
+
+
+1.2
+Related Work
+Although our proposed framework for reputation mining-
+combination of two components: opinion extraction and text
+mining using SA, is new in the area of marketing, each of
+the components itseff also has novelty and effectiveness for
+marketing.
+Opinion extraction, one of the key technologies used in
+our framework, was developed by Tateishi, lshiguro, and
+Fukushima [24]. [t is closely related to information extrac-
+tion techniques (see e.g., [1], [4], [10], [8], [9], [7]), in which
+a wrapper or a specific extraction procedure is built auto-
+matically or marmally and used to extract specific pieces
+of information requested by a user. For example, Shopbot
+[9], [7] uses HTML tags to automatically extract product
+prices or specifications.
+Our proposed framework, by way
+of contrast, attaches labels to extracted information, which
+makes it possible to apply a supervised learning approach
+to text mining, and this distinguishes it from conventional
+information extraction techniques.
+Opinion extraction can also be thought of as a kind of
+QA (question-answering) (see e.g., [13],[6],[17],[22],[23],[12]),
+which has extensively been explored in the field of text re-
+trieval. In fact, it can be conducted by asking an ordinary
+QA system what; opinions exist for target products.
+The
+QA system will output opinions, giving each a fikelihood of
+its being included in an answer to that question.
+Among
+QA systems, Tateishi et.al.'s system [24] is particularly well
+suited to opinion extraction since it prepares specialized dic-
+tionaries for major product fields and unique syntactic rules
+for calculating opinion-fikeliness.
+These improve opinion-
+search results significantly, and it reportedly offers a partic-
+ularly high rate of accuracy with respect to searching out
+opinions about a target product: A precision rate of 86.6%
+for the top 17.1% of total search results, while the portion
+of total search results actually containing opinions, obtained
+by a general-purpose search engine (Google) was 15.9% in
+total[24].
+Various text mining techniques have been appfied to an-
+alyzing open answers in questionnaire data, including those
+which employ text-clustering techniques (e.g., [14]).
+The
+idea here is to view each answer as a vector of words, and
+to cluster vectors on the basis of similarity measures. Such
+methods are effective for summarizing (grouping) answers,
+but they are not effective for extracting analysis target char-
+acteristics. Methods for analyzing open answers on the basis
+of associations between words have also been proposed (e.g.,
+[11]). More specifically, associations between word pairs are
+calculated on the basis of their co-occurrences in open an-
+swers, and they are visually presented on a two-dimensional
+positioning map. In most of the previous work on position-
+ing maps, redundant words tend to appear too frequently,
+making the maps hard to understand. This suggests the ne-
+cessity of preprocessing step in which characteristic words
+are first extracted.
+A text classification approach to survey analysis has been
+proposed by Li and Yamanishi [15]. Texts consist of open
+answers contained in questionnaire results, and categories
+are specified on the basis of closed answers (i.e., answers
+to closed questions, for which possible responses have bnen
+fimited, as in check fists).
+In this approach, a classifica-
+tion rule that assigns a text into one of some number of
+categories is learned from training examples, and the key-
+words that appear in the rule can be thought of as those
+that are characteristic of the category. The key to this ap-
+proach is supervised learning from labeled examples, which
+is well-suited to the analysis of the labeled opinions that the
+opinion extraction system produces.
+In our framework we combine an information extraction
+
+
+
+
+342
+
+technique (here, opinion extraction[24]) with a text classifi-
+cation technique (here, that of Li and Yamanishi[15]). To
+the best of our knowledge, such a combination has never
+been reported before.
+Section 2 below gives a brief sketch of our reputation anal-
+ysis framework. Section 3 describes the opinion extraction
+technique proposed in [24]. Sections 4-7 describe how we
+analyze extracted opinion data with, respectively, rule anal-
+ysis, co-occurrence analysis, typical sentence analysis, and
+correspondence analysis. In Section 8 we evaluate the va-
+lidity and effectiveness of our framework. Section 9 gives
+concluding remarks.
+
+
+2.
+REPUTATION MINING SYSTEM
+Figure 1 gives a flow overview for our reputation mining
+
+
+User
+~223
+( ~ < ~ 2 : ~
+epntati°n
+
+
+Product names ~
+-~-x~ v
+Miningresults ~
+
+
+x~7
+Analysis
+conditionJ
+Web page
+collection
+
+
+Positive/negative
+determining
+
+
+Opinion-likeliness
+calculation
+
+OpinionExtraction
+Characteristic Word
+
+Co-occurrence
+
+Typical Sentence
+
+Correspondence
+
+
+ReputationAnalysis
+
+
+Figure 1: Reputation mining
+
+
+framework. The system performs two functions: opinion
+extraction and reputation analysis. A user can first input
+product names (e.g., Products A, B, and C, all of which are
+cellular phones) into the system, and the opinion extrac-
+tion function will use a search engine to collect web pages
+that include those names. It then extracts sentences that
+express opinions regarding these products and inputs them
+into an opinion database. The text mining function, which
+is the major subject of this paper, takes as input an analysis
+condition specifying the target category, and it outputs its
+mining results.
+
+
+3.
+OPINION EXTRACTION
+The opinion extraction function consists of the following
+modules [24]: Web page collection module, positive/negative
+determining module, and opinion-likelinesscalculation mod-
+ule
+1. Web page collection module:
+This module uses a crawler to collect web pages relevant to
+input product names.
+2. Positive/negative determining module:
+For each of the collected pages, this module first extracts
+sets of sentences that include evaluation-expressions about
+the products. These are checked with a previously prepared
+evaluation-expression dictionary. It then selects from among
+them sentences in which evaluation expressions are located
+within a certain distance of the relevant product name, and
+it designates these as opinions. Here each evaluation-expression
+is registered in the dictionary as being either positive or
+negative. For example, in the field of computer equipment,
+"fast," "good," "light," "satisfied," and "recommendable"
+are positive evaluation expressions, while "heavy,.... easily
+broken," "noisy," and "unstable" are negative. On the basis
+of evaluation expression dictionary entries, the "positive"
+or "negative" nature of each opinion is determined, taking
+into account, naturally, linguistic negation. If, for example,
+an inherently "positive" expression like "low-cost" appears
+within a certain distance of a negating expression, such as
+"insufficient," the opinion as a whole will be deemed "nega-
+tive."
+3. Opinion-likeliness calculation module:
+For each opinion obtained by the previous module, this mod-
+ule calculates its opinion-likelinessscore, a real value rang-
+ing from 1 to 5, indicating the relative likelihood that the
+statement represents an opinion: the higher the score, the
+higher the likelihood. This score is calculated using syn-
+tactic property rules, which can either be learned manually
+from training examples (see [24]for details) or by a standard
+machine learning technique, such as decision-tree-induction.
+The labeled opinions are input into the opinion database.
+Table 1 shows an example of 6 such opinions. (In this paper,
+all opinions have been translated from Japanese to English.)
+
+4.
+REPUTATION ANALYSIS
+
+4.1
+Rule Analysis (Characteristic-Word Ex-
+traction)
+The first step in mining opinions here is to extract key-
+words that are indicative of a specified category. In order
+to do this, we learn text classification rules and association
+rules from examples (see [15],[16]). The learned rules are
+basically lists of words that must be present for a new text
+to be classified into a specific category. These are the char-
+acteristic words of the category. Extracting characteristic
+words for each category helps us to discover differences in
+opinions between the target category and other categories.
+The task of rule-based text classification can be described
+as follows: We have a number of categories, each already
+containing a number of texts as training examples; we are to
+automatically acquire a set of rules from them and then clas-
+sify new texts on the basis of those acquired rules. Here we
+employ text classification based on a stochastic decision list
+[26],[15],[16] consisting of an ordered sequence of IF-THEN-
+ELSE rules for assignment of new opinions to a given cate-
+gory. The condition part (IF part) may require the simulta-
+neous presence of several words or simply the presence of a
+single word, and the consequence part (THEN part) specifies
+a category. Each rule also attaches a probability (relative
+frequency) value to its assignment.
+The words in the condition part of the obtained classifi-
+cation rules for a specific category represent the character-
+istics of opinions there. We can extract characteristic words
+for a specific category in the opinion database by learning
+text classification rules, using the opinion database itself for
+training examples.
+For example, Figure 2 shows a classification rule for the
+category specified by [product name = cellular phone A]
+
+
+
+
+343
+
+Table 1: Data Records in the Opinion Databese
+Product name
+Nature
+[ Opinion-likeliness
+cellular phone A
+Positive
+4.05
+cellular phone A
+Negative
+2.74
+
+cellular phone C
+Negative
+
+cellular phone E
+Positive
+cellular phone B
+Positive
+3.37
+
+2.91
+4.12
+Opinion
+cellular phone A is my favorite.
+I am a cellular phone A user, even though it is said to be inconvenient in
+some ways.
+I feel a little unsatisfied with cellular phone C because it has fewer functions
+than other models.
+I'm satisfied with my present phone -cellular phone F-.
+You can only download five melodies to cellular phone C, so I recommend
+cellular phone B.
+
+
+
+
+0
+2
+4
+
+"benchmark result" (13113)
+I
+1
+
+"TFT" 45/6) I
+I
+l
+-
+
+
+
+
+"person" (5/6) I
+I
+
+"future" (3/3) I
+·
+
+"no problem(s)" (4/5) I
+I
+
+.~
+"No.r' 44/s) .i
+I
+
+"retailsh0p" 42/2)I
+
+"look as though" (1/1) I
+
+"~o" (i/i) ·
+
+"hand" (I11) I
+6
+8
+10
+Frequency
+12
+14
+
+
+
+
+Figure 2: Classification Rules for Cellular Phone A
+5
+i0
+
+"benchmark result" 413/13)
+
+"benchmark result" & "fast" (13/13)
+
+"fast" 419/31)
+
+
+
+~.
+"TFT" (5/6)
+
+"person" (5/6)
+
+"no problem(s)"(4·5)
+
+"No.r' 44/5)
+
+"site"4212) I
+
+%omment"(2/2) I
+Frequency
+15
+20
+
+
+
+
+Figure 3: Association Rules for Cellular Phone A
+
+
+
+
+(each English expression has been translated from a single
+Japanese vocabulary item). The first rule indicates that if
+an opinion contains the expression "benchmark result" then
+it should be classified as an opinion about cellular phone A
+with a probability of 13/13.
+If it does not but does con-
+tain the word "TFT," then it should also be classified as an
+opinion about cellular phone A, though with a probability of
+5/6. The open answer is examined in this way with respect
+to the rules, from beginning to end. The extracted words
+such as "benchmark result," "TFT," etc. can be thought of
+characteristics of cellular phone A, which we recognize as a
+reputation of this product.
+In Figure 2, frequency bars denote the number of opin-
+ions in the category that contain each individual word, re-
+spectively.
+The two numbers in parentheses next to each
+expression indicate the number of opinions containing each
+expression in the category and the database as a whole, re-
+spectively.
+We also employ association rules consisting of an ordered
+sequence of IF-THEN-ORrules. These represent the strength
+of associations between opinions and a target category. Each
+rule has a condition for a given association, one that the
+presence of a single word or the simultane6us presence of
+some number of words. It also attaches a probability (rela-
+tive frequency) value to each association.
+As an example, Figure 3 shows association rules for the
+category [cellular phone A]. The first rule indicates that
+there are 13 opinions containing the expression '%enchmark
+result" in the opinion database, and that all of them are
+in the category of [product name = cellular phone A]. The
+third rule indicates that in the opinions at large there are 31
+opinions containing the word "fast" and that 19 of them are
+opinions regarding cellular phone A. These extracted words
+or combinations of words can be thought of as characteristic
+of the category.
+For purposes of comparison, let us look at a word his-
+togram, which consist of words listed in descending order
+with respect to the number of opinions containing them in
+the category. Figure 4 shows a word histogram for the cat-
+egory [cellular phone A]. Note that such generic words as
+"do" or "become" would obviously have no relevance to our
+purposes.
+In constructing classification and association rules, we em-
+ploy stochastic complexity [21] as a criterion for selecting
+words.
+Below we describe the mathematics of such selec-
+tion.
+We denote a text with label A as 'T' and that with any
+other label as "0." Thereby we denote a set of texts D as
+a binary sequence.
+We denote a subsequence of D which
+consists of texts including a word or a phrase w as E(w)
+and the remaining sequence as D - E(w).
+Let I(E(w)) and I(D-E(w))
+be the information-theoretic
+complexity of E(w) and D - E(w), respectively. In general,
+for a binary sequence x, its information-theoretic complex-
+ity, denoted as I(x), is calculated using stochastic complex-
+ity as follows:
+
+
+I(=) = ,~H
++ ~ log -T"
+(i)
+
+
+
+
+344
+
+A
+"fast"(19/31)
+
+"benchmark result"(13/13)
+
+"good"(12/44)
+
+"do"(9/19)
+
+"become" (8/18)
+
+"sale" (7/13)
+
+"liquid crystal" (7/17)
+
+"inexpensive" (6/14)
+
+"person" (5/6)
+
+"TFT"(5/9)
+5
+10
+Frequency
+
+15
+20
+
+
+
+
+Figure 4: Word Histogram
+for Cellular Phone A
+
+
+
+Alternatively, we may calculate l(x) using extended stochas-
+tic complexity [27] as follows:
+
+
+I(x)=min{m,,m-m,}+C
+m l ~ .
+(2)
+
+Here, m denotes the length of x, ml the number of "r's
+in x, H(z) = -zlog~ z-
+(1- z)logs(1- z), and C is a cer-
+tain positive constant. Note that the stochastic complexity
+of x is interpreted as the shortest code length required to
+encode x using a given probabilistic model (in this case,
+a Bernoulli model) under the prefix coding condition [21].
+Here, stochastic complexity is also considered from the view-
+point of a statistical decision theory a loss for predicting x
+in the case where the logarithmic loss function is used as a
+distortion measure. Extended stochastic complexity can be
+considered to be a general extension of stochastic complex-
+ity, in the sense that a general loss function is employed as
+a distortion measure (in (2), we use a "discrete loss").
+We calculate the score of w as follows:
+
+
+Score(w) = ! (I(O) - (I(E(w)) + I(D - E(w)))).
+(3)
+m
+Score(w) represents information gain achieved by the se-
+lection of w, which intuitively shows how much the stochas-
+tic complexity of the original data sequence can be reduced
+by separating it into two parts: that which contains w and
+that which does not. A larger Score(w) indicates that w is
+either characteristic of the set of all "1" texts or of the set
+of all "0" texts.
+If we were to eliminate the second term
+from stochastic complexity formula (1), leaving only the en-
+tropy (the first term), Score(w) would then become equiv-
+alent to the mutual information often used in decision-tree
+splitting[20].
+Notice here that stochastic-complexity-based
+Score(w) is a more precise measure of information included
+in a data sequence of finite length than entropy, and the for-
+mer will converge to the latter as the length of the sequence
+increases to infinity.
+In the learning of classification rules, we calculate, on the
+basis of all the data, a Score(w) value for each of the possible
+rules. Here, the condition of a rule may include not only the
+presence of one word, but also the simultaneous presence
+of several words.
+We select as a first rule that for which
+the Score(w) value is the largest. We then remove from the
+data those that satisfy the condition of the first rule. For the
+remaining data, we again calculate the Score(w) value for
+each of the remaining possible rules, and select as a second
+rule that for which the Score(w) value is the largest.
+We
+repeat this process until we cannot find any rule which is
+significant in terms of Score(w).
+In the learning of association rules, we calculate, on the
+basis of all the data, a Score(w) value for each of the pos-
+sible rules, and sort the rules in descending order of their
+Score(w) values. Note that this algorithm is different from
+conventional association rule mining algorithms (see e.g.,
+[2]), which perform based on support ("Total Freq." in this
+paper) and confidence ("Freq./Total Freq." in this paper)
+only.
+
+4.2
+Co-occurrence Analysis
+For each characteristic word or phrase extracted from
+open answers belonging to a specific category, we extract
+a list of words or phrases that co-occur with that word or
+phrase. Through this list we are better able to understand
+the contexts in which the characteristic keywords appear.
+Table 2 shows a co-occurring word list for the "No. 1"
+
+
+Table 2: Co-occurring Words
+Characteristic Word I Co-occurring Word
+Freq.
+Score
+No. 1
+I
+candidate
+1
+0.0024
+all
+1
+0.0024
+no problem(s)
+i
+boot up
+3
+0.0070
+operation
+2
+0.0034
+
+
+
+and "no problem" shown in Figure 2. With no contextual
+information, characteristic words such as "No.
+1" or "no
+problem" have little meaning for us, but co-occurrence anal-
+ysis can, for example, help us here to see that cellular phone
+A is recognized as the No. 1 candidate for something, and
+that there is no problem in booting up cellular phone A.
+These contexts help form reputations for cellular phone A.
+Below we describe how to calculate a co-occurrence score
+for any given pair of keywords. For a word or phrase w, let
+D~ denote the sequence of texts including w. For another
+word or phrase w', let D~o(w') denote the subsequence of D
+each of which includes w'. Then, letting I(0~), I(D~(w')),
+I(D~-D~o (w')) be the stochastic complexities of D~, D~(w'),
+D~ - D~o(w') (as calculated in (1)), respectively, we define
+the co-occurrence score of w~with respect to w as
+
+Score(w': w) = ± (I(Ow) - (l(O~(w')) + I(O~ - O~(w')))),
+m
+(4)
+where m is the number of texts included in D~o. The larger
+Score(wI : w) is, the larger the degree of co-occurrence of
+w' relative to w is.
+Maximizing Score(w': w) w.r.t, wI is equivalent to mini-
+mizing I(Dw(w'))+I(O~o-D~(w')) w.r.t, w' since I(D~) is
+independent of w ~. Notice also that Score(w~: w) is asym-
+metric with respect to w and w'; that is, Score(w~: w)
+Score(w : wI) in general.
+
+4.3
+Typical Sentence Analysis
+For a set of opinions belonging to a specific category, we
+give a score to each of them, with a high score indicating a
+high possibility of its being a typical opinion for the cate-
+
+
+
+
+345
+
+gory. This gives the user a simple overview of tendencies in
+original opinion data.
+Table 3 shows a list of typical sentences in the category
+specified by [product name = cellular phone A]. The charac-
+teristic words extracted above (such as "benchmark result",
+"no problem(s)', etc.) appear with high frequency in typical
+high-scoring sentences.
+Below we describe how to calculate a score for any given
+opinion sentence s. Let W be a set of all words appearing
+in opinion database and C be a set of all categories. Let Nc
+be the number of opinions belonging to the category c E C.
+Let N = ~cec N:. We calculate the occurrence probability
+of c using its MAP estimate:
+
+N~+#
+p(c) = g + ICW
+(5)
+
+where j3 is a positive constant usually set to 1/2.
+For a category c E C, let Dc denote the set of opinion
+sentences belonging to c and let m~ be the number of oc-
+currences of w in D~. We can then calculate the occurrence
+probability of w in c by using its MAP estimate:
+
+rn~+8
+p(wlc) = E~oe~o rn~ + IWl~'
+(6)
+
+where fl is a positive constant usually set to 1/2.
+Suppose that an opinion s is represented as a sequence
+of words wl,... ,wr, where wi E W (i = 1,... ,T). We
+calculate the score of s using the Bayes posterior probability
+of the category c for given s as follows:
+
+p(c) IIT=~p(w, lc)
+Score(s)
+=
+T
+'
+(7)
+Eoec p(c) I/,=, p(wdc)
+
+where we used the naive Bayes assumption that each wl is
+independent.
+
+4.4
+Correspondence Analysis
+We conduct correspondence analysis in order to get what
+we call a two-dimensional positioning map over the set of
+analysis objects and keywords extracted from the opinion
+database. The map visually shows the relationships between
+the categories and characteristic words, with distance on the
+map being a representation of correspondence (closeness).
+Before performing correspondence analysis, characteris-
+tic words are extracted for the categories designated by the
+user. Specifically, words considered indicative of individual
+target categories are extracted on the basis of rule analyses.
+These extracted keywords are in fact equivalent to those con-
+tained at the upper reaches of the association rules for the
+targets. We then construct a table that contains frequency
+data for extracted words for each of the target categories.
+Correspondence analysis can be viewed as an extension
+of principal component analysis (PCA) (which is similar to
+Singular Value Decomposition).
+It is conventionally per-
+formed, as in [5], on the basis of the frequency data table.
+Examples of the result of correspondence analysis are shown
+in the next section.
+Note that if correspondence analysis is conducted from
+original data without extracting characteristic words, an un-
+readable positioning map, in which many unnecessary words
+appear, may be generated as a result. That is why using
+rule analysis in preprocessing is crucial to effective corre-
+spondence analysis.
+5.
+EXPERIMENTS
+We conducted experiments in three different product fields:
+cellular phones, PDAs, and Internet service providers. We
+input the names of five cellular phones, four PDAs, and
+five Internet service providers into the system's opinion ex-
+traction section. The web page collection module ran on
+a SunEnterprise250 with a 400MHz UltraSPARK-II and a
+512MB memory. It collected 1200 pages for each product
+name (total: 16800) within 3 hours. The positive/negative
+determining module and the opinion-likeliness calculation
+module ran on a DELL Precision420 with an 866MHz Pen-
+tiumlII and a 768MB memory. They processed the pages
+within 1 hour. Labeled opinions with opinion likeliness not
+less than 2.5 were recorded in three separate databases in
+accord with their respective product fields (cellular phones,
+PDAs, and ISPs). The number of data records (extracted
+opinions) was, respectively, 519, 1195, and 605. We describe
+below the results of text mining for each of the fields.
+
+5.1
+Cellular Phones
+We extracted characteristic words for each of the cellular
+phones on the basis of learned association rules and per-
+formed a correspondence analysis of them. The text mining
+was processed on an NEC MA86T with an 866MHz Pentium
+III and a 256MB memory. It took about 10 seconds to learn
+rules for a single product, as opposed to roughly 2 hours for
+manual rule analysis (conducted for time comparison). The
+correspondence analysis took about 5 seconds.
+The rule analysis results gave a good indication of the
+reputation of each cellular phone. For example, we discov-
+ered that the red body of cellular phone C had captured
+the public's fancy, and that cellular phone D attracted peo-
+ple who wanted to replace older models. Figure 5 shows
+the obtained positioning map. The words plotted around
+each cellular phone are the top four characteristic words for
+each. We can see that cellular phone A has a good reputa-
+tion for its basic performance ("benchmark result", "fast",
+"no problem(s)'), and cellular phone B has a bad reputa-
+tion ("doesn't work well", "slow"). We can also see that for
+cellular phone D its "display" is more of an issue than its
+basic performance since the position of its product name is
+located closely to "display" but far from words representing
+performance.
+
+5.2
+PDAs
+In reputation mining for PDAs (personal digital assis-
+tants), we used both of the product name label and posi-
+tive/negative nature label. We extracted characteristic words
+for each of the PDAs on the basis of learned association rules
+for connecting positive opinions to product names. The tar-
+get category was defined as [product name = X, nature =
+positive].
+We discovered that PDA A has a good reputation with
+respect to the use of email when away from home/work. We
+also discovered that its monochrome screen version is popu-
+lar. Since the monochromatic quality is generally regarded
+as negative, this reputation is very interesting. A search of
+the original opinion data for the word "monochrome" in-
+dicated that the long running time, the reasonable price,
+and the large keyboard of the monochrome version are rea-
+sons for its good reputation. Figure 6 shows the obtained
+positioning map for four PDAs. Although all of the prod-
+ucts have good reputations, they show almost no sharing of
+
+
+
+
+346
+
+N o ,
+
+1
+2
+3
+4
+S c o r e
+
+0.82
+0.7"0
+0.69
+0.54
+
+
+0.51
+
+0.48
+Table
+3: Typical
+Sentences
+in the
+Category
+[cellular
+phone
+A]
+Typical Sentence
+cellular phone A turned out to be fast. -Benchmark result-
+The fact is that cellular phone A is faster. -Benchmark result amendment-
+Comment to Mr. ***: I was able to boot up cellular phone A with no problem.
+Since the price of cellular phone A Type 1 is falling, I will replace my *** with it as soon as
+possible, and replace that with cellular phone A Type 2 when the price comes down in the
+future.
+I tested all of them, and found that the worst one (where the expression for "worst" in
+Japanese contains a word equivalent to the English "No.l" .) was cellular phone A.
+cellular phone A might be a candidate for purchase
+
+
+
+
+2.5
+
+
+
+
+2
+
+
+
+
+L.5
+
+
+
+
+L
+
+
+
+
+0.5
+
+
+
+
+0
+
+
+
+
+0.5
+
+
+
+
+l
+t
+i
+
+
+
+
+. . . . . . . . .
+f"
+. . . . . . . . . . . . . . . . . . .
+'i . . . . . . . . . . . . . . . . . . .
+-r
+. . . . . . . . .
+a.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+J
+
+
+t
+,
+i
+
+,'
+benchmark
+result
+
+'
+10
+i
+. . . . . .
+a.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+-
+--B
+--
+i
+,
+,,future
+;
+l
+
+i
+i
+J
+
+
+
+Cellular Phon
+A ·
+,"
+,'
+,'
+
+............................
+~O- no problem(s)
+"-f...........................
+
+
+fast
+'
+,'
+'
+t
+i
+t
+,
+t
+i
+t
+
+
+,
+'Function ~**
+not exceea
+backside
+Cell dar Phone B ·
+total memory size
+i
+
+.........
+.-
+Cellular PhoneE
+jUO- doesn't use
+................................
+
+by far the most ...
+' health
+Cellular Phone C
+,
+,
+',
+wait
+'
+Oslowi~
+'
+,
+,
+1
+red
+I
+,'
+,'
+1
+@ Game **
+· . . . . . . . . .
+r- . . . . . . .
+- 0
+. . . . . . . . .
+~ .
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+r
+. . . . . . . . .
+,
+screen -
+" r
+'
+doesn't work
+Ireplace
+w colo
+,,
+i
+i
+
+h
+:
+
+Cellular Phone D
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+U . . . . . . . . .
+
+· Tokyo
+i
+
+
+
+L.5
+!
+1.5
+l
+0,5
+0
+0,5
+t
+t.5
+2
+2.5
+
+Axis t
+
+
+
+Figure
+5: Positioning
+Map
+for Five Cellular
+phones
+and
+Their
+Extracted
+Characteristic
+Words
+
+
+
+
+347
+
+2.5
+
+
+
+
+1.5
+
+
+
+
+0.5
+salesman
+large·
+
+
+......................................
+PDA B ...............
+
+
+
+
+-0.5
+
+
+
+
+-1.5
+
+"1.5
+"0.5
+sub-notebook
+· No. 1
+
+
+...............i....... ll PDA C ...........,.................
+
+fondof
+· lightweight
+
+· PDAD
+
+........ proudof ............................ ~.................
+
+email.~·
+'
+· monochrome
+PDA A
+i
+makeappearance
+'.
+·
+"
+awayfromhome/work
+
+
+0.5
+1.5
+2.5
+Axis 1
+"1
+
+
+
+
+"2
+crowded display
+engine ~
+
+.......................................iSP~'~ ISPworstB...........
+search ;horrible
+
+
+senseof security
+..... ISP D economy ............................................
+
+ISP Elm'package
+idiot
+longtime
+button
+
+. . . . . . . . . . . . .
+1 . . . . . . . . . . . . . . . .
+, . . . . . . . . . . . . . . . . . .
+r
+. . . . . . . . . . . . . . . . .
+
+
+i·ISP
+A
+
+rounds s forum
+conferenceroom
+
+
+"2
+-1
+0
+1
+2
+Axis
+
+
+Figure 6: Positioning Map for PDAs and Charac-
+teristic Words
+Figure
+7: Positioning Map for ISPs and Character-
+istic Words
+
+
+
+attribute-words, which implies that, in terms of extracted
+words, these products do not compete with each other.
+
+5.3
+Internet Service Providers
+
+Fig 7 shows a positioning map five ISPs. As can be seen,
+they form three well-separated clusters. Providers within a
+single cluster have similar reputations. For example, two
+closely located ISPs, D and E, share reputations for both
+"economy" and "sense of security", and it is easy to imagine
+that they might compete each other.
+
+
+6.
+CONCLUDING
+REMARKS
+
+In this paper we have proposed a framework for mining
+product reputations on the web. It consists of an opinion ex-
+traction portion and a text miningportion; the former works
+as an application-specific question-answering system, and
+the latter conducts four fundamental tasks: characteristic
+word extraction, co-occurring word extraction, typical sen-
+tence extraction, and correspondence analysis. The key to
+combining these two parts is opinion labeling, which makes
+it possible to conduct supervised learning in the text min-
+ing portion. We used real data to empirically demonstrate
+that the proposed framework is able to help users discover
+significantlyimportant knowledge regarding the reputations
+of products of interest, and to drastically reduce the cost of
+collecting and analyzing opinions. Our framework could, of
+course, also be well applied to mining reputations far be-
+yond the area of industrial products, for example, individu-
+als, events, services, companies, governments, etc.
+
+
+7.
+REFERENCES
+
+[1] B. Adelberg, Nodose - a tool for semi-automatically
+extracting structured and semistructured data from
+text documents, in Proc. of the 1998 ACM SIGMOD
+International Conference on Management of Data,
+pp:283-294, 1998.
+[2] R. Agrawal and R. Srikant, Fast algorithms for mining
+association rules, in Proc. 1994 Int'l. Conf. Very Large
+Data Bases (VLDB), pp:487-499, 1994.
+[3] M.R. Anderberg, Cluster Analysis for Applications,
+Academic Press, 1973.
+[4] N. Ashish ~md C. Knoblock, Wrapper generation for
+semi-structured internet sources, SIGMOD Record,
+26(4), 1997.
+[5] J.P. Benzecri, Correspondence Analysis Handbook,
+Mercel Dekker, 1992.
+[6] V. Chandhri and R. Fikes, Answering Systems, the
+1999 Fall Symposium. Technical Report, FS-98-04,
+AAAI, November 1999.
+[7] D. Clark, Shopbots Become Agents for Business
+Change, Computer, 33, pp:18-21, February 2000.
+[8] M. Craven, D. DiPasquo, D. Freitag, A. McCallum, T.
+Mitchell, K. Nigam, and S. Slattery, Learning to
+construct knowledge bases from World Wide Web,
+Artificial Intelligence, 118, pp:l-2, 2000.
+[9] R. Doorenbos, O. Etzioni, and D. Weld, A scalable
+comparison-shopping agent for the World-Wide Web,
+in Proc. of the First International Conference on
+Autonomous Agents Agents'97, pp:39--48, 1997.
+[10] D. Florescu, A. Levy, and A. Mendelzon, Database
+Techniques for the World-Wide Web: A Survey,
+SIG-MOD Record, 27(3), 1998.
+[11] Fujitsu, Symfoware World
+http:/ /www.fujitsu.co.jp/jp/soft /symfoware/index.html,
+2001.
+[12] S. Harabagiu, M. Pasca, and S. Maiorano,
+
+
+
+
+348
+
+Experiments with open-domain textual question
+answering, in Proc. of COLING-~O00, pp:292-298,
+2000.
+[13] B. Katz, From sentence processing to information
+access on the World Wide Web. in Natural Language
+Processing for the World Wide Web: the 1997 AAAI
+Spring Symposium, pp:77-94, 1999.
+[14] Komatsu Soft, Information Mining Tool VextSearch
+(in Japanese)
+http: / /www.komatsnsoft.co.jp/ develp/vxtsc/index.html,
+2001.
+[15] H. Li and K. Yamanishi, Mining from open answers in
+questionnaire data, in Proc. of KDD 2001,
+pp:443-449, 2001.
+[16] H. Li and K. Yamanishi, Text classification using
+ESC-based stochastic decision lists, Information
+Processing and Management, 38, pp.343-361, 2002.
+[17] K.C. Litkowski, Question-answering using semantic
+relation triples.in Proc. of the 8th Text Retrieval
+Conference (TREC-8)., pp:349-356, 1999.
+[18] D. Moldovan and S. Harabagiu, The structure and
+performance of an open-domain question answering
+system, in Proc. of the 38th Annual Meeting of the
+Association for Computational Linguistics,
+pp:563-570, 2000.
+[19] J. Prayer, E. Brown, and A. Coden,
+Question-answering by predictive annotation, in Proc.
+of the 23rd Annual International ACM SIGIR
+Conference on Research and Development in
+Information Retrieval, pp:184-191, 2000.
+[20] J.R. Qninlan, C.~.5: Programs for Machine Learning,
+Morgan Kaufmann, 1993.
+[21] J. Rissanen, Fisher information and stochastic
+complexity, IEEE Transaction on Information Theory,
+42(1), pp:40-47, 1996.
+[22] D. R. Radev, J. Prager, and V. Saran, The use of
+predictive annotation for question answering in Proc.
+of the 8th Text Retrieval Conference (TREC-8},
+pp:399-411, 1999.
+[23] R. Srihari and W. Li, Information extraction
+supported question answering, in Proc. of the 8th Text
+Retrieval Conference CTREC-8), pp:185-196, 1999.
+[24] K. Tateishi, Y. Ishiguro, and T. Fukushima, A
+reputation search engine that gathers people's
+opinions from the internet, (in Japanese) Technical
+Report NL-1~4-11, Information Processing Society of
+Japan, pp:75-82, 2001.
+[25] E.M. Voorhees and D.M. Tice, Building a quesdtion
+answering test collection, in Proc. of the ~3rclAnnual
+International ACM SIGIR Conference on Research
+and Development in Informtion Retrieval, pp:200-207,
+2000.
+[26] K. Yaraanishi, A learning criterion for stochastic rules,
+Machine Learning, 9, pp:165-203, 1992.
+[27] K. Yamanishi, A decision-theoretic extension of
+stochastic complexity and its applications to learning,
+IEEE Trans. on Infortmation Theory, 44(4),
+pp:1424-1439, 1998.
+
+
+
+
+349
+

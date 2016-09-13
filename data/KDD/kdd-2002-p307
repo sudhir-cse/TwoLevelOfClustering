@@ -1,0 +1,864 @@
+Efficient Handling of High-Dimensional Feature Spaces by
+Randomized Classifier Ensembles
+
+Aleksander Ko.l'cz
+Personalogy,Inc.
+3365 OrionDrive
+ColoradoSprings,CO 80906
+a.kolcz @ieee.org
+Xiaomei Sun
+DepartmentofComputer
+Science,Universityof
+Coloradoat ColoradoSprings
+1420 AustinBluffsPkwy.
+ColoradoSpnngs,CO 80918
+maysun 1998 @yahoo.com
+Jugal Kalita
+Departmentof Computer
+Science,Universityof
+Coloradoat ColoradoSprings
+1420 AustinBluffsPkwy.
+ColoradoSprings,CO 80918
+kalita@ pikespeak.uccs.edu
+
+
+ABSTRACT
+
+Handling massive datasets is a difficult problem not only due
+to prohibitively large numbers of entries but in some cases
+also due to the very high dimensionality of the data. Often,
+severe feature selection is performed to limit the number of
+attributes to a manageable size, which unfortunately can
+lead to a loss of useful information. Feature space reduction
+may well be necessary for many stand-alone classifiers, but
+recent advances in the area of ensemble classifier techniques
+indicate that overall accurate classifier aggregates can be
+learned even if each individual classifier operates on incom-
+plete "feature view" training data, i.e., such where certain
+input attributes are excluded. In fac% by using only small
+random subsets of features to build individual component
+classifiers, surprisingly accurate and robust models can be
+created. In this work we demonstrate how these types of
+architectures effectively reduce the feature space for sub-
+models and groups of sub-models, which lends itself to ef-
+ficient sequential and/or parallel implementations. Experi-
+ments with a randomized version of Adaboost are used to
+support our arguments, using the text classification task as
+an example.
+
+
+1.
+INTRODUCTION
+Many challenges faced in data mining are due to the huge
+amounts of data available, which presents serious scaling
+problems for many machine learning algorithms. Although
+commonly the problem is caused by excessively many data
+entries, in domains such as text it is compounded by the
+very high dimensionality of the data.
+Much research has
+been directed at data pre-processing to eliminate irrelevant
+examples and/or features, and for high-dimensional prob-
+lems a feature selection stage is often performed to reduce
+the number of attributes. Unfortunately, such approaches
+may lead to a loss of useful information [19].
+
+
+
+
+Permissionto make digitalor hard copiesof all or part of this workfor
+personalor classroomuse is grantedwithoutfee providedthat copiesare
+not madeor distributedfor profitor commercialadvantageandthatcopies
+bear thisnoticeand thefullcitationonthe firstpage.Tocopyotherwise,to
+republish,topostonserversor toredistributeto lists,requirespriorspecific
+permissionand/ora fee.
+SIGKDD '02 Edmonton,Alberta,Canada
+Copyright2002ACM 1-58113-567-X/02/0007/...$5.00.
+Recent advances in the area of machine learning resulted
+in architectures such as Support Vector Machines [17], that
+can handle large feature spaces without overfitting, so that
+the aspect of feature-space reduction becomes less of an is-
+sue. Scalability is a problem, however, and many datasets
+are too large to be processed efficiently if an algorithm re-
+quires access to all data during the learning process. En-
+semble classifier techniques are attractive in this respect,
+since robust and accurate classifier aggregates can be learned
+even if each individual component classifier operates on in-
+complete training data, i.e., such where certain training in-
+stances and/or input attributes are eliminated, often at ran-
+dom [s].
+An under-emphasizedproperty of certain randomized clas-
+sifter ensembles, such as Random Forests [8] or Randomized
+Boosting [3], is that each individual classifier may be induced
+using just a fraction of the available features. In this work we
+discuss how this characteristic can be used to build resource-
+efficient classifiers in situations where the number of features
+is very high. To focus our presentation, we will assume that
+the original high-dimensional dataset is too large to fit into
+the memory (RAM) space of a computing process, but it is
+possible to do so with a reduced number of features (i.e.,
+the related problem of excessive numbers of data entries is
+ignored). We use the text classification task and a boosting
+algorithm to illustrate the effectiveness of our approach.
+The paper is organized as follows: In Section 2 we briefly
+outline the context of the ensemble randomization ideas used
+in our work. Section 3 demonstrates how the architecture
+of Random Forests, when combined with depth constrained
+tree models, leads to an implicit feature subset selection,
+which has important implications for inducing models from
+high dimensional data. In Section 4 we discuss the applica-
+bility of random feature subset selection to boosting. Section
+5 outlines the experimental setup, the results of which are
+given in Section 6. The paper is concluded in Section 7.
+
+
+2.
+BACKGROUND
+Ensemble classifiers have been quite popular in many data
+mining applications due to their high accuracy and potential
+for efficient parallel implementations. The success of these
+techniques rests largely on their ability to combine many
+weakly coupled models which are not very accurate when
+taken individually but which, as ar~aggregate, greatly reduce
+the overall generalization error rate.
+
+
+
+
+307
+
+Historically, a number of seemingly diverse ensemble schemes
+have been proposed, but recently efforts have been made to
+explain their properties under within a common framework,
+which can be viewed as statistical sampling from a model
+space where adequate model coverage is achieved via appro-
+priate randomization of the learning set and/or the learning
+process [8][3]. Decision trees have been used predominantly
+as the ensemble base learner, and approaches based on ran-
+dom perturbations of the training set (bagging [6] and arcing
+[7]) received particularly much attention. Adaboost [11], a
+technique related to arcing that does not explicitly depend
+of randomization, has been especially well acclaimed.
+Dietterich [9], instead of randomizing the training set, ran-
+domized the process of tree construction whereby, when de-
+ciding how to best split a tree node, all possibilities are
+ranked according to their utility, and a split is chosen at
+random from a small set of the most promising candidates I .
+Note that such an approach requires a complete training set
+(with all features) to be present for splitting each node of
+the tree. A different variant of randomization, which relaxes
+this constraint, is due to Amit et al. [3] and Breiman [8].
+In [3] it is suggested to built each tree using random sub-
+sets of all possible attribute-threshold combinations when
+splitting each node of the tree. Breiman [8] proposed a sim-
+ilar process, where a random subset of attributes is selected
+prior to executing each split (the two approaches are equiv-
+alent when all features are binary). In both [3] and [8] the
+authors also propose unifying frameworks for different types
+of classifiers ensembles (under the name of Multiple Ran-
+domized Classifiers (MRCL) in [3] and under the term of
+Random Forests in [8]).
+The ideas outlined in this paper are directly based on
+the types of randomization proposed by Amit et al.
+[3]
+and Breiman [8]. In the general discussion we will focus
+on the architecture of Random Forests, whose algorithmic
+implementation clearly puts emphasis on random selection
+of input features. We will then treat Randomized Boosting
+of [3] as a natural extension of Random Forests, and use
+Randomized Boosting as the platform for our experiments.
+It is interesting to note that the idea of using random
+subsets of features in classifier system design has a long his-
+tory. Bledsoe and Browining [5] applied it to built optical
+character-recognition systems using random access memo-
+ries, by randomly interconnecting the address lines of each
+memory module to the image matrix. Their architecture be-
+came known as the N-tuple network [15] (since N randomly
+selected features were utilized by each model), and has been
+used with success in several pattern recognition applications
+(e.g., [1][2]). As will be shown, under certain circumstances,
+the new architectures such Random Forests can be seen to
+extend the basic N-tuple idea.
+
+
+3.
+RANDOM FORESTS AS FEATURE SUB-
+SET SELECTORS
+
+3.1
+Single-model effects
+Although the definition of a Random Forest, as stated in
+[8], is quite general and has much in common with that of
+MRCL, we focus on its special instance Forest-RI, which is
+
+XFor axis-parallel splits, a candidate combines the attribute
+(i.e., feature) to be split with a particular threshold value at
+which the attribute's range is to be divided.
+one of algorithmic embodiments of a Random Forest pro-
+posed by Breiman.
+We will thus narrowly understand a
+Random Forest as a classifier ensemble that consists of a
+number of trees, each grown without pruning such that only
+a random subset of F features is "seen" when splitting each
+node of the tree. For a given input, the Random Forest en-
+semble produces its output via uniform voting to choose the
+most popular class.
+We begin with an observation that when the dimension-
+ality of the feature space is large, by selecting only a small
+random subset of features for each split, the tree, as a whole,
+may have an opportunity to see only a small subset of the
+feature space.
+It is important to note that this limiting
+effect applies to the learning stage. Naturally, even a tradi-
+tionally learned tree may effectively depend on just a small
+subset of features - that is, those which have been selected
+for splitting during tree construction.
+Let us assume that a binary tree model is constrained
+to implement S splits (i.e., it has S internal nodes and its
+depth is at most S) only. If a random subset of F features
+(out of the total number of N available) is used to determine
+each split, then the total number of features seen by the tree
+during the learning process can be estimated as:
+
+
+E=N(1-
+(1-~-)
+s)
+(1)
+
+
+For the special case of a stump (i.e., S = 1) the effect is
+particularly dramatic, since only F features are seen by each
+tree model.
+The severity of this feature subset selection
+depends on the total number of features, N, the complexity
+of the tree models (as determined by S) and the size of the
+feature window, F, used for each split. For example, for
+N=
+10,000,_F= 100, andS=
+10eq. (1) yields E=956,
+i.e., only about; 10% of features being visited by each tree.
+Since the time-complexity of each node split is usually linear
+with respect to the number of attributes involved, the overall
+speed-up with respect to a tree grown using all features can
+be expected to be proportional to ~.
+The above suggests that by knowing the average fraction
+of features, E, likely to be visited during the tree construc-
+tion, we can attempt to speed up and/or simplify the learn-
+ing process for each tree by handing it a random subset of
+features of size E, in advance, without otherwise modifying
+the tree-growing algorithm in any way. The advantage of
+such an approach is evident in cases where the entire train-
+ing set is too big to be contained in the computer's memory,
+but where the training set slice corresponding to the ran-
+dom feature window (of size E) may do so. Also, note that
+each tree component of a Random Forest can be seen as per-
+forming a variant of N-tuple sampling of the input feature
+space.
+
+3.2
+Group effects
+Let us assume that E << N, which may occur if the in-
+dividual tree models are severely constrained (e.g., S = 1)
+and/or when the number of available features is quite large.
+Since individual trees sample the feature space indepen-
+dently from one another, the binomial model used to es-
+timate E in eq.
+(1) can be used to estimate the number
+of unique features seen by a collection of K trees. Here E
+takes the place of F, while K takes the place of S, and the
+expected number of unique features visited by at least one
+
+
+
+
+308
+
+tree in the collection is estimated as
+
+EK
+N(1-
+(1
+.~)K)
+=
+-
+(2)
+
+
+If EK is significantly smaller than N for some value of K
+(e.g., EK/N < 0.5) then, for large feature spaces, an attrac-
+tive strategy of growing a randomized tree ensemble might
+be to construct it in blocks of K trees, where each block
+sees only EK of the original input features (and assuming,
+of course, that the learning set with EK features does not ex-
+ceed the available memory resources of the running process).
+Note that the algorithm used to grow each individual tree
+remains the same.
+Since the order in which the tree models are created is
+irrelevant (with exceptions, such as boosting), the process
+of building a large ensemble of trees for a high-dimensional
+problem might be parallelized by mapping the tree ensemble
+onto number of machines, each growing a collection of K
+trees over a reduced feature space (i.e., where the number
+of attributes is reduced, via random sampling, from N to
+EK). In practice, for efficiency reasons one might want to
+grow more than K trees per block. This will result in the
+trees grown within a common block being more correlated
+with each other than with trees grown over different feature
+windows. An ensemble consisting of T trees implemented
+in this way may underperform one constructed using the
+original algorithm, although the effects might be negligible
+if the "overloading" performed within each block is not too
+extreme.
+To summarize, in cases where the complete training set
+with all features is too big to fit into computer's memory
+(i.e., RAM), one might construct a Random Forest by:
+
+· Step 1: choosing a random subset of F features (as-
+suming that the feature-reduced training set overcomes
+the RAM limitations);
+
+· Step 2: building K random trees by sampling from the
+pre-selected features only;
+
+· Step 3: repeating steps 1 and 2 for a predefined num-
+ber of times, or till the desired level of accuracy, or
+a convergence criterion has been reached. For parallel
+implementations, each sequence of steps 1 and 2 might
+be executed on a separate machine.
+
+A suitable value of F might determined via cross-validation
+or heuristically. As demonstrated in [8], Random Forests are
+not overly sensitive to the choice of F and for rich feature
+datasets, good results are achieved for F << N.
+
+
+4.
+APPLICATION
+TO BOOSTING
+The popular Adaboost algorithm [11] (and its arcing vari-
+ants [7]) is an apparent exception among other ensemble
+classifier schemes, since it requires the component classifiers
+to be built in a sequential fashion, and is.thus more difficult
+to implement in parallel. The power of boosting stems from
+its continuous reweighting of training instances, so that dif-
+ficult to classify examples receive more priority over time.
+Despite its sequential and deterministic nature, it has been
+argued in ([8] and [3]) that Adaboost can be seen as a spe-
+cial form of a Random Forest, or MRCL, since in the limit
+of many iterations it can be viewed as a special type of sta-
+tistical sampling from a classifier distribution.
+Typically, the problem of scaling up boosting has been at-
+tacked in the context of datasets having excessive numbers of
+training instances. A few effective parallelization approaches
+have been put forward, based on combining the arcing vari-
+ant of boosting with synchronizing the way in which weights
+are assigned to individual training instances among the par-
+allel nodes [14][20]. Adaboost assigns non-uniform weights
+to its component classifiers but, as reported for example in
+[7][3][14], the weights assigned by boosting can be substi-
+tuted with uniform weights (which simplifies parallelization
+[14][20]) with little effect on the aggregate classifier perfor-
+mance. In purely sequential implementations, it has been
+proposed to modify arcing such that only much smaller sub-
+sets (in terms of the number of instances) of the original
+training data are selected for each iteration [13] (a simi-
+lar approached using adaptive resampling was described in
+[10]). One can see that this latter approach bears strong
+similarity to the idea of using only small subsets of total
+features when building each model in Random Forests.
+Focusing on the use of trees as base learners, Amit et al.
+[3] extended the randomization idea to boosting by defining
+Randomized Boosting, where during each boosting iteration
+a component tree classifier uses random subsets of features
+when choosing the node splits, just as in the case of Ran-
+dom Forests.
+For some data sets, Randomized Boosting
+was even reported to outperform standard (i.e., determinis-
+tic) boosting. Clearly, the feature subset selection aspects
+of Random Forests discussed in Section 3 apply to Random-
+ized Boosting as well. In fact, Randomized Boosting can
+be seen as combining two approaches building classifier en-
+sembles: boosting and randomization of tree decision splits.
+Interestingly, Breiman reported in [8] that practical imple-
+mentations of Random Forests seem to perform better when
+combined with bagging, which could be seen as "Random-
+ized Bagging".
+The experiments performed in [3] used shallow trees in the
+form of stumps even for fairly moderate numbers of features
+and, indeed, to effectively apply Adaboost to multi-class
+feature-rich problems, such as text categorization, Schapire
+and Singer proposed to use stumps, in a collection of algo-
+rithms termed BoosTexter [16]. Boosting with stumps as
+base learners has also been reported in [3][10] and [12], for
+example. In the following experimental section we adapted
+the Real Adaboost.MH (we will drop the Real prefix for
+brevity) algorithm from BoosTexter [16] to be used with
+Randomized Boosting.
+Adaboost.MH utilizes a stump as
+the base weak learner and applies uniform weights to all
+component classifiers; the reader is referred to [16] for full
+details.
+The randomized version of Adaboost.MH simply
+uses just a random subset of F features during each boost-
+ing iteration, as discussed in Section 3.
+
+
+5.
+EXPERIMENTAL
+SETUP
+To evaluate the effectiveness of Randomized Boosting, and
+demonstrate the value of the associated feature subset selec-
+tion, a number of text classification experiments were per-
+formed using the well-known Reuters-215782 document cor-
+pus.
+The text medium was chosen~ since it represents a
+naturally high dimensional domain, common in many data
+mining applications.
+Following [16], we used the popular
+Mod-Apte split [41 of the Reuters corpus and focused on the
+
+Zhttp://www.research.att.com/-lewis/reuters21578.html
+
+
+
+
+309
+
+6 of the most populous categories {acq, com, earn, econ,
+engr, garl}, where documents belonging to multiple cate-
+gories were removed, leaving the 6,089 training documents
+and 3,044 test documents. For pre-processing, all charac-
+ters were converted to lower case, and words were defined
+as sequences of characters delimited by whitespace, which
+produced N = 6,502 unique features. Words are treated as
+binary attributes, i.e., only the presence/absence of a word
+in a document was taken into account.
+The text categorization performance was measured by
+means of the macro- and micro-averaged F1 metric, often
+used in the information-retrieval community, defined as
+
+F1 ----2 precision, recall
+precision -t- recall
+
+where precision is the ratio of the correctly classified doc-
+uments for a given class to the total number of documents
+classified as belonging to that class, while recall is the ratio
+of the correctly classified documents for a given class to the
+total number of documents belonging to that class. In the
+case of macro-averaging, F1 is first measured when distin-
+guishing each class from all others and then the results are
+averaged. Conversely, in micro-averaging, the contingency
+tables corresponding to all one-against-others classifiers are
+merged and then the overall average is computed.
+More
+details can be found in [18].
+Given this data set, three sets of experiments were per-
+formed:
+tI001
+001
+01
+I
+
+
+
+
+Figure 1:
+Micro-averaged
+F1 test-set accuracy of
+randomized Adaboost.MH for different choices of al-
+pha.
+
+
+
+
+· Standard Adaboost using Adaboost.MH.
+
+· Randomized Boosting based Adaboost.MH for differ-
+ent values of the feature window size, F. For each value
+of F, 10 runs of the experiment where performed with
+different random seeds, and the results were averaged.
+
+· "Overloaded" Randomized Boosting, where instead of
+performing the randomization step at every iteration,
+it was performed at every I iterations for different set-
+tings of I. Overloading can be considered a special case
+of the block-oriented approach to the ensemble imple-
+mentation (see Section 3.2), where E is made equal to
+F. It results in running deterministic boosting for I
+iterations on the feature-reduced data, before a new
+random feature subset is selected.
+
+· Block oriented randomized boosting based on Adaboost.MH
+for a selection of the feature block size EK, and the
+feature window size, F.
+
+
+6.
+RESULTS
+Standard Adaboost.MH achieved the micro and macro-
+averaged F1 test-set accuracy of 0.92 and, 0.95, respectively.
+Little change in accuracy occurred beyond 500 iterations,
+and for all subsequent experiments the overall number of
+boosting iterations (however divided between blocks, etc.)
+was kept at 500.
+For Randomized Boosting, the dependence of the test-set
+F1 measure on the number of boosting iterations and dif-
+ferent choices of F is depicted in Figures 1 and 2 where,
+instead of showing the absolute values of F, we used their
+relative values, with the total number of features used as a
+reference, i.e., a = F/N, where c~ E (0, 1). Note that for
+= 1 Randomized Boosting is equivalent to deterministic
+0001
+001
+~1
+I
+
+
+
+
+Figure 2: Macro-averaged F1 test-set accuracy of
+randomized Adaboost.MH for different choices of al-
+pha.
+
+
+
+
+310
+
+I
+10
+100
+1~
+
+t~,vzd
+b1~m
+1
+
+
+
+Og6
+
+
+
+G9
+
+
+
+~S5
+
+
+
+08
+
+
+
+
+07
+
+
+
+O~
+
+
+
+
+Q.55
+
+
+
+05
+iiiiiiiiiiiiiiiii~
+
+
+
+
+Figure 3: Micro-averaged F1 test-set accuracy of
+randomized Adaboost.MH for alpha=0.1 and dif-
+ferent overloading factors. The x-axis indicates the
+number of boosting rounds performed for each ran-
+dom feature subset.
+Figure 4: Macro-averaged F1 test-set accuracy of
+randomized Adaboost.MH for alpha=0.1 and dif-
+ferent overloading factors. The x-axis indicates the
+number of boosting rounds performed for each ran-
+dom feature subset.
+
+
+boosting.
+For each value of o~, 10 runs of 500 iterations
+were performed using different random seeds. Clearly, for
+this data set, randomized boosting using just 10% of to-
+tal features at each iteration achieves performance largely
+equivalent to that of standard boosting using all features,
+while resulting in a 10-fold overall speedup.
+In experiments with the overloaded and block-oriented
+Randomized Boosting, we used the fixed setting of o~= 0.1.
+To overload Randomized Boosting, we performed I boost-
+ing iterations for each random choice of features (with I
+ranging from 2 to 500), while keeping the overall number of
+iterations at 500. The results are shown in Figures 3 and 4,
+which suggest that moderate overloading does not seem to
+harm the overall accuracy of the predictor, which may lead
+to more efficient implementations when dealing with large
+high-dimensional datasets.
+To evaluate the effects of larger-sized blocks, we used
+K = 5 blocks, each sampling ~ = 50% of the available fea-
+tures. Within each block, Randomized Boosting was run for
+100 iterations, so that the overall number of boosting itera-
+tions was kept at 500, as in the previous experiments. Six
+replicates of the experiment were performed, using differ-
+ent random seeds in each case. The averaged performance
+after 500 iterations was slightly lower that for standard Ad-
+aboost.MH and regular Randomized Boosting, but as shown
+in Figures 5 and 6 the accuracy of the block-oriented algo-
+rithm was still rising at the point of termination. There-
+fore, achieving higher accuracy could be a matter of a trade-
+off between the memory resources required to implement a
+block of models, and the run-time cost of a single iteration,
+which could be exploited in parallel implementations.
+
+
+7.
+CONCLUSIONS
+We have shown that, for depth-constrained tree models,
+the algorithmic procedures of randomized classifier ensem-
+bles of Random Forests and Randomized Boosting implic-
+itly lead to an effective reduction in the number of input
+features actually used during the construction of each tree.
+This limits the amount of resources necessary to construct
+each component classifier of an ensemble, and can be ex-
+tremely useful when working with large high-dimensional
+datasets that do not easily fit into the memory space avail-
+able to running processes. Since each model needs to see
+only a fraction of the overall features, a methodology anal-
+ogous to one used in N-tuple networks can be used to apply
+random feature-wise masks to the input data before passing
+it on to individual models. Moreover, the reduced feature
+requirements of a single model extend to groups of models as
+well, which can be exploited in both sequential and parallel
+randomized ensemble implementations.
+Using a text categorization task as the test-bed, practical
+experiments with a randomized version with Adaboost.MH
+showed that Randomized Boosting using only 10% of the
+original number of features achieves accuracy levels of com-
+parable standard Adaboost.MH without requiring more it-
+erations.
+Further efficiency improvements are possible by
+performing several boosting iterations using the same ran-
+dom feature subset (i.e., overloading) and, for problems with
+particularly many features, by performing two-stage ran-
+domization of features (i.e., blocking). The latter case is
+more amenable to parallel implementations but there are
+trade-offs between the number of iterations necessary for
+good accuracy, the size of a feature window used and the
+block overloading factor.
+Such issues can be resolved by
+taking into account the particulars of the dataset and the
+availability of the computational resources.
+Although we addressed only the problem of handling datasets
+with large numbers of attributes (and ignored the possibil-
+ity of processing excessive number of data entries), it would
+be interesting to examine the effectiveness of combining ran-
+domized feature subset selection with adaptive sampling ap-
+proaches (e.g., those used in [13] and [10]) to handle datasets
+with both large numbers of features and large numbers of
+data instances.
+
+8.
+REFERENCES
+[1] I. Aleksander and T. J. Stonham. A guide to pattern
+
+
+
+
+311
+
+°%
+O.14Si
+o.ll
+
+o.IW ~
+
+o.F
+
+
+
+
+a.l~ 'I
+
+..!
+I +i,i~:+:2~i;
+':'
+~.:~
+
+
+
+
++
++
+~+;::+
+
+
++
++
+++++~++~....
++++++++++++++%?~+
+
+
++++~.~
++++.. +++++~+
++++++++++++
+++++++++++++
++++++++++++++++++++ ++++++ +..~++++
+
+
+~o~na
+
+
+
+
+Figure 5:
+Micro-averaged
+F1 test-set accuracy of
+block-oriented
+randomized
+Adaboost.MH
+for
+al-
+pha=0.1.
+Here,
+100 randomized
+iterations
+pro-
+ceeded within blocks, with each block having access
+to a random 50% subset of total features. The blocks
+were executed in sequence, with the test-set perfor-
+mance being updated at the end of each block.
+
+
+
+
+.... :~:!~
+
+O.llr
+~
++...++++
+
+o.iiii ~
++
+....
+
+®
++i'~+¸+:¸+
+
+
+~t! ':t
+~:~:::
+
+
+
+
+4" "
+g~ :
+
+
+
+
+Figure
+6:
+Macro-averaged
+F1
+test-set
+accuracy
+of block-oriented randomized Adaboost.MH
+for al-
+pha=0.1.
+Here,
+100 randomized .iterations
+pro-
+ceeded within blocks, with each block having access
+to a random 50% subset of total features. The blocks
+were executed in sequence, with the test-set perfor-
+mance being updated at the end of each block.
+recognition using random-access memories, lEE
+Proceedings-E Computers and Digital Techniques,
+2(1):29-40, 1979.
+[2] I. Aleksander, W. Thomas, and P. Bowden. WISARD,
+a radical new step forward in image recognition.
+Sensor Rev., 4(3):120-124, 1984.
+[3] Y. Amit, G. Blanchard, and K. Wilder. Multiple
+randomized classifiers: MRCL. Technical Report 446,
+Depertment of Statistics, University of Chicago, 2000.
+[4] C. Apt~, F. Damerau, and S. M. Weiss. Automated
+learning of decision rules for text categorization. ACM
+Transactions on Information Systems, 12(3):233-251,
+1994.
+[5] W. Bledsoe and I. Browning. Pattern recognition and
+reading by machine. In IRE Joint Computer
+Conference, pages 225-232, 1959.
+[6] L. Breiman. Bagging predictors. Machine Learning,
+24(2):123-140, 1996.
+[7] L. Breiman. Arcing classifiers. The Annals of
+Statistics, 26(3):801-849, 1998.
+[8] L. Breiman. Random forests. Machine Learning,
+24(2):5-32, 2001.
+[9] T. G. Dietterich. An experimental comparison of three
+methods of constructing ensembles of decision trees:
+Bagging, boosting, and randomization. Machine
+Learning, 40(2):139-157, 2000.
+[10] C. Domingo and O. Watanabe. Scaling up a
+boosting-based learner via adaptive sampling. In
+Proceedings of the 2000 Pacific-Asia Conference on
+Knowledge Discovery and Data
+Mining(PAKDD-2000), pages 317-328, 2000.
+[11] Y. Freund and R. E. Schapire. Experiments with a
+new boosting algorithm. In Proceedings of the
+Thirteenth International Machine Learning
+Conference, pages 148-156, 1996.
+[12] J. Friedman, T. Hastie, and R. Tibshirani. Additive
+logistic regression: a statistical view of boosting. The
+Annals of Statistics, 38(2):337-374, 2000.
+[13] D. Pavlov, J. Mao, and B. Dom. Scaling-up support
+vector machines using boosting algorithm. In
+Proceedings of the 2000 International Conference on
+Pattern R.ecognition, 2000.
+[14] J. A. Reichler and H. D. Harris. Parallel online
+continuous arcing and a new framework for wrapping
+parallel ensembles. In Proceedings of IJCAI 2001:
+International Joint Conference on Artificial
+Intelligence, Workshop on Wrappers for Performance
+Enhancement in Knowledge Discovery in Databases,
+pages 148-156, 2001.
+[15] R. Rohwer and M. Morciniec. The theoretical and
+experimental status of the N-tuple classifier. Neural
+Networka, 11(1):1-14, 1998.
+[16] R. E. Schapire and Y. Singer. BoosTexter: A
+boosting-based system for text categorization.
+Machine Learning, 39(2-3):135-168, 2000.
+[17] V. N. Vapnik. Statistical Learning Theory. John
+Wiley, New York, 1998.
+[18] Y. Yang and X. Liu. A re-examination of text
+categorization methods. In Proceedings of the 22nd
+International ACM SIGIR Conference on Research
+and Development in Information Retrieval, pages
+
+
+
+
+312
+
+42-49, 1999.
+[19] Y. Yang and J. P. Pedersen. A comparative study on
+feature selection in text categorization. In Proceedings
+of the Fourteenth International Conference on
+Machine Learning (ICML '97), pages 412-420, 1997.
+[20] C. Yu and D. B. Skillicorn. Parallelizing boosting and
+bagging. Technical Report 2001-442, Depertment of
+Computing and Information Science, Queen's
+University, Kingston, Canada, 2001.
+
+
+
+
+313
+

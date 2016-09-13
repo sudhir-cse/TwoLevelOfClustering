@@ -1,0 +1,1646 @@
+Bursty and Hierarchical Structure in Streams
+
+
+Jon Kleinberg
+Departmentof Computer Science
+Cornell University, Ithaca NY 14853
+kleinber@cs.cornell.edu
+
+
+
+ABSTRACT
+
+A fundamental problem in text data mining is to extract meaning-
+ful structure from document streams that arrive continuously over
+time. E-mail and news articles are two natural examples of such
+streams, each characterized by topics that appear, grow in intensity
+for a period of time, and then fade away. The published literature in
+a particular research field can be seen to exhibit similar phenomena
+over a much longer time scale. Underlying much of the text min-
+ing work ih this area is the following intuitive premise -- that the
+appearance of a topic in a document stream is signaled by a "burst
+of activity," with certain features rising sharply in frequency as the
+topic emerges.
+The goal of the present work is to develop a formal approach
+for modeling such "bursts," in such a way that they can be robustly
+and efficiently identified, and can provide an organizational frame-
+work for analyzing the underlying content. The approach is based
+on modeling the stream using an infinite-state automaton, in which
+bursts appear naturally as state transitions; in some ways, it can
+be viewed as drawing an analogy with models from queueing the-
+ory for bursty network traffic. The resulting algorithms are highly
+efficient, and yield a nested representation of the set of bursts that
+imposes a hierarchical structure on the overall stream. Experiments
+with e-mail and research paper archives suggest that the resulting
+structures have a natural meaning in terms of the content that gave
+rise to them.
+
+
+I.
+INTRODUCTION
+Documents can be naturally organized by topic, but in many set-
+tings we also experience their arrival over time. E-mall and news
+articles provide two clear examples of such document streams: in
+both cases, the strong temporal ordering of the content is necessary
+for making sense of it, as particular topics appear, grow in inten-
+sity, and then fade away again. Over a much longer time scale,
+the published literature in a particular research field can be mean-
+
+*Supported in part by a David and Lucile Packard Foundation Fel-
+lowship, an ONR Young Investigator Award, NSF ITR/IM Grant
+IIS-0081334, and NSF Faculty Early Career Development Award
+CCR-9701399.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the firstpage. Tocopy otherwise, to
+republish, to post on serversor to redistributeto lists, requires prior specific
+permission and/or a fee.
+SIGKDD '02 Edmonton, Alberta, Canada
+Copyright 2002 ACM 1-58113-567-X/02/0007 ...$5.00.
+ingfully understood in this way as well, with particular research
+themes growing and diminishing in visibility across a period of
+years. Work in the areas of topic detection and tracking [2, 3, 5,
+64, 65], text mining [37, 59, 60, 61], and visualization [27, 45, 63]
+has explored techniques for identifying topics in document streams
+comprised of news stories, using a combination of content analysis
+and time-series modeling.
+Underlying a number of these techniques is the following in-
+tuitive premise -- that the appearance of a topic in a document
+stream is signaled by a "burst of activity," with certain features ris-
+ing sharply in frequency as the topic emerges. The goal of the
+present work is to develop a formal approach for modeling such
+"bursts," in such a way that they can be robustly and efficiently
+identified, and can provide an organizational framework for ana-
+lyzing the underlying content. At one level, the approach presented
+here can be viewed as drawing an analogy with models from queue-
+ing theory for bursty network traffic (see e.g. [33]). In addition,
+however, the analysis of the underlying burst patterns reveals a la-
+tent hierarchical structure that often has a natural meaning in terms
+of the content of the stream.
+My initial aim in studying this issue was a very concrete one:
+I wanted a better organizing principle for the enormous archives
+of personal e~mail that I was accumulating. Abundant anecdotal
+evidence, as well as academic research [6, 44, 62], suggested that
+my own experience with "e-mail overload" corresponded to a near-
+universal phenomenon -- a consequence of both the rate at which
+e-mail arrives, and the demands of managing volumes of saved per-
+sonal correspondence that can easily grow into tens and hundreds
+of megabytes of pure text content. And at a still larger scale, e-
+mail has become the raw material for legal proceedings [35] and
+historical investigation [8, 39, 46] -- with the National Archives,
+for example, agreeing to accept tens of rnillions of e-mail messages
+from the Clinton White House [48]. In sum, there are several set-
+tings where it is a crucial problem to find structures that can help in
+making sense of large volumes of e-mail.
+An active line of research has applied text indexing and clas-
+sification to develop e-mall interfaces that organize incoming mes-
+sages intofolders on specific topics, sometimes recommending fur-
+ther actions on the part of a user [4, 9, 13, 30, 31, 40, 49, 50, 52,
+53, 54, 56, 57] -- in effect, this framework seeks to automate a
+kind of filing system that many users implement manually. There
+has also been work on developing query interfaces to fully-indexed
+collections of e-mail [7].
+My interest here is in exploring organizing structures based more
+explicitly on the role of time in e-mail and other document streams.
+Indeed, even the flow of a single focused topic is modulated by
+the rate at which relevant messages or documents arrive, dividing
+naturally into more localized episodes that correspond to bursts of
+
+
+
+
+91
+
+activity of the type suggested above. For example, my saved e-mail
+contains over a thousand messages relevant to the topic "grant pro-
+posals" -- announcements of new funding programs, planning of
+proposals, and correspondence with co-authors. While one could
+divide this collection into sub-topics based on message content --
+certain people, programs, or funding agencies form the topics of
+some messages but not others -- an equally natural and substan-
+tially orthogonal organization for this topic would take into account
+the sequence of episodes reflected in the set of messages -- bursts
+that surround the planning and writing of certain proposals. In-
+deed, certain sub-topics (e.g. "the process of gathering people to-
+gether for our large NSF ITR proposal") may be much more easily
+characterized by a sudden confluence of message-sending over a
+particular period of time than by textual features of the messages
+themselves. One can easily argue that many of the large topics rep-
+resented in a document stream are naturally punctuated by bursts in
+this way, with the flow of relevant items intensifying in certain key
+periods. A general technique for highlighting these bursts thus has
+the potential to expose a great deal of fine-grained structure.
+Before moving to a more technical overview of the methodol-
+ogy, let me suggest one further perspective on this issue, quite dis-
+tant from computational concerns. If one were to view a particular
+folder of e-mall not simply as a document stream but also as some-
+thing akin to a narrative that unfolds over time, then one immedi-
+ately brings into play a body of work that deals explicitly with the
+bursty nature of time in narratives, and the way in which particu-
+lar events are signaled by a compression of the time-sense. In an
+early concrete reference to this idea, E.M. Forster, lecturing on the
+structure of the novel in the 1920's, asserted that
+
+...
+there seems something else in life besides time,
+something which may conveniently be called "value,"
+something which is measured not by minutes or hours
+but by intensity, so that when we look at our past it
+does not stretch back evenly but piles up into a few
+notable pinnacles, and when we look at the future it
+seems sometimes a wall, sometimes a cloud, some-
+times a sun, but never a chronological chart [18].
+
+This role of time in narratives is developed more explicitly in work
+of Genette [20, 21], Chatman [11], and others on anisochronies, the
+non-uniform relationships between the amount of time spanned by
+a story's events and the amount of time devoted to these events in
+the actual telling of the story.
+
+
+Modeling Bursty Streams. Suppose we were presented with a
+document stream -- for concreteness, consider a large folder of e-
+mail on a single broad topic. How should we go about identifying
+the main bursts of activity, and how do they help impose additional
+structure on the stream? The basic point emerging from the dis-
+cussion above is that such bursts correspond roughly to points at
+which the intensity of message arrivals increases sharply, perhaps
+from once every few weeks or days to once every few hours or min-
+utes. But the rate of arrivals is in general very "rugged": it does not
+typically rise smoothly to a crescendo and then fall away, but rather
+exhibits frequent alternations of rapid flurries and longer pauses in
+close proximity. Thus, methods that analyze gaps between consec-
+utive message arrivals in too simplistic a way can easily be pulled
+into identifying large numbers of short spurious bursts, as well as
+fragmenting long bursts into many smaller ones. Moreover, a sim-
+ple enumeration of close-together sets of messages is only a first
+step toward more intricate structure. The broader goal is thus to ex-
+tract global structure from a robust kind of data reduction -- iden-
+tifying bursts only when they have sufficient intensity, and in a way
+that allows a bursll to persist smoothly across a fairly non-uniform
+pattern of message arrivals.
+My approach here is to model the stream using an infinite-state
+automaton ..4, which at any point in time can be in one of an under-
+lying set of states, and emits messages at different rates depending
+on its state. Specifically, the automaton .,4 has a set of states that
+correspond to increasingly rapid rates of emission, and the onset of
+a burst is signaled by a state transition -- from a lower state to a
+higher state. By assigning costs to state transitions, one can control
+the frequency of such transitions, preventing very short bursts and
+making it easier to identify long bursts despite transient changes
+in the rate of the stream. The overall framework is developed in
+Section 2. It can be viewed as drawing on the formalism of on-off
+Markov sources used in modeling bursty network traffic (see for ex-
+ample the overview article by Kelly [33]), as well as the formalism
+of hidden Markov models [51].
+Using an automaton with states that correspond to higher and
+higher intensifies provides an additional source of analytical lever-
+age -- the bursts associated with state transitions form a naturally
+nested structure, with a long burst of low intensity potentially con-
+taining several bursts of higher intensity inside it (and so on, re-
+cursively). For a folder of related e-mail messages, we will see in
+Sections 2 and 3 that this can provide a hierarchical decomposi-
+tion of the temporal order, with long-running episodes intensifying
+into briefer ones according to a natural tree structure. This tree
+can thus be viewed as imposing a fine-grained organization on the
+sub-episodes within the message stream.
+Following this development, Section 4 focuses on the problem
+of enumerating all significant bursts in a document stream, ranked
+by a measure of "weight." Applied to a case in which the stream
+is comprised not of e-mail messages but of research paper titles
+over the past several decades, the set of bursts corresponds roughly
+to the appearance and disappearance of certain terms of interest in
+the underlying research area. The approach makes sense for many
+other datasets of an analogous flavor; in Section 4, I also discuss an
+example based oil U.S. Presidential State of the Union Addresses
+from 1790 to 2002. Section 5 discusses the connections to related
+work in a range of areas, particularly the striking recent work of
+Swan, Allan, and Jensen [59, 60, 61] on overview timelines, which
+forms the body of research closest to the approach here. Finally,
+Section 6 discusses some further applications of the methodology
+-- how burstiness in arrivals can help to identify certain messages
+as "landmarks" in a large corpus of e-mail; and how the overall
+framework can be: applied to logs of Web usage.
+
+
+
+
+2.
+A WEIGHTED AUTOMATON MODEL
+Perhaps the simplest randomized model for generating a sequence
+of message arrival times is based on an exponential distribution:
+messages are emitted in a probabilistic manner, so that the gap x in
+time between messages i and i + 1 is distributed according to the
+"memoryless" exponential density function f(x) = ae -~'~, for a
+parameter a > 0. (In other words, the probability that the gap ex-
+ceeds x is equal to e-'~.) The expected value of the gap in this
+model is a- 1, and hence one can refer to a as the rate of message
+arrivals.
+Intuitively, a "bursty" model should extend this simple formula-
+tion by exhibiting periods of lower rate interleaved with periods of
+higher rate. A natural way to do this is to construct a model with
+multiple states, where the rate depends on the current state. Let us
+start with a basic :model that incorporates this idea, and then extend
+it to the models that will primarily be used in what follows.
+
+
+
+
+92
+
+A two-state model.
+Arguably the most basic bursty model of this
+type would be constructed from a probabilistic automaton ..4 with
+two states qo and qx, which we can think of as corresponding to
+"low" and "high." When .,4 is in state qo, messages are emitted at
+a slow rate, with gaps x between consecutive messages distributed
+independently according to a density function fo(x) = c~oe-=ox
+When ..4 is in state q~, messages are emitted at a faster rate, with
+gaps distributed independently according to fl (x) = c~le-=1~,
+where c~x > c~o. Finally, between messages, ..4 changes state with
+probability p E (0, 1), remaining in its current state with probabil-
+ity 1 - p, independently of previous emissions and state changes.
+Such a model could be used to generate a sequence of messages
+in the natural way. ,,4 begins in state qo. Before each message (in-
+cluding the first) is emitted, ,,4 changes state with probability p. A
+message is then emitted, and the gap in time until the next message
+is determined by the distribution associated with ,A's current state.
+One can apply this generative model to find a likely state se-
+quence, given a set of messages. Suppose there is a given set of n +
+1 messages, with specified arrival times; this determines a sequence
+of n inter-arrivalgaps x = (xl,x2,...
+,x~). The development
+here will use the basic assumption that all gaps x~ are strictly posi-
+tive. We can use the Bayes procedure (as in e.g. [14]) to determine
+the conditional probability of a state sequence q = (qi:,... , q~,~);
+note that this must be done in terms of the underlying density func-
+tions, since the gaps are not drawn from discrete distributions. Each
+state sequence q induces a density function fq over sequences of
+gaps, which has the form fq(Xl ....
+, x,~) =
+Ht~=l fit (xt). If b
+denotes the number of state transitions in the sequence q -- that
+is, the number of indices it so that qit ~ qit+a -- then the (prior)
+probability of q is equal to
+
+
+( H
+P)( H
+1--p)=pb(1--P)n-b=
+(l--p)".
+it:~it+l
+it=it+l
+
+(In this calculation, let io = 0, since .A starts in state qo.) Now,
+
+Pr [q] fq(x)
+Pr [qlx]
+=
+Eq' Pr [q'] fq,(X)
+
+=
+~
+(1-p)n
+f~,(~,),
+t=l
+
+where Z is the normalizing constant ~q, Pr [q'] fq, (x). Finding a
+state sequence q maximizing this probability is equivalent to find-
+ing one that minimizes
+
+- In Pr [q I x]
+
+
+=bin
++
+-lnfit(xt)
+-nln(1-p)+lnZ.
+
+
+Since the third and fourth terms are independent of the state se-
+quence, this latter optimization problem is equivalent to finding a
+state sequence q that minimizes the following costfunction:
+
+
+e(q]x)
+=
+bln(~)+(
+~-lnf~t(xt))t=~
+
+Finding a state sequence to minimize this cost function is a prob-
+lem that can be motivated intuitively on its own terms, without re-
+course to the underlying probabilistic model. The first of the two
+terms in the expression for c (q t x) favors sequences with a small
+number of state transitions, while the second term favors state se-
+quences that conform well to the sequence x of gap values. Thus,
+one expects the optimum to track the global structure of bursts in
+the gap sequence, while holding to a single state through local pe-
+riods of non-uniformity. Varying the coefficient on b controls the
+amount of "inertia" fixing the automaton in its current state.
+The next step is to extend this simple "high-low" model to one
+with a richer state set, using a cost model; this will lead to a method
+that also extracts hierarchical structure from the pattern of bursts.
+
+
+An infinite-state model. Consider a sequence of n + 1 messages
+that arrive over a period of time of length T. If the messages were
+spaced completely evenly over this time interval, then they would
+arrive with gaps of size ~ = Tin.
+Bursts of greater and greater
+intensity would be associated with gaps smaller and smaller than
+~. This suggests focusing on an infinite-state automaton whose
+states correspond to gap sizes that may be arbitrarily small, so as
+to capture the full range of possible bursts. The development here
+will use a cost model as in the two-state case, where the underlying
+goal is to find a state sequence of minimum cost.
+Thus, consider an automaton with a "base state" qo that has an
+associated exponential density function fo with rate ao = ~-1 =
+n/T -- consistent with completely uniform message arrivals. For
+each i > 0, there is a state q~ with associated exponential density
+fi having rate c~i = ~-ls~, where s > 1 is a scaling parameter.
+(i will be referred to as the index of the state q~.) In other words,
+the infinite sequence of states qo, ql,.., models inter-arrival gaps
+that decrease geometrically from ~; there is an expected rate of
+message arrivals that intensifies for larger and larger values of i.
+Finally, for every i and j, there is a cost r(i,j) associated with a
+state transition from qi to q.~. The framework allows considerable
+flexibility in formulating the cost function; for the work described
+here, r(., .) is defined so that the cost of moving from a lower-
+intensity burst state to a higher-intensity one is proportional to the
+number of intervening states, but there is no cost for the automaton
+to end a higher-intensity burst and drop down to a lower-intensity
+one. Specifically, when j > i, moving from q~ to q~ incurs a cost
+of (j - i)3' In n, where 3' > 0 is a parameter; and when j < i, the
+cost is 0. See Figure l(a) for a schematic picture.
+This automaton, with its associated parameters s and % will be
+denoted ,,4:,7. Given a sequence of positive gaps x = (z 1, x2,... , xn)
+between message arrivals, the goal --by analogy with the two-state
+model above -- is to find a state sequence q = (qil, · · - , qi,~) that
+minimizes the cost function
+
+
+
+
+(Let io = 0 in this expression, so that .A:,~ starts in state qo.) Since
+the set of possible q is infinite, one cannot automatically assert that
+the minimum is even well-defined; but this will be established in
+Theorem 2.1 below. As before, minimizing the first term is consis-
+tent with having few state transitions -- and transitions that span
+only a few distinct states -- while minimizing the second term is
+consistent with passing through states whose rates agree closely
+with the inter-arrival gaps. Thus, the combined goal is to track the
+sequence of gaps as well as possible without changing state too
+much.
+Observe that the scaling parameter s controls the "resolution"
+with which the discrete rate values of the states are able to track the
+real-valued gaps; the parameter ,7 controls the ease with which the
+automaton can change states. In what follows, 3' will often be set
+to a default value of 1; we can use ,,4: to denote ,A:,i.
+
+
+Computing a minimum-cost state sequence.
+Given a a sequence
+of positive gaps x = (xl, x2,... , xn) between message arrivals,
+
+
+
+
+93
+
+a)
+
+
+
+emissions at rate
+transiUon coat 0
+transition cost
+.~
+i
+s
+tJ
+¥ in n per state
+
+
+
+
+b)
+
+
+
+
+time
+optimal state sequence
+
+0
+1
+2
+3
+
+O--O--O--O--O--
+
+0--e--0--0--0--
+
+0---0--0-..0--0--
+
+0-----0-.---0--0-.-0---
+
+O---e--O--O--O--
+
+0--0--4--0---0--
+
+0.---0--0----0--0--
+bursts
+
+0
+1
+2
+3
+
+
+
+
+II
+tree representation
+
+0
+1
+2
+
+
+
+
+O--e--O--O--O--
+
+0--0--0--0--0--
+
+Figure 1: An infinite-state model for bursty sequences. (a) The infinite-state automaton A:,~; in state q~, messages are emitted at
+a spacing in time that is distributed according to f(x) = aie -"~, where ai = ~-Xsl. There is a cost to move to states of higher
+index, but not to states of lower index. (b) Given a sequence of gaps between message arrivals, an optimal state sequence in .A*.7
+is computed. This gives rise to a set of nested bursts: intervals of time in which the optimal state has at least a certain index. The
+inclusions among the set of bursts can be naturally represented by a tree structure.
+
+
+
+
+consider the algorithmic problem of finding a state sequence q =
+(qi~ ....
+,q~,) in A;,~ that minimizes the cost c(ql x); such a
+sequence will be called optimal. To establish that the minimum is
+well-defined, and to provide a means of computing it, it is useful
+to first define a natural finite restriction of the automaton: for a
+natural number k, one simply deletes all states but qo, qi,...
+, qk-1
+from A~,~, and denotes the resulting k-state automaton by A~,~.
+Note that the two-state automaton .A2~,.ris essentially equivalent
+(by an amortization argument) to the probabilistic two-state model
+described earlier.
+It is not hard to show that computing an optimal state sequence
+in .A;,7 is equivalent to doing so in one of its finite restrictions.
+
+THEOREM 2.1. Let 6(x) = min~=x xi and
+
+k = [1 + log, T + log~ ~(x)-l].
+
+(Note that 6(x) > O,since all gaps are positive.) If q* is an optimal
+state sequence in .A~,7, then it is also an optimal state sequence in
+A;,~.
+PROOF. Let q* = (qq,... , qe,) be an optimal state sequence
+in .Ask,.r, and let q = (qi~, ··· , qi,~) be an arbitrary state sequence
+in A~,~. As before, set go = io = 0, since both sequences start
+in state qo; for notational purposes, it is useful to define £,~+1 =
+i,~+1 = 0 as well. The goal is to show that c (q* I x) < c (q I x).
+If q does not contain any states of index greater than k - 1,
+this inequality follows from the fact that q" is an optimal state
+sequence in .,4k
+Otherwise, consider the state sequence q' =
+S,~"
+(qi~ .... , qi,~) where i~ = min(it, k - 1). It is straightforward to
+verify that
+
+n--1
+n--1
+
+r(i,,i,+l).
+t=:0
+t=0
+
+Now, for a particular choice of t between 1 and n, consider the
+expression -lnfi(xt)
+= a~xt - lnaj; what is the value of j
+for which it is minimized? The function h(a)
+= axt - In a is
+concave upwards over th.e interval (0, c~), with alglobal minimum
+at a = 27t-1. Thus, ifj
+is such that aj. < x 7
+< a~*+l, then
+the minimum of --lnf~(xt) is achieved at one of j* or j* + 1;
+moreover, if j" > j' > j* + 1, then -In fj,, (xt) > -In f~, (x).
+Since k = rl~ - lo~ T + log, $(x)-1], one has
+
+
+Otk-1
+=
+g--lak-1
+T~ . 8k_ 1 >
+1 . 8logs T+log s 6(x) -1
+=y
+
+1
+T
+1
+
+=
+=
+6(x)'
+
+
+Since ~(x) -1 > x~-1 for any t = 1,2,... ,n, the index k - 1
+is at least as large as the j for which - In f~ (xt) is minimized. It
+follows that for those t for which it ¢ i~ one has - In fi~ (xt) <
+
+-In fit (xt), since it > i~ = k -- 1.
+Combining these inequalities for the state transition costs and the
+
+
+
+
+94
+
+gap costs, one obtains
+
+
+
+
+Since q' is a state sequence in A~,~, and since el* is an optimal state
+sequence for this automaton, it follows that e (q* I x) < c (q' I x) <
+c(qlx).l
+
+In view of the theorem, it is enough to give an algorithm that
+computes an optimal state sequence in an automaton of the form
+A ks,r- This can be done by adapting the standard forward dynamic
+programming algorithm used for hidden Markov models [51] to the
+model and cost function defined here: One defines C~(t) to be the
+minimum cost of a state sequence for the input :r~, z2,..., zt that
+must end with state q~, and then iteratively builds up the values of
+C~(t) in order of increasing t using the recurrence relation C~(t) =
+-In f~(zt) + mine(Ce(t -
+1) + r(t,j)) with initial conditions
+Co (0) = 0 and C~(0) = c~ for j > 0. In all the experiments here,
+an optimal state sequence in A:,~r can be found by restricting to a
+number of states k that is a very small constant, always at most 25.
+Note that although the final computation of an optimal state se-
+quence is carried out by recourse to a finite-state model, working
+with the infinite model has the advantage that a number of states k
+is not fixed a priori; rather, it emerges in the course of the compu-
+tation, and in this way the automaton ,A:,7 essentially "conforms"
+to the particular input instance.
+
+
+3.
+HIERARCHICAL STRUCTURE
+AND E-MAIL STREAMS
+
+Extracting hierarchical structure. From an algorithm to com-
+pute an optimal state sequence, one can then define the basic repre-
+sentation of a set of bursts, according to a hierarchical structure.
+For a set of messages generating a sequence of positive inter-
+arrival gaps x = (zl,z2,... ,z,~), suppose that an optimal state
+sequence q = (qil,qi2,...
+,qi,~) in ,A:,~r has been determined.
+Following the discussion of the previous section, we can formally
+define a burst of intensity j to be a maximal interval over which q
+is in a state of index j or higher. More precisely, it is an interval
+It, t'] so that it,...
+, it, _> j but it-1 and it,+l are less than j (or
+undefined if t - 1 < 0 or t' + 1 > n).
+It follows that bursts exhibit a natural nested structure: a burst
+of intensity j may contain one or more sub-intervals that are bursts
+of intensity j ÷ 1; these in turn may contain sub-intervals that are
+bursts of intensity j + 2; and so forth. This relationship can be
+represented by a rooted tree I', as follows. There is a node corre-
+sponding to each burst; and node v is a child of node zt if node u
+represents a burst B~, of intensity j (for some value of j), and node
+v represents a burst By of intensity j + i such that B~ C B~.
+Note that the root of r' corresponds to the single burst of intensity
+0, which is equal to the whole interval [0, n].
+Thus, the tree F captures hierarchical structure that is implicit in
+the underlying stream. Figure l(b) shows the transformation from
+an optimal state sequence, to a set of nested bursts, to a tree.
+
+
+Hierarchy in an e-mail stream. Let us now return to one of the
+initial motivations for this model, and consider a stream of e-mall
+messages. What does the hierarchical structure of bursts look like
+in this setting?
+I applied the algorithm to my own collection of saved e-mail,
+consisting of messages sent and received between June 9, 1997
+and August 23, 2001. (The cut-off dates are chosen here so as to
+roughly cover four academic years.) First, here is a brief summary
+of this collection. Every piece of mail I sent or received during
+this period of time, using my cs.comell.edu e-mall address, can be
+viewed as belonging to one of two categories: first, messages con-
+sisting of one or more large files, such as drafts of papers mailed
+between co-authors (essentially, e-mail as file transfer); and sec-
+ond, all other messages. The collection I am considering here con-
+sists simply of all messages belonging to the second, much larger
+category; thus, to a rough approximation, it is all the mail I sent
+and received during this period, unfiltered by content but excluding
+long files. It contains 34344 messages in UNIX mailbox format,
+totaling 41.7 megabytes of ascii text, excluding message headers. 1
+Subsets of the collection can be chosen by selecting all messages
+that contain a particular string or set of strings; this can be viewed
+as an analogue of a "folder" of related messages, although mes-
+sages in the present case are related not because they were manually
+filed together but because they are the response set to a particular
+query. Studying the stream induced by such a response set raises
+two distinct but related questions. First, is it in fact the case that
+the appearance of messages containing particular words exhibits a
+"spike," in some informal sense, in the (temporal) vicinity of sig-
+nificant times such as deadlines, scheduled events, or unexpected
+developments? And second, do the algorithms developed here pro-
+vide a means for identifying this phenomenon?
+In fact such spikes appear to be quite prevalent, and also rich
+enough that the algorithms of the previous section can extract hier-
+archical structure that in many cases is quite deep. Moreover, the
+algorithms are efficient enough that computing a representation for
+the bursts on a query to the full e-mail collection can be done in
+real-time, using a simple implementation on a standard PC.
+To give a qualitative sense for the kind of structure one obtains,
+Figures 2 and 3 show the results of computing bursts for two dif-
+ferent queries using the automaton .A~. Figure 2 shows an analysis
+of the stream of all messages containing the word "ITR," which is
+prominent in my e-mail because it is the name of a large National
+Science Foundation program for which my colleagues and I wrote
+two proposals in 1999-2000. There are many possible ways to or-
+ganize this stream of messages, but one general backdrop against
+which to view the stream is the set of deadlines imposed by the
+NSF for the first run of the program. Large proposals were sub-
+mitted in a three-phase process, with deadlines of 11/15/99, 1/5/00,
+and 4/17/00 for letters of intent, pre-proposals, and full proposals
+respectively. Small proposals were submitted in a two-phase pro-
+cess, with deadlines of 1/5/00 and 2/14/00 for letters of intent and
+full proposals respectively. I participated in a group writing a pro-
+posal of each kind.
+Turning to the figure, part (a) is a plot of the raw input to the
+automaton ,A~, showing the arrival time of each message in the re-
+sponse set. Part (b) shows a nested interval representation of the
+set of bursts for the optimal state sequence in .A~; the intervals are
+annotated with the first and last dates of the messages they contain,
+and the dates of the NSF deadlines are lined up with the intervals
+that contain them. Note that this is a schematic representation, de-
+signed to show the inclusions that give rise to the tree F; the lengths
+and centering of the intervals in the drawing are not significant. Part
+(c) shows a drawing of the resulting tree I'. The root corresponds to
+the single burst of intensity 0 that is present in any state sequence.
+
+1These figures reveal that I receive less e-mail per day than many
+of my colleagues; one contributing factor is that I do not subscribe
+to any high-volume mailing lists based outside Cornell.
+
+
+
+
+95
+
+a)
+,,0
+
+120
+
+
+
+
+11:
+8o
+G
+
+¢1
+In
+
+
+
+
+20
+
+
+
+0
+1,4e,~
+,#/'
+*t+ , +t
+,
+t *¢
+
+
+
+
+f
+
+,l
+I
+i
+i
+i
+i
+i
+i
+i
+i
+1.5e+06 1.6e+06 1.711+061.81)+06t.ge~,06 2e+06 2,1e,+062,21HA~62.34)+062.441+062,5e+!~
+
+Minutes since 1/1/97
+
+
+
+10/28-
+11/2- 11/9-
+C ~
+11/16
+11/16 11/15
+I
+10/28/99- 10/28-10~]---~~
+~ ~ 2 / 2 1 / 9 02/14
+
+
+
+
+7/10/00-
+7/10-
+10/31/00
+7/14
+b)
+Intensities
+
+0
+2
+O/2
+3
+4
+5
+
+/991(2810/281,1/2 11/9
+
+.........
+t--t
+.....
+111116 11/16 11/15
+1/2/00 "1/2
+11/15: letter of Intent deadline
+(large proposals)
+
+
+1/5: pre-proposal deadline
+(large proposals)
+
+2/14: full proposal deadline
+2,/4
+2/14
+(small proposals)
+2/21
+......................
+4/17: full proposal deadline
+7/10
+(large proposals)
+
+7/10
+
+
+
+...................
+7/11: unofficial notification
+i
+(small proposal)
+
+
+
+
+7/14
+9/13: official announcement
+of awards
+10/31
+
+
+
+Figure 2: The stream of all e-mail messages containing the word 'qTR" analyzed using the automaton .A~. (a) The raw input data:
+the x-axis shows message arrival time; the y-axis shows message sequence number. (b) The set of bursts in the optimal state sequence
+for .A~, drawn schematically to show the inclusions that form the tree F. (Lengths of intervals are standardized and hence not to
+scale.) Intervals are annotated with starting and ending dates, and the dates of the NSF ITR program deadlines are lined up with the
+intervals that contain them. (c) A representation of the tree F, showing inclusions among the bursts.
+
+
+
+
+One sees that the two children of the root span intervals surround-
+ing the submission deadlines and notification dates, respectively.
+Moreover, the sub-tree rooted at the first of these children splits
+further into two sub-trees that are concentrated over a week lead-
+ing up to the deadline for letters of intent (11/15/99), and four days
+leading up to the pre-proposal deadline (1/5/00). Finally, note that
+there is no burst of positive intensity over the final deadline for large
+proposal, since we did not continue our large submission past the
+pre-proposal stage.
+Figure 3 shows an analysis of the stream of all messages contain-
+ing the word "prelim," which is the term used at Cornell for (non-
+final) exams in undergraduate courses. One sees that the raw data in
+this example (part (a) of the figure) exhibits an arguably more reg-
+ular structure than in the previous example. I taught undergraduate
+courses in four of the eight semesters covered by the collection of
+e-mail, and each of these courses had two prelims. For the first of
+these courses, correspondence with students was restricted almost
+exclusively to a special course e-mall account, and hence very lit-
+tle appears in my own saved e-mail. The remaining three courses
+are captured very cleanly by the tree r' computed from the optimal
+state sequence of,A~ (parts (b) and (c) of the figure) -- each course
+corresponds to a long burst, and each contains two shorter, more
+intense bursts for the particular prelims. Specifically, the three chil-
+dren of the root are centered over the semesters in which the three
+undergraduate courses were taught (Spring 1999, Spring 2000, and
+Fall 2000); and the sub-trees below these children split further into
+two sub-trees each, concentrated either directly over or slightly pre-
+ceding the two prelims given that semester.
+Overall, these structures suggest how a large folder of e-mail
+might naturally be divided into a hierarchical set of sub-folders
+around certain key events, based only on the rate of message ar-
+rivals. The appropriateness of Forster's comments on the time-
+sense in narratives is also fairly striking here: when organized by
+burst intensities, the period of time covered in the e-mail collection
+very clearly "pile.,;up into a few notable pinnacles" [18], rather than
+proceeding uniformly.
+
+
+
+4.
+ENUMERATING BURSTS
+Given a framework for identifying bursts, it becomes possible to
+perform a type of enumeration: for every word w that appears in the
+collection, one computes all the bursts in the stream of messages
+
+
+
+
+96
+
+a)
+
+
+
+
+c)
+25O
+
+Q
+
+
+
+
+100
+..t'
+L~.t, /
+2~1000
+'
+'
+'
+I
+I
+I
+I
+I
+4O0000 6000~0 800~
+1¢-1.~ 1,2e+OSf,4e-tO6 1,60~qM 1,Oe+06 2e,~6
+2.20+06 2.,4~.1,01g
+
+Minutes since
+111/97
+b)
+Intensities
+
+0 1 2 3 4 5678
+
+
+
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+
+
+
+-[ ............
+rm',
+
+l
+-I-l-'l
+.........
+,/9o
+prelim
+1
+
+
+
+
+prelim 2
+
+
+
+t:I:l:::::::::10_
+prelim 1
+
+
+11/13/00
+prelim 2
+
+
+
+
+Figure 3: The stream of all messages containing the word "prelim," analyzed using .A~. Parts (a), (b), and (c) are analogous to
+Figure 2, but date annotations are omitted. In part (b), the dates of prelims (exams) are lined up with the intervals that contain them.
+
+
+
+containing w. Combined with a method for computing a weight
+associated with each burst, and for then ranking by weight, this
+essentially provides a way to find the terms that exhibit the most
+prominent rising and falling pattern over a limited period of time.
+This can be applied to e-mail, and it can be done very efficiently
+even on the scale of the e-mail corpus from the previous section;
+roughly speaking, it can be performed in a single pass over an in-
+verted index for the collection, and it produces a set of bursts that
+correspond to natural episodes of the type suggested earlier. In the
+present section, however, I focus primarily on a different setting
+for this technique: extracting bursts in term usage from the rifles of
+conference papers. Two distinct sources of data will be used here:
+the titles of all papers from the database conferences SIGMOD and
+VLDB for the years 1975-2001; and the titles of all papers from the
+theory conferences STOC and FOCS for the years 1969-2001.
+The first issue that must be addressed concerns the underlying
+model: unlike e-mail messages, which arrive continuously over
+time, conference papers appear in large batches-- essentially, twenty
+to sixty new papers appear together every half year. As a result,
+the automaton .,4:,.r is not appropriate, since it is fundamentally
+based on analyzing the distribution of inter-arrival gaps. Instead,
+one needs to model a related kind of phenomenon: documents ar-
+rive in discrete batches; in each new batch of documents, some are
+relevant (in the present case, their rifles contain a particular word
+w) and some are irrelevant.
+The idea is thus to find an automa-
+ton model that generates batched arrivals, with particular fractions
+of relevant documents. A sequence of batched arrivals could be
+considered bursty if the fraction of relevant documents alternates
+between reasonably long periods in which the fraction is small and
+other periods in which it is large.
+Suppose there are n batches of documents; the t th batch contains
+rt relevant documents out of a total of dr. Let R = ~=1
+rt and
+D = ~t~l dr. Now we define an automaton B;,.r by close anal-
+ogy with the construction of .A:.r For each state qi of B;. r, for
+i > 0, there is an expected fraction of relevant documents p~. Set
+po = R/D, and p~ = pos i. Since it does not make sense for p~ to
+exceed 1, the state qi will only be defined for i such that p~ _< 1;
+thus, B;,~ will be a finite-state automaton. One can further restrict
+B;. r to k states, resulting in the automaton B,k,~. Viewed in a gener-
+ative fashion, state q~ produces a mixture of relevant and irrelevant
+documents according to a binomial distribution with probability p~.
+The cost of a state sequence q = (qla,... , qi,,) in B;,~ is de-
+fined as follows. If the automaton is in state q~ when the t th batch
+arrives, a cost of
+
+
+
+dt
+rt
+
+
+
+
+97
+
+Word
+Interval of burst
+data
+1975 SIGMOD ~ 1979 SIGMOD
+base
+1975 SIGMOD-
+1981 VLDB
+application
+1975 SIGMOD-
+1982 SIGMOD
+bases
+1975 SIGMOD m 1982 VLDB
+1975 SIGMOD-- 1985 VLDB
+relational
+1975 SIGMOD ~
+1989 VLDB
+model
+1975 SIGMOD ~
+1992 VLDB
+large
+1975 VLDB
+~
+1977 VLDB
+schema
+1975 VLDB
+-- 1980 VLDB
+theory
+1977 VLDB
+-- 1984 SIGMOD
+distributed
+1977 VLDB
+-- 1985 SIGMOD
+data
+1980 VLDB
+-- 1981 VLDB
+statistical
+1981 VLDB
+-- 1984 VLDB
+database
+1982 SIGMOD ~
+1987 VLDB
+nested
+1984 VLDB
+-- 1991 VLDB
+deductive
+1985 VLDB
+-- 1994 VLDB
+transaction
+1987 SIGMOD -- 1992 SIGMOD
+objects
+1987 VLDB
+-- 1992 SIGMOD
+object-oriented
+1987 SIGMOD -- 1994 VLDB
+parallel
+1989 VLDB
+-- 1996 VLDB
+object
+1990 SIGMOD -- 1996 VLDB
+1995 VLDB
+--
+mining,
+server
+1996 SIGMOD -- 2000 VLDB
+sql
+1996 VLDB
+-- 2000 VLDB
+warehouse
+1996 VLDB
+--
+similarity
+1997 SIGMOD
+approximate
+1997 VLDB
+--
+web
+1998 SIGMOD
+indexing
+1999 SIGMOD-
+xml
+1999 VLDB
+
+
+Figure 4: The 30 bursts of highest weight in B22,using titles of
+all papers from the database conferences SIGMOD and VLDB,
+1975-2001.
+Word
+Interval of burst
+grammars
+1969 STOC ~
+1973 FOCS
+automata
+1969 STOC-
+1974 STOC
+languages
+1969 STOC-
+1977 STOC
+machines
+1969 STOC-
+1978 STOC
+recursive
+1969 STOC -- 1979 FOCS
+classes
+1969 STOC-- 1981 FOCS
+some
+1969 STOC -- 1980 FOCS
+sequential
+1969 FOCS -- 1972 FOCS
+equivalence
+1969 FOCS -- 1981 FOCS
+programs
+1969 FOCS -- 1986 FOCS
+program
+1970 FOCS -- 1978 STOC
+on
+1973 FOCS -- 1976 STOC
+
+
+problems
+1974 STOC-
+1975 FOCS
+1975 FOCS -- 1976 FOCS
+relational
+1975 FOCS -- 1982 FOCS
+logic
+1976 FOCS -- 1984 STOC
+vlsi
+1980 FOCS -- 1986 STOC
+probabilistic
+how
+1981 FOCS -- 1986 FOCS
+1982 STOC -- 1988 STOC
+1984 STOC-- 1987 FOCS
+1984 FOCS -- 1987 FOCS
+1987 STOC -- 1989 STOC
+learning
+1987 FOCS -- 1997 FOCS
+competitive
+1990 FOCS -- 1994 FOCS
+randomized
+1992 STOC -- 1995 STOC
+._approximation
+1993 STOC-
+improved
+1994 STOC -- 2000 STOC
+codes
+1994 FOCS
+..approximating
+1995 FOCS --
+quantum
+1996 FOCS --
+
+
+Figure 5: The 30 bursts of highest weight in B~, using titles of
+all papers from the theory conferences STOC and FOCS, 1969-
+2001.
+
+
+
+is incurred, since this is the negative logarithm of the probability
+that rt relevant documents would be generated using a binomial
+distribution with probability Pl. There is also a cost of r(it, it+x)
+associated with the state transition from qlt to qit+l, where this
+cost is defined precisely as for .A*
+A state sequence of minimum
+total cost can then be computed as in Section 2.
+In the analysis of conference paper tides here, the main goal is
+to enumerate bursts of positive intensity, but not to emphasize hier-
+archical structure. Thus, the two-state automaton B~ is used; given
+an optimal state sequence, bursts of positive intensity correspond
+to intervals in which the state is ql rather than qo. For such a burst
+[tt, t2], we can define the weight of the burst to be
+
+t2
+
+E
+(a(O, rt, dr) - o"(1, rt, at)).
+
+t~t 1
+
+In other words, the weight is equal to the improvement in cost in-
+curred by using state ql over the interval rather than state qo. Ob-
+serve that in an optimal sequence, the weight of every burst is non-
+negative. Intuitively, then, bursts of larger weight correspond to
+more prominent periods of elevated activity. (This notion of weight
+can be naturally extended to larger numbers of states, as well as to
+the automaton model from Section 2.)
+In Figure 4, this framework is applied to the titles of SIGMOD
+and VLDB papers for the years 1975-2001. For each word w (in-
+cluding stop-words), an input to B~ is constructed in which rt is the
+number of rifles at the tth conference (chronologically) that contain
+the word w, and d, is the total number of tides at the tth confer-
+ence. Note that no pre-processing is done on the titles, other than
+to eliminate leading/trailing punctuation and to convert each word
+to lower-case. The 30 bursts with the highest weight, over all pos-
+sible words w, are then depicted in the figure, sorted by year of ap-
+pearance. The bursts with no given ending date ('mining', 'ware-
+house', 'similarity', 'approximate', 'web', 'indexing', and 'xml')
+are those for which the interval extends to the most recent confer-
+ence, suggesting terms that are in the middle of a large-weight burst
+at present. In Figure 5, the same analysis is applied to the rifles of
+STOC and FOCS papers for the years 1969-2001.
+There are several points to note about this analysis. First, the
+words in Figures 4 and 5 are almost all quickly recognizable as car-
+rying technical content, even though they are the top results in an
+enumeration where bursts were computed and ranked for all words.
+As such, the set of bursty words is very different from a list con-
+sisting simply of the most common words; the latter list would
+be dominated by stop-words and common content-bearing words
+whose occurrence is relatively uniform over the entire rime span
+considered. In this regard, the parameter s in the two-state model
+essentially controls whether we are looking for briefer, more el-
+evated bursts or longer, milder bursts: in order to trigger a state
+transition with a large value of s, the change in rate must be cor-
+
+
+
+
+98
+
+respondingly more extreme. It is also important to note that the
+number of occurrences of a word w is in general a quantity that, at
+a local scale, changes very rapidly from one conference to the next;
+thus, many of the intervals depicted in the figures span conferences
+in which the indicated word did not appear at all, and omit ones
+with large numbers of occurrences. The non-trivial cost of state
+transitions in B~ is crucial in making it possible for intervals of any
+reasonable length to form in the presence of this data.
+One also sees in the figures that certain of the bursts are picking
+up trends in language use, rather than in the underlying technical
+content of the papers. For example, the bursts for 'data,' 'base,'
+and 'bases' in the years 1975-1981 in Figure 4 arise in large part
+from the fact that the term 'database' was written as two words
+in a significant number of the paper titles during this period. The
+bursts for 'some,' 'on,' 'improved,' and 'how' in Figure 5 reflect to
+a large extent particular titling conventions that were in fashion for
+certain periods (e.g. "How to construct random functions," "How
+to generate and exchange secrets," and many others).
+A number of these issues arise in quite different document streams;
+as one example, I briefly discuss an analysis of bursts in the full set
+of U.S. Presidential State of the Union Addresses, which have been
+given essentially annually from 1790 to 2002.
+(For many years
+the addresses were given as written messages rather than speeches,
+though the 'overall formats were comparable.) The automaton/3~ is
+used for each word w, adapted so the tth batch is the tth address, dt
+is the total number of words in the address, and vt is the number of
+occurrences of w. The underlying stream spans a much longer time
+period -- over two hundred years w than the conference titles dis-
+cussed above. Given this large time span, automata like Ba2 and 1336
+seem to be more effective than/3~ at producing bursts correspond-
+ing to events on a 5-10 year time scale; small values of s often lead
+to long bursts covering several decades. The 150 bursts of high-
+est weight in/3~6 (excluding those that span just a single year) are
+listed at http://www.cs.cornell.edu/home/kleinber/kdd02.html.
+One finds that many of the bursts seem to correspond naturally to
+national events and issues, particularly up through the 1970's. Be-
+ginning in the 1970's and especially the 1980's, however, the num-
+ber of bursts increases dramatically -- in effect, a kind of burstiness
+in the rate of burst appearances. This increase appears to reflect, in
+part, an increasing rhetorical uniformity among the speeches, as nu-
+merous particular words start to appear annually at an elevated rate.
+Thus the burst analysis of the addresses in the past few decades ar-
+guably has the effect, to a large extent, of exposing specific trends
+in the construction of the speeches themselves -- repeated empha-
+sis of particular key words, as well as an explosion, for example,
+in the use of contractions ('we've,' 'we're,' 'I'm,' 'let's', and many
+others). While this phenomenon is visible throughout the history of
+the address, it emerges particularly strongly in recent years, com-
+pared with words that are more transparently associated with par-
+ticular events and issues.
+
+
+5.
+RELATED WORK
+The Topic Detection and Tracking (TDT) study [2, 3, 64, 65]
+articulated the problem of extracting significant topics and events
+from a stream of news articles, thereby framing the type of docu-
+ment stream analysis questions considered here. Much of the em-
+phasis in the TDT study was on techniques for the on-line version
+of the problem, in which events must be detected in real-time; but
+there was also a retrospective version in which the whole stream
+could be analyzed. Similar issues have recently been addressed in
+the visualization community [27, 45, 63], where the problem of
+visualizing the appearance and disappearance of themes in a se-
+quence of news stories has been explored.
+Following on the TDT work, Swan, Allan, and Jensen [59, 60,
+61] developed a method for constructing overview timelines of a set
+of news stories. For each named entity and noun phrase in the cor-
+pus, they perform a X2 test to identify days on which the number
+of occurrences yields a value above a certain threshold; contiguous
+sets of days meeting this condition are then grouped into an inter-
+val that is added to the timeline. Thus, the high-level structure of
+their approach is parallel to the enumerative method in Section 4.
+However, the underlying methodology is quite different from the
+present work in two key respects. First, Swan et al. note that the
+use of thresholds makes it difficult to construct long intervals of ac-
+tivity for a single feature -- such intervals are often broken apart by
+brief gaps in which the feature does not occur frequently enough,
+and subsequent heuristics are needed to piece them together. The
+present work, by modeling a burst as a state transition with costs,
+allows for a long interval to naturally persist across such gaps; es-
+sentially, in place of thresholds, the optimization problem inherent
+in finding a minimum-cost state sequence adaptively groups nearby
+high-intensity intervals together when it is advantageous to do so.
+Second, the work of Swan et al. does not attempt to infer any type
+of hierarchical structure in the appearance of a feature.
+Lewis and Knowles analyze the dynamics of message-sending
+over a very short time scale, searching for features that can deter-
+mine whether one message is a response to another [38]. This is
+applied to develop robust techniques for identifying threads, a pop-
+ular metaphor for organizing e-mail and newsgroup postings [15,
+23]. In a very different context, Grosz and Sidner develop struc-
+tural models for discourse as a means of analyzing communication
+[22]; their use of stack models in particular results in a nested orga-
+nization that bears an intriguing, though distant, relationship to the
+nested structure of bursts studied here.
+The present work dearly overlaps with the large areas of time
+series analysis and sequence mining [10, 26]; connections to related
+probabilistic frameworks such as bursty on-off sources [33] and
+hidden Markov models [51] have already been discussed above.
+There has also been work incorporating a notion of hierarchy into
+the framework of hidden Markov models [17, 47]; this goes beyond
+the type of automaton we use here to allow more complex kinds of
+hierarchies with potentially large state sets at each "level." Ehrich
+and Foith [16] proposed a method for constructing a tree from a
+one-dimensional time series, essentially by introducing a branch-
+point at each local minimum and a leaf at each local maximum (see
+also [58]). In the context of the applications here, this approach
+would yield trees of enormous complexity, due to the ruggedness of
+the underlying temporal data, with many local minima and maxima.
+The search for a minimum-cost state sequence in the automata
+of Section 2 and 4 can also be viewed as a search for approximate
+level sets in a time series, and hence related to the large body of
+work on piece-wise function approximation in both statistics and
+data mining (see e.g. [24, 25, 28, 32, 34, 36, 41, 43]). In a dis-
+crete framework, work on mining episodes and sequential patterns
+(e.g. [1, 12, 26, 42]) has developed algorithms to identify particular
+configurations of discrete events clustered in time, in some cases
+obeying partial precedence constraints on their order. Finally, there
+is an interesting general relationship to work on traffic analysis in
+the areas of cryptography and security [55]; in that context, tempo-
+ral analysis of a message stream is crucial because the content of
+the messages has been explicitly obscured.
+
+
+6.
+EXTENSIONS AND CONCLUSIONS
+In the settings discussed above, the analysis has made use of both
+the temporal information and the underlying content. The role of
+temporal data is clear; but the content of course plays an integral
+
+
+
+
+99
+
+role as well: Section 3 deals with streams consistingof the response
+set for a particular query to a larger stream; and Section 4 consid-
+ers streams with batched arrivals, in which a particular subset of
+each batch is designated as relevant. And in fact, there is strong
+evidence that the interplaybetween content and time is crucial here
+that an arbitrary set of messages with same sequence of arrival
+times would not exhibit an equally strong set of bursts. Adapting a
+permutation test from Swan and Jensen [61], one can start with a
+complete e-mail corpus having arrival times tl, t2,... , tiv, choose
+a random permutation 7r, and shuffle the corpus so that message
+7r(i) arrives at time tl (instead of message i), for i = 1, 2,... , N.
+The resulting shuffled corpus has the same set of arrival times and
+the same messages, but the original correspondence between the
+two is broken; do equivalently strong "spurious" bursts appear in
+this new sequence? In fact, they clearly do not: when the weight
+of bursts for all words (with respect to ,A~) is computed using the
+e-mall corpus in Section 3, the total weight associated with the true
+corpus is more than an order of magnitude greater than the average
+total weight over 100 randomly shuffled versions (369,980 versus
+25,141). Moreover, the shuffled versions exhibit almost no non-
+trivial hierarchical structure; the average total number of words
+generating bursts of intensity at least 2 (i.e. inducing trees I" with
+two or more levels below the root) is 16.7 over the randomly shuf-
+fled versions, compared with 3865 in the true corpus.
+The overall framework developed here can be naturally applied
+to Web usage data -- for example, to clickstreams and search en-
+gine query logs, where bursts can correspond to a collective focus
+of attention on a particular event, topic, or site. In particular, I have
+applied the methods discussed here to Web clickstream data col-
+lected by Gay et al. [19]. The dataset in [19] was compiled as part
+of a study of student usage of wireless laptops: The browser clicks
+of roughly 80 undergraduate students in two particular classes at
+Cornell were collected (with consent) from wireless laptops over a
+period of two and a half months in Spring 2000. Bursts with re-
+spect to .A:,.v can be computed by an enumerative method, as in
+Section 4: for every URL w, all bursts in the stream of visits to
+w are determined; the full set of bursts is then ordered by weight.
+Each burst, associated with a URL w, now has an additional quan-
+tity associated with it: the number of distinct users who visited w
+during the interval of the burst. This allows one to distinguish be-
+tween collective activity involving much of the class and that of
+just a single user. As it turns out, if one focuses on bursts that in-
+volve at least 10 distinct users, then many of those with the highest
+weight involve the URLs of the on-line class reading assignments,
+centered on intervals shortly before and during the weekly sessions
+at which they were discussed.
+A final observation is that the use of a model based on state tran-
+sitions leads to bursts with sharp boundaries; they have clear begin-
+nings and ends. In particular, this means that for every burst, one
+can identify a single message on which the associated state transi-
+tion occurred. This is akin to the TDT study's notion of (retrospec-
+tive)first story detection [2], although in the automaton model of
+the present work, identifying initial messages does not constitute
+a separate problem since it follows directly from the definition of
+the state transitions. In the context of e-mall, the contents of such
+an initial message can often serve as a concentrated summary of
+the circumstances precipitating the burst -- in other words, there
+is frequently something in the message itself to frame the flurry of
+message-sending that is about to occur. For example, one sees in
+Figure 2 that a very sharp state transitionrelated to the collection of
+"ITR" messages occurs at a single piece of e-mall on October 28,
+1999; such a phenomenon suggests that this message may play an
+interesting role in the overall stream. And for messages on which
+bursts for several different terms are initiated simultaneously, this
+phenomenon is even more apparent; these messages often represent
+natural "landmarks" at the beginning of long-runningepisodes.
+In many domains, we are accumulating extensive and detailed
+records of our own communication and behavior. The work dis-
+cussed here has been motivated by the strong temporal character of
+this kind of data: it is punctuated by the sharp and sudden onset of
+particular episodes, and can be organized around rising and falling
+patterns of activity. In many cases, it can reveal more than we real-
+ize. And ultimately, the analysis of these underlying rhythms may
+offer a means of structuring the information that arises from our
+patterns of interacting and communicating.
+
+
+Acknowledgements. I thank Liilian Lee for valuable discussions
+and suggestions throughout the course of this work.
+
+
+7.
+REFERENCES
+[1] R. Agrawal, R. Srikant, "Mining sequential patterns," Proc.
+Intl. Conf. on Data Engineering, 1995.
+[2] J. Allan, J.G. Carbonell, G. Doddington, J. Yarnron, Y. Yang,
+'Topic Detection and Tracking Pilot Study: Final Report;'
+Proe. DARPA Broadcast News Transcription and
+Understanding Workshop, Feb. 1998.
+[3] J. Allan, R. Papka, V. Lavrenko, "On-line new event detection
+and tracking," Proc. SIGIR Intl. Conf. Information Retrieval,
+1998.
+[4] K. Becker, M. Cardoso, "Mall-by-Example: A visual query
+interface for managing large volumes of electronic messages,'
+Proc. 15th Brazilian Symposium on Databases, 2000.
+[5] D. Beeferman, A. Berger, J. Lafferty, "Statistical Models for
+Text Segmentation,"Machine Learning 34(1999), pp. 177-210.
+[6] H. Berghel, "E-mail: The good, the bad, and the ugly;'
+Communications of the ACM, 40:4(April 1997), pp. 11-15.
+[7] A. Birrell, S. Perl, M. Schroeder, T. Wobber, The Pachyderm
+E-mail System, 1997, at
+http://www.research.compaq.com/SRC/pachyderm/.
+[8] T. Blanton, Ed., White House E-mail, New Press, 1995.
+[9] G. Boone, "Concept features in Re:Agent, an intelligent
+e-mall agent," Proc. 2nd Intl. Conf. Autonomous Agents, 1998.
+[10] C. Chatfield, The Analysis of lime Series: An Introduction,
+Chapman and Hall, 1996.
+[11] S. Chatman, Story and Discourse: Narrative Structure in
+Fiction and Film, Cornell Univ. Press, 1978.
+[12] D. Chudova, P. Smyth, "Unsupervised identificationof
+sequential patterns under a Markov assumption;' KDD
+Workshop on Temporal Data Mining, 2001.
+[13] W. Cohen. "Learning rules that classify e-mall." Proc. AAAI
+Spring Syrup. Machine Learning and Information Access, 1996.
+[14] T. Cover, P. Hart, "Nearest neighbor pattern classification,"
+IEEE Trans. Information Theory IT-13(1967), pp. 21-27.
+[15] W. Davison, L. Wall, S. Barber, trn, 1993
+http:llweb.mit.edulafslsipb/projectltrnlsrcltrn-3.61.
+[16] R. Ehrich, J. Foith, "Representation of Random Waveforms
+by Relational'Trees," IEEE Trans. Computers, C25:7(1976).
+[17] S. Fine, Y. Singer, N. Tishby, "The hierarchical hidden
+Markov model: Analysis and applications;' Machine Learning
+32(1998).
+[18] E.M. Forster, Aspects of the Novel, Harcourt, Brace, and
+World, Inc. 1927.
+[19] G. Gay, M. Stefanone, M. Grace-Martin, H. Hembrooke,
+"The effect of wireless computing in collaborative learning
+
+
+
+
+100
+
+environments," Intl. J. Human-Computer Interaction, to appear.
+[20] G. Genette, Narrative Discourse: An Essay in Method,
+English translation (J.E. Lewin), Cornell Univ. Press, 1980.
+[21] G. Genette, Narrative Discourse Revisited, English
+translation (J.E. Lewin), Cornell Univ. Press, 1988.
+[22] B. Grosz, C. Sidner, "Attention, intentions, and the structure
+of discourse," Computational Linguistics 12(1986).
+[23] T. Gruber, Hypermail, Enterprise Integration Technologies.
+[24] V. Guralnik, J. Srivastava, "Event detection from time series
+data," Intl. Conf. Knowledge Discovery and Data Mining, 1999.
+[25] J. Han, W. Gong, Y. Yin, "Mimng Segment-WisePeriodic
+Patterns in Time-RelatedDatabases", Proc. Intl. Conf.
+Knowledge Discovery and Data Mining, 1998.
+[26] D. Hand, H. Mannila, P. Smyth, Principles of Data Mining,
+MIT Press, 2001.
+[27] S. Havre, B. Hetzler, L. Nowell, "ThemeRiver: Visualizing
+Theme Changes over Time," Proc. IEEE Symposium on
+Information Visualization, 2000.
+[28] D. Hawkins, "Point estimation of the parameters of
+piecewise regression models," Applied Statistics 25(1976)
+[29] B. Heckel, B. Hamann, "EmVis - A Visual e-Mail Analysis
+Tool," Proc. Workshop on New Paradigms in Information
+Visualization and Manipulation, in conjunction with Conf. on
+Information and Knowledge Management, 1997.
+[30] J. Helfman, C. Isbell, "Ishmail: Immediate identificationof
+important information," AT&T Labs Technical Report, 1995.
+[31] E. Horvitz, "Principles of Mixed-InitiativeUser Interfaces,"
+Proc. ACM Conf. Human Factors in Computing Systems, 1999.
+[32] D. Hudson, "Fitting segmented curves whose join points
+have to be estimated,"Journal of the American Statistical
+Association 61(1966) pp. 1097-1129.
+[33] EP. Kelly,"Notes on effective bandwidths," in Stochastic
+Networks: Theory and Applications, (F.P. Kelly, S. Zachary, I.
+Ziedins, eds.) Oxford Univ. Press, 1996.
+[34] E. Keogh, P. Smyth, "A probabilisticapproach to fast pattern
+matching in time series databases," Proc. Intl. Conf. Knowledge
+Discovery and Data Mining, 1997.
+[35] J.l. Klein et al., Plaintiffs' Memorandum in Support of
+Proposed Final Judgment, United States of America v.
+Microsoft Corporation and State of New York, ex rel. Attorney
+General Eliot Spitzer, et al., v. Microsoft Corporation, Civil
+Actions No. 98-1232 (TPJ) and 98-1233 (TPJ), April 2000.
+[36] M. Last, Y. Klein, A. Kandel, "Knowledge Discovery in
+Time Series Databases," IEEE Transactions on Systems, Man,
+and Cybernetics 31B(2001).
+[37] V. Lavrenko, M. Schmill, D. Lawfie, P. Ogilvie, D. Jensen, J.
+Allan, "Mining of Concurrent Text and Time-Series,"
+KDD-2000 Workshop on Text Mining, 2000.
+[38] D.D. Lewis, K.A. Knowles, "Threading electronic mail: A
+preliminary study," Inf. Proc. Management 33(1997).
+[39] S.S. Lukesh, "E-mall and potential loss to future archives
+and scholarship, or, The dog that didn't bark," First Monday
+4(9) (September 1999), at http://firstmonday.org
+[40] P. Maes, "Agents that reduce work and information
+overload," Communications of the ACM 37:7(1994), pp. 30-40.
+[41] H. Mannila, M. Salmenkivi, "Finding simple intensity
+descriptions from event sequence data," Proc. Intl. Conf. on
+Knowledge Discovery and Data Mining, 2001.
+[42] H. Mannila, H. Toivonen, A.I. Verkamo, "Discovering
+frequent episodes in sequences," Proc. Intl. Conf. on
+Knowledge Discovery and Data Mining, 1995.
+[43] R. Martin, V. Yohai, "Data mining for unusual movements in
+temporal data," KDD Wkshp. Temporal Data Mining, 2001.
+[44] M.L. Markus, "Finding a Happy Medium: Explaining the
+Negative Effects of Electronic Communication on Social Life
+at Work," ACM Trans. Info. Sys. 12(1994), pp. 119-149.
+[45] N. Miller, P. Wong, M. Brewster, H. Foote, "Topic Islands: A
+Wavelet-BasedText Visualization System," Proc. IEEE
+Visualization, 1998.
+[46] R. Moore, C. Baru, A. Rajasekar, B. Ludaescher, R.
+Marciano, M. Wan, W. Schroeder, A. Gupta, "Collection-Based
+Persistent Digital Archives- Part 2," D-Lib Magazine, 6(2000).
+[47] K. Murphy, M. Paskin, "Linear time inference in hierarchical
+HMMs," Advances in Neural Information Processing Systems
+(NIPS) 14, 2001.
+[48] E Olsen, "Facing Flood of E-Mail, Archives Seeks Help
+From Supercomputer Researchers," Chronicle of Higher
+Education, August 24, 1999.
+[49] T. Payne, P. Edwards, "Interface agents that learn: An
+investigation of learning issues in a mail agent interface,"
+Applied Artificial Intelligence 11(1997), pp. 1-32.
+[50] S. Pollock, "A rule-based message filtering system," ACM
+Trans. Office Automation Systems 6(3):232-254, 1988.
+[51] L. Rabiner, "A tutorial on hidden Markov models and
+selected applicationsin speech recognition," Proc. IEEE
+77(1989).
+[52] M. Redmond, B. Adelson, "AlterEgo e-mail filtering agent,"
+Proc. AAAI Workshop on Case-Based Reasoning, 1998.
+[53] J. Rennie, "ifile: An applicationof machine learning to
+e-mail filtering," Proc. KDD Workshop on TextMining, 2000.
+[54] M. Sahami, S. Dumais, D. Heckerman, E. Horvitz. "A
+Bayesian approach to filteringjunk email," Proc. AAAI
+Workshop on Learning for Text Categorization, 1998.
+[55] B. Schneier, Applied Cryptography Wiley, 1996.
+[56] R. Segal, J. Kephart. "MailCat: An intelligentassistant for
+organizing e-mail,"Proc. Intl. Conf. Autonomous Agents, 1999.
+[57] R. Segal, J. Kephart. "Incremental Learning in SwiftFile,"
+Proc. Intl. Conf. on Machine Learning, 2000.
+[58] S. Shaw, R. DeFigueiredo, "Structural Processing of
+Waveforms as Trees," IEEE Transactions on Acoustics, Speech,
+and Signal Processing 38:2(1990)
+[59] R. Swan, J. Allan, "Extracting significant time-varying
+features from text," Proc. 8th Intl. Conf. on Information
+Knowledge Management, 1999.
+[60] R. Swan, J. Allan, "Automatic generation of overview
+timelines," Proc. SIGIR Intl. Conf. Information Retrieval, 2000.
+[61] R. Swan, D. Jensen, "TimeMines: Constructing Timelines
+with StatisticalModels of Word Usage," KDD-2000 Workshop
+on TextMining, 2000.
+[62] S. Whittaker, C. Sidner, "E-mail overload: Exploring
+personal information management of e-mail," Proc. ACM
+SIGCHI Conf. on Human Factors in Computing Systems, 1996.
+[63] P. Wong, W. Cowley, H. Foote, E. Jurrus, J. Thomas,
+"Visualizing sequential patterns for text mining," Proc. IEEE
+Information Visualization, 2000
+[64] Y. Yang, T. Ault, T. Pierce, C.W. Lattimer, "Improving text
+categorizationmethods for event tracking," Proc. SIGIR Intl.
+Conf. Information Retrieval, 2000.
+[65] Y. Yang, T. Pierce, J.G. Carbonell, "A Study on
+Retrospective and On-line Event Detection," Proc. SIGIR Intl.
+Conf. Information Retrieval, 1998.
+
+
+
+
+101
+

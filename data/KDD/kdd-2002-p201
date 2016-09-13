@@ -1,0 +1,943 @@
+A Parallel Learning Algorithm for Text Classification
+
+Canasai Kruengkrai and Chuleerat Jaruskulchai
+IntelligentInformationRetrievaland Database Laboratory
+Departmentof ComputerScience, Facultyof Science
+KasetsartUniversity,Bangkok, Thailand
+
+{g4364115,fscichj}@ku.ac.th
+
+
+ABSTRACT
+Text classification is the process of classifying documents into
+predefined categories based on their content. Existing supervised
+learning algorithms to automatically classify text need sufficient
+labeled documents to learn accurately. Applying the Expeetatiun-
+Maximization (EM) algorithm to this problem is an alternative
+approach that utilizes a large pool of unlabeled documents to
+augment the available labeled documents. Unfortunately, the time
+needed to learn with these large unlabeled documents is too high.
+This paper introduces a novel parallel learning algorithm for text
+classification task. The parallel algorithm is based on the combi-
+nation of the EM algorithm and the naive Bayes classifier. Our
+goal is to improve the computational time in learning and classi-
+fying process. We studied the performance of our parallel algo-
+rithrn on a large Linux PC cluster called PIRUN Cluster. We re-
+port both timing and accuracy results. These results indicate that
+the proposed parallel algorithm is capable of handling large
+document collections.
+
+
+Keywords
+Text classification, parallel expectation-maximization (EM)
+algorithm, naive Bayes, cluster computing
+
+
+1. INTRODUCTION
+Text classification has become one of the most important tech-
+niques in text data mining. The task is to automatically classify
+documents into predefined classes based on their content. Many
+algorithms have been developed to deal with automatic text clas-
+sification. One of the common methods .is the naive Bayes. Al-
+though the naive Bayes works well in many studies [7][9][10], it
+requires a large number of labeled training documents for learning
+accurately. In the real world task, it is very hard to obtain the
+large labeled documents, which are mostly produced by humans.
+To overcome this shortage, Nigam et al. [13] apply the Expecta-
+tion-Maximization (EM) algorithm to the text classification prob-
+lem. The EM algorithm uses both labeled and unlabeled docu-
+ments for learning, Their experimental results show that using the
+EM algorithm with unlabeled documents can reduce classification
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroomuse is granted without fee proyided that copies are
+not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the first page. To copy
+otherwise, or republish, to post on servers or to redistribute to lists, re-
+quires prior specificpermissionand/or a fee.
+SIGKDD '02, July 23-26, 2002, Edmonton,Alberta,Canada.
+Copyright2002 ACM 1-58113-567-X/02/0007...$5.00.
+error when there is a small number of training data. Unfortu-
+nately, the EM algorithm is too slow when it performs on very
+large document collections. Furthermore, the text data rapidly
+increase on the World Wide Web. The scalability of the algorithm
+is required to handle such massive data.
+
+The parallel processing is an interesting technique for scaling up
+the algorithms. For example, the parallel algorithms are applied
+for mining association rules [11 and classification based on deci-
+sion tree [8]. Several researches study techniques for parallelizing
+clustering algorithms, which can be considered as the unsuper-
+vised learning problem. Ruoceo and Ffieder [15] propose parallel
+single-link and single-pass algorithm for clustering documents
+worked on an Intel Paragon. Dhillon and Modha [3] introduce an
+effective parallelizatiun of the k-means clustering algorithm im-
+plemented on an IBM POWERparallel SP2. Forman and Zhang
+[4] also present a general technique for parallelizing a class of
+center-based clustering algorithms including k-means, k-harmonic
+means, and EM algorithm performed their work on existing net-
+work structures (LAN). The similar ideas of the last two works
+are to use data-parallelism and limit the communication among
+processes to only some parameters.
+
+In this paper, we propose a novel parallel learning algorithm for
+text classification task. We focus on parallelizing supervised
+learning algorithm that combines the EM algorithm and the naive
+Bayes classifier. To the best of our knowledge, the parallel ver-
+sion of the combination algorithm has not been reported in the
+literature. Our experiments performed on a large Linux PC cluster
+called PIRUN (Pile of Inexpensive and Redundant Universal
+Nodes) Cluster. The experimental results show that our parallel
+implementation has reasonable speedup characteristics.
+
+The paper is organized as follows. In Section 2, we describe how
+text data is represented. Section 3 briefly reviews the probabilistic
+framework for text classification task including the naive Bayes
+classifier and the EM algorithm. In Section 4, we present the par-
+allel implementation of the EM algorithm. Section 5 shows the
+complexity analysis of the algorithm. In section 6, we present the
+experimental results. In particular, we measure the performance of
+the parallel algorithm by exploring both speedup and accuracy.
+Finally, Section 7 is the conclusion of our work.
+
+
+2. TEXT DOCUMENT REPRESENTATION
+Typically, text documents are unstructured data. Before learning
+process, we must transform them into a representation that is suit-
+able for computing. We employ the vector space model, widely
+used in information retrieval [2], to represent the text documents.
+
+
+
+
+201
+
+The vector space model is also known as the bag-of-words repre-
+sentation. The representation method is equivalent to an attribute
+value representation used in machine learning [12]. Each distinct
+word is a feature (or index term) and the number of times the
+word occurs in the document is its value (or term frequency).
+
+Let us describe how to construct the vector space model from a
+document collection. First, we parse the document collection to
+extract unique words and prune non-content words (or stop-
+words), low and high frequency words. Then, we obtain w = (wt,
+w2, ..., wk.... , wz), where V is the number of the unique words
+within the collection. In the vector space model, we ignore the
+sequence in which the word occurs. Next, each document is repre-
+sented by a vector di = (w/l, Wt2..... Wik..... WiV),where wa is the
+frequency of kth word in a document dr. Finally, we map the en-
+tire document vectors to a matrix called the document-word ma-
+trix (see Figure I). Each row of the matrix corresponds to a
+document vector. The columns of the matrix correspond to the
+unique terms in the document collection.
+
+
+
+
+dl
+
+d2
+
+d,
+
+d~
+WI
+W2
+.,.
+W k
+...
+W V
+
+
+WI!
+Wl2
+.,.
+Wlk
+...
+WIV
+
+w21
+w22
+.,.
+w2k
+...
+W2v
+
+
+Wi)
+Wi2
+. . ·
+Wik
+. . .
+WiV
+
+
+
+
+WN1
+WN2
+...
+WNk
+...
+WNV
+
+
+Figure 1. The document-word matrix used for representing
+a document collection.
+
+
+
+3.
+PROBABILISTIC
+FRAMEWORK
+Suppose that we have training documents D ={dl ..... du}, where
+each document is labeled by y~ E C = {cl..... CM}.We write y/= cj
+when a document dr belongs to a class cj. We use ® to denote the
+parameters of the model. We assume that documents are gener-
+ated bY a mixture of multinomial model, and there is a one-to-one
+correspondence between mixture components and classes. Each
+document dr is generated by choosing a mixture component with
+the class prior probabilities P(cjIO),
+and having this mixture
+component generate a document according to its own parameters,
+with distribution P(d~ Icj;O). Thus we can write:
+
+M
+P(d/IO) = ~P(cj 10)P(d, Icj;O).
+(1)
+]=1
+
+
+
+3.1
+Naive Bayes
+Classifier
+The naive Bayes classifier uses the maximum a posteriori (MAP)
+estimation for learning a classifier. It assumes that the occurrence
+of each word in a document is conditionally independent of all
+other words in that document given its class. Using this assump-
+tion, the probability of a document given its claas becomes:
+P(4 Icj;O) = p(w,, ..... w,j~,jlcj;O)
+
+IdA
+I-IY(w~ Icj;®).
+(2)
+k=l
+
+
+Therefore, the parameters of the model are the conditional prob-
+abilities 0~,,,~ =P(wt,
+Icj;O), and the prior probabilities Oj =
+P(cj IO). That is:
+
+® = {O~,,,,.... 8..,¢. ; e~,..... e~,,}.
+(3)
+
+
+Let O be the estimations of ®. The parameters 0 , can be es-
+timated by using Laplace smoothing that adds one to all the word
+counts to avoid probabilities of zero. Thus we obtain:
+
+.
+1+ ~(wk,c~)
+o~f,,, = v + ~.,..¢(w, cj) '
+(4)
+
+where ~(wk,cj) is the number of times that a word wt occurs in
+the training documents for a class cj. The parameters O,j can be
+estimated as follows:
+
+
+0~,= ¢(a/'cJ-----2
+(5)
+N
+'
+
+where ~b(d~,cj) is the number of training documents dr that are
+assigned to a class cj. Given estimations of these parameters cal-
+culated from the training documents, we can classify an unseen
+document to a single class that the posteriori probability is high-
+est; argmaxj P(cj Idr;O). It can be calculated by applying Bayes'
+formula:
+
+P(cj Id,;~) ~ P(cj t6)P(41 cj;~)
+
+= e(cj I~)He(w~ icj;(9)
+
+g
+
+= P(cj IOlI~[P(wk Icj;g) ~c''d') ,
+(6)
+k=l
+
+
+where ~(wk,d~)
+is the number of times that a word wkoccurs in a
+document d~.
+
+
+3.2
+Expectation-Maximization
+Algorithm
+One drawback of the naive Bayes classifier is that it requires a
+large set of the labeled training documents for learning accurately.
+The cost of labeling documents is expensive, while unlabeled
+documents are commonly available. By applying the EM algo-
+rithm, we can use the unlabeled documents to augment the avail-
+able labeled documents in the training process.
+
+The EM algorithm is a general technique for maximum likelihood
+or maximum a posteriori estimation in the incomplete-data prob-
+lems [11]. In our task, the class labels of the unlabeled documents
+are considered as the missing values. The document collection D
+now consists of the disjoint subsets of the labeled and the unla-
+beled documents: Db./D~.
+The
+probability function of all the
+documents is:
+
+
+
+
+202
+
+P(D IO) = II P(Y~ = c/ IO)P(4 1Yi = cj; O)
+4 eD~
+
+M
+×II ~P(cjlo)e(d, lcj;O).
+(7)
+dieD- /ffit
+
+
+For the labeled documents, the generating component is given by
+labels y~, we do not need to refer to all mixture components [13].
+As described earlier, we use the MAP estimation for learning a
+classifier, argmax o P(OlD). By making use of the Bayes' for-
+mula and Equation 7, we obtain the MAP estimation of ®, which
+is equivalent to the value of® that maximizes the log-posteriori:
+
+logP(® ID) = ~
+log(P(y, = cy [O)P(d, [y, = cfi®))
+,~Eo,
+M
++ ~
+log~P(c/I®)P(d, IcfiQ) + log(P(O)).
+(8)
+4GD.
+y-l
+
+It is difficult to compute Equation 8 directly, because the second
+term contains a log of summations. Here we introduce the class
+indicator variables Z, where each z¢ e Z is defined to be one or
+zero according as d~does or does not come from thejth class. By
+using the class indicator variables Z, we can write the complete-
+data log-posteriofi in the form:
+
+M
+logg(® ID;Z) = ~ ~z~ log(P(cj I®)P(d, Icj;Q))
+dteD j=l
+
++ log(P(®)),
+(9)
+
+where the log of the priori P(®) is approximated by using
+Dirichlet distribution [13]. Since we do not know the exact values
+of Z, we instead work with their expectation. The algorithm finds
+a local maximum of the complete-data log-posteriori by iterating
+the following two steps:
+
+
+E - Step:
+Z'tk+l)= E[Z ]D;Ot,~]
+
+M - Step:
+OCk÷l~= argmaxo P(OID;Z<,÷i~),
+(10)
+
+where the E-step is the current parameter estimations of probabil-
+istic labels for every documents calculated by Equation 6, and the
+M-step is the new MAP estimations for the parameters calculated
+by Equation 4 and 5.
+
+
+4. PARALLEL IMPLEMENTATION
+In this section, we present the parallel implementation of the EM
+algorithm for text classification. We employ the Single Program
+Multiple Data (SPMD) model in our parallelization. In this model,
+a single source program is written and each processor executes its
+personal copy of this program. We assume that we have P proces-
+sors, where each processor is assigned a unique rank between 0
+and P-I and has an individual local memory. The processors
+communicate with each other by using MPI (Message-Passing
+Interface) library [6].
+
+The EM algorithm starts by using the naive Bayes classifier to
+initialize the parameters. The E- and M-step are iterated until the
+change of logP,(® [D;Z) is less than some predefined threshold.
+The E-step almost dominates the execution time on each iteration,
+Processor P® builds the initial global parameters ®g from
+only the labeled documents Dr, and broadcasts them to all
+processors
+
+Processor Pr reads training documents based on its respon-
+sibility from a disk
+
+Iterate until convergence
+
+3.1
+E-step: Each processor Pr estimates the class of each
+document by using the current global parameters ®g
+
+3.2
+M-step: Each processor Pr re-estimates its own local
+parameters ®t given the estimated class of each docu-
+ment
+
+3.3
+Sum up the local parameters ®t to obtain the new
+global parameters ®8 and return them to all proces-
+sors
+
+Figure 2. The outline of the parallel EM algorithm for
+text classification.
+
+
+since it estimates the class labels for all the training documents.
+Fortunately, we observe that this step is inherently data parallel,
+because if the parameters ® are available for each processor, the
+same operation can be performed on different documents simulta-
+neously. We parallelize the loop by evenly distributing the docu-
+ments across processors. If we partition the N documents into P
+blocks, each processor handles roughly N/P documents. In other
+words, P, is given a responsibility for documents di, where i =
+(r)(N/P) + 1..... (r + 1)(N/P).
+
+Let ®t and ®g be the local and global parameters of the model,
+respectively. In the training process, the processor P® first com-
+putes the global parameters ®g from only the labeled training
+documents. Then, the processor P® distributes them to the avail-
+able processors by using HPI Beast. We assign this task to
+only processor P0, because the naive Bayes classifier can learn in
+constant time. Next, each processor P, uses the current global
+parameters ®s to label the unlabeled documents for its partition.
+Finally, each processor P, calculates its local parameters ®t and
+calls MPI Allreduce to sum up the local parameters ®t to
+obtain the new global parameters ®s. The algorithm uses these
+parameters as the current parameters in the next iteration. Since
+each processor has the same global parameters Og, it can inde-
+pendently decide when it should exit the loop. Figure 2 gives the
+outline of the parallel EM algorithm.
+
+The MPI Allreduco
+function is a global communication op-
+eration tl~t the result of the reduction operation is available in all
+processes [6]. The parameters of our model in Equation 3 are the
+probability estimations consisting of word and document counts
+among different classes. As a result, the local parameters Ot
+achieve
+the
+global
+parameters
+®g
+by
+simply
+using
+
+MPI Allreduce
+with the reduction operation MPI SUM as
+shown in Figure 3. Our algorithm design can avoid the network
+bottleneck, because there are only the parameters that exchange
+across processes. In the test process, we use the final global pa-
+rameters ®s to classify the test documents that are evenly parti-
+tioned for each processor as in the E-step.
+
+
+
+
+203
+
+Po
+
+
+
+Pl
+
+
+
+
+Pe-t
+
+
+Before
+After
+
+
+Figure 3. MPI Allreduce with the reduction operation
+lq[pT SUM.
+
+
+
+5. COMPLEXITY ANALYSIS
+The time complexity of the sequential EM algorithm can be cal-
+culated as follows. In training process, the initial step requires
+VNt~ for estimating the parameters from the labeled documents.
+The E-step takes VMND~, since the class estimation is per-
+formed on the entire training documents, including the labeled
+and unlabeled documents. The M-step takes VND~" . Let I be the
+number of iterations. As described earlier, the training process is
+dominated by the loop. The training process requires VND,+
+I( VMNv_ + VND~ ),
+which
+can
+be
+approximated
+by
+O(IVMND_). In test process, it requires O(VMN~,) similar to
+the E-step. Therefore, we obtain the overall time complexity
+O(IVMNo,, +VMND~).
+
+The space complexity of the algorithm requires 2(VM + M) for
+storing the current and updated parameters and VN, for storing the
+subsets of the document collection on demand. We finally obtain
+the total space complexity O(2(VM + M) + VNs).
+
+For parallel processing, since each processor handles only N/P
+documents, the computational time decreases to at most
+O(1VM(ND_ / P) +VM(Nb, / P)). The communication time for
+exchanging the parameters is O(I(VM + M)Taa,,), where Tdata is
+the transmission time for the parameters. Consequently, the over-
+all parallel time complexity is estimated as:
+
+O(IVM(ND, /p)+VM(ND /P)+I(VM+M)T,~,o),
+(11)
+
+and the space complexity reduces to O(2(VM+ M) + V(NJP)) for
+each node.
+
+
+6. EXPERIMENTAL RESULTS
+In this section, we give the experimental results to provide evi-
+dence that our parallel algorithm design can improve both the
+computational efficiency and the quality of classification. We
+implemented our parallel algorithm on PIRUN Cluster at Kaset-
+sart University. PIRUN Cluster consists of 72 nodes connected
+with Fast Ethernet Switch 3COM SuperStackII. Each node is a
+500 MHz Pentium III with 128 Mbytes of RAM and uses Linux
+as the operating system. It was constructed by using Beowulf
+architecture [14]. The configuration of components can be found
+athttp ://pirun. ku. ac. th.
+
+
+6.1 Data Set and Performance Measure
+The 20 Newsgroups data set was used in our experiments
+[7][10][13]. It consists of 20000 articles divided evenly among 20
+different UseNet discussion groups. We extracted all unique
+words from the entire documents. After removing stop-words, low
+and high frequency words, we obtained i 1350 unique words. We
+randomly selected 4000 (20%) of the collection as a test set. The
+first remaining documents were used to form a labeled training
+set, containing 6000 documents (30%) drawn at random. The last
+remaining documents were used as an unlabeled set consisting of
+10000 documents (50%). Each set is represented by a document-
+word matrix.
+
+Normally, the document-word matrix is very large and sparse,
+having mostly zero entries. For example, we have 10000 docu-
+ments and extract 20000 unique words from all the documents. If
+we use 4 bytes for each element, the matrix requires 10000 x
+20000 x 4 = 800 Mbytes of main memory. Although we exploit
+from the distributed memory, reading this matrix can increase
+disk access costs. Moreover, it also causes network congestion,
+since we work on cluster. In order to reduce the matrix size, we
+look at a compression method called Scalar ITPACK [5]. The
+idea is to store non-zero elements of the matrix with their rows
+and column indices.
+
+To measure the computational efficiency of our parallel algo-
+rithm, we examined the speedup (S). The speedup is the ratio of
+the execution time for learning and classifying a document collec-
+tion on a single processor to execution time for the same tasks on
+P processors. Thus, the speedup of the parallel EM algorithm can
+be approximated as follow:
+
+S =
+O(IVMNvn" +VMND")
+(12)
+O(IVM(ND,- /P) +VM(ND.' / P) +I(VM +M)T,~ )
+
+which increases linearly with P, if we have the large numbers of
+No.~. and ND~ . We measured the elapsed time (disk accesses
+included) from start to complete the task. The classification result
+of each parallel execution is equivalent to its sequential execution.
+
+6.2 Results
+Figure 4 shows the curves of execution time on the 20 News-
+groups data set. Figure 5 demonstrates the relative speedups. The
+parallel EM algorithm was run on configurations of up to 16
+processors. We varied the number of unlabeled documents to
+observe the effects of different problem sizes on the performance.
+Three sets were used with the number of unlabeled documents
+2500, 5000, and 10000. For each set, the algorithm performs 6, 7,
+and 8 iterations, respectively. The number of dimensions V was
+also varied. The unlabeled documents were fixed at 10000, and
+the number of dinaensions were varied at 6750 and 11350. Figure
+6 shows the relative speedups.
+
+The time of the initial step using the naive Bayes classifier does
+not affect the performance, since the naive Bayes can learn in
+constant time. From our experiments, it takes less than 18 seconds
+
+
+
+
+204
+
+0
+10000
+
+#
+5000
+
+N
+2500
+3200
+
+
+
+2800
+
+
+
+2400
+
+
+
+2000
+
+
+
+1600
+
+
+
+1200
+
+
+
+800
+
+
+
+4O0
+
+
+
+0
+--o--/u~o0o
+--~.- 5000
+
+
+
+
+2
+4
+6
+8
+10
+12
+14
+
+Number of Processors
+I
+
+16
+
+
+
+
+Figure 4. The execution time of the parallel EM algorithm
+with 2500, 5000, and 10000 unlabeled documents on 20
+Newsgroups data set.
+
+
+even though it uses the largest size of labeled training documents
+for learning. The computational time of the algorithm is mostly
+dominated by the loop in the training process. As we analyzed in
+the previous section, the speedup curves increase linearly in some
+cases. For example, on the largest unlabeled set, it achieves the
+relative speedups of 1.97, 3.72, 7.16, and 12.16 on 2, 4, 8, and 16
+processors, respectively. When it accesses to a smaller set of
+unlabeled documents, the speedup curves tend to drop from the
+linear curve. The algorithm achieves the relative speedups of
+1.82, 3.55, 6.18, and 8.38 on 2, 4, 8, and 16 processors, respec-
+tively. The smallest unlabeled document sizes give the same
+trend. If we increase the number of processors further, the
+speedup curves tend to significantly drop from the linear curve.
+For a given problem instant, the relative speedups decrease as the
+number of processors is increased due to increased overheads.
+This is a normal situation when the problem size is fixed as the
+number of processors increases. However, it can be solved by
+scaling the problem size. For example, in Figure 5, the speedups
+for three sets on 4 processors improve from 3.23 to 3.72, on 8
+processors improve from 5.17 to 7.16, and on 16 processors im-
+prove from 6.46 to 12.16. It can be seen that our parallel algo-
+rithm yields better performance for the larger data sets.
+
+To ensure that the EM algorithm works well with the unlabeled
+documents, we also re-examined the quality of classification. The
+number of labeled training documents was varied, and compared
+the accuracy with the naive Bayes classifier. The parallel EM
+algorithm accessed to 10000 unlabeled documents in learning
+process. The parallel execution produced the same classification
+results as sequential execution. In our experiments, five trials of
+selecting test/train/unlabeled splits at random were conducted, and
+each reported accuracy was interpreted as an average over the five
+16
+
+
+
+14
+
+
+
+12
+
+
+
+10
+
+
+
+8
+
+
+
+6
+
+
+
+4
+
+
+
+2
+
+
+
+0
+i
+i
+i
+i
+
+2
+4
+6
+8
+10
+12
+14
+16
+
+Number of Processors
+
+
+
+Figure 5. The relative speedup curves of the parallel EM
+algorithm corresponding to Figure 4.
+
+
+
+trials. Figure 7 shows the results on accuracy. We observe that the
+EM algorithm significantly outperforms the naive Bayes classifier
+when the amount of the labeled documents is small. For example,
+the EM algorithm achieves 36% accuracy while the naive Bayes
+classifier reaches 21% accuracy at 20 labeled documents (or one
+document per category). With 100 labeled documents, the EM
+algorithm achieves 59% accuracy while the naive Bayes classifier
+reaches 35% accuracy. The two approaches begin to converge
+when the amount of the labeled documents is large. We can see
+that the EM algorithm constantly outperforms the naive Bayes on
+the 20 Newsgroups data set. However, work by [13] also shows
+that the EM hurts accuracy on some data sets. When the labeled
+documents are large, the accuracy curve drops slightly. The rea-
+son is that the data do not fit the assumptions of the generative
+model. This indicates that using the simple generative model is
+inadequate to produce accurate classification results. This prob-
+lem can be solved by using more complex statistical model. We
+believe that our parallelization strategy can adapt to that model by
+adding some parameters.
+
+
+7. CONCLUSIONS
+In this paper, we presented the paraUelization of the EM algo-
+rithm in the area of text classification. Since the EM algorithm
+uses both the labeled and unlabeled documents for learning, the
+computational time of the algorithm also increases. Consequendy,
+the parallel processing was applied to the algorithm. We parallel-
+ized the EM algorithm by using the idea of data parallel computa-
+tion. We evaluated our parallel implementation on a large Linux
+PC cluster called PIRUN Cluster. The experimental results on the
+efficiency indicate that our parallel algorithm design has good
+speedup characteristics when the problem sizes are scaled up.
+
+
+
+
+205
+
+100
+
+
+
+
+2
+4
+6
+8
+10
+12
+14
+16
+
+Number of Processors
+
+
+
+Figure 6. The relative speedup curves using V = 6750 and
+11350. The unlabeled documents were fixed at 10000.
+
+
+In future work, we will look at the improvement of the disk I/0.
+Our current implementation is based on the basic Unix I/O func-
+tions. When the problem sizes are sealed up, we require high per-
+formanee I/O to reduce disk access costs. The parallel I/O defined
+the MPI-2 standard [16] is one solution. We expect that the paral-
+lel I/O will deliver much higher performance.
+
+
+8. REFERENCES
+[1] Agrawal, R., and Shafcr, J. C. Parallel mining of association
+roles. IEEE Transaction on Knowledge and Data
+Engineering, 1996.
+
+[2] Baeza-Yates, R., and Ribeirn-Neto, B. Modern information
+retrieval. The ACM Press, New York, 1999.
+
+[3] Dhillon, I.S., and Modha, D.S, A data-clustering algorithm
+on distributed memory multiprocessors. Large-Scale Parallel
+Data Mining, pages 245-260, 1999.
+
+[4] Forman, G., and Zhang, B. Linear speed-up for a parallel
+non-approximate recasting of center-based clustering
+algorithms, including k-means, k-harmonic means, and EM.
+KDD Workshop on Distributed and Parallel Knowledge
+Discovery, 2000.
+
+[5] Goharian, N., El-Ghazawi, T., Grossman, D., and
+Chowdhury, A. On the enhancements of a sparse matrix
+information retrieval approach. Proceedings of the
+International Conference on Parallel and distributed
+Processing Techniques and Applications, 1999.
+
+[6] Gropp, W., Lusk, E., and Skjellum, A. Using MPI: portable
+parallel programming with the message-passing. The MIT
+Press, Cambridge, MA, 1999.
+
+[7] Joaehimes, T. A probabilistie analysis of the Roeehio
+algorithm with TFIDF for text categorization. In
+|
+Naive Beyes
+
+O
+EM
+
+
+
+
+70
+
+
+60
+
+
+~ 5o
+
+~ 4o
+
+30
+
+
+20
+
+
+10
+
+
+0
+0
+20
+40
+100
+200
+400
+600
+800
+1400 2000 3000 4500 6000
+
+Number of Labeled Documents
+
+
+
+Figure 7. Classification accuracy vs. the number of labeled
+training documents.
+
+
+proceedings of the Fourteenth International Conference on
+Machine Learning, pages 143-151. 1997.
+
+[8] Joshi, M.V., Karypis, G., and Kumar, V. ScalParC: A new
+scalable and efficient parallel classification algorithm for
+mining large datasets. In Proceedings of International
+Parallel Processing Symposium, 1998.
+
+[9] Lewis, D., and Ringuette, M. A comparison of two learning
+algorithms for text categorization. In Third Annual
+Symposium on Document Analysis and Information
+Retrieval, pages 81-93, 1994.
+
+[10] MeCallum, A., and Nigam, K. A comparison of events
+models for naive Bayes text classification. Papers from the
+AAAI Workshop, pages 41-48, 1998.
+
+[11] MeLachlan, G.J., and Krishnan, T. The EM algorithm and
+extensions. Iohn Wiley & Sons, 1997.
+
+[12] Mitchell, T. Machine learning. McGraw-Hill, New York,
+1997.
+
+[13]Nigam, K., MeCallum, A., Thrun, S., and Mitchell, T. Text
+classification from labeled and unlabeled documents using
+EM. Machine Learning, pages 103-134, 2000.
+
+[14]Ridge, D., Beaker D., and Merkey, P. 1997. Beowulf:
+Harnessing the power of
+parallelism in a Pile-of-PCs.
+Proceedings, IEEE Aerospace.
+
+[15] Ruocco, A.S., and Frieder, O. Clustering and classification
+of large doetnnent bases in a parallel environment. JASIS
+48(10), pages 932-943, 1997.
+
+[16] Thakur, R., Gropp, W., and Lusk, E. Optimizing
+noncontiguous accesses in MPI/IO. Parallel Computing,
+pages 83-105, 2002.
+
+
+
+
+206
+

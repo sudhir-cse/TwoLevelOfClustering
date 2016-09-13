@@ -1,0 +1,657 @@
+Nonstop
+SQLlMX Primitives
+for Knowledge
+Discovery
+John Clear, Debbie Dunn, Brad Harvey, Michael Heytens, Peter Lohman, Abhay Mehta, Mark Melton,
+Lars Rohrberg, Ashok Savasere, Robert Wehrmeister, Melody Xu
+Compaq Computer Corporation
+14231 Tandem Blvd., LOC 116
+Austin, TX 78728-6699
+(512) 432-8000
+
+First/Vame.LastName@Compaq.Com
+
+Abstract
+In this paper, we describe the primitives that we have
+implemented in NonStop SQL/MX, a commercial DBMS, to
+support the knowledge discovery process. These primitives,
+combinedwith the high-performanceSQL&IX engine, represent
+apowerful kernelfor performing basicknowledgediscoverytasks
+in ascalableandefftcient manner.
+
+1. Introduction
+Knowledge discovery is a lengthy processinvolving many data-
+intensive steps.
+The data management and manipulation
+challengesinherent in this processaresignificant and continue to
+grow as knowledge discovery becomesmore widely used in
+practice. In responseto thesechallenges,many researchersand
+practitioners have proposed tightly
+integrating knowledge
+discovery anddatabasesystems[I, 2, 3, 61,an approachin which
+many data-intensivecomputationsareperformedin the database,
+ratherthanoutsideit in tools andapplications.
+An important goal of this approach is to enable large-scale
+knowledgediscoveryto be performedin an efficient and scalable
+manner by leveraging the powerful capabilities provided by
+databasesystemstoday. Data analysis in this approachis also
+more interactive and involves fewer process steps, leading to
+better and faster results. Efficiently supporting data-intensive
+knowledge discovery tasks in a databasesystem, however, is
+sometimesdifficult, as the computations and accesspatterns in
+these tasks may be very different from those in traditional
+databaseapplications. For example, a single table may be
+scannedor joined to itself hundredsor even thousandsof times.
+Thesedifftculties can be overcome,in somecases,by the clever
+useof SQL, specialtuning of optimization/execution strategies,or
+the useof object-relationalfeaturessuchasuser-definedtypesand
+functions.
+There are important data-intensive knowledge discovery tasks,
+though, that simply can't be executed efficiently in the DBMS
+using thesetechniques. For example,statistical sampling canbe
+
+
+Permission to make drgttal or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage
+and that
+copies bear this notice and the full citation on the lirst page. To copy
+othcrwisc, to republish, to post on servers or to rcdistributc to lists,
+requires prior specific permission and/or a fee.
+KDD-90 SanDiego CA USA
+Copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+implemented in a DBMS via a user-defined function, but good
+performancecan't be achieved unless it is built deeply into the
+engine. Extending a DBMS with new primitive structuresand
+operationsis thereforeanotherimportant technique for efficiently
+supportingknowledgediscovery in database systems.
+In this paper,we describethe setof suchprimitives that we have
+addedto Nonstop SQL/MX [4], a new parallel, object-relational
+DBMS from the TandemDivision of Compaq. Theseprimitives,
+along with other high-performance features of the SQL/MX
+engineenablebasicknowledgediscoverytasksto beperformedin
+ascalableandefficient manner.
+We begin in the next section with a discussion of when it is
+appropriate to extend a DBMS with new primitives for
+knowledge discovery. We then examine in some detail the
+primitives we have implementedin SQLMX.
+The final section
+concludeswith asummary.
+
+2. Adding New DBMS Primitives for
+Knowledge Discovery
+The knowledge discovery processincludes many data-intensive
+steps,starting with the preprocessingand profiling of data,then
+transforming datain a variety of ways, finally ending with model
+building and deployment of discovered knowledge.
+In an
+architecturein which knowledge discovery and databasesystems
+aretightly coupled,the tasksperformedin eachof thesestepscan
+be executedanywherefrom the client part of atool/application to
+the lowest levels of a DBMS. How thesetasksaredecomposed
+into subtasks,andwherethesesubtasksareactually implemented,
+arekey decisionsthat affectboth scalability andperformance.
+Tasks that involve regular processing of large data sets are, in
+general,good candidatesfor execution in a DBMS. Other tasks,
+such as visualization and user interaction, clearly don't fit well
+into databasesystemsand thus are best performedoutside them
+in, e.g., a client-mining tool. For tasks that do fit well into a
+DBMS, there are several implementation possibilities: standard
+SQL queries; stored procedures;object-relational features; new
+primitives; andvarious combinationsthereof.
+Whenis implementationasanew DBMS primitive anappropriate
+choice? There is a high developmentcost associatedwith new
+DBMS primitives, as opposed to other alternatives, such as
+standardSQL queriesanduser-definedfunctions. Therefore,it is
+cost-effective to build new primitive capabilities into a DBMS
+only when the advantagesof doing so, relative to other choices,
+aresignificant. In our SQL/MX developmentwork, we haveused
+the following guidelines to determinewhether a particular taskis
+agoodcandidatefor implementationasaDBMS primitive.
+
+
+
+
+425
+
+1.
+
+
+2.
+
+
+
+
+3.
+
+
+
+
+4.
+
+
+
+5.
+Generality: does it support multiple knowledge discovery
+tasksandalgorithms? Is it useful in otherapplication areas?
+Compatibility
+with relational model: is the result of the new
+primitive easily and naturally describedas a table? Is the
+operation composablewith standardDBMS operationssuch
+asaggregating,filtering, joining, etc.?
+Level of integration:
+does implementation as a primitive
+operator,asopposedto, say, a standardSQL query or user-
+defined function, result in significantly moreperformanceor
+expressivepower?
+Control: Is the operation something that tool vendors and
+application developers are willing to outsource to DBMS
+vendors?
+Muturi~
+and stability:
+is the task relatively stable, or is it
+changing frequently, e.g., as new researchresults become
+available.
+
+We havedoneextensiveresearchinto many knowledge discovery
+tasksandalgorithms, looking for key DBMS extensionsthat meet
+the criteria listed above. Our researchhas included: in-depth
+discussions with many data mining tool vendors; analysis of
+actual customer engagementsin the Compaq Advanced Data
+Mining Center; and an ongoing relationship with the Intelligent
+Database Systems Research Laboratory at Simon Fraser
+University. The specific extensionsthat have been identified to
+date in this work and implementedin SQL/MX are describedin
+the next sectionof the paper.
+Note that the searchfor new DBMS primitives to better support
+mining is expectedto be an on-going effort. Perhapsat some
+point in the future there will be widespreadagreementon the set
+of primitives neededto supportknowledge discovery in a DBMS
+in a first-class manner,but clearly that point hasn't beenreached
+yet.
+The search for such primitives will continue, for the
+foreseeablefuture, to beanactive areaof research.
+
+3. Knowledge Discovery Primitives in
+SQL/MX
+The following primitive operationsand data structures,exposed
+through a SQL interface, have been implemented in Nonstop
+SQL/MX:
+Transposition. Implementedin the form of TRANSPOSE,a
+new SELECT statement clause.
+TRANSPOSE allows
+multiple results,such asfrequency counts or cross-tables,to
+becomputedin asingle scanover atable.
+Sampling. Three basic sampling methods are provided:
+random, first n, and periodic. For eachtype, the actual size
+of the samplecanbespecified,either asapercentof the data
+setbeing sampled,or an absolutenumber of sampledrows.
+Stratified andclustersamplingarealsosupported.
+Sequencefunctions. Theseallow a single query to retrieve
+valuesfrom any row in a sortedresult, computerunning and
+moving aggregates,andcalculatethe numberof rows sincea
+certain condition was true. Can also be used to generate
+denseencodingsfor columnswith low cardinalities.
+Table partitioning strategies and column data types. The
+new partitioning strategies added are vertical partitioning
+andround-robin horizontal partitioning. A new column data
+type, a bit-precision integer, enablesintegral values to be
+storedin the minimum requirednumberof bits.
+A detailed description of eachfeaturemay be found in [4]. Two
+data mining tools, KnowledgeSTUDIO from Angoss Software
+Corporation and Clementine from Integral Solutions Limited,
+havebeentightly integratedwith SQL&IX, making extensive use
+of theseprimitives. Let us now look ateachof theseprimitives in
+moredetail.
+
+3.1 Transposition
+The TRANSPOSE operator may be used in a variety of ways
+throughout the knowledge discovery process. In the data-
+profiling step, for example, a table of unique values and
+frequency counts for each categorical attribute (or column) is a
+valuable aid to understandinga dataset. This canbedonevia one
+SQL query percolumn, asshow below.
+
+SELECT ACCT STATUS,
+COUNT(*)
+-
+FROM CUSTOMER GROUP BY ACCT-STATUS;
+SELECT GENDER,
+COUNT(*)
+PROM CUSTOMER GROUP BY GENDER;
+...
+This approach is very inefficient, though, as there may be
+hundredsof such queries,eachperforming a separatetable scan.
+Using TRANSPOSE, all thesequeries can be combined into one
+andcomputedin a single table scan. For example:
+
+SELECT ATTR-ID,
+ATTR-VAL,
+COUNT(*)
+FROM CUSTOMER
+TRANSPOSE
+(1,
+ACCT-STATUS)
+,
+(2,
+GENDER),
+. .
+AS
+(ATTR-ID,
+ATTR-VAL)
+GROUP BY ATTR-ID,
+ATTR-VAL
+ORDER BY ATTR-ID,
+ATTR-VAL;
+
+
+The TRANSPOSE
+clauseproducesmultiple output rows for each
+input row.
+In the example above, for a given input row,
+TRANSPOSE will place 1 and the value of ACCT-STATUS
+in
+fields ATTR-ID
+and ATTR-VAL
+in the first output row, 2 and
+the value of GENDER in the samefields in the secondoutput row,
+and so on. This intermediateresult is then groupedand ordered
+by ATTR-ID
+andATTR-VAL.
+In the final result, the rows with
+an ATTR-ID
+of 1 will contain the unique values and frequency
+countsfor ACCT-STATUS, and rows with ~~ATTR-ID
+of2 the
+valuesandcountsfor GENDER.
+The examplequery shown abovecanbemodified easily to handle
+attributes with different data types and to perform other
+computations such as cross-tables, a key intermediate data
+structure for model building [S]. For example, the following
+query computes cross-tables for the independent variables
+GENDER, AGE, and NW-CHILDREN
+versus the dependent
+variable STATUS.
+
+SELECT CTNUMBER,
+IVl,
+IV2,
+DV,
+COUNT(*)
+FROM MINING-DATA
+TRANSPOSE
+(l,GENDER,NULL,STATUS)
+,
+(2,NULL,AGE,STATUS),
+
+
+
+
+426
+
+(3,NULL,NUM_CHILDREN,STATUS)
+AS
+(CTNUMBER,
+Ivl,
+1~2,
+DV)
+GROUP BY CTNUMBER,
+IVl,
+IV2,
+DV
+ORDER BY CTNUMBER,
+IV1,
+IV2,
+DV
+In this example, TRANSPOSE
+maps each input row to three
+output rows, containing GENDER, AGE, and NUM-CHILDREN,
+respectively. A cross-tablenumbercolumn (CTNLJMBER) is used
+to keeptrack of which independentvariable value is storedin a
+particular row (1 for gender,2 for age,3 for numberof children).
+The STATUS value (the dependentvariable) is alsoplacedin each
+output row. Two independentvariable columns, IVY and IV2,
+arenecessary,one for eachunion-compatible setof independent-
+variable data types. (GENDER is a charactercolumn, and AGE
+and NuM-CHILDREN
+are numeric.) The result of TRANSPOSE
+is then groupedand ordered. The CTNUMER column in the result
+specifiesthe cross-tableto which arow belongs.
+Decisiontreealgorithmstypically computearound(Na- 1)cross-
+tables per node in a decision tree, where N, is the number of
+attributesin the datasetbeing mined. Without transposition,this
+requiresNa times Nn (the number of nodesin the decision tree)
+queries,where N, may be on the order of thousands.The use of
+transposition reduces this count to Nn so that the number of
+queries is independentof the number of attributes in the table.
+Transpositionenablesthe dataprocessingpart of the decision tree
+building taskto scalelinearly asthe numberof dimensionsbeing
+modeledincreases.
+The key benefit provided by TRANSPOSE is it allows many
+similar computationsto be expressedconcisely and in a form that
+is amenableto optimization and efficient execution. Without
+TRANSPOSE,very sophisticatedoptimizations (e.g.,multi-query
+optimization) mustbedoneto achievethe samelevel of execution
+efficiency.
+
+3.1.I Related Work
+Thebasicprinciple of transposition,namelygeneratingrows from
+columns, has appearedelsewhere,specifically as introduced by
+Microsoft via the IJNPIVOT operator[5]. Onemajordifference is
+that UNPIVOT is performedonceper sourcetable, on the entire
+row, asopposedto transposingan arbitrary number of specified
+columnsof the sourcerow in multiple ways.
+
+3.2 Sampling
+Statistical sampling is another primitive operation that has been
+addedto SQLh4X for knowledge discovery. Sampling is useful
+for generating fast approximate answers. For example, the
+profiling query shown abovecan bemodified to usesampling as
+fo11ows.
+
+SELECT ATTR
+ID,
+ATTR VAL,
+COUNT(*)
+-
+-
+FROM CUSTOMER
+SAMPLE P.ANDOM 1 PERCENT
+TRANSPOSE
+(1,
+ACCT-STATUS)
+,
+(2,
+GENDER),
+. .
+AS
+(ATTR-ID,
+ATTR VAL)
+-
+GROUP BY ATTR
+ID,
+ATTR VAL
+-
+ORDER BY ATTR
+ID,
+ATTR VAL;
+-
+Here a top-level SAMPLE
+clause has been added, causing
+frequency counts to be computedon only a randomone percent,
+rather than the entire, CUSTOMER table. Sampling can also be
+usedto adjustsubsetsof apopulation. For instance,the following
+query oversamplesthe sub-population of malesin the CUSTOMER
+table (e.g.,to equalize the number of male and female customers
+prior to modelbuilding).
+
+SELECT *
+FROM CUSTOMER
+SAMPLE RANDOM BALANCE
+WHEN GENDER='M'
+THEN 150
+PERCENT
+WHEN GENDER='F'
+THEN 100
+PERCENT
+END;
+
+
+A BALANCE
+clause is used to split rows from the CUSTOMER
+table into maleandfemalesub-populations,then to take 150 and
+1o
+o
+percentsamples,respectively,of thesesub-populations.
+There are five different dimensions to the SQL/MX sampling
+feature: sampling type, sampling method, sampling source,
+sampling ratio and samplesize. A number of possibilities exist
+along eachof thesedimensions,asshownbelow.
+.
+Type:SimpleandStratified/Weighted
+
+l
+M&rod: Random,First-N, andPeriodic
+.
+Source:BasetableandIntermediateresults
+.
+R&o: Normal andOversampling
+.
+Size:Absolute andRelative
+The sampling feature in SQL&IX
+treats each dimension
+orthogonally. That is, options along one dimension can be
+combined with any option along another dimension.
+The key
+benefits provided by sampling are fast approximate answers,a
+capability that is useful throughout the entire knowledge
+discovery process,andthe ability to adjust(i.e., boost or reduce)
+sub-populations. Implementationof samplingasa primitive deep
+inside the DBMS engine is critical to achieving good
+performance.
+
+3.2.1 Related Work
+While some researchershave recognized the importance of
+samplingin aDBMS [7], SQL&IX is, to our knowledge,the only
+commercialDBMS to supportacomprehensivesamplingfeature.
+
+3.3 Sequence Functions
+SQL&IX supportsa number of sequencefunctions that can be
+usedto concisely specify queries that computemoving-window
+and running aggregations. For example, the following query
+computesathree-monthmoving averagefor customeraccounts.
+
+SELECT ACCOUNT,
+HISTORY
+MONTH,
+-
+MOVINGAVG(BALANCE,
+ROWS
+SINCE(THIS(ACCOUNT)
+c>
+ACCOUNT),
+3)
+FROM CUSTOMER ACCOUNT HISTORY
+-
+-
+SEQUENCE BY ACCOUNT,
+HISTORY-MONTH;
+
+
+The table CUSTOMER-ACCOIJNT-HISTORY
+contains monthly
+status records for each customer account. Sequencefunction
+MOVINGAVG
+is used in the select list to compute a moving
+
+
+
+
+427
+
+average of account history records ordered by ACCOUNT
+and
+HISTORY-MONTH
+(specified in the SEQUENCE
+BY clause).
+The moving averageis either computed over three months (the
+maximum window size, specified in argument three to
+MOVINGAVG)
+or the numberof monthsof history for a particular
+account (specified via argument two, an expression that counts
+the number of rows since the account number changed),
+whichever is smaller.
+Sequencefunctions are useful for manipulating time sequence
+data in various ways, e.g., profiling, computing interesting
+derived attributes, and so on. They are also useful for doing
+ranking.
+For instance, customer accounts can be ranked by
+averagebalanceover someperiod of time, and this ranking then
+mappedto quartiles or deciles,a derived attribute which may be a
+good predictor of behavior for certain mining problems. Finally,
+sequencefunctions are also useful for computing lit? charts
+comparing, say, the performanceof a direct-mail campaignwith
+andwithout useof amining model.
+The benefits provided by sequencefunctions arethat they allow
+certain computations to be expressed concisely and executed
+efficiently in SQLMX.
+Without sequence functions, these
+computationseither can't becomputedusing standardSQL or can
+but only with long and complex queries. Implementation of
+sequencefunctions as a new primitive deep inside the DBMS
+engineis critical to achieving goodperformance.
+
+3.3.1 Related Work
+RedBrick [8] hasintroduced a small setof sequencefunctions as
+part of its RISQL interface. They are CUME, MOVINGAVG,
+MOVINGSUM,
+RANK, RATIOTOREPORT and TERTILE
+(three-tiered rank). One significant difference is that, since
+ORDER BY is used to specify the sequence, these are
+implemented as "display" functions on top of a final result, as
+opposedto occurring in arbitrarily nestedqueries.
+Recently, a proposal has been approved by the ANSI SQL
+committee for OLAP support in the form of functions that
+computesuch things as moving averagesand running sums [9].
+This proposal is similar to sequence functions in Nonstop
+SQL/MX, exceptthat sequencefunctions allow moreflexibility in
+specifying window sizes and function nesting. The ANSI
+proposal,on the otherhand,is moreexpressivein the sensethat it
+directly supportslookaheadand multiple partitioning/sequencing
+specifications for defining the windows over which OLAP
+functions arecomputed.
+
+3.4 Table partitioning
+strategies and column
+data types
+Mining tables typically contain many columns---up to hundreds
+or eventhousands. At any given point in a mining exercise,only
+a relatively small subsetof columns may be used. For example,
+only 25 out of severalhundred columns may be usedfor model
+building. Vertical partitioning has been added to SQL&IX to
+allow individual columns of a table, or groups of columns,to be
+storedin completely separatedisk tiles, thus providing fast access
+to only thosecolumnsthat areneeded.
+Since mining tables may get very large, horizontal partitioning
+over multiple disk drives is usually necessary. Mining queries
+can contain predicates on almost any column, resulting in
+unpredictable searchpatterns. As a result, an effective way to
+partition mining tables for balancedparallel execution is
+simply
+to distribute them evenly over a number of horizontal partitions.
+This is supported in SQL&IX by the round-robin and hash
+partitioning strategies.
+The columns contained in mining tables generally have low
+cardinality.
+The bit-precision integer data type in SQL/MX
+allows suchcolumnsto bestoredin the minimum numberof bits,
+thus eliminating wasted space. In other words, use of this data
+type allows a column whose range of values is 0 to 2b-I to be
+stored in b bits. Consider an attribute representing gender that
+hastwo values: `F', and `M'. As the datais loaded,the value `F'
+can be mappedto the number 0 andthe value `M' to the number
+1, and the result storedin a one-bit bit precision integer column.
+As bit precision integers are then compressedtogether on disk,
+the required storageis reduced(on average)from 8 bits perrow to
+l-bit per row. In the sameway, this reducesI/O costsby up to a
+factor of 8. In practice,we have found that around 80 percentof
+the attributes in a typical mining datasethave cardinalities of 16
+or less. Using bit precision integers can result in significant
+savingsin both storageandI/O costsfor theseattributes.
+
+4. Summary
+In a KDD architecture in which knowledge discovery and
+databasesystemsaretightly coupled, performanceand scalability
+are major challenges. Building new primitives into a DBMS
+engine is an important technique for meeting these challenges.
+We have describedthe set of such primitives implemented in
+Nonstop SQL&IX, and given examplesof how they areusedfor
+knowledge discovery. Theseprimitives, combined with the high-
+performance SQLiMX engine, representa powerful kernel for
+performing basic knowledge discovery tasks in a scalable and
+efficient manner.
+
+5.
+VI
+
+
+
+PI
+
+
+r31
+
+
+
+
+r41
+
+
+PI
+
+
+
+
+@I
+References
+R. Agrawal, M. Mehta, J. Shafer,R. Srikant, A. Aming, T.
+Bollinger, The Quest data mining system, In Proc.of the 2nd
+Int'l Conferenceon Knowledge Discovery and Data Mining,
+Portland, OR,Aug 1996.
+S.Chaudhuri, Data Mining and Database Systems: Where is
+the Intersection? IEEE Data Engineering Bulletin, Vol. 21.
+No. 1,March 1998.
+J. Clear, D. Dunn, B. Harvey, M. Heytens, P. Lohman, A.
+Mehta, M. Melton, H. Richardson,L. Rohrberg,A. Savasere,
+R. Wehrmeister, and M. Xu, Large Scale Knowledge
+Discovery
+Using
+NonStop
+SQL/k%.
+Submitted for
+publication, 1999.
+Compaq Computer Corporation.
+Nonstop SQLNX
+ReferenceGuide, 1999.
+Graefe,Goetz; Fayyad, Usama;and Chaudhuri, Surajit On
+the
+Eficient
+Gathering
+of
+Sufficient
+Statistics
+for
+Classification from Large SQL Databases.
+In Proceedings
+of the 4th International Conferenceon Knowledge Discovery
+andDataMining, NewYork, New York, 1998.
+J. Han, Y. Fu, W. Wang,J. Chiang, W. Gong, K. Koperski,
+D. Li, Y. Lu, A. Rajan, N. Stefanovic, B. Xia, 0. Zaine,
+DBMiner: A systemfor mining knowledge in large relational
+databases, In Proceedingsof the 2nd Int'l Conference on
+
+
+
+
+428
+
+Knowledge Discovery and Data Mining, Portland, Oregon,
+August 1996.
+[7]
+Olken, F.
+Random Sampling from
+Databases,
+Ph.D.
+Dissertation,Univ. of California Berkeley, 1993.
+[8] Red Brick Systems,Inc. Decision-makers, Business Data
+and IX?QL. White Paper,1998.
+[9] F. Zemke, K. Kulkami, A. Witkowski, and B. Lyle.
+Proposal for OLAP functions,
+ANSI NCITS H2-99-155,
+April 1999.
+
+
+
+
+429
+

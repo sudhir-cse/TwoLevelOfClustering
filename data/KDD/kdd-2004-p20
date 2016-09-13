@@ -1,0 +1,1842 @@
+Mining Reference Tables for Automatic Text Segmentation
+
+Eugene Agichtein
+
+
+Columbia University
+
+eugene@cs.columbia.edu
+Venkatesh Ganti
+Microsoft Research
+vganti@microsoft.com
+
+
+
+ABSTRACT
+Automatically segmenting unstructured text strings into structured
+records is necessary for importing the information contained in legacy
+sources and text collections into a data warehouse for subsequent
+querying, analysis, mining and integration. In this paper, we mine
+tables present in data warehouses and relational databases to develop
+an automatic segmentation system. Thus, we overcome limitations
+of existing supervised text segmentation approaches, which require
+comprehensive manually labeled training data. Our segmentation
+system is robust, accurate, and efficient, and requires no additional
+manual effort. Thorough evaluation on real datasets demonstrates the
+robustness and accuracy of our system, with segmentation accuracy
+exceeding state of the art supervised approaches.
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications--Data min-
+ing; I.2.6 [Artificial Intelligence]: Learning
+
+
+General Terms
+Algorithms, design, performance, experimentation
+
+
+Keywords
+Text segmentation, machine learning, text management, information
+extraction, data cleaning
+
+
+1. INTRODUCTION
+Information in unstructured text needs to be converted to a struc-
+tured representation to enable effective querying and analysis. For
+example, addresses, bibliographic information, personalized web server
+logs, and personal media filenames are often created as unstructured
+strings that could be more effectively queried and analyzed when
+imported into a structured relational table. Building and maintaining
+large data warehouses by integrating data from such sources requires
+automatic conversion, or segmentation of text into structured records
+of the target schema before loading them into relations.
+Informally, the problem of segmenting input strings into a struc-
+tured record with a given n-attribute schema is to partition the string
+into n contiguous sub-strings and to assign each sub-string to a unique
+attribute of the schema. For instance, segmenting the input string
+"Segmenting text into structured records V. Borkar, Deshmukh and
+
+Work
+done at Microsoft Research.
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD'04, August 22­25, 2004, Seattle, Washington, USA.
+Copyright 2004 ACM 1-58113-888-1/04/0008 ...$5.00.
+Sarawagi SIGMOD" into a bibliographic record with schema [Au-
+thors, Title, Conference, Year] requires the assignment of the sub-
+string "V. Borkar, Deshmukh and Sarawagi" to the Authors attribute,
+the sub-string "Segmenting text into structured records" to the Ti-
+tle attribute, "SIGMOD" to the Conference attribute, and the NULL
+value to the Year attribute.
+Current techniques for automatically segmenting input strings into
+structured records can be classified into rule-based and supervised
+model-based approaches. Rule-based approaches require a domain
+expert to design a number of rules and maintain them over time.
+This approach does not scale as deployment for each new domain
+requires designing, crafting, deploying, and maintaining a new set of
+rules. Supervised approaches alleviate this problem by automatically
+learning segmentation models from training data consisting of input
+strings and the associated correctly segmented tuples [5]. However,
+it is often hard to obtain training data, especially data that is com-
+prehensive enough to illustrate all features of test data. This prob-
+lem is further exacerbated when input test data as in our target data
+warehouse scenario is error prone; it is much harder to obtain com-
+prehensive training data that effectively illustrates all kinds of errors.
+These factors limit the applicability and the accuracy of supervised
+approaches.
+In this paper, we exploit reference relations--relations consisting
+of clean tuples--in typical data warehouse environments. For exam-
+ple, most data warehouses include large customer and product tables,
+which contain examples that are specific to the domain of interest.
+Reference relations can be a source of rich vocabularies and structure
+within attribute values. Our insight is to exploit such widely available
+reference tables to automatically build a robust segmentation system.
+Note that we do not attempt to match the newly segmented records
+with the tuples in the reference table. Record matching and dedupli-
+cation are different problems and are not the focus of this paper.
+Our approach relies only on reference tables: we do not need the
+association between unsegmented input strings and the correspond-
+ing segmented strings (labeled data) that supervised systems require
+for training. Current operational data warehouses and databases do
+not maintain such associations between input data and the actual data
+in the database, because input data goes through a series of poten-
+tially complex transformations before it is stored in the database.
+Building segmentation models from clean standardized tuples in
+a large reference table requires three critical challenges to be ad-
+dressed. The first challenge is that information in reference rela-
+tions is typically clean whereas input strings may contain a variety
+of errors: missing values, spelling errors, use of inconsistent abbre-
+viations, extraneous tokens, etc. [18]. Therefore, the challenge is to
+learn from clean reference relations, segmentation models that are ro-
+bust to input errors. The second challenge is that we do not know the
+order in which attribute values in an input string are specified. In the
+data warehouse maintenance scenario, the order in which attribute
+values are concatenated by an address data source may be [State, Zip-
+code, City, Name, Address] while another source may concatenate it
+in the order [Name, Address, City, Zip, State]. Another common ex-
+ample is bibliographic data: some sources may order attributes for
+
+
+
+20
+Research Track Paper
+
+T1, t2, t3,....,tm
+SEGMENTATION
+T1 | T2, T3 | .... | Tn
+INPUT STRING
+SEGMENTED TUPLE
+A1
+A2
+...
+An
+
+PRE-PROCESSING/
+
+TRAINING
+ARM1
+
+
+ARM2
+
+
+...
+
+
+ARMn
+REFERENCE TABLE
+
+
+
+
+feature hierarchy,
+tokenization
+
+
+
+
+Figure 1: Architecture of the CRAM system
+
+
+each article as [authors, title, conference, year, pages] while other
+sources may order them as [title, authors, conference, pages, year].
+Therefore, for an unsupervised segmentation system to be deployed
+over a variety of data sources it has to deal with differences in input
+orders by automatically detecting the attribute order. The third chal-
+lenge is that reference tables can usually be very large and consist
+of millions of tuples. Therefore, to effectively exploit large vocab-
+ularies and rich structural information in large reference tables the
+algorithm for building a segmentation model from large reference ta-
+bles has to be efficient and scalable. Note that training efficiency is
+not usually an issue with supervised approaches: manually labeling
+data is time-consuming and expensive and hence training datasets are
+much smaller than sizes of available reference tables.
+Due to the above challenges, it is not possible to directly adapt ex-
+isting supervised approaches to the "learn from reference table only"
+scenario. First, we cannot use data in a reference table to prepare
+a training dataset for current supervised approaches because we do
+not know the order in which attribute values would be observed in
+test input strings. In fact, current supervised models heavily rely on
+the knowledge of input attribute order to achieve high accuracy [5].
+Second, data in reference tables is usually clean whereas input data
+observed in practice is dirty. And, making a design goal of robustness
+to input errors during training itself improves the overall segmenta-
+tion accuracy. Third, current supervised text segmentation systems
+are designed to work with small labeled datasets (e.g., by using cross
+validation) and hence tend not to scale to training over large reference
+tables.
+The architecture of our automatic segmentation system CRAM1 is
+shown in Figure 1. We adopt a two-phased approach. In the first
+pre-processing phase, we build an attribute recognition model over
+each column in the reference table to determine the probability with
+which a (sub-)string belongs to that column. This process can be
+customized with a domain-specific tokenizer and a feature hierar-
+chy (i.e., token classification scheme such as "number", "delimiter",
+etc.). For example, the recognition model on the "Zip Code" col-
+umn of an address relation indicates that the probability of a five-
+digit number (e.g., 12084) being a valid zip code is 0.95 whereas
+that of a word like Timbuktoo is only 0.005. Models on all columns
+can be used together to determine the best segmentation of a given
+input string into sub-strings. In the second run-time segmentation
+phase, we segment an input string s into its constituent attribute val-
+ues s1, . . . , sn and assign each si to a distinct column such that the
+quality of the segmentation is the best among all possible segmenta-
+tions.
+
+Contributions: In this paper, we develop a robust segmentation sys-
+tem which can be deployed across a variety of domains because it
+only relies on learning the internal attribute structure and vocabular-
+ies from widely available reference tables. We introduce robust and
+accurate attribute recognition models to recognize attribute values
+from an attribute, and develop efficient algorithms for learning these
+models from large reference relations (Section 4). We then develop
+
+1
+CRAM: Combination of Robust Attribute Models
+an algorithm that effectively uses robust attribute recognition models
+to accurately and efficiently segment input strings (Section 5). Fi-
+nally, we present a thorough experimental evaluation of CRAM on
+real datasets from a variety of domains and show that our domain-
+independent segmentation system outperforms current state of the
+art supervised segmentation system (Section 6).
+
+2. RELATED WORK
+Extracting structured information from unstructured text has been
+an active area of research, culminating in a series of Message Under-
+standing Conferences (MUCs) [2, 17] and more recently ACE eval-
+uations [21]. Named entity recognition systems extract names of en-
+tities from the natural language text (e.g., PERSON names, LOCA-
+TIONs, ORGANIZATIONs). Detecting entities in natural language
+text typically involves disambiguating phrases based on the actual
+words in the phrase, and the text context surrounding the candidate
+entity. Explored approaches include hand-crafted pattern matchers
+(e.g., [1]), rule learners (e.g., [3, 23]), and other machine learning
+approaches (e.g., [11]). In contrast, strings in our segmentation sce-
+nario are not necessarily natural language phrases, and do not contain
+surrounding contextual text.
+Work on wrapper induction (e.g., [12, 19, 24]) exploits layout and
+formatting to extract structured information from automatically gen-
+erated HTML pages, as well as heuristics and specialized feature hi-
+erarchies to extract boundaries between records [14]. In contrast, the
+input strings in our problem are short and have no obvious markers
+or tags separating elements. Furthermore, all of the string except for
+the delimiters must be assigned to some of the target attributes. As
+previously shown by Borkar et al. [5], the required techniques there-
+fore differ from traditional named entity tagging and from wrapper
+induction.
+Hidden Markov Models (HMMs) are popular sequential models [4],
+and have been used extensively in information extraction and speech
+recognition. Since the structure of HMMs is crucial for effective
+learning, optimizing HMM structure has been studied in the context
+of IE and speech recognition (e.g., [15, 27].
+The problem of robustness to input errors has long been studied in
+speech recognition. Some approaches include filtering out noise dur-
+ing pre-processing and training the system in artificially noisy con-
+ditions (error injection) [13]. Noise filtering from speech recognition
+cannot be adapted to text segmentation directly, since in our scenario
+the input errors are not separable from actual content. To the best of
+our knowledge, we are the first to explicitly address input errors in
+the context of text segmentation.
+Past work on automatic text segmentation most closely related to
+ours is the DATAMOLD system [5] and related text segmentation
+approaches (e.g., [22] and [28]). These are supervised approaches
+and hence share the limitations discussed earlier.
+In this paper, we present a novel, scalable, and robust text segmen-
+tation system CRAM. Our system requires only the target reference
+table and no explicitly labelled data to build accurate and robust mod-
+els for segmenting the input text strings into structured records.
+
+3. SEGMENTATION MODEL
+In this section, we define the segmentation problem and introduce
+preliminary concepts required in the rest of the paper. We define
+the "quality" of segmentation of an input string into attribute value
+sub-strings as a function of the "probabilities" of these sub-strings
+belonging to corresponding attribute domains. Our goal now is to se-
+lect the segmentation with the best overall probability. The probabil-
+ity of a sub-string assignment to an attribute domain is estimated by
+a model called Attribute Recognition Model (described below) asso-
+ciated with each attribute. Consider an input string "Walmart 20205
+S. Randall Ave Madison 53715 WI" which has to be segmented into
+
+
+21
+Research Track Paper
+
+Organization Name, Street Address, City, State, and Zipcode attribute
+values. For example, the attribute recognition model for Organiza-
+tion Name may assign respective probabilities of 0.9 and 0.15 to sub-
+strings "walmart" and "walmart 20205." If the combination (say,
+product) of individual probabilities of the segmentation "walmart" as
+Organization Name, "20205 s. randall ave" as Street Address, "madi-
+son" as City, "53715" as Zipcode, and "WI" as State has the highest
+numeric value, we output this segmentation of the given input string.
+The combination of probabilities has to be invariant to changes in the
+order in which attribute values were concatenated. This is in contrast
+to traditional (tagging) approaches, which rely heavily on the order
+in which attribute values are concatenated (e.g, [5, 10]). In the rest of
+the paper, we use R to denote a reference relation with string-valued
+attributes (e.g., varchar types) A1, . . . , An.
+
+Attribute Recognition Model (ARM): An attribute recognition model
+ARMi for the attribute Ai is a model for the domain of Ai such that
+ARMi(r) for any given string r is the probability of r belonging to
+the domain of Ai.
+
+Optimal segmentation of an input string: Let R be a reference re-
+lation with attributes A1, . . . , An and ARM1, . . . , ARMn be their
+respective attribute recognition models. Given an input string s, the
+segmentation problem is to partition s into s1, . . . , sn and to map
+them to distinct attributes As1, . . . , Asn such that
+ 
+n
+i
+{ARMsi(si)}.
+is maximized over all valid segmentations of s into n substrings. A
+similar model that assumes partial independence of attribute segmen-
+tations was independently developed in [9].
+
+Note that the order of attributes As
+1
+, . . . , Asn may be different
+from the order of the attributes A1, . . . , An specified in the reference
+table. Attribute constraints for R (e.g., maximum attribute length)
+can also be incorporated into this model. And, information about
+the order in which attribute values are usually observed can also be
+incorporated. For example, if we know that the street address value
+usually follows the name attribute value, we can potentially bias the
+assignment of consecutive sub-strings, say "walmart" and "20205 S.
+Randall Ave," to name and to street address attributes, respectively.
+
+
+3.1 Preliminaries
+Let tok be a tokenization function which splits any string into a
+sequence tok(s) of tokens based on a set of user-specified delimiters
+(say, whitespace characters). The token set of a string s is the set of
+all tokens in s. For example, tok(v[1]) of the tuple [Boeing company,
+Seattle, WA, 98004] is [boeing, company], and {boeing, company}
+is the token set. Observe that we ignore case while generating tokens.
+The dictionary Di of the attribute Ai of R is the union of token sets
+of all attribute values in the projection R[i] of R on Ai. In the rest
+of the paper, we assume that strings can be segmented only at token
+boundaries.
+
+Hidden Markov Models: A Hidden Markov Model (HMM) is a
+probabilistic finite state automaton encoding the probability distri-
+bution of sequences of symbols each drawn from a discrete dictio-
+nary [25]. Figure 3(a) shows an example HMM. For a sequence s
+of symbols each drawn from the probability distribution encoded by
+a HMM, we can compute the probability of observing s. A HMM
+comprises a set of states and a dictionary of output symbols. Each
+state can emit symbols from the dictionary according to an emission
+probability distribution for that state and pairs of states are connected
+by directed edges denoting transitions between states. Further, edges
+are associated with transition probabilities. HMMs have two special
+states: a start state and an end state. The probability of observing a
+string s = o1, . . . , ok of symbols drawn from the dictionary, is the
+ave apt
+st
+5th 42nd 40th
+*
+
+words
+[a-z]{1-}
+numbers
+[0-9]{1-}
+delimiters
+mixed
+[a-z0-9]{1-}
+
+
+[a-z]{1-10}
+
+
+[a-z]{1-9}
+
+
+
+[a-z]{1-1}
+[0-9]{1-10}
+
+
+[0-9]{1-9}
+
+
+
+[0-9]{1-1}
+...
+...
+[a-z0-9]
+{1-10}
+[a-z0-9]
+{1-10}
+
+[a-z0-9]
+{1-2}
+...
+
+
+
+
+123 55
+5
+#
+Feature
+classes
+
+
+
+
+Base
+tokens
+
+Figure 2: A sample generalized dictionary instantiated for the
+Street Address column
+
+
+sum of probabilities of all paths from the start state to the end state
+with k transitions. The probability of any path p is the product of all
+transition probabilities on each transition in p and the emission prob-
+abilities of observing the ith symbol oi at the ith state on p. The path
+with the highest probability is usually considered the path that gener-
+ated the string s. The set of states and the set of transitions constitute
+the topology of a HMM. For any given application, the topology is
+usually fixed a priori.2 The emission and transition probabilities are
+then learned during a training phase over the training data.
+
+Feature Hierarchy: A HMM built over a dictionary of an attribute
+cannot be directly used for computing probabilities of sequences with
+unknown tokens. However, the set of base tokens in a dictionary can
+be generalized to recognize unknown tokens [5]. For example, it may
+be sufficient to see a 5-digit number optionally followed by a 4-digit
+number to recognize zip codes. The successive generalization of fea-
+tures (e.g., from 5-digit numbers to all numbers) is usually encoded
+as a feature hierarchy. In this paper, we use a hierarchy which is
+similar to the feature hierarchy employed in [5]. In our hierarchy the
+lower levels are more specific than higher levels. At the top level
+there is no distinction among symbols; at the next level they are di-
+vided into classes "words," "numbers," "mixed," and "delimiters."
+"Words," "numbers" and "mixed" are then divided into sub-classes
+based on their lengths. For example, the class of words consisting
+of 10 or less characters (denoted [a-z]{1-10}) is above the class
+of words consisting of 9 or less characters (denoted [a-z]{1-9}).
+All base tokens are at the leaf levels of the feature hierarchy. To dis-
+tinguish base tokens from the generalized elements in the discussion,
+we refer to the non-leaf elements in the feature hierarchy as feature
+classes. We say that that a token t minimally belongs to a feature
+class f if t belongs to f but not to any feature class that is a descen-
+dant of f. For example, the Zipcode value 21934 is said to minimally
+belong to the feature class 5-digit numbers.
+Observe that it is possible to input domain-specific feature hier-
+archies to CRAM in the pre-processing phase, but as we show ex-
+perimentally, the default hierarchy is sufficient for a wide range of
+domains.
+
+Generalized Dictionary: The generalized dictionary consists of all
+elements in the feature hierarchy in addition to the dictionary of base
+tokens. Formally, the generalized dictionary of an attribute Ai in R
+is the union of the dictionary Di of Ai and the set of feature classes
+in the feature hierarchy. Henceforth, we use the term dictionary to
+denote the generalized dictionary unless otherwise specified. Note
+that while the feature hierarchy itself is fixed across domains, the
+generalized dictionary is instantiated for each attribute automatically
+during training from the provided reference tables. A sample of a
+
+2
+Recently, techniques based on cross validation were developed
+to identify a good topology from among a target class of topolo-
+gies [15].
+
+
+22
+Research Track Paper
+
+BEGIN
+MIDDLE
+TRAiLING
+START
+END
+
+
+
+
+(b)
+Number
+ending
+
+in `st' or `th'
+Short word
+(<= 5 chars)
+st|rd|wy|blvd
+START
+
+0.3
+0.4
+1.0
+1.0
+END
+
+
+
+
+(a)
+
+Figure 3: Example HMM Model (a), and our ARM Model (b)
+
+
+generalized dictionary instantiated for the Street Address attribute is
+shown in Figure 2.
+
+
+4. ATTRIBUTE RECOGNITION MODELS
+In this section, we discuss the efficient construction of robust at-
+tribute recognition models from a reference relation. Recall that an
+attribute recognition model assigns probability with which a string
+or a sequence of tokens belongs to the attribute domain. Therefore,
+we adopt the class of hidden markov models (HMMs), a popular
+class for modelling sequences of elements, for instantiating attribute
+recognition models. Instantiating an HMM requires us to define (i)
+the topology consisting of a set of states and the set of transitions
+among them, and (ii) the emission probabilities at each state and the
+transition probabilities between states. In this section, we describe
+the topology we adopt for instantiating ARMs and the computation
+of emission and transition probabilities. Our primary focus in this de-
+sign is (i) to improve the robustness of segmentation to input errors,
+and (ii) to develop an efficient and scalable algorithm for building
+robust attribute recognition models.
+We now discuss the intuition behind the principle, which we call
+specificity, that we exploit to make ARMs more robust to input er-
+rors. A more "specific" attribute recognition model assigns higher
+probabilities only to very few selective token sequences. ARMs can
+be specific in three aspects: positional specificity, sequential speci-
+ficity, and token specificity. We illustrate these notions with an ex-
+ample. Consider an HMM example in Figure 3(a). That a token in
+the street address value ending in "th--st" can only be in the second
+position is an example of positional specificity. The probability of
+acceptance is much lower if such a token ending in "th--st" appears
+in the third position instead of the second position. A token ending
+in "th" or "st" can only follow a short word and tokens "st, rd, wy,
+blvd" can only follow a token ending in "th" or "st" are examples
+of sequential specificity. Note that sequential specificity stresses the
+sequentiality--of a token following another--and is orthogonal to
+the positionality of the tokens. That the last state can only accept one
+of "st, rd, wy, blvd" is an example of token specificity.
+Even though highly specific models may be required for some ap-
+plications, attribute recognition models need only be specific to the
+extent of being able to identify an attribute value as belonging to the
+correct attribute and distinguish it from other domains. Moreover,
+being overly specific in recognizing attribute values may cause the at-
+tribute recognition model to reject (i.e., assign very low probability)
+attribute values with errors, thereby resulting in incorrect segmenta-
+tions. Often, we can trade specificity off for achieving robustness to
+input errors. However, the challenge is to make the tradeoff with-
+out losing segmentation accuracy and at the same time being able to
+build the model efficiently.
+In this section, we instantiate an accurate and robust attribute recog-
+nition model. We first describe the topology of ARMs, and then de-
+scribe the techniques for relaxing sequential and token specificity.
+Finally, we describe a procedure for learning such a model from a
+large reference table.
+4.1 ARM Topology
+The topology of a hidden Markov model, consisting of the set of
+states and valid transitions between these states, has a big impact
+on the accuracy of the model. Recently, techniques based on cross-
+validation and stochastic optimization have been proposed to auto-
+matically decide good topologies [16, 5]. However, these structure
+optimization techniques require several scans of the training data,
+and hence are slow when training data is large. Moreover, these
+techniques--if trained on "clean" data--can result in positionally
+specific topologies (e.g., Figure 3(a)), conditioned to accept tokens
+in specific positions, say, first or third or last. Such topologies, even
+though accurate for segmenting clean input data, can be less robust
+towards erroneous input. In this section, we discuss a statically fixed
+topology that (i) enables efficient model building and (ii) relaxes po-
+sitional specificity in favor of robustness to input errors.
+We observe that collapsing positional information into a small
+number of distinct categories results in a more flexible, compact, and
+robust ARM topology. More specifically, we categorize tokens in at-
+tribute values into three positions: Beginning, Middle, and Trailing
+positions, resulting in what we will call the BMT topology, shown in
+Figure 3(b).3 In the example "57th nw 57th st" string correspond-
+ing to a street address, the token "57th" is categorized as beginning
+token, "st" as the trailing token, and the rest as middle tokens.
+Collapsing token positions into these three categories, we gain ef-
+ficiency while building ARMs by avoiding a computationally expen-
+sive search for "optimal" topology. We also gain robustness to sev-
+eral common types of input errors--token deletions, token insertions,
+and token re-orderings. For example, the probability of observing a
+token 57th as the second or third token in "nw 57th 57th st" is the
+same for both occurrences of the token. Observe that we still are spe-
+cific about the positionality of the beginning and trailing tokens be-
+cause these are critical for correctly recognizing boundaries between
+attribute values.4 And, by not grouping boundary tokens with the
+middle tokens, we are able to collect more specific statistics on the
+emission and transition probabilities for boundary tokens. Our em-
+pirical evaluation shows that the BMT topology captures the salient
+structure required for robust segmentation, and performs as well as,
+and sometimes better than, other topologies involving multiple mid-
+dle positions.
+The categorization of tokens into positions induces a categoriza-
+tion on the (generalized) dictionary of an attribute. The dictionary
+Di corresponding to an attribute Ai is now categorized into the be-
+ginning, middle, and trailing dictionaries DB
+i
+, DM
+i
+, and DT
+i
+. For
+example, a token occurring in the beginning position of an attribute
+value of any tuple in R belongs to the DB
+i
+dictionary.
+
+Set of States and Possible Transitions: The set of states in an ARM
+model is also categorized into beginning, middle, and trailing states.
+Each category consists of a state s for each element e (base token
+or feature class) in the corresponding categorized (generalized) dic-
+tionary, and s emits only e with non-zero probability. The union of
+all three categorized states along with the special start and end states
+constitutes the set of states in an ARM. The broad structure of the
+set of allowed transitions is shown in Figure 3(b). Each category--
+
+3
+The categorization can be generalized to more sophisticated topolo-
+gies with multiple middle positions. However, our experiments (not
+included due to space constraints) showed that the simplest BMT
+topology is equally good.
+4
+This intuition is corroborated by the human ability to recognize
+words even if all but boundary characters are randomly rearranged:
+"Aoccdrnig to a rscheearch at an Elingsh uinervtisy, it deosn't mttaer
+in waht oredr the ltteers in a wrod are, the olny iprmoetnt tihng is taht
+frist and lsat ltteer is at the rghit pclae. The rset can be a toatl mses
+and you can sitll raed it wouthit porbelm. Tihs is bcuseae we do not
+raed ervey lteter by it slef but the wrod as a wlohe."
+
+
+23
+Research Track Paper
+
+beginning, middle, and trailing--may consist of several states in
+the HMM but the transitions among these state categories are re-
+stricted to non-backward transitions, as indicated by the arrows in
+Figure 3(b). That is, beginning states can only transition to either
+middle or to trailing or to the end states, middle states to middle or
+to trailing or the end states, and trailing states only to the end state.
+Observe that by assigning a state to each token or feature class,
+we encode transition probabilities more accurately than the usually
+adopted approach grouping all base tokens into one state. Thus, we
+are better able to exploit large sets of examples in reference tables.
+For example, grouping base tokens "st, hwy" into one BaseToken
+state also collapses all transitions from previous states (say, "49th,
+hamilton, SR169") to any of these individual tokens into one transi-
+tion. It is possible that the states (e.g., "SR169") transitioning into
+the token "hwy" are very different from the states (e.g., "49th, hamil-
+ton") transitioning into the token "st." Grouping several base tokens
+into one BaseToken state loses the ability to distinguish among tran-
+sitions. Therefore, we associate one base token per state. The cost
+of associating a token per state is that the number of transitions in-
+creases. However, we show in Section 6.5 that the resulting transition
+matrices are very sparse, and hence the comprehensive ARM models
+easily fit in main memory.
+
+Emission and Transition Probabilities: To complete the instanti-
+ation of an attribute recognition model ARMi on attribute Ai, we
+need to define the emission probabilities at each state and the tran-
+sition probabilities between states. Since we in include in ARMi
+a state s per element (base token or feature class) e in the cate-
+gorized feature hierarchy, the emission probability distribution at s
+is: P(x|e) = 1 if x = e and the position of x within ARMi and
+that of e within the attribute value are identical, and 0 otherwise. In
+Section 4.4, we describe an algorithm for learning, during the pre-
+processing phase, the transition probability distribution from the ref-
+erence table. In the next section, where we describe the relaxation of
+sequential specificity for robustness, we assume that these probabili-
+ties are known.
+
+
+4.2 Sequential Specificity Relaxation
+Consider the example path in Figure 3(a) consisting of a "short
+word," a "number ending in th or st," and a token in the set rd, wy,
+st, blvd, which accepts the string "nw 57th st" with a high proba-
+bility. However, its erroneous versions "57th st," "nw57th st," "nw
+57th," "nw 57th 57th st" have a very low acceptance probability due
+to the sequential specificity of the model in Figure 3(a): that a spe-
+cific token has to follow another specific token. Therefore, erroneous
+transitions (from the state accepting "57th" to the end state, from the
+start state to the state accepting "57th") have a very low probability.
+Our approach for trading sequential specificity for robustness is to
+"adjust" attribute recognition models trained on clean data by creat-
+ing appropriate states and transitions in an ARM to deal with some of
+the commonly observed types of errors: token insertions, token dele-
+tions, and missing values [18]. Our adjustment operations exploit
+the uniform BMT topology and are illustrated in Figure 4. In order
+to deal with erroneous token insertions, we copy states along with
+transitions to and from these states in the beginning and trailing po-
+sitions to the middle position (as shown in Figure 4(a)). We add low
+probability (according to the Good-Turing estimate [8]) transitions
+to the states copied from the beginning position from all states in the
+beginning position. Similar transitions to trailing states are added
+from the states copied from the trailing position. In order to deal
+with erroneous token deletions, we copy states and associated transi-
+tions from the middle position to the beginning and trailing positions
+(as shown in Figure 4(b)). In order to deal with missing attribute val-
+ues, we create a transition (as shown in Figure 4(b)) directly from the
+BEGIN
+MIDDLE TRAILING
+START
+END
+
+
+BEGIN
+MIDDLE TRAILING
+START
+END
+
+
+BEGIN
+MIDDLE TRAILING
+END
+
+
+
+
+(a)
+(b)
+(c)
+START
+A
+A'
+B
+B'
+
+
+
+
+Figure 4: Illustration of robustness operations: Recover Inser-
+tions (a), Deletions (b), Missing Values (c)
+
+
+start state to the end state. Observe that the implementation of these
+operations on a non-uniform topology would be very complex. Other
+common errors are addressed by other characteristics of ARMs. Our
+begin-middle-trailing topology is designed to be robust to token re-
+orderings, especially, those in the middle position. Spelling errors
+are handled through token specificity relaxation as we describe next.
+
+4.3 Token Specificity Relaxation
+We now describe an approach for relaxing token specificity to ac-
+count for unknowns or rare tokens. Our approach is a departure from
+the smoothing approach used by Borkar et al. [5]: during training,
+we propagate base token statistics to all matching feature classes.
+At runtime, if the observed token t is in the dictionary it is mapped
+directly to the appropriate state in the ARM; otherwise, the token
+is generalized to the minimal feature class that accepts t. In order to
+explicitly address spelling errors, we have experimented with match-
+ing unseen base tokens to states corresponding to known base tokens
+according to standard distance measures such as edit distance (e.g.,
+"street" with "streat"). However, our experiments did not show any
+accuracy improvement over our original method.
+
+4.4 ARM Training
+We now describe the training procedure for computing transition
+probabilities between states in the BMT topology. The importance
+of each transition in recognizing whether or not a string exhibiting
+this transition belongs to the attribute depends on two factors: (i)
+generative factor: how often is the transition observed in the current
+attribute? (ii) discriminative factor: how unique is the transition to
+the current attribute?
+Many traditional approaches for learning HMM transition proba-
+bilities rely only the generative factors. That is, the (generative) tran-
+sition probability between two states s1 and s2 in ARMi is the prob-
+ability of observing token pairs t1 and t2 that can be emitted from s1
+and s2. The generative approach results in high probability transi-
+tions between higher level feature classes (e.g., transitions between
+the w+ states that accept any token) even though such transitions
+may not discriminate an attribute from other attributes. For exam-
+ple, consider an erroneous bibliographic input string "editorial wil-
+fred hodges of logic and computation" that has to be segmented into
+attributes [Title, Authors, Journal]5. In our experiments, purely gen-
+erative models segment this string as ["editorial", "wilfred hodges of
+logic", "and computation"] because the token "and" generalizes to a
+three-character string which is often observed as the beginning token
+for a journal name (e.g., "ACM TODS").
+We ensure that the transition probabilities depend on both the gen-
+erative and the discriminative factors. We now formalize this intu-
+ition to define the transition probabilities between pairs of states. In
+the following description, let s1 and s2 be two states in the attribute
+recognition model ARMi. Let the position posi(s) of a state s de-
+note the position--beginning, middle, or trailing--of s in ARMi.
+The position pos(t, v) of a token t in an attribute value v is the
+position--beginning, middle, trailing--of t in the string v. Given
+two states s1 and s2, we say that the transition t(s1, s2) from s1 to
+
+5
+The original record before corruption was ["Editorial", "Wilfred
+Hodges", "Journal of Logic and Computation"].
+
+
+24
+Research Track Paper
+
+Procedure BuildARM (Table R, Column C, f)
+
+1
+First Pass: Scan R, build Dictionary(C)
+1a Prune Dictionary(f)
+2
+Second Pass: Scan R, compute transition frequencies
+3
+Generalize: Propagate base transitions up the hierarchy
+4
+Compute transition probabilities
+5
+Apply Robustness transformations
+
+
+Figure 5: ARM Training Procedure
+
+s2 is valid only if it is a non-backward transition. That is:
+· if posi(s1) = beginning then posi(s2)  {middle, trailing, END}
+· if posi(s2) = middle then posi(s2)  {middle, trailing, END}
+· if posi(s1) = trailing then posi(s2)  {END}
+Given an attribute value v from the attribute Ai and the states of
+ARMi, we say that v supports a valid transition t(s1, s2) if there ex-
+ists a pair of consecutive tokens t1 and t2 in v such that pos(t1, v) =
+posi(s1), pos(t2, v) = posi(s2), and either t1 and t2 (i) are emitted
+with non-zero probability by s1 and s2, respectively or (ii) belong to
+the feature classes emitted by s1 and s2, respectively.
+
+Positive Frequency: Given a reference table R, the positive fre-
+quency f+
+i
+(t(s1, s2)) of a transition t(s1, s2) with respect to at-
+tribute Ai is the number of attribute values in the projection of R
+on Ai that support t(s1, s2), and is 0 for all non-feasible transitions.
+
+Overall Frequency: Given a reference table R, the overall frequency
+f(t(s1, s2)) of a transition t(s1, s2) is the number of attribute val-
+ues from any attribute that support the transition t(s1, s2). That is,
+f(t(s1, s2)) =
+¡
+i
+f+
+i
+(t(s1, s2)).
+
+Generative Transition Probability: Given a reference table R, the
+generative transition probability GP(t(s1, s2)|Ai)) of transition
+
+t(s1, s2) with respect to an attribute Ai is the ratio
+f +
+i
+(t(s1,s2))
+
+¢
+
+
+
+
+j
+f +
+i
+(t(s1,sj ))
+.
+
+Transition Probability: Given a reference table R, the transition
+probability P(t(s1, s2)|Ai of a transition depends on its generative
+probability and its ability to distinguish attribute Ai. Assuming inde-
+pendence between the two aspects, we compute the transition prob-
+
+ability as the product: Ai: GP(t(s1, s2)|Ai) ·
+f +
+i
+(t(s1,s2))
+f (t(s1,s2))
+. Note
+that we do not re-normalize the transition probabilities. An EM-style
+Baum-Welch [26] algorithm or other discriminative training methods
+(e.g., [10]) can be used to further optimize the transition probabili-
+ties. In our implementation, we used the efficient two-pass procedure
+described next (Figure 5).
+
+The pseudocode for the training procedure is shown in Figure 5.
+The overall procedure requires two passes: the first pass builds the
+dictionary and the second pass computes transition probabilities and
+applies robustness adjustments.
+
+ARMs SUMMARY: The crucial aspects of ARMs are (i) the adop-
+tion of a fixed BMT topology that allows us to efficiently learn them
+from large reference tables and to gain robustness to input errors, (ii)
+the association of a state per base token to accurately encode transi-
+tion probabilities and exploit large dictionaries, (iii) the relaxation of
+sequential specificity by adjusting an ARM learned from clean ref-
+erence data, and (iv) the computation of transition probabilities to
+distinguish target attributes on which ARMs are built.
+
+5. SEGMENTATION ALGORITHM
+In this section, we describe an efficient algorithm for segmenting
+input strings. The segmentation problem has two components: first,
+BATCH
+
+
+
+
+INPUT STRING
+OUTPUT TUPLE
+LEARN ATTRIBUTE
+VALUE ORDER
+
+
+
+
+SEGMENT
+
+(Dynamic programming
+algorithm )
+ARMs
+
+
+
+
+Figure 6: Segmentation Algorithm
+
+determining the sequence in which attribute values are concatenated
+in an input string and second, determining the best segmentation of
+an input string into the corresponding ordered sequence of attribute
+values. Previous supervised approaches learned the attribute value
+order from the training data. For example, Borkar et al. [5] model
+the probabilistic attribute order using a hidden markov model. For
+instance, the author attribute immediately precedes the title attribute
+with probability 0.77 and the year attribute immediately precedes
+the booktitle attribute with probability 0.35. Once such a probabilis-
+tic order is known, a dynamic programming algorithm based on the
+Viterbi approximation can be employed to determine the best seg-
+mentation [25]. Therefore, in the rest of this section, we only discuss
+the solution for the first sub-problem of determining the attribute
+value order. For the second sub-problem, a dynamic programming
+algorithm can be employed. (However, our implementation uses an
+exhaustive search.) Figure 6 illustrates our approach: first learn the
+total order of attribute values over a batch of input strings, and then
+segment each individual string using this (fixed) attribute order.
+
+5.1 Determining Attribute Value Order
+We now describe an efficient algorithm for determining the at-
+tribute value order in input strings. Our algorithm is based upon the
+following observation. Attribute value orders of input strings usually
+remain same within batches of several input strings. For example, a
+data source for bibliographic strings may concatenate authors, title,
+conference name, year, pages in this order, preserving order across
+strings within the same page. Therefore, we need to recognize and
+recover this order only once for the entire batch of input strings. We
+validated this assumption on real data sources on the web for the
+Media, Address, and Citation domains: content creators do tend to
+preserve the order of attributes at least within the same page.
+We now formalize the above intuition. We first estimate the prob-
+ability of attribute Ai preceding (not necessarily immediately) at-
+tribute Aj, and the use these estimates to determine the most likely
+total ordering among all attributes. We now describe these two steps
+of the process.
+
+Pairwise Precedence Estimates
+Intuitively, the precedence estimate prec(Ai, Aj) of an attribute Ai
+preceding attribute Aj is the fraction of input strings where the at-
+tribute value for Ai is before the attribute value for Aj. The prece-
+dence order among attributes for a single input string is determined
+as follows. For each attribute, we determine the token in the input
+string s at which it is most likely to start. For a pair of attributes
+Ai and Aj, if the token at which Ai is most likely to start precedes
+the token at which Aj is most likely to start, then we say that Ai
+precedes Aj with respect to the input string s. We break ties by
+picking one of the two attributes with equal probability. For exam-
+ple, consider an input string consisting of 8 tokens "walmart 20205
+s. randall ave madison 53715 wi." We compute an 8-coordinate vec-
+tor [0.05, 0.01, 0.02, 0.1, 0.01, 0.8, 0.01, 0.07] for the city attribute.
+The first component 0.05 in the vector denotes the probability of the
+city attribute starting at the token "walmart." Because the 6th coor-
+dinate is the maximum among all coordinates, the city attribute is
+
+
+25
+Research Track Paper
+
+most likely to start at the token "madison." Suppose the vector for
+the street attribute is [0.1, 0.7, 0.8, 0.7, 0.9, 0.5, 0.4, 0.1]. The maxi-
+mum for the city vector occurs at the 6th coordinate and that for the
+street occurs at the 5th coordinate. Therefore, street attribute value
+precedes the city attribute value for this input string. The fraction of
+input strings in the entire batch where attribute Ai precedes Aj is an
+estimate for Ai preceding Aj.
+Formally, let s be a given input string within a batch S of strings.
+We tokenize s into a sequence t1, . . . , tm of tokens and associate
+with each attribute Ai (1  i  n) a vector v(s, Ai) = [vi
+1
+, . . . , vim].
+The component vij is an estimate of the attribute value for Ai starting
+at the token tj; vij is the maximum probability with which ARMi
+accepts any prefix of [tij, . . . , tim]. Let max(v(s,Ai)) denote the
+coordinate corresponding to the maximum among values vi
+1
+, . . . , vim.
+That is, max(v(s,Ai)) = argmaxj{vij}. The precedence esti-
+mate prec(Ai, Aj) is:
+
+
+prec(Ai, Aj) =
+|{s  S : max(v(s,Ai)) < max(v(s, Aj))}|
+|S|
+
+At the end of this phase, we possess the pairwise precedence es-
+timates between all pairs of attributes. Computationally, this proce-
+dure requires invoking the ARMs for determining acceptance proba-
+bilities of sub-sequences of tokens from each input string in a batch.
+If the average number of tokens in an input string is m, this computa-
+tion involves O(m2) calls to ARMs. These acceptance probabilities
+can be cached and later used during the actual segmentation, thus
+avoiding repeated invocation of ARMs.
+
+Determining Total Attribute Order
+Using the directed attribute precedence probabilities estimated as de-
+scribed above, we can now estimate the best total order among at-
+tributes. The quality of an attribute order is the product of prece-
+dence probabilities of consecutive pairs of attributes in the given or-
+der. When the number of target attributes is small (say, less than 10),
+we can exhaustively search all permutations for the best total order.
+When the number of attributes is large, we can use more efficient
+heuristic search techniques (e.g., [20]).
+
+
+6. EXPERIMENTAL EVALUATION
+In this section, we evaluate CRAM using a variety of real datasets
+from real operational databases to show that CRAM is a robust, ac-
+curate, and efficient unsupervised domain-independent segmentation
+system. We first describe our experimental setup (Section 6.2). We
+present results on accuracy in Sections 6.3 and 6.4, and those on scal-
+ability in Section 6.5.
+
+6.1 Experimental Setup
+We now describe the datasets and the evaluation metrics we adopted.
+
+Reference Relations: We consider reference relations from three
+different domains: addresses, media (music album records), and bib-
+liography domains.
+· Addresses: The address relation consists of 1, 000, 000 clean and
+standardized individual and organization addresses from United States
+and Puerto Rico with the schema: [Name, Number1, Number2, Ad-
+dress, City, State, Zip].
+· Media: The media reference relation consists of 280, 000 clean
+and standardized records describing music tracks with the schema:
+[ArtistName, AlbumName, TrackName].
+· Bibliography: The bibliography relation consists of 100, 000 bib-
+liography records from the DBLP repository and has the following
+schema: [Title, Author, Journal, Volume, Month, Year].
+Error
+Description
+
+Spelling
+A randomly chosen token is corrupted
+Deletions
+A randomly chosen token is deleted
+Insertions
+Insert a random token from dictionary
+Reorders
+Move randomly chosen token to new position
+Missing
+Replace randomly chosen attribute with null
+All 5 Errors
+Apply one or more of the above errors to a tuple
+Natural
+Naturally erroneous data (manually entered by users)
+
+Table 1: Error Model: General attribute error types used for
+corrupting the test datasets.
+
+Test Datasets: We evaluated CRAM over both naturally concate-
+nated strings obtained from the web and from internal company sources.
+Further, in order to allow controlled experiments, we generated ex-
+tensive test sets by concatenating "error-injected" real records into
+strings. All test datasets are disjoint from training datasets.
+· Naturally Concatenated Test Sets: Company addresses obtained
+from the RISE repository of information extraction sources (pub-
+licly available); Individual addresses and Media filenames from in-
+ternal company sources (not publicly available); 100 most cited pa-
+pers from Citeseer (publicly available). We will refer to these collec-
+tively as Natural datasets.
+· Controlled Test Data Sets: Both clean and erroneous strings are
+obtained by concatenating attribute values of records in a test rela-
+tion held aside for validation. Therefore, the training and test sets are
+disjoint. To automate evaluation, we fix the order in which attribute
+values are concatenated to be a randomly chosen permutation of all
+attributes. Erroneous input strings are generated from test tuples by
+passing them through an error injection phase (as in [7]) before they
+go into the concatenation phase described above. The error injection
+phase is a controlled injection of a variety of errors, which are com-
+monly observed in real world dirty data [18], into the test tuples. The
+attribute value(s) to introduce an error into is chosen randomly from
+among all attribute values. The types of errors and their effects on
+attribute values are listed in Table 1. While generating input strings
+with errors, we introduce at least one error into every tuple. For the
+mixed error model (All 5 Errors in Table 1), we assume that each
+error type occurs with equal probability.
+
+Systems Compared: We compare our system CRAM with a state of
+the art supervised text segmentation system DATAMOLD [5], which
+was designed for automatic text segmentation and was shown to out-
+perform other competing systems such as Rapier [6]. Thus, our com-
+parison is definitive, since by outperforming DATAMOLD, CRAM is
+virtually guaranteed to outperform other systems as well.
+
+6.2 Evaluation Metrics
+As discussed earlier in Section 5, we separate the problem of deter-
+mining attribute order from that of arriving at the best segmentation
+given the order. Reflecting this separation, we also split the evalu-
+ation of the attribute order determination from that of segmentation
+accuracy given the order.
+
+Segmentation Accuracy: We measure segmentation accuracy as a
+fraction of attributes segmented correctly. From an input string s, let
+n (out of a maximum of n attributes) be the number of attributes
+correctly identified by a segmentation algorithm Alg. We define the
+segmentation accuracy acc(s, Alg) on the input string s as
+n
+n
+, or the
+fraction of target attributes correctly identified. For a set S of input
+strings, the overall segmentation accuracy of Alg is defined as the
+average fraction of correctly identified attributes over all strings in S,
+or, more formally as:
+
+Accuracy(Alg) =
+s
+S
+acc(s, Alg)
+|S|
+(1)
+
+
+
+
+26
+Research Track Paper
+
+0
+20
+40
+60
+80
+100
+
+
+
+
+Missing
+Insertions
+Deletions
+Spelling
+Reordering
+AllErrors
+Addresses
+DBLP
+Winmedia
+
+
+
+
+Figure 8: Relative accuracy gain of CRAM over Datamold.
+
+
+Attribute Order: We compute the accuracy of our order determina-
+tion as the fraction of attributes in the input batch of strings which
+were assigned the correct absolute position. For example, if the cor-
+rect order is Number, Address, City and our algorithm proposes Num-
+ber, City, Address, the order accuracy is 0.33 or 33%.
+
+6.3 Robustness of CRAM
+We now evaluate the accuracy of CRAM over real datasets. We
+show that (i) the CRAM system substantially outperforms the state
+of the art supervised text segmentation system, (ii) the attribute order
+determination technique is accurate, and (iii) CRAM scales to large
+reference tables.
+
+Segmentation Accuracy
+We compare the segmentation accuracy of CRAM with that of Data-
+mold over both erroneous and clean test datasets discussed in Sec-
+tion 6.1. For this experiment, we fix the order in which attribute
+values are concatenated to focus on the improvements due to using
+ARMs.6 We report the segmentation accuracy in Figure 7 (a, b, and
+c). Observe that CRAM substantially improves accuracy, often by 8-
+15%, for all error types and over all datasets illustrating that ARMs
+are accurate in modelling attribute value domains. In order to put
+the accuracy improvements in a relative perspective, we report the
+same results in Figure 8 but in the form of the percentage relative
+error reduction over Datamold for the Addresses, DBLP, and Media
+datasets. For many of the noisy datasets, CRAM reduces segmenta-
+tion errors by over 50%. These improvements directly result in the
+significant reduction of required manual intervention and increased
+accuracy while loading the data into relations.
+
+Accuracy of Attribute Order Determination
+We now evaluate our attribute order determination technique over
+batches of natural (i.e., user-entered or web-derived) strings. Fig-
+ure 9 shows the high accuracy of our total order determination al-
+gorithm: in many cases we can determine order with 100% for a
+relatively small number (around 200) of tuples. This is a reasonable
+requirement, since many personal media libraries, and address and
+citation collections, and legacy data sources will have that many tu-
+ples.
+
+Exploiting Large Reference Tables
+We now study the impact of reference table sizes on segmentation
+accuracy. Figure 10 shows the results. Observe the increase in seg-
+mentation accuracy with the size of the reference table, especially
+for the Media dataset. In fact, note that accuracy of over 80% for
+the Media dataset is only achieved when the reference table size ex-
+
+6
+Because of privacy restrictions, we were not able to ship "real" in-
+dividual addresses data to be evaluated by DATAMOLD. All of the
+remaining results are performed over the Natural dataset, unless oth-
+erwise indicated. When this was not possible for privacy concerns,
+our All 5 Errors dataset provides a good approximation of the seg-
+mentation accuracy of the real data entered by real users.
+0
+20
+40
+60
+80
+100
+
+
+
+
+25
+50
+100
+150
+200
+Batch Size (tuples)
+OrderAccuracy
+Addresses
+Media
+DBLP
+
+
+
+
+Figure 9: Accuracy of attribute order determination for the web-
+derived Addresses and Media, and the corrupted DBLP datasets.
+
+
+
+
+40
+60
+80
+100
+
+
+
+
+1.E+02
+1.E+03
+2.E+03
+5.E+03
+1.E+04
+2.E+04
+4.E+04
+1.E+05
+2.E+05
+DBLP
+
+Addresses
+
+Media
+
+
+
+
+Figure 10: Accuracy of segmentation usingCRAM for increasing
+reference table size (Addresses, DBLP, and Media datasets).
+
+
+
+ceeds 40,000 tuples. Therefore, (i) exploiting rich dictionaries from
+large reference tables is important to achieve higher segmentation ac-
+curacy, and (ii) a segmentation system must scale to large reference
+table sizes. CRAM takes just a few minutes (< 5) to learn ARMs
+over a reference table of 200, 000 tuples. In contrast, supervised sys-
+tems relying on cross-validation approaches would be much slower.
+
+6.4 Effectiveness of Robustness Techniques
+In this section we evaluate the impact on segmentation accuracy
+of the BMT topology, the association of a state for each base token,
+and the robustness operations.
+
+Fixed ARM topology and Robustness Operations
+We now evaluate the effectiveness of our BMT topology--which al-
+leviates the need for expensive cross-validation approaches for opti-
+mizing HMM topology--to show that it results in high segmentation
+accuracy, and is often better than topologies obtained by using ex-
+pensive cross-validation approaches. We compare the accuracy of
+segmentation using two representative ARM topologies: (i) 1-Pos
+topology only models the sequential information between states by
+even collapsing all begin, middle, and trailing positions into one cat-
+egory and (ii) our BMT (the 3-Pos) topology. In fact, we found that
+increasing the number of positions in the fixed topology further does
+not increase accuracy. Due to space constraints, we omit the results.
+Figure 11 shows that the fixed BMT topology is usually more accu-
+rate than the 1-Pos topology that completely ignores positional speci-
+ficity.
+Figure 11 also reports results of sequential specificity relaxation
+operations over ARMs. These include the adjustment operations
+(e.g., recovering from token deletions) and the transition probability
+computation described in Section 4.4. As we can see, our robustness
+operations do provide a consistent improvement in accuracy over
+both erroneous and clean data on all datasets. The improvements
+on clean test datasets are the result of modified transition probability
+computation.
+
+
+
+27
+Research Track Paper
+
+(a)
+(b)
+(c)
+86
+88
+90
+92
+94
+96
+98
+100
+
+
+
+
+Missing
+Insertions Deletions
+Spelling Reordering AllErrors
+Clean
+
+CRAM
+Datamold
+65
+70
+75
+80
+85
+90
+95
+
+
+
+
+Missing Insertions Deletions Spelling Reordering AllErrors
+Clean
+
+CRAM
+Datamold
+55
+60
+65
+70
+75
+80
+85
+
+
+
+
+Missing Insertions Deletions Spelling ReorderingAllErrors
+Clean
+
+CRAM
+Datamold
+
+
+
+
+Figure 7: Robustness of CRAM and Datamold over the erroneous Addresses (a), DBLP (b), and Media (c) datasets.
+
+
+
+
+80
+85
+90
+95
+100
+
+
+
+
+Missing
+Insertions
+Deletions
+Spelling
+Reordering
+AllErrors
+Natural
+Clean
+
+
+
+1 Pos
+BMT
+BMT-robust
+80
+85
+90
+95
+100
+
+
+
+
+Missing
+Insertions
+Deletions
+Spelling
+Reordering
+AllErrors
+Natural
+Clean
+
+
+
+1 Pos
+BMT
+BMT-robust
+40
+45
+50
+55
+60
+65
+70
+75
+80
+85
+
+
+
+
+Missing
+Insertions
+Deletions
+Spelling
+Reordering
+AllErrors
+Natural
+Clean
+
+
+
+1 Pos
+BMT
+BMT-robust
+
+
+(a)
+(b)
+(c)
+Figure 11: Accuracy of CRAM over Addresses (a), DBLP (b), and Media (c) datasets with different ARM topologies (1-Pos and BMT),
+and with robustness operations (BMT-robust).
+
+
+
+
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+A:Clean A:Errors
+D:Clean D:Errors
+M:Clean M:Errors
+Collapsed
+
+Complete
+
+
+
+
+Figure 12: Complete vs. Collapsed token states over Addresses
+(A), DBLP (D), and Media (M) datasets.
+
+Modelling Individual Base Tokens
+As discussed in Section 4.1, we associate a state with each base to-
+ken that is retained in the ARM. A common alternative is to collapse
+many base tokens together into one state of the HMM, which results
+in the loss of transitional information by collapsing transitions to-
+gether. Figure 12 shows that collapsing base tokens together into one
+state (as is done in Datamold), results in substantially lower (some-
+times by 10%) segmentation accuracy. The price of this accuracy
+gain is a larger model size. However, we show in Section 6.5 that
+CRAM achieves high accuracy even if we retain only important base
+tokens. In related experiments, which we omit due to space con-
+straints, we studied the use of different hierarchies. However, they
+all resulted in similar segmentation accuracies.
+
+Hypothetical Supervised Approach
+We now demonstrate that making robustness to input errors a design
+criterion is essential. We consider a hypothetical scenario where we
+know the error model with the percentages of each error type ex-
+pected in the test input. (Of course, this knowledge is not available
+in practice.) We use this knowledge to prepare a training dataset that
+reflects the variety of errors and percentages. As shown in Figure 13,
+Datamold:Hypothetical (corresponding to Datamold trained over this
+hypothetical dataset) has significantly higher segmentation accuracy
+than Datamold trained over clean data, but is still outperformed by
+CRAM trained on clean reference data. Thus, robustness to input
+errors is essential for deploying a segmentation system on real data.
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+Addresses:AllErrors
+Addresses:Clean
+DBLP:AllErrors
+DBLP:Clean
+
+
+Datamold
+Datamold:Hypothetical
+CRAM
+
+Figure 13: Segmentation accuracy of Datamold trained over
+clean and hypothetical erroneous training data.
+
+
+
+
+(a)
+(b)
+(c)
+80
+85
+90
+95
+100
+
+
+
+
+0.1
+0.2
+0.3
+0.5
+1
+
+Addresses
+DBLP
+Media
+0.E+00
+5.E+05
+1.E+06
+2.E+06
+2.E+06
+
+
+
+
+0.1
+0.2
+0.3
+0.5
+1
+
+Addresses
+DBLP
+Media
+0
+1
+2
+3
+4
+5
+6
+7
+8
+
+
+
+
+0.1
+0.2
+0.3
+0.5
+1
+
+Addresses
+DBLP
+Media
+
+
+
+Figure 14: Varying fraction of tokens retained: Segmentation
+Accuracy (a), #Transitions (b), and Total Model Size (MB) (c).
+
+
+6.5 Scalability
+We now study the sizes of models with respect to reference table
+sizes and the impact of constraining model sizes on the segmentation
+accuracy. We validate our hypothesis that (i) the number of tran-
+sitions grows much slower than a function that is quadratic in the
+number of states, and (ii) that we can achieve comparable accuracy
+by considering only a fraction of the most frequent base tokens.
+Figure 14 shows results of varying the fraction f of base tokens
+retained while keeping the reference table size fixed. As shown in
+Figure 14(a), retaining only a fraction of the base tokens in ARMs
+gets us the same accuracy as that of retaining all base tokens. At
+f = 1, all tokens are retained and the model size (shown in Fig-
+
+
+28
+Research Track Paper
+
+0
+0.2
+0.4
+0.6
+0.8
+1
+1.2
+1.4
+1.6
+1.8
+2
+
+
+
+
+1.E+03
+2.E+03
+5.E+03
+1.E+04
+2.E+04
+4.E+04
+1.E+05
+2.E+05
+0
+5000
+10000
+15000
+20000
+25000
+Total Size (Mb)
+Model States
+
+
+
+
+(a)
+(b)
+50
+55
+60
+65
+70
+75
+80
+85
+90
+
+
+
+
+1.E+03
+2.E+03
+5.E+03
+1.E+04
+2.E+04
+4.E+04
+1.E+05
+2.E+05
+Erroneous
+Clean
+
+
+
+
+Figure 15: Varying reference table sizes: Segmentation Accuracy
+(a), Total model size (in MB) on the primary axis, and #Model
+states on the secondary axis (b).
+
+
+
+ure 14(c)) is still less than a few MB for all datasets. And, the num-
+ber of transitions (shown in Figure 14(b)) is around 10 times that of
+the number of states--usually 100, 000--in the model; hence, it is
+orders of magnitude less than |S|2. Thus, we can significantly re-
+duce memory requirements without compromising on segmentation
+accuracy.7
+We now study the impact on accuracy of increasing reference ta-
+ble sizes while constraining the size of the CRAM model to be under
+2MB (using the Media dataset). Figure 15(a) shows the improve-
+ment in accuracy as the reference table size increases from 1000
+to 200, 000 tuples. Figure 15(b) shows the corresponding model
+size (which is constrained to below 2MB) and the number of states.
+Note that even under constrained model size, the resulting segmen-
+tation accuracy of 86% for 200, 000 tuples matches that of the larger
+unconstrained model trained over the same reference table. Thus,
+CRAM scales to large reference tables while maintaining a small
+memory footprint without compromising on segmentation accuracy.
+In summary, we have shown CRAM to be robust, scalable, and
+domain independent. It is accurate on both clean and erroneous test
+data, and gracefully scales up to large reference table sizes.
+
+
+7. CONCLUSIONS
+In this paper, we exploit widely available reference tables to de-
+velop a domain-independent, robust, scalable, and efficient system
+for segmenting input strings into structured records. We exploit rich
+dictionaries and latent attribute value structure in reference tables to
+accurately and robustly model attribute value domains. To easily de-
+ploy CRAM over a variety of data sources, we address the prob-
+lem of automatically determining the order in which attribute values
+are concatenated in input strings. Using real datasets from several
+domains, we established the overall accuracy and robustness of our
+system vis-a-vis state of the art supervised systems.
+
+Acknowledgments: We thank Sunita Sarawagi for helping us com-
+pare our system with DATAMOLD. We also thank Theo Vassilakis
+for several thoughtful comments on the paper.
+
+
+8. REFERENCES
+[1] Microsoft SmartTagger.
+[2] Proceedings of the 7th Message Understanding Conference (MUC-7).
+Morgan Kaufman, 1998.
+[3] B. Adelberg. NoDoSE­a tool for semi-automatically extracting
+structured and semistructured data from text documents. In
+Proceedings of the ACM SIGMOD Conference, 1998.
+[4] J. Bilmes. What HMMs can do. Technical report,
+UWEETR-2002-0003, 2002.
+
+7
+We did not have access to DATAMOLD code and so cannot report
+DATAMOLD's resulting model size or memory consumption.
+[5] V. R. Borkar, K. Deshmukh, and S. Sarawagi. Automatic segmentation
+of text into structured records. In Proceedings of the ACM SIGMOD
+Conference, 2001.
+[6] M. E. Califf and R. J. Mooney. Relational learning of pattern-match
+rules for information extraction. In Sixteenth National Conference on
+Artificial Intelligence, 1999.
+[7] S. Chaudhuri, K. Ganjam, V. Ganti, and R. Motwani. Robust and
+efficient fuzzy match for online data cleaning. In Proceedings of the
+ACM SIGMOD Conference, 2003.
+[8] S. Chen and J. Goodman. An empirical study of smoothing techniques
+for language modeling. In Proceedings of the annual meeting of ACL,
+pages 310­318, 1996.
+[9] W. Cohen and S. Sarawagi. Exploiting dictionaries in named entity
+extraction: Combining semi-markov extraction processes and data
+integration method. In Proceedings of the ACM SIGKDD Conference,
+2004.
+[10] M. Collins. Discriminative training methods for hidden markov
+models: Theory and experiments with perceptron algorithms. In
+Proceedings of the EMNLP Conference, 2002.
+[11] M. Collins and Y. Singer. Unsupervised models for named entity
+classification. In Proceedings of the Conference on Empirical Methods
+in Natural Language Processing, 1999.
+[12] V. Crescenzi, G. Mecca, and P. Merialdo. RoadRunner: Towards
+automatic data extraction from large web sites. In Proceedings of the
+VLDB Conference, 2001.
+[13] J. Droppo, L. Deng, and A. Acero. Evaluation of the splice algorithm
+on the aurora2 database. In Proceedings of the Eurospeech Conference,
+2001.
+[14] D. Embley, S. Jiang, and Y. Ng. Record-boundary discovery in web
+documents. In Proceedings of the ACM SIGMOD Conference, 1999.
+[15] D. Freitag and A. McCallum. Information extraction with HMM
+structures learned by stochastic optimization. In Proceedings of the
+AAAI/IAAI Conference, pages 584­589, 2000.
+[16] D. Freitag and A. McCallum. Information extraction with HMM
+structures learned by stochastic optimization. In Proceedings of the
+AAAI/IAAI Conference, pages 584­589, 2000.
+[17] R. Grishman. Information extraction: Techniques and challenges. In
+Information Extraction (International Summer School SCIE-97).
+Springer-Verlag, 1997.
+[18] M. A. Hernandez and S. J. Stolfo. Real-world data is dirty: Data
+cleansing and the merge/purge problem. Data Mining and Knowledge
+Discovery, 2(1):9­37, 1998.
+[19] C. A. Knoblock, K. Lerman, S. Minton, and I. Muslea. Accurately and
+reliably extracting data from the web: A machine learning approach.
+IEEE Data Engineering Bulletin, 23(4):33­41, 2000.
+[20] M. Lapata. Probabilistic text structuring: Experiments with sentence
+ordering. In Proceedings of the annual meeting of ACL, 2003.
+[21] A. Martin and M. Przybocki. NIST 2003 language recognition
+evaluation. In Proceedings of the Eurospeech Conference, 2003.
+[22] A. McCallum, D. Freitag, and F. Pereira. Maximum entropy markov
+models for information extraction and segmentation. In Proceedings of
+the ICML Conference, 2000.
+[23] A. Mikheev, M. Moens, and C. Grover. Named entity recognition
+without gazetteers. In Proceedings of EACL, 1999.
+[24] I. Muslea, S. Minton, and C. Knoblock. A hierarchical approach to
+wrapper induction. In O. Etzioni, J. P. M¨uller, and J. M. Bradshaw,
+editors, Proceedings of the Third International Conference on
+Autonomous Agents (Agents'99), pages 190­197, Seattle, WA, USA,
+1999. ACM Press.
+[25] L. R. Rabiner. A tutorial on hidden markov models and selected
+applications in speech recognition. Proceedings of the IEEE, 77(2),
+1989.
+[26] L. R. Rabiner and B. H. Juang. Fundamentals of speech recognition.
+Prentice Hall, 1993.
+[27] K. Seymore, A. McCallum, and R. Rosenfeld. Learning hidden
+Markov model structure for information extraction. In AAAI 99
+Workshop on Machine Learning for Information Extraction, 1999.
+[28] C. Sutton, K. Rohanimanesh, and A. McCallum. Dynamic conditional
+random fields: Factorized probabilistic models for labeling and
+segmenting sequence data. In Proceedings of the ICML Conference,
+2004.
+
+
+
+
+29
+Research Track Paper
+

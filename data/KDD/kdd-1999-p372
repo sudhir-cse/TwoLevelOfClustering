@@ -1,0 +1,936 @@
+Towards Automated Synthesis of Data Mining Programs
+
+Wray Buntine*
+Dept. of EECS, UC Berkeley
+wrayQic.eecs.berkeley.edu
+Bernd Fischer+ and Thomas PressburgerS
+NASA Ames Research Center
+{tisch,
+ttp}@ptolemy
+. arc. nasa. gov
+
+
+
+
+Abstract
+discovery community.
+
+Code synthesis is routinely
+used in industry
+to generate
+GUIs and for database support.
+In this paper we consider
+whether code synthesis could also be applied as a rapid pro-
+totyping
+method to the data mining phase of knowledge dis-
+covery. Rapid prototyping
+of statistical
+data analysis algo-
+rithms would allow experienced
+analysts to experiment
+with
+diierent
+statistical
+models before choosing one, but without
+requiring
+prohibitively
+expensive
+programming
+efforts.
+It
+would also smooth the steep learning
+curve often faced by
+novice users of data mining
+tools and libraries.
+Finally,
+it
+would accelerate dissemination
+of essential research results.
+For the synthesis task, we use a specification
+language that
+generalizes Bayesian networks, a dependency model on vari-
+ables.
+Using decomposition
+methods
+and algorithm
+tem-
+plates, our system transforms
+the network through
+several
+levels of representation
+into pseudo-code which can be trans-
+lated into the implementation
+language of choice. Here, we
+explain the framework on a mixture
+of Gaussians model used
+in some commercial
+clustering tools. We show the effective-
+ness of our framework
+by generating
+pseudo-code for some
+more sophisticated
+algorithms
+from recent literature.
+
+1
+Introduction
+A key component
+of the data mining task within knowl-
+edge discovery is statistical
+data analysis. Applied and
+computational
+statisticians
+who perform this task on
+smaller data sets use experimentation
+with different
+statistical
+models and development of specialized algo-
+rithms to achieve reliable and useful results, especially
+in situations where the data cannot be cast into a form
+suitable for one of the standard algorithms.
+This ca-
+pability
+is not practically
+available to the knowledge
+An alternative
+approach to algorithm
+prototyping
+from the statistics
+community
+is implemented
+in the
+BUGS system [14]. A probability
+model is simulated
+directly
+from its specification
+using Gibb's sampling.
+However,
+BUGS
+cannot
+make use of more efficient
+special-purpose
+algorithms
+because of its underlying
+simulation
+kernel. This restricts its applicability
+under
+real-world
+data mining conditions,
+e.g., scaling up to
+large data sets.
+We see the popularity
+of BUGS as
+an existence proof that rapid prototyping
+provides a
+needed capability
+for data mining.
+In this paper we develop an alternative
+approach to
+rapid prototyping
+of data mining tools based on pro-
+gram synthesis, the automatic
+derivation
+of a program
+that meets a given specification.
+We apply these meth-
+ods to synthesize data analysis programs from Bayesian
+network specifications
+using a library
+of efficient alge
+rithm templates together with core special-purpose
+al-
+gorithms and general purpose solvers, as suggested in
+[3]. We show that this approach can address non-trivial
+data analysis problems.
+Our approach is motivated
+by three observations.
+First, the success of BUGS demonstrates the need for
+data analysis tools suitable for reliable rapid prototyp-
+ing. Second, Bayesian networks provide a ready, unify-
+ing specification
+language, as seen by their widespread
+use in communities
+such as applied Bayesian statistics
+and neural information
+processing [15, 71;their role for
+the data mining community
+is to provide a flexible data
+modeling language [4]. Finally,
+program synthesis has
+been proven to be competitive
+in other domains.
+It
+offers:
+*Funded by NASA Universities Grant 05106 & Ultimode Inc.
+t Research Institute for Advanced Computer Science
+t Recom Technologies, Inc.
+
+
+Permission to make digital or hard copies of all or part of this work fat
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies hear this notice and the full citation on the tirst page. To copy
+othcrwisc, to republish, to post on servers or to redistribute to lists,
+requires prior specific permission and/or a fee.
+KDD-99
+San Diego CA USA
+l
+Rapid turn-around:
+even for large tasks mature
+synthesis systems usually
+require less than a few
+minutes to produce code [lo, 23.
+
+l
+Reliability:
+synthesized code is used in production
+systems to schedule military
+logistics [2] or to price
+stock options [13].
+
+l
+Eficiency:
+synthesized
+code can be an order of
+magnitude faster than hand-crafted
+code [2].
+Copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+
+
+
+
+372
+
+However,to the best of our knowledge, program synthe-
+sis has not previously been applied to data analysis al-
+gorithms; an edited discussion on its relevance appears
+in [5]. Specific advantagesfor data analysis, other than
+rapid prototyping, are that generated code should be
+time and spaceefficient; to achieve this we would rely
+on high-performance optimizing compiler techniques [l]
+coupled to our pseudo-code,asdiscussedin Section 3.2.
+
+2
+Preliminaries
+
+2.1
+A simple
+problem
+As a simple running example to illustrate our concepts
+we will use mixture of Gaussians (cf. Fig. 1) which is
+coveredin detail in many statistical texts. It is a model
+for the measured data vector 2 based on parameter
+vectors p',j&o' that are to be estimated. Figure l(left)
+
+
+
+
+Figure 1: A mixture of Gaussians: data and model
+
+showsa two dimensional version of the problem where
+each Gaussian can be fully covariate. Here, example
+data is represented with a scatter plot; projections of
+the component Gaussiansthat makeup the distribution
+are shown on both axes. The dots are roughly clustered
+in four blobs: top left, bottom right, bottom left, and
+a diagonal blob. Hence, C, the number of Gaussians
+being "mixed", is four. An intuitive interpretation of
+this mixture model is that we first generate data from
+four individual Gaussians, mix these up according to
+someproportions, and throw away the information of
+the original Gaussian source.
+The Bayesian network1 for the model is given in
+Fig. l(right).
+Bayesian networks are acyclic directed
+graphs that define probabilistic dependencies between
+variables; the shaded variables are supplied in the data
+and the remaining are to be inferred. The box around
+the variables cand x indicates that they are data vectors
+where each of the 200 components is independently
+and identically distributed. The vector c'(the "hidden
+variable" of the model which captures the assignment of
+the dots to the blobs) is discrete, with eachentry taking
+a value {1,2, ....C}, and the vector 3c'is real-valued. The
+full joint probability for this model is
+
+
+
+
+`Tutorialsand references are availableat wu. auai.org.
+
+
+
+313
+where p parameterizes the discrete distribution
+over
+each discrete value ci for i = 1,. ..,200, and (p[j],a[j])
+are the Gaussian parameters for each of j = 1,. . .,C
+Gaussian peaks in the data. The precise form of the
+prior distributions for p,p, u is left unspecified here;
+they could be considered as variables for a maximum
+likelihood analysis, or be fully specified for a Bayesian
+analysis.
+This kind of problem is traditionally handled using an
+algorithm known as Expectation-Maximization
+(EM);
+our presentation follows [ll].
+In the mixture of
+Gaussian problem, one common interpretation of the
+learning task is to seek to maximize CL, logPr(zi
+1
+p',3,:). The problem here is that the inner probabilities
+are themselves a sum over ci, Pr(xi
+1 p',p, G) =
+cg,
+W~i,Ci
+I p',Iz,a'),
+and the combination with the
+log makes the formula intractable. To overcome this,
+a new set of parameters is introduced and a cyclic "re-
+estimation" method is used as follows:
+
+1. Set qi,j = Pr(~=j]zi,p',fi,Z)fori=l,...,
+Nand
+j=l
+,. ..,C. Thus ais a discrete distribution on Z.
+
+2. Maximize &+,- [logPr(rc', c'lp',5, Z)] for p',3, a' given
+(7 above. Here, the log probability is evaluated
+according to the correct model, and then c' is
+quantified out by averaging using $
+
+This EM algorithm applies for these general probability
+forms, and not just the mixture of Gaussians.
+
+2.2
+Indexed
+variables,
+Bayesian
+networks
+In data analysis, indexed variables as vectors are ubiq-
+uitous: data Z = {xi,. ..,XN) with independent and
+identical distributions, and vectors of parameters e' =
+(01,. ..,0~)
+that behave similarly (e.g., different nodes
+in a neural net). The representation must allow full
+vectors, 3, generic single components, xi, and particu-
+lar single components, zs. During synthesis, the system
+needsto determine dependencies between these differ-
+ent combinations of variables, and the Bayesian network
+performs the role of a data-flow graph used in compil-
+ers [l]. In Bayesian networks, vector variables should
+not be "unfolded" (i.e., represented fully) becausethat
+obscuresthe model's regularities and increasesthe net-
+work's size. Instead, the network contains the most
+general representation and is unfolded only by demand
+and only locally.
+Our system uses Prolog-terms; a theory of indexed
+Bayesian networks, where indices are represented as
+Prolog variables is developed in [S]. We have extended
+these results using difference sets2 to work with non-
+ground probability queries since we seekto determine
+
+2Differencesetsaresubstitutionsrepresentingequalitiesand
+inequalitiesto define a set of variables with inclusion/exclusion.
+
+probabilities over indexed vectors. Tests for indepen-
+dence on these indexed Bayesian networks are easily
+developed in Lauritzen's framework which usesances-
+tral sets and set separation [8].
+
+
+2.3
+Expressions
+for probabilities
+
+During synthesis, probability expressionsare repeatedly
+evaluated and converted into mathematical formula for
+analysis or insertion into code.
+Some probabilities
+can easily be extracted from a Bayesian network by
+enumerating the component probabilities at eachnode:
+
+Lemma
+1 Let U, V beaeta of variables over a Bayeaian
+network with U f~ V = 0. Then V fl descendants(U) =
+0 and parents(U)
+C V hold in the corresponding
+dependency graph ifl the following probability statement
+holds:
+
+Pr(UIV)
+= Pr(UIparente(U))
+= ~Pr(u~porents(u))
+UEU
+
+How can probabilities not satisfying these conditions
+be converted to symbolic expressions? Symbolic prob-
+abilistic inference [9], for instance extracts an efficient
+expressionfor a particular probability, p(UIV).
+Wehave
+developed another result that lets us extract probabili-
+ties on a large class of mixed discrete and real, poten-
+tially indexed variables, where no integrals are needed
+and all marginalization is done by summing out discrete
+variables. We give the non-indexed casebelow; this is
+readily extended to indexed variables, and our proofs
+areconstructive. Lemma 2 lets us evaluate a probability
+by a summation: Pr(U 1V) =
+&EDomCU,I
+Pr(U'
+=
+u', U ]V). Lemma 3 lets us evaluate a probability by a
+summation and a ratio:
+
+Pr(UI V) =
+d4
+c uEDom(U)q(")
+'
+
+where q(u) = `&EDom(U,) Pr(U'
+= u', U, V/V' 1V').
+Since the lemmas also show minimality
+of the sets
+U' and V/V',
+they also give the minimal conditions
+under which a probability can be evaluated by discrete
+summation without integration.
+
+Lemma
+2 Vndeacendanta(U)
+= 0 holds and ancestors(V)
+is independent
+of U given V ifl there exiata a set
+of variables U' such that Lemma 1 holds if we re-
+place U by U u U'.
+Moreover,
+the unique
+min-
+imal set U' satisfying these conditions ia given by
+ancestors(U) /( ancestors(V) U V)
+
+Lemma
+3 Let V' be a subset of V/descendants(U)
+such that anceatora(V') ia independent of (UUV)/(V'U
+anceatora(V'))
+given V'.
+Then Lemma 2 holds if we
+replace U by U U V/V'
+and V by V'. Moreover, there is
+a unique maximal set V' satisfying these conditions.
+3
+The Framework
+
+3.1
+Specification
+language
+PN
+Cur specification language PN (Probabilistic Networks)
+is a simple textual notation to describe networks
+as in Fig. l(right)
+and to specify the distributions
+and equations at each node.
+The following small
+specification is already sufficient to model the Mixture
+of Gaussians.
+
+constant
+Int
+N = 200, C=4;
+Real muCC1, sigmaCC1;
+ProbabilityVector
+rho;
+for(i=l,N)
+c[i]
+- Discrete(rho);
+for(i=i,N)
+x[i]
+- Gaussian(muCc[ill ,sigmaCc[ill 1;
+optimize
+mu,sigma,rho
+for
+Pr(xImu,sigma,rho)
+given
+x;
+
+
+The first three lines define the model constants Nand C
+and declaresthe parameter vectors ji, 0'and ji with their
+respective types and dimensions; all types are built-
+in. Since the parameter vectors are to be estimated
+using a maximum likelihood analysis, no probability
+distributions are specified.
+The next two lines define the hidden variable Z and
+the observed data vector 2 which will ultimately be-
+comethe only input to the synthesized program. Both
+vectors are independently and identically distributed,
+as the for-construct
+mirrors the box-notation of Fig-
+ure l(right).
+The Bayesian network for the distribution
+is ex-
+tracted from the specification dynamically and pro-
+cessed extensively with graph operations to deter-
+mine applicability of different transformations.
+The
+above model is thus represented by the following small
+database, where each literal represents all arcs into a
+single node:
+
+depends(sigma,[]).
+depends(rho,U).
+depends(mn.Csigmal).
+depends(c(I),[rho]).
+dapends(x(I),[inu,sigma,c(I)]).
+
+The last lines of the specification contain the opti-
+mization statement. It specifiesthe variables to be op-
+timized together with the initial probability expression;
+the trailing clause given {x} identifies 2 as the initial
+data vector. A different analysis, e.g., a Bayesian ver-
+sion, can be specified simply by changing the optimiza-
+tion statement.
+
+3.2
+Pseudo-code
+For two reasons,our system generatesan intermediate
+level pseudo-code and not any particular target lan-
+guage. First, pseudocode is easier to translate into a
+variety of languages. Second,and more important, it is
+easierto optimize. Standard implementation languages,
+such asC++ and C, allow programming constructs that
+
+
+
+374
+
+defeat good optimization, and the array languages of-
+ten result in a programming style that defeatsgood op-
+timization as well, as programmers attempt to avoid
+explicit iteration "at all costs." Thus program synthe
+sis has the added advantage that it can probably make
+better use of modern code optimization capabilities [l]
+than most programmers.
+
+3.3
+Outline
+of the implementation
+The systemimplementation comprises9000lines of Pro-
+log, including a packagefor term rewriting. A number
+of procedures are specifically designedfor manipulating
+indexed sumsand products, and probabilities over ind+
+pendently and identically distributed array variables as
+in Section 2.2. Wealso have a databaseof distributions,
+and a term rewrite system for simplifying formula and
+probabilities in various ways: simplifying the log of a
+formula, moving a summation inwards, splitting a for-
+mula into its linear components, symbolically deriving
+a derivative, testing for positivity, and testing for non-
+zero.
+Internally, our system uses three conceptually dif-
+ferent levels of representation.
+Probabilities (includ-
+ing logarithmic and conditional probabilities) are the
+most abstract level. They are processedvia methods for
+Bayesian network decomposition or matches with core
+algorithms such asEM. Formulae are introduced when
+probabilities of the form Pr(U 1parents(U)), where
+parents(U) is the set of variables appearing in the def-
+inition for U, are detected, either in the initial net-
+work, or after the application of network decomposi-
+tions. Atomic probabizities (i.e., U is a single variable)
+are directly replaced by formulae based on the given
+distribution and its parameters. General probabilities
+are decomposedinto sums and products of the respec-
+tive atomic probabilities. Pseudo-code programs are the
+lowest level of representation. They contain no proba-
+bilities and are ready for immediate optimization using
+symbolic or numeric methods but they can still be de-
+composedinto independent subproblems. Each of the
+program transformations we apply operates on or be
+tween these levels.
+
+3.4
+Transformations
+for optimization
+Our current list of transformations is asfollows. Decom-
+position of a problem into independent sub-problems is
+always done. Decomposition of probabilities is driven
+by the Bayesian network. We also have a separate sys-
+tem for handling decomposition of formulae. A formula
+can be cJecomposedalong a loop, e.g., the problem "op-
+timize 0for I& f(&)" is transformed into a for-loop over
+subproblems "optimize Bi for f(f3i)". More commonly,
+"optimize 19,C$for f(f3) + g(d)" is transformed into the
+two subprograms "optimize 8 for f(e)" and "optimize
+4 for 9(d)".
+The lemmas in Section 2.3 are applied to change the
+level of representation and thus for simplification
+of
+probabilities.
+The statistical
+algori'thm
+schema currently imple-
+mented is EM; others that can be encoded with the
+current primitives are mean-field methods for exponen-
+tial family, iterative proportional fitting, and iterative
+reweighted least-squares [15, 71. Usually, the schemas
+require a particular form of the probabilities involved;
+they are thus tightly coupled to the decomposition and
+simplification transformations.
+E.g., EM is a way of
+dealing with situation where Lemma 2 applies to vec-
+tors of data.
+Likelihoods of the exponential family (i.e., sub-expres-
+sions of the form log I& Pr(zi 10)) are identified in the
+initial specification or in intermediate representations
+and simplified into linear expression with terms such aa
+mean
+and mean(
+As final resort, we pass formulae which cannot be
+handled symbolically off to a general purpose package
+for numerical optimization.
+
+4
+Some Examples
+4.1
+Mixture
+of Gaussians
+Here, we show how our system derives pseudo-code
+for the mixture of Gaussians example as specified in
+Section 2.1.
+The probability in the initial
+optimization state-
+ment matches the conditions of Lemma 2; moreover,
+U' is just {q which has the same dimensions as the
+given data vector 2.
+This condition triggers the
+EM algorithm as described in Section 2.1, and in-
+stantiates its schema,resulting in the partial program:
+vhile(converging(~,a,P))
+for((i,j),
+(Ci,2OOl,C1.41))
+W
+= Pr(Ci = jlZi = j,/.l,U);
+optimize
+{/.6,a,p}
+for
+LogPr(Q,
+Ci 1/.ki
+, uci,
+p)
+given
+{Ci
+N
+Qi,*,
+x}
+In this, converging is a generic convergence criterion
+imposed over the variables $, a',$
+Given C< N qi,e
+implies we quantify q out of the objective by averaging;
+the for-loop bounds were easily extracted from the
+specification. The instantiated schema also contains
+two recursive calls to the synthesis system. The first
+is hidden in the the evaluation of qi,j using Lemma 3;
+the pseudo-code resulting from this call consists only
+of the symbolic expression representing the value of
+the probability.
+The second is represented explicitly
+by the optimization statement. Here, Q is averaged
+out with the discrete distribution with parameters qi,+,
+and the log probability is evaluated using Lemma 1.
+The Bayesian (sub-) network to evaluate this reduced
+problem reveals that 3 is independent of 3, @thus the
+optimization problem can be decomposed. The second
+
+
+
+375
+
+half of this decomposition contains the optimization
+goal logPr(zi
+1 pci, a,,) which (under the given
+distribution for 9) is simplified into $I
+~i,j log Pr(ai 1
+pj,aj).
+This formula is then decomposed along the
+index j, leaving
+while (converging
+(p, Q,p) 1
+for((i.
+j),
+(C1,2001, EI.41))
+Qi,j
+= Pr(Zj ICi = j, /JqU) ;
+optimize+
+: Cj pj
+= 1 I cf=,(cf:
+Qij)Pj)
+i
+for(j,
+Cl,411
+optimize({pj,aj}.
+C:zlqi,j
+lOgPr(ZiI~j,Uj))))
+The first optimization statement here is solved exactly
+to yield that p' is set to sweighted frequencies. The
+secondoptimize statement is matched with a weighted
+log probability of a Gaussian, and thus turned into an
+expressionfor eachpj, gj involving &weighted meansof
+5Yand z;. This is then solved exactly for pi, Uj. Divide
+by zero is detected to occur here when Ci", qi,j = 0
+for somej. Thus, the usual EM algorithm for mixture
+of Gaussians is derived.
+
+4.2
+Additional
+examples
+Wehavetested our system on a variety of different prob-
+lems. These include the simple Bayes classifier, linear
+regression on non-linear basis functions with Bayesian
+smoothing, and a "curve clustering" model suggested
+by Smyth which attempts to fit multiple curves at once.
+Our systemyielded correct pseudocode in all cases.We
+alsomodelled the distributional clustering framework of
+[12] but without introducing their "temperature" pa-
+rameter. This method is the basis of techniques for
+featurizing documents by generating clusters of related
+words, and versions of it are used in text mining.
+
+5
+Conclusions
+The one aspect of our framework not demonstrated
+is the generation of target code from pseudo-code,
+and thus a final empirical evaluation of the algorithms
+generated. We are developing a back-end for Lisp and
+Matlab. We have demonstrated the general feasibility
+of our approach, but also raised issuesfor future work.
+Necessary research to make this method suitable for
+data
+mining
+at a commercial
+level
+is to adequately
+address numerical issues such as divide by zero and
+ill-conditioned matrices, and to have the algorithms
+scale on large data-sets. We note that many divide
+by zero and ill-conditioning problems are actually due
+to modeling (e.g., too many basis functions are being
+used) and need to be addressed at the level of the
+statistical model.
+While scaling to large data sets is
+beyond the scopeof our current research,webelieve our
+demonstration here is an important first step towards
+a reliable prototyping system for data mining programs
+while scaling technology
+itself matures.
+References
+PI
+
+
+
+
+[31
+
+
+PI
+
+
+
+
+PI
+
+
+PI
+
+
+
+PI
+
+PI
+
+
+PI
+
+
+PO1
+
+
+
+
+PI
+
+P21
+
+
+P31
+
+
+
+M
+
+
+
+P51
+BACON, D., GRAHAM, S., AND SHARP, 0. Compiler
+optimizations
+for high-performance
+computing.
+ACM
+Computing
+Surveys 26, 4 (1994).
+BLAINE, L., GILHAM, L.-M.,
+LIU, J., SMITH, D. R.,
+AND WESTFOLD,
+S.
+Planware
+-
+domain-specific
+synthesis
+of high-performance
+schedulers.
+In Proc.
+13th Intl. Conf. Automated
+Software Engineering
+(Hon-
+olulu, Hawaii, Oct. 1998), D. F. RRdmiles and B. Nu-
+seibeh, Eds., IEEE Comp. Sot. Press, pp. 270-280.
+BUNTINE, W.
+Operations
+for learning with graphical
+models.
+J. Artijicial
+Intelligence
+Research 2 (1994),
+159-225.
+BUNTINE, W. Graphical
+models for discovering knowl-
+edge. In Advances in Knowledge
+Discovery
+and Data
+Mining, U. M. Fayyad, G. Piatetsky-Shapiro,
+P. Smyth,
+and R. S. Uthurssamy,
+Eds. MIT Press, 1995.
+Will
+domain-specific
+code synthesis
+become a silver
+bullet?
+IEEE Intelligent
+Systems (1998).
+In Trends
+and Controversies.
+HADDAWY,
+P.
+Generating
+bayesian
+networks
+from
+probablity
+logic knowledge
+bases. In Proc. 10th Conf.
+on Uncertainty
+in Artificial
+Intelligence
+(San Francisco,
+CA, USA, July 1994), R. L. de Man&as
+and D. Poole,
+Eds., Morgan Kaufmann
+Publishers,
+pp. 262-269.
+JORDAN,
+M.,
+Ed.
+Learning
+in Graphical
+Models.
+Kluwer Academic Publishers,
+Dordrecht,
+1998.
+LAUFUTZEN, S., DAWID, A., LARSEN, B., AND LEIMER,
+H.-G.
+Independence
+properties
+of directed
+Markov
+fields. Networks 20 (1990), 491-505.
+LI, Z., AND D'AMBRQSIO,
+B.
+Efficient
+inference in
+Bayes nets as a combinatorial
+optimization
+problem.
+International
+J. Approximate
+Reasoning 11, 1 (1994),
+55-81.
+LOWRY, M.,
+PHILPOT,
+A., PRESSBURGER, T., AND
+UNDERWOOD, I. AMPHION:
+Automatic
+programming
+for scientific
+subroutine
+libraries.
+In Proc. 8th Intl.
+Symp. on Methodologies
+for Intelligent
+Systems (Oct.
+1994), Z. W. Ra4 and M. Zemankova, Eds., LNAI 869,
+Springer, pp. 326-335.
+NEAL,
+R.,
+AND HINTON,
+G.
+A view of the EM
+algorithm
+that justifies
+incremental,
+sparse, and other
+variants.
+In Jordan [7].
+PEREIRA, F., TISHBY, N., AND LEE, L. Distributional
+clustering
+of English words.
+In Proc. ACL-93
+(June
+1993).
+RANDALL, C., KANT, E., AND KOSTEK, S. Automatic
+synthesis of financial
+modeling
+codes.
+In Proc. Intl.
+Association
+of Financial
+Engineers First Annual Com-
+putational
+Finance Conf. (Aug. 1996).
+THOMAS, A.,
+SPIEGELHALTER, D., AND GILKS, W.
+BUGS: A program to perform Bayesian inference using
+Gibbs sampling.
+In Bayesian
+Statistics
+4, J. Bernardo,
+J. Berger,
+A. Dawid,
+and A. Smith,
+Eds. Oxford
+University
+Press, 1992, pp. 837-42.
+WHITTAKER,
+J.
+Gmphical
+Models in Applied
+Multi-
+variate Statistics.
+Wiley, 1990.
+
+
+
+
+376
+

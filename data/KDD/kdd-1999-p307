@@ -1,0 +1,1143 @@
+Evaluating
+A Class of Distance-Mapping
+Algorithms
+for Data Mining
+and Clustering*
+
+Jason Tsong-Li Wang+
+Xiong Wang
+New York University
+New Jersey Inst. of Tech.
+wang@cs.nyu.edu
+xiong@homer.njit.edu
+King-Ip
+Lin
+The University
+of Memphis
+linki@msci.memphis.edu
+
+Dennis Shasha
+New York University
+shasha@cs.nyu.edu
+Bruce A. Shapiro
+National Cancer Institute
+bshapiro@ncifcrf.gov
+Kaizhong Zhang
+The Univ. of Western Ontario
+kzhang@csd.uwo.ca
+
+Abstract
+A distance-mapping
+algorithm
+takes a set of objects and a
+distance metric and then maps those objects to a Euclidean
+or pseudoEuclidean
+space in such a way that the distances
+among objects
+are approximately
+preserved.
+Distance
+mapping
+algorithms
+are a useful tool for clustering
+and
+visualization
+in data intensive
+applications,
+because they
+replace
+expensive
+distance
+calculations
+by sum-of-square
+calculations.
+This can make clustering
+in large databases
+with expensive distance metrics practical.
+In this paper we present five distance-mapping
+algorithms
+and conduct experiments
+to compare their performance
+in
+data clustering
+applications.
+These include two algorithms
+called FastMap
+and MetricMap,
+and three hybrid heuris-
+tics that combine the two algorithms
+in different ways. Ex-
+perimental
+results on both synthetic
+and RNA data show
+the superiority
+of the hybrid algorithms.
+The results imply
+that FastMap
+and MetricMap
+capture complementary
+in-
+formation
+about distance metrics and therefore can be used
+together to great benefit.
+The net effect is that multi-day
+computations
+may be done in minutes.
+
+1
+Introduction
+A distanc+mapping
+algorithm
+is one that
+takes
+a
+set of objects
+and a distance
+metric
+and maps those
+objects
+to a space in such a way that
+the distances
+among objects
+are approximately
+preserved.
+In [FL95],
+Faloutsos and Lin proposed
+to use such an algorithm
+as
+a tool for visualization
+and clustering
+in data intensive
+applications.
+The approach
+is to first map the objects
+to points in a k-dimensional
+target space. Then perform
+
+* Work supported by NSF grants IRJ-9531548 and IRI-
+9531554, and by the Natural Sciences and Engineering Research
+Council of Canada under grant number OGP0046373.
+t On sabbatical leave from NJIT (jason&is.njit.edu).
+
+
+permission to make digital or hard topics ofall or part ofthis work f~
+personal or classroom use is granted without fee provided
+that copies
+are not !JJ~& or distributed hr profit or
+cOlmnercia~
+ZNkdnbge
+and
+that
+copies bear this notice and the full citation on the first page. To COPY
+othcrwisc, to qublish,
+to post on scrvcrs or to rcdistributc to lists,
+requires prior specific permission and/or a fee.
+KDD-99
+San Diego CA USA
+Copyright ACM 1999 l-581 13-143-7/99/08...$5.00
+the clustering
+on the k-dimensional
+points
+in the target
+space.
+The algorithm
+proposed is called FastMap.
+Empirical
+studies indicated
+that FastMap
+works well
+for Euclidean distances.
+In this paper we present a new distance-mapping
+al-
+gorithm,
+called MetricMap,
+and three hybrid heuris-
+tics that combine FastMap
+and MetricMap
+in dif-
+ferent ways. We conduct experiments
+to compare the
+performance of the five algorithms
+based on both Eu-
+clidean distance and general distance metrics in data
+clustering applications.
+A general distance metric is a
+function
+6 that takes pairs of objects into real num-
+bers, satisfying
+the following
+properties:
+for any ob-
+jects 2, y, z, d(z, s) = 0 and &,
+21) > 0,~ # y (non-
+negative definiteness);
+6(z, g) = 6(y, 5) (symmetry);
+6(z, y) 5 6(z,z)
++ 6(z, y) (triangle
+inequality).
+Eu-
+clidean distance satisfies these properties.
+On the other
+hand, many general distance metrics of interest are not
+Euclidean, e.g. string edit distance as used in biology.
+None of the five algorithms
+(nor any other algorithm
+that we know of) give guaranteed performance for gen-
+eral distance metrics. For this reason, an experimental
+analysis is worthwhile.
+
+
+2
+Distance-Mapping
+Algorithms
+
+Consider a set of objects 2) = {Oc,Oi,
+. . . , ON-~} and
+a distance function
+d where for any two objects Oi,
+Oj E D, d(Od,Oj)
+(or di,j for short) represents the
+distance between Oi and Oj.
+The function
+d can be
+Euclidean or a general distance metric. The algorithms
+studied here take the set of objects, some inter-object
+distances
+and map the objects
+to a k-d space R" (k
+is user-defined),
+such that
+the distances among the
+objects are approximately
+preserved. The k-d point Pi
+corresponding
+to the object Oi is called the image of
+Oi. The k-d space containing the images is called target
+spuce. The differences among the algorithms
+lie in the
+way they use for mapping and the target space they
+choose. For example, FastMap
+embeds the objects in
+a Euclidean
+space, whereas
+MetricMap
+embeds them
+in a pseudoEuclidean
+space [Gre75]. We describe the
+
+
+
+
+307
+
+algorithms in some detail below; related proofs can be
+found in FL95, YZW98] and in the full paper available
+from the authors.
+
+2.1
+The
+FastMap
+Algorithm
+The basic idea of this algorithm
+is to project objects
+on a line (0,, Ob) in an n-dimensional
+(n-d) space Rn
+for some unknown n, n 2 k. The line is formed by two
+pivot objects 0,, Oa, chosen as follows. First arbitrarily
+choose one object and let it be the second pivot object
+Oa. Let 0, be the object that is farthest apart from
+Ob. Then update Ob to be the object that is farthest
+apart from 0,.
+The two resulting
+objects O,, Ob are
+pivots.
+Now consider an object 0; and the triangle
+formed by Oi, 0, and Ob (Fig.
+1). From the cosine
+law, one can get d& = d2,,++ d", ,, -
+2Xido,b.
+Thus, the
+first coordinate xi of object Oi with respect to the line
+
+(oa,
+0,)
+is Xi
+=
+(d2,,i
++ d2,,b -
+d;4,j)/(`da,b).
+..;/.;`a
+ob
+Xi
+.
+dab
+
+
+
+Fig. 1.
+
+
+We can extend
+the above projection
+method
+to
+embed objects
+in the target
+space R"
+as follows.
+Pretending
+that the given objects are indeed points
+in Rn, we consider an (n - 1)-d hyper-plane
+3t that
+is perpendicular
+to the line (Oa,Ob),
+where 0,
+and
+Ob are two pivot objects.
+We then project
+all the
+objects onto this hyper-plane.
+Let Oi, Oj be two objects
+and let Oi, 0; be their projections
+on the hyper-plane
+3t. It can be shown that the dissimilarity
+d' between
+Oi, 0; is (d'(Oi,0i))2
+= (d(Oi,Oj))"
+- (xi - xj)",
+i,j =0
+,***>
+N - 1. Being able to compute d' allows one
+to project on a second line, lying on the hyper-plane 31,
+and therefore orthogonal to the first line (0,, Ob). We
+repeat the steps recursively,
+k times, thus mapping all
+objects to points in RL.
+The discussion thus far assumes that
+the objects
+are indeed points in Rn.
+If the assumption
+doesn't
+hold, (d(Oi, Oj))2 - (xi - zj)2 may become negative.
+For this
+case: the dissimilarity
+d' is modified
+as
+follows:
+d'(Oj, 0;)
+=
+-J(Xi
+-
+Xj)2
+- (d(Oi, Oj))".
+Let Oi,
+Oj
+be two objects
+in 23 and let Pi
+=
+(xi,...
+,XF),
+Pj
+= (Xi,...,
+x5) be their images in the
+target space R".
+The dissimilarity
+between Pi and
+Pj, denoted df (Pi, Pj), is calculated
+as dj (Pi, Pj) =
+JK
+x'.)~.
+Note that if the objects are indeed
+points
+in R",
+n
+>
+k, and the distance
+function
+d is Euclidean,
+then FastMap
+guarantees
+a lower
+bound on inter-object
+distances. That is, df (Pi, Pj) 5
+d(OiyOj).
+Let COStfastmapdenote the total number
+of distance calculations
+required by FastMap.
+Then
+costfos~mop = 3Nk where N is the size of the dataset
+and k is the dimensionality
+of the target space.
+
+2.2
+The
+MetricMap
+Algorithm
+The algorithm works by first choosing a small sample A
+by randomly picking 2k objects from the dataset. The
+algorithm
+calculates the pairwise distances among the
+sampling objects and uses these distances to establish
+the target space Rk.
+The algorithm
+then maps all
+objects in the dataset to points in Rk.
+Specifically, assume, without loss of generality, that A
+= (00,. . .) 02&i}.
+We define a mapping cr as follows:
+(Y : A + R2k-'
+such that a(Oe) = as = (0,. . . ,O),
+a(Oi) = aj = (0,. . . , l(i), . . . ,O), 1 5 i 5 2k-1 (seeFig.
+2(a)). Intuitively
+we map 00 to the origin and map the
+other sampling objects to vectors (points)
+{aj}l<j<`Jk-1
+--
+in R2"-l
+so that each of the objects corresponds to a
+base vector in R2"-l.
+Let
+M($J<,>)
+=
+(%,j)l<i,j<2k-1
+where
+%,j
+=
+
+kg0
++ 4,o
+-
+~,j)/2,
+1 5 i, j 5 2k - 1. Define the
+function $ as follows: II, : R2k-1 x R2k-1 -+ R such that
++(s, y) = z?M($<,,)y
+where xT is the transpose of
+vector
+X.
+Notice that $(ai, oj) = mi,j, 1 5 i, j 5 2k- 1.
+The function
++ is called a symmetric
+bilinear form
+of R2k-1 [Gre75].
+M($J<~>)
+is the matrix
+of y!~with
+respect to the basis
+{aj}l<j<2k-1.
+The vector space
+R2"-'
+equipped with the symmetric bilinear form @is
+called a pseudo-Euclidean
+space. For any two points
+(vectors)
+x, y E R2k-1,
+$(x, y) is called the inner
+product of x and y.
+The squared distance between x
+and y, denoted ]]x - y]12, is defined as ]]x - y]]" =
+$(x-y,
+z-9).
+This squared distance is used to measure
+the dissimilarity
+of two points in the pseudo-Euclidean
+space. Since the matrix
+M($,,,)
+is real symmetric,
+there is an orthogonal
+matrix Q =
+(qj,j)l<j,j<2k-1
+and
+a diagonal
+matrix
+D = diag(&)l<i<2k-1
+such that
+QTM(tiCa>)Q
+= D, where QT is the transpose of Q,
+Ais are eigenvalues of M($J <((,) arranged in some order,
+and columns of Q are the corresponding
+eigenvectors
+[GV96]. Note that if the matrix M($,,>)
+has negative
+eigenvalues, the squared distance between two points in
+the pseudoEuclidean
+space may be negative.
+That's
+why we never say the "distance"
+between points in a
+pseudo-Euclidean
+space.
+We find a $-orthogonal
+basis of R2'-`,
+{ej}llj<zk-1,
+where (ei, . . . ,ezk--1)
+=
+(al,. . . ,ask--1)Q
+or equiva-
+lently (al,. . . , ask-i)
+= (ei, . . . ,@&I)&~.
+Each
+VeCtOr
+oi, 1 < i 5 2k - 1, can be represented as a vector in
+the space spanned by
+{ej}l<j<zk-1
+and the coordinate
+
+
+
+308
+
+mppjng
+ob.jccts
+a3
+J-
+a0
+=1
+
+
+
+
+a!2
+
+
+
+(3
+R
+2k-1
+R2k-l
+
+
+
+
+'ik
+
+el
+l-
+0
+a3
+
+0
+5
+
+0=z
+
+
+
+
+Fig. 2. Illustration
+of the MetricMap
+algorithm
+(k
+= 2).
+
+
+
+
+of aj with respect to {ei}il;ssk-i
+is the jth
+row
+of &
+(see Fig. 2(b)). Each ei corresponds to an eigenvector.
+
+Suppose the eigenvalues are sorted in descending
+order by their absolute values, followed by the zero
+eigenvalues.
+The MetricMap
+algorithm
+reduces the
+dimensionality
+of RSk-l
+to obtain
+the subspace Rk
+by removing the k - 1 dimensions
+along which the
+eigenvalues X;s of M($J,,,,)
+are zero or their absolute
+values are smallest (see Fig. 2(c)). Notice that among
+the remaining
+k-dimensions,
+some may have negative
+eigenvalues. The algorithm then chooses k + 1 objects,
+called the reference objects, that span R".
+Once the
+target space R" is established, the algorithm maps each
+object 0, in the dataset to a point (vector) P. in the
+target space by comparing the object with the reference
+objects.
+The coordinate
+of P, is calculated through
+matrix multiplication.
+Here is how.
+
+Assume, without
+loss of generality, that the reference
+objects are 00, Oi, . . . ,ok.
+Let b =
+(`&,j)l<j<k
+where
+n*,j = (d$ + $,o - e,j)/2,
+1 < j 5 k. Define
+
+
+
+
+{
+1
+if Xi > 0
+sign(&)
+=
+0
+if Xi = 0
+-1
+if&<0
+
+That is, sign(&)
+is the sign of the ith eigenvalue Xi. Let
+J = diag(sign(Xi))
+l<i<Zk-1
+and
+(7 =
+d@I(ci)
+19<2k-1
+where
+c,=
+l&l
+if&#0
+I
+{
+1
+otherwise
+
+Let Jikl be the kth leading principal
+submatrix
+of the
+matrix
+J, i.e.
+$1
+=
+diag(&+i))l<i<k.
+Let
+c[k]
+be the kth leading principal
+submatrix
+of the matrix
+C, i.e. Clkl
+=
+diag(l&l)l<i<k*
+Let Qlkk] be the kth
+leading principal
+submatrix
+of the orthogonal
+matrix
+Q,
+i.e.
+&[kk]
+=
+(&,j)l<i,j<k*
+The coordinate of P. in
+R", denoted Coor(P,),
+can be approximated
+as follows:
+COOT(P,) % J~k~C~~`2Q&b.
+Let Oi7 Oj be two objects
+in 2) and let Pi = (of,. . . ,s$), Pj = (3,.
+. . ,$)
+be
+their images in R". Let A(Pi, Pj) = CF=, sign(Xl)(di
+-
+X$)2. The dissimilarity
+between Pi and Pj, denoted
+&(Pi,
+Pj), is approximated
+by
+
+
+&(pi,
+Pj)
+fi:
+@m5i
+if A(P+,Pj)
+2 0
+-,/w
+otherwise
+
+Note that if the objects are points in R", n 2 k, and the
+distance function d is Euclidean, then as in FastMap,
+MetricMap
+guarantees a lower bound on inter-object
+distances. That is, d,(Pi,
+Pj) 5 d(Oi, Oj).
+
+Let
+CO&dricmap
+denote the total number of dis-
+tance calculations
+required by MetricMap.
+It can be
+shown that Costmetricmclp = 4k2 + (IV - 2k)(k + 1).
+Since N 2 k, CoStmetriemap I Co+,tmop.
+
+2.3
+Hybrid
+Algorithms
+Let Oi, Oj be two objects in 2) and let Pi, Pi be
+their images in Rk. The dissimilarity
+between Pi, Pj,
+embedded by FastMap,
+is denoted by df(Pi, Pj). The
+dissimilarity
+between Pi, Pj, embedded by Met&Map,
+is denoted by &(Pi,
+Pj). The three hybrid algorithms,
+called AvgMap,
+MinMap
+and MaxMap,
+respectively,
+use the dissimilarities
+d,, 4,
+dz, respectively,
+defined
+as follows:
+da(Pi, Pi)
+= [df(Pi, Pi) + dm(Pi, Pj)]/2,
+&(Pi,Pj)
+= min{df(Pi,Pj),d,(Pi,Pj)),
+ds(Pi,Pj)
+=
+ma,x{df(Pi,
+Pj), &(Pi,
+Pj)}.
+We collectively
+refer to all
+these algorithms as mappers. It should be pointed out
+that AvgMap,
+MinMap
+and MaxMap
+are no more
+expensive to compute than FastMap
+and Met&Map;
+the algorithms have the same cost O(Nk).
+
+3
+Experiments
+and Results
+We conducted
+a series of experiments
+to evaluate
+the performance
+of the mappers in data clustering
+
+
+
+309
+
+applications.
+The algorithms
+were implemented
+in C
+and C++ under the UNIX operating system run on a
+SPARC 20. Two datasets were used: RNA secondary
+structures and n-dimensional
+vectors.
+RNA distance
+was a general distance metric, so satisfied the triangle
+inequality, but was not Euclidean.
+We selected 200 RNA
+secondary structures
+from
+the virus database in the National
+Cancer Institute.
+The RNA secondary structures
+were created by first
+choosing two phylogenetically
+related mRNA sequences,
+rhino 14 and ~0x5, from GenBank pertaining
+to the
+human rhinovirus
+and coxsackievirus.
+The 5' non-
+coding region of each sequence was folded and 100
+secondary structures
+of that sequence were collected.
+The structures
+were then transformed
+into trees and
+their pairwise distances were calculated as described in
+[WSS99]. The trees had between 70 and 180 nodes. The
+distances for rhino 14's trees and ~0x5's trees were in the
+interval (1..75) and (1..60), respectively.
+The distances
+between rhino 14's trees and ~0x5's trees were in the
+interval (43..94). The secondary structures
+(trees) for
+each mRNA sequence roughly formed a cluster.
+For the synthetic
+data, we built p = q2 clusters as
+in [ZRL96].
+Specifically,
+we generated q groups of n-
+dimensional vectors from an n-dimensional
+hypercube.
+Each vector was generated by choosing n real numbers
+randomly
+and uniformly
+from the interval
+[LB..HB].
+The pairwise Euclidean
+distances among the vectors
+were then calculated.
+Initially
+the groups (clusters)
+might overlap. We considered all the q groups as sitting
+on the same line and moved them apart along the
+line by adding a constant
+(i x c), 1 5 i 5 q, to the
+6rst coordinate of all the vectors in the ith group.
+c
+was a tunable parameter.
+We used CURE [GRS98] to
+adjust the clusters so that they were not too far apart.
+Specifically, c was chosen to be the minimum
+value, by
+which CURE can just separate the q clusters.
+In our
+case, c = 1.15. Once the first q clusters were generated,
+we moved to the second line, which was parallel to the
+first line, and generated another q clusters along the
+second line. This step w& repeated until all the q lines
+were generated, each line comprising q clusters. Again
+we used CURE to adjust the distance between the lines
+so that they were not too far apart.
+The parameters
+and their base values used in the experiments
+were: k
+(dimensionality
+of the target space) = 10, p (number of
+clusters) = 4, n (dimensionality
+of synthetic
+vectors)
+= 20, C (number
+of vectors in a cluster)
+= 100,
+LB (smallest possible value for each coordinate of the
+synthetic vectors) = 0, HB (largest possible value for
+each coordinate of the synthetic vectors) = 100.
+
+3.1
+Results
+
+We first
+evaluated
+the precision
+of embedding
+for
+the five mappers.
+It
+was found
+that
+MaxMap
+achieves the most accurate embedding for the Euclidean
+data.
+This is understandable-since
+both FastMap
+and MetricMap
+underestimate
+inter-object
+distances,
+MaxMap
+gives the lowest error in embedding. The per-
+formance of MaxMap
+depends on the dimensionality
+of
+vectors n (the performance degrades as n increases), but
+is independent of the dataset size and distance ranges.
+On the other hand, AvgMap
+achieves the most accurate
+embedding for the RNA data. The performance of both
+MaxMap
+and AvgMap
+improves as the dimensionality
+of the target space, k, increases.
+We then evaluated
+the accuracy
+of clustering
+in
+the presence of imprecise embedding.
+The purpose
+is twofold.
+First,
+this study
+shows the feasibility
+of clustering
+without
+performing
+expensive distance
+calculations.
+Second, through
+the study,
+one can
+understand
+how imprecision
+in the embedding
+may
+affect the accuracy
+of clustering.
+The clustering
+algorithm
+used in our experiments was the well known
+average-group method pKR90], which works as follows.
+Initially,
+every object is a cluster.
+The algorithm
+merges two nearest clusters to form a new cluster,
+until there are only K clusters left where K is p for
+the Euclidean clusters and 2 for the RNA data.
+The
+distance between two clusters Cr and CZ is given as
+h
+CO,~~~,CJ,~C~ I4%
+%>I where Icily i = 17%
+is the size of cluster Ci. The algorithm
+requires O(N2)
+distance calculations
+where N is the total number of
+objects in the dataset.
+In principle,
+one can use any
+reasonably
+good distance-based
+clustering
+algorithm
+since our experiments deal with both Euclidean distance
+and general distance metrics.
+An object 0 is said to be mis-clustered if 0 is in a
+cluster C created by the average-group
+method, but
+its image is not in C's corresponding
+cluster, which
+is also created by the average-group
+method,
+in the
+target space. The performance
+measure we used was
+the mis-clustering
+rate (Err,),
+defined as Errc
+=
+(NC/N)
+x 100% where N, was the number of mis-
+clustered objects.
+Fig. 3 graphs Errc as a function of the dimensionality
+of the target space, k, for the Euclidean
+clusters and
+Fig. 4 shows Err,
+as a function of k for the RNA data.
+For the Euclidean
+data, the average-group
+method
+successfully found the 4 clusters in the dataset. For the
+RNA data, the average-group method missed 5 objects
+in the dataset (i.e., the 5 RNA secondary structures
+were not detected to belong to their
+corresponding
+sequence's cluster). The images of these 5 objects were
+also missed in the target space; they were excluded
+when calculating
+Errc.
+We see from the figures that the clustering
+perfor-
+mance improves as the dimensionality
+of the target
+space increases, since the embedding becomes more pre-
+cise. Fig. 3 shows that the ErrCs of all the mappers
+
+
+
+310
+
+-0-e FastMap
+U
+MetricMap
+-0-e
+AvgMap
+-x-x Minhlap
+Q-A
+MaxMap
+
+
+
+
+2
+4
+6
+8
+10
+
+k
+
+
+Fig. 3.
+
+
+
+
+40
+60
+80
+k
+
+Fig. 4.
+
+
+
+
+approach 0 when k = 9. Fig. 4 shows that Met&Map
+outperforms
+FastMap;
+its Err,
+approaches 0 when
+k = 80. Overall, MaxMap
+is best for the Euclidean
+data and AvgMap
+is best for the non-Euclidean
+RNA
+data. The results indicate that with the two best map-
+pers, one can perform clustering
+on the k-dimensional
+points. Embedding the data objects can be performed
+in the off-line stage, thus reducing the clustering time
+significantly.
+We next examined the scalability
+of the
+results using Euclidean
+clusters.
+With higher dimen-
+sional vectors (e.g. 60-dimensions)
+and more clusters,
+the average-group method missed several objects in the
+dataset. However, MaxMup
+consistently gives the low-
+est m&-clustering
+rate.
+We also conducted
+experiments
+by replacing
+the
+random sampling objects used by MetricMap
+with the
+2k pivot objects found by FastMap.
+The performance
+of MetricMap
+improves for the Euclidean
+data, but
+degrades .for the non-Euclidean
+data.
+MaxMup
+and
+AvgMap
+remain the best as in the random sampling
+case.
+4
+Discussion
+Our approach is related to two groups of work: multi-
+dimensional
+scaling (MS) [GCS89] and the linear pro-
+jection via Principal
+Components Analysis [F'ukSO]. In
+contrast to these methods, which consider Euclidean
+space, our approach
+considers both
+Euclidean
+and
+pseudo-Euclidean
+spaces. Furthermore,
+our approach
+requires O(Nk) time. This is faster than the MS meth-
+ods, which, in the worst case, need O(iV2) time. Cur-
+rently we are applying the proposed techniques to sim-
+ilarity retrieval in metric spaces.
+
+Acknowledgments
+We thank the SIGKDD reviewers for their constructive
+criticism and helpful comments.
+
+References
+FL951 C. Faloutsos and K.-I. Lin.
+FastMap:
+A fast
+algorithm for indexing, data-mining
+and visualiza-
+tion of traditional
+and multimedia
+datasets. ACM
+SIGMOD Proceedings, pages 163-174,1995.
+
+@?uk90]K. Fukunaga.
+Introduction
+to Statistical Pat-
+tern Recognition. Academic Press, CA, 1990.
+
+[GV96] G. H. Golub and C. F. Van Loan. Matrix Com-
+putations.
+The Johns Hopkins
+University
+Press,
+MD, 1996.
+
+[GCSSS] P. E. Green, F. J. Carmone, Jr., and S. M.
+Smith.
+Multidimensional
+Scaling:
+Concepts and
+Applications.
+Allyn and Bacon, MA, 1989.
+
+[Gre75] W. Greub.
+Linear
+Algebra. Springer-Verlag,
+NY, 19'75.
+
+[GRS98] S. Guha, R. Rastogi, and K. Shim. CURE: An
+efficient clustering
+algorithm
+for large databases.
+ACM SIGMOD Proceedings, pages 73-84, 1998.
+
+[KR90] L. Kaufman
+and P. J. Rousseeuw.
+Finding
+Groups in Data: An Introduction
+to Cluster Anal-
+ysis. John Wiley & Sons, 1990.
+
+[wSS99] J. T. L. Wang, B. A. Shapiro, and D. Shasha,
+editors.
+Pattern Discovery in Biomolecular
+Data:
+Tools, Techniques and Applications.
+Oxford Uni-
+versity Press, NY, 1999.
+
+pZW98]
+Y. Yang, K. Zhang, X. Wang, J. T. L. Wang,
+and D. Shasha. An approximate
+oracle for distance
+in metric spaces.
+In M. Farach-Colton,
+editor,
+Combinatorial
+Pattern Matching, 1998.
+
+[ZRL96] T. Zhang, R. Ramakrishnan,
+and M. Livny.
+BIRCH:
+An efficient data clustering
+method for
+very large databases. ACM SIGMOD
+Proceedings,
+pages 103-114,1996.
+
+
+
+
+311
+

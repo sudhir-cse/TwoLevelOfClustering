@@ -1,0 +1,867 @@
+Efficient Mining of Weighted Association Rules (WAR)
+
+
+Wei Wang
+IBM Watson Research Center
+ww1@us.ibm.com
+Jiong Yang
+IBM Watson Research Center
+jiyang@us.ibm.com
+Philip S. Yu
+IBM Watson Research Center
+psyu@us.ibm.com
+
+
+
+
+ABSTRACT
+In this paper, we extend the tradition association rule prob-
+lem by allowing a weight to be associated with each item in
+a transaction, to re ect interest intensity of the item within
+the transaction. This provides us in turn with an oppor-
+tunity to associate a weight parameter with each item in
+the resulting association rule. We call it weighted associ-
+ation rule WAR. WAR not only improves the con dence
+of the rules, but also provides a mechanism to do more ef-
+fective target marketing by identifying or segmenting cus-
+tomers based on their potential degree of loyalty or volume
+of purchases. Our approach mines WARs by rst ignoring
+the weight and nding the frequent itemsets via a tradi-
+tional frequent itemset discovery algorithm, and is followed
+by introducing the weight during the rule generation. It is
+shown by experimental results that our approach not only
+results in shorter average execution times, butalso produces
+higher quality results than the generalization of previous
+known methods on quantitative association rules.
+
+Categories and Subject Descriptors
+H.2.8 Information Systems : Database Management|
+database applications
+
+General Terms
+Weighted association rules, Ordered shrinkage
+
+1. INTRODUCTION
+Association rule discovery has been an active research topic
+during recent years. However, the traditional association
+rules focus on binary attribute. This model only considers
+whether an item is present in a transaction, but does not
+take into account the weight intensity of an item within a
+transaction. For example, a customer may purchase 10 bot-
+tles of soda and 5 bags of snacks and another may purchase
+4 bottles of soda and 1 bag of snacks at a time. These two
+transactions will be treated the same in the conventional as-
+sociation rule approach. This could lead to the loss of some
+vital information. Assume, for example, that if a customer
+buys more than 7 bottles of soda, he is likely to purchase 3
+or more bags of snacks. Otherwise, the purchase tendency
+of soda is not strong. The traditional association rule can-
+not express this type of relationship. With this knowledge,
+the supermarket manager may set a promotion such as if
+a customer buys 8 bottles of soda, he can get two free bags
+of snacks."
+In this paper, we rstextend the traditional association rule
+problembyallowing aweighttobeassociated witheachitem
+in a transaction, to re ect interest intensity of each item
+within the transaction. In turn, this provides us with an
+opportunity to associate a weight parameter with each item
+in a resulting association rule. We call them weighted asso-
+ciation rules WAR.For example,soda 4;6 ,! snack 3;5
+is a weighted association rule indicating that if a customer
+purchases soda in the quantity between 4 and 6 bottles, he
+is likely to purchase 3 to 5 bags of snacks. Thus WAR can
+not only improve the con dence in the rules, but also pro-
+vide a mechanism to do more e ective target marketing by
+identifying orsegmenting customers basedontheir potential
+degree of loyalty or volume of purchases.
+Previous workdealing withnumerical attributesincludes the
+quantitative association rule approach and optimized asso-
+ciation rule approach. These approaches are not designed
+for weighted association rules 4 . In the problem we study
+in this paper, there can be a very large number of items
+and every item has a numerical attribute, although only a
+small fraction of items are present in a transaction. Thus,
+in our approach, the frequent itemsets are rst discovered
+withoutconsidering weights,and thentheweighted associ-
+ation rules foreachfrequent itemsetaregenerated. Ourgoal
+is to segment the weight domain of each item in the item-
+set so that rules with higher con dence can be discovered.
+Moreover, thespeci ed weight interval of each attribute in a
+weighted association rule should also coincide with the nat-
+ural distribution of the data and human intuition. In most
+case, only the weight interval combinations that represent a
+signi cant number of transactions are interesting. Our goal
+can be transformed into nding highly populated regions.
+Thus, we use another metric density for such purpose. As
+a result, the weight domain space of each frequent itemset
+is partitioned into ne grids. A density threshold is used to
+separate thetransaction concentrating regions fromtherest.
+WARscanbeidenti ed based onthese dense" regions. The
+contributions of this paper are summarized as follows.
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+270
+
+A new class of association rule problems | WAR is
+proposed.
+Due to the nature of this problem, the mining process
+isaccomplished byatwofoldapproach: rstgenerating
+frequent itemsets and then deriving WARs from each
+frequent itemset.
+During the WAR derivation process,
+The concept of density is employed to separate
+transaction concentrated regions from the rest.
+An e cient ordered shrinkage algorithm is pro-
+posed to derive WARs from a high density re-
+gion through shrinkages to meet the con dence
+requirement.
+
+The remainder of this paper is organized as follows. The
+problem is formulated in Section 2, while Section 3 out-
+lines the general approach. Sections 4 and 5 present the
+space partition and WAR generation, respectively. Section
+6 shows the experimental results. A conclusion is drawn in
+Section 7.
+
+2. PROBLEM FORMULATION
+Let = = fi1;i2;:::;iMg be a set of items and be the set
+of non-negative integers. A pair hx;wiis called a weighted
+item, where x 2 = is an item and w 2 is the weight
+associated with x. A transaction is a set of weighted items.
+For example, T1 = fhfashion;15i;hsports;10ig and T2 =
+fhfashion;20i;hbook;5ig are two transactions. An interval
+weighted item is a triple hx;l;ui. This denotes the fact that
+the weight associated with the item x is within the range
+l;u where l and u are non-negative integers and l  u.
+Note that we can always view a weighted item hx;wi as
+a special case of the interval weighted item hx;l;ui where
+w = l = u. Therefore, we will use the term weighted item
+if no ambiguity will occur. Given two weighted items I1 =
+hx1;l1;u1iandI2 =hx2;l2;u2i,wecallI1ageneralization
+of I2 and I2 is a specialization of I1 i x1 = x2 and
+l1  l2  u2  u1. For example, hfashion;10;20i is a
+specialization of hfashion;10;25i. Note that any weighted
+item hx;l;ui can be view as a specialization of the item x.
+We use the term weighted itemset to represent a set of
+weighted items. Let itemX denote the set of items that
+are involved in a weighted itemset X, i.e., itemX = fx j
+x 2=;hx;l;ui 2 Xg. Given two weighted itemsets X1 and
+X2, X1 is a specialization of X2 or X2 is a generalization
+of X1 i itemX1 = itemX2 and each weighted item
+in X1 is a specialization of a weighted item in X2. For
+instance, fhfashion;10;20i;hbook;5;7ig is a specialization
+of fhfashion;10;20i;hbook;5;10ig. Given a transaction T
+and a weighted item hx;l;ui, we say that T supports this
+weighted item i there exists a weighted item hx;wi 2 T
+such that hx;wi is a specialization of hx;l;ui. Similarly,
+we say that a transaction T supports a weighted itemset
+X i T supports each individual weighted item in X. For
+instance, if X = fhfashion;10;20i;hbook;5;10ig, then T2
+supports X while T1 does not. Given a weighted itemset X
+and a set of transactions, referred to as , we say X has
+supportsin i softransactions in support X. Note
+that the support of a weighted itemset is always less than
+or equal to the support of any of its generalization.
+A weighted association rule WAR is an implication
+X ,! Y where X and Y are two weighted itemsets and
+itemX itemY = ;. A transaction is said to support
+a WAR X ,! Y i this transaction supports the weighted
+itemset X Y. In turn, we de ne the support of the WAR
+as the support of X Y. In addition, we say that the WAR
+X ,! Y holds in the transaction set with con dence c
+i c of the transactions in that support X also support
+Y. In other words, the con dence of the WAR is the ratio
+of the support of X Y over the support of X. The density
+of a WAR is de ned as the ratio of the actual support of
+the WAR and the expected" support of the WAR. We will
+elaborate on the density de nition in Section 5. In this
+paper, we assume that Y only contains one weighted item
+for the sake of simplicity.
+Given a transaction set , our objective is to nd a set
+of Weighted Association Rules WAR which have sup-
+port, con dence, and density greater than or equal to some
+user-speci ed minimum supportreferredtoasminsup,min-
+imum con dence referred to as minconf, and minimum
+density referred to as d. Since there could be a huge
+number of quali ed WARs, in this paper, we aim at mining
+maximum WAR. A quali ed WAR X ,! Y is a maxi-
+mum WAR if for any generalization X0 of X and Y0 of Y
+where X0 6= X and Y0 6=Y, neither of X0 ,! Y, X ,! Y0,
+nor X0 ,! Y0 is a quali ed WAR.
+
+3. GENERAL APPROACH
+Clearly, there canbe a huge number ofpotential WARs, due
+to the numerical nature of the weight. E cient pruning of
+such a huge search space becomes a crucial task in the min-
+ing process. Unlike 3 , we design a twofold approach based
+on an observation we made in Section 2: the support of a
+weighted itemset is always less than or equal to the support
+of any of its generalizations. This indicates that, for any
+weighteditemsetI,itssupportisalwayslessthanorequalto
+the support of itemI. This suggests that we can rst cal-
+culate frequent itemsets without considering the weights
+andthenexamine theweightfactorforeachfrequentitemset
+to generate the WARs. A frequent weighted itemset is a
+weighted itemset whose support is larger than or equal to
+thethreshold minsup. Thus,weemploy atwofoldapproach.
+1 Generate frequent itemsets. In this step, we ignore the
+weight associated with each item in the transaction set. 2
+For each frequent itemset, nd the WARs that meets the
+support, con dence, and density thresholds.
+Since the rst phase is mainly the frequent itemset counting
+as in the traditional association rule mining, we will not
+elaborate itin this paper. Afterobtaining thesetoffrequent
+itemsets, referred to as F, we examine them to generate the
+weighted association rules. Given an itemset I ofcardinality
+n, the domain of the weights of all items forms an n dimen-
+sional spacewhereeachdimension corresponds totheweight
+ofoneitem. Forsimplicity, weassumethattheweightrange
+on each dimension to be the same. Each specialization of
+I corresponds to an n-dimensional rectangular box within
+this space. Our objective is to nd the maximum boxes
+so that support, con dence, and density are satis ed. To
+
+
+
+271
+
+facilitate this process, we discretize the space into a set of
+grids and divide the second phase further.
+
+1. Space partition and counter generation: The goal is
+to identify, for each frequent itemset, those dense
+grids that satisfy the density requirement. Ane cient
+pruning technique is provided to reduce the number of
+grids that need to be evaluated and maintained.
+2. WARs generation: The goal is to generate the maxi-
+mum WARs from the dense boxes enclosing adjacent
+dense grids. As the dense boxes generally do not sat-
+isfy the con dence requirement, an ordered shrinkage
+approach is developed to shrink the dense boxes in an
+orderly way to meet the con dence requirement.
+
+4. SPACE PARTITION
+The density concept is introduced to develop e ective prun-
+ing techniques foridentifying candidate boxes forWARmin-
+ing. Wewanttokeeptheadditional parameters thatneedto
+be speci ed by the users to a minimum. The intent is to in-
+troduce one density threshold that is applicable to all grids,
+regardless of the number of dimensions. A straightforward
+partitioning method is to divide each dimension into a xed
+number of partitions. However, under this approach, as the
+number of dimension increases, the number of grids grows
+exponentially, while the average density of each grid drops
+rapidly. This implies thatdi erent density thresholds would
+be needed for grids of di erent dimensionalities. We hence
+use an alternative approach that keeps the number of grids
+N xed regardless of the number of dimensions. Another
+advantage of this partitioning method is that we can easily
+control the number of counters by varying the value of N.
+This provides us with the capability to take full advantage
+of the available storage space dynamically.
+The grid is taken as the granularity of our WAR mining
+process. Any n-dimensional box within this space, which is
+the union of a set of adjacent grids and is rectangular in
+shape, uniquely corresponds to a specialization of I. Thus,
+in the remainder of this paper, we will use the term box"
+and weighted itemset" interchangeably if no ambiguity will
+occur. Let be the average number of transactions that
+support a grid. We have =
+j j
+N
+. The density of a grid
+is de ned as the ratio of the support of this grid and .
+Intuitively, density can be viewed as an indication of the
+relative concentration of transactions within the space. A
+grid is dense i its density is above a threshold d, where
+d 1 is a small real number. In order to limit the search
+space, weonly investigate dense grids and the region formed
+by them. Unlike a box, a region does not have to be of rect-
+angular shape. The motivation behind this is that we only
+wanttoreport WARswhich represent signi cant patternsin
+the data. Therefore, a range will not be included in a WAR
+if there is not enough evidence density to support it. A
+dense region is the union of a set of adjacent dense grids.
+Each box within a dense region, referred to as dense box, is
+a candidate of frequent weighted itemset. The volume of a
+box is de ned as the number of distinct grids it contains.
+
+Counter Pruning
+Althoughthisapproachneedsonedensitythreshold forprun-
+ing, it does create additional complexities on the pruning
+algorithms, as the projection of an n-dimensional grid onto
+an n,1-dimensional subspace does not align on the grid
+boundaries of the n , 1-dimensional subspace. In fact,
+such projection is always of a looser granularity than the
+grid in the n,1-dimensional space. This can be easily ob-
+served in Figure 1. The projection of a grid in Figure 11
+overlaps with 9grids in Figure 12.Thelevelwise pruning in
+2 can still be adopted with one modi cation: given an n-
+dimensional grid g, if thesupport oftheunion ofthe n,1-
+dimensional grids that can cover the projection of g is below
+d , than g cannot be a dense grid. For example, if the
+support of the shaded area in Figure 12 is below d ,
+then the grid in Figure 11 cannot be dense. After nding
+all dense grids, dense regions, which serve as the basis for
+WAR generation, can be easily identi ed by a depth- rst
+traversal through neighboring dense grids similar to 2 .
+
+
+
+
+books
+(1)
+(2)
+fashion
+fashion
+sports
+sports
+
+
+
+
+Figure 1: Partitioning and Counter Pruning
+
+5. WAR GENERATION
+Given an n-itemset I = fi1;i2;:::;ing, there are poten-
+tially n di erent WAR formats because each item might
+serve as the right hand side. In order to search for the
+range associated with each item, we examine each dense re-
+gion sequentially. Given a dense region, if its support is
+below the required minsup threshold, we simply discard it,
+since no quali ed WAR can be generated from this dense
+region. Otherwise, we start from the minimum bounding
+box of the dense region. The minimum bounding box is the
+box with smallest volume which contains the dense region.
+In general, such a box itself may not satisfy the con dence
+requirement, but may contain dense boxes corresponding
+to quali ed WARs. Thus, we choose to shrink the mini-
+mum bounding box towards the maximum WARs. An al-
+ternative algorithm is to pick a grid and grow towards the
+maximum WARs. Since the maximum WARs usually have
+large volumes, shrinking towards a maximum WAR is gen-
+erally more e cient than growing towards it. To the best
+of our knowledge, this is the rst algorithm to use shrinking
+instead of growing in mining association rules or cluster-
+ing. A shrinkage is de ned as the action that reduces the
+span of a box over one dimension by exactly one base in-
+terval. At each step, a candidate box is chosen to perform
+a shrinkage to generate a new dense box that may serve
+as a candidate for further shrinkage at a later step. The
+process ends when the newly generated dense box meets the
+con dence requirement or all remaining candidate boxes fall
+to meet the support requirement. Without loss of general-
+ity, we assume that there is only one dense region. Fig-
+ure 2a is a dense region whose minimum bounding box
+is shown in Figure 2b, where the dark shaded grids and
+light shaded grids are dense grids and non-dense grids, re-
+spectively. For each item, the range of its weight can be
+
+
+
+272
+
+shrunken towards twodirections: increasing the lowerbound
+or decreasing the upperbound. Thus, there are 2n di erent
+shrinkages applicable to a weighted n-itemset. As a result,
+2n new weighted n-itemsets can be generated. Since these
+new weighted item sets are produced by one shrinkage from
+the original weighted itemset, we call them the immediate
+specializationsofthe original weighted itemset. Theoriginal
+weighted itemsetisanimmediategeneralizationofthesenew
+weighted itemsets. Figure 2c shows the six di erent direc-
+tions toshrink a weighted 3-itemset and their corresponding
+outcomes.
+
+
+
+
+dimension
+3
+
+
+
+
+dimension 1
+
+
+dimension
+2
+
+
+(1)
+dimension
+3
+
+
+
+
+dimension 1
+
+
+dimension
+2
+
+
+(3)
+dimension
+3
+
+
+
+
+dimension 1
+
+
+dimension
+2
+
+
+(5)
+dimension
+3
+
+
+
+
+dimension 1
+
+
+dimension
+2
+
+
+
+(a) original dense region
+dimension
+3
+
+
+
+
+(d) multiple shrinkage paths
+dimension 1
+
+
+dimension
+2
+
+
+
+(b) minimum bounding box
+
+
+
+
+dimension
+3
+
+
+
+
+dimension 1
+
+
+dimension
+2
+
+
+(2)
+dimension
+3
+
+
+
+
+dimension 1
+
+
+dimension
+2
+
+
+(4)
+dimension
+3
+
+
+
+
+dimension 1
+
+
+dimension
+2
+
+
+(6)
+
+
+
+
+dimension
+3
+
+
+
+
+dimension 1
+
+
+dimension
+2
+
+
+(1)
+dimension
+3
+
+
+
+
+dimension 1
+
+
+dimension
+2
+
+
+(2)
+(c) different ways to shrink
+
+
+
+
+Figure 2: Region shrinkage
+
+Clearly, each dense box can be reached by a set of shrink-
+ages from the minimum bounding box of the dense region.
+Assuming that we can only perform one shrinkage on one
+candidate box at a time, the entire process can be viewed as
+a sequence of operations Bj;Hj j =1;2;::: where Bj is
+a candidate box and Hj is a shrinkage along some direction.
+Let j be the set that includes the minimum bounding box
+of the dense region B1 and all boxes generated via opera-
+tions B1;H1;:::;Bj,1;Hj,1. j thus represents the set
+of candidate boxes for further shrinking available before
+the jth operation. Clearly, we have Bj 2 j at each step.
+The sequence stops when all WARs are generated. For the
+box Bj visited at the jth step, there exists a subsequence
+ofoperationsBj1;Hj1;Bj2;Hj2;:::;Bjr;Hjrsuchthat
+Bj
+1
+is the minimum bounding box of the dense region and
+Bjk istheboxproduced byperforming shrinkage Hj
+
+k,1
+on
+Bj
+
+k,1
+where 1 k  r and 1  j1 j2  jr j.
+Hj
+1
+;Hj
+2
+;:::;Hjr is a shrinkage path to Bj from the mini-
+mum bounding box of the dense region. Note that, at each
+step, there are multiple candidate boxes in j and di erent
+shrinking directions to choose from. As a result, di erent
+algorithms for picking candidate box and shrinking direc-
+tion canproduce di erent sequences ofoperations andhence
+could require di erent number of operations before all nec-
+essary WARs are generated. Therefore, the e ciency of an
+algorithm depends on the amount of time consumed at each
+operation and the number of operations needed.
+One possible approach is the brute force algorithm. Let 0j
+be j excluding those boxes which satisfy either of the fol-
+lowing conditions: 1 all of its immediate specializations
+are in j, or 2 it is a maximum WAR. At each step,
+the brute force algorithm randomly picks a box from 0j.
+The algorithm terminates when 0j =;. Thecomputational
+complexity of the brute force algorithm is O
+2nn
+npN
+.
+Therefore, this approach is indeed ine cient. Intuitively,
+this ine ciency is caused by the fact that a box may be
+visited multiple times via di erent shrinkage paths. This
+would lengthen the operation sequence and thus cause the
+ine ciency. For example, there are two paths to reach the
+box in Figure 2d2 from the box in Figure 2d1. One
+is reducing the upper bound of dimension 2" followed by
+reducing the upper bound of dimension 1", while the other
+is reducing the upper bound of dimension 1" followed by
+reducing the upper bound of dimension 2". The set of
+shrinkages of the two paths is the same. The only di erence
+is that di erent paths adopt adi erent permutation ofthese
+shrinkages. In general, if it takes b shrinkages to reach from
+box B0 from B where B0 is enclosed within B, then there
+exist b! di erent shrinkage paths. In order to eliminate the
+redundancy ofweighted itemset generation, weintroduce an
+ordered shrinkage technique. This guarantees that each
+weighted itemset is generated exactly once.
+
+Ordered Shrinkage
+We rst choose a permutation, referred to as , of 2n dif-
+ferent shrinking directions and retain this order during the
+entire process. For example, the six shrinking directions in
+Figure 2c can be ordered as increasing lowerbound of di-
+mension 1, decreasing upperbound of dimension 1, increas-
+ing lowerbound of dimension 2, decreasing upperbound of
+dimension2, increasinglowerboundofdimension3,decreas-
+ing upperboundof dimension 3. Then, during the shrinking
+process, a shrinkage of the kth direction in can be per-
+formed on a box B only if no shrinkage of direction after
+the kth one in has been performed to generate B. We
+call such shrinkage a valid shrinkage. For instance, if we
+take the box in Figure 2c4 as the candidate to gener-
+ate new weighted itemsets, according to the order we pick,
+three shrinking directions can be applied: decreasingupper-
+bound of dimension 2, increasing lowerbound of dimension
+3, and decreasing upperbound of dimension 3. As a result,
+the only valid shrinkage path from Figure 2d1 to Fig-
+ure 2d2 is reducing the upper bound of dimension 1"
+followed by reducing the upper bound of dimension 2". It
+is obvious that this ordered shrinkage approach completely
+eliminates the redundancy of box generation in the previous
+brute force approach, by providing each possible weighted
+itemset a unique shrinkage path from the root. The compu-
+tational complexity of the ordered shrinkage for one itemset
+is ON2. The detailed algorithm is shown in 4 .
+
+
+
+273
+
+0.04
+0.06
+0.08
+0.1
+0.12
+0.14
+0.16
+0.18
+0.2
+10
+1
+10
+2
+10
+3
+10
+4
+
+
+
+
+minsup
+Execution
+Time
+WAR
+QAR
+
+
+
+
+(a)
+0.04
+0.06
+0.08
+0.1
+0.12
+0.14
+0.16
+0.18
+0.2
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+
+
+
+
+minsup
+Overall
+Recall
+
+
+
+
+WAR
+QAR
+
+
+
+
+(b)
+0.04
+0.06
+0.08
+0.1
+0.12
+0.14
+0.16
+0.18
+0.2
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+
+
+
+
+minsup
+Overall
+Accuracy
+
+
+
+
+WAR
+QAR
+
+
+
+
+(c)
+
+
+Figure 3: WAR vs. QAR
+
+6. EXPERIMENTAL RESULTS
+We implemented our algorithm in C and executed it on an
+IBM AIX RS6000 machine with a 333 MHz CPU. The data
+was placed on a disk with approximate 8 MB s throughput.
+To analyze the performance of our proposed approaches, we
+generate the input data in a similar manner as in 1 . The
+data set contains 1 million transactions with 10000 di erent
+items. The number of items in a transaction is clustered
+around a mean 15 and a few transactions have many items.
+The volume of frequent weighted itemsets are also clustered
+around a mean 500. Refer to 4 for further information on
+data generation and additional experiments.
+The quantitative association rule QAR has been proposed
+for the general numerical attribute values that are associ-
+ated with every database record. Even though we are in-
+vestigating a di erent scenario, QAR is the only other ap-
+proach which we know that may be generalized to mine
+WARs. Therefore, we compare our approach with the QAR
+approach. In essence, the quantitative association rule ap-
+proach 3 rst quantizes the domain ofevery item, and map
+it into a binary value. Since at the beginning it is unknown
+that which items will appear in an itemset, all attribute do-
+mains have to be partitioned. If a numerical attribute is
+partitioned into intervals, then these intervals are mapped
+into
+2
++
+2
+items because each of the original intervals and
+the combined intervals is treated as a di erent item. For
+the synthetic dataset generated above, if the weight domain
+of each weighted item is partitioned into 20 intervals, then
+there are over 2 million binary items for the QAR approach.
+The QAR approach utilizes a parameter maxsup to reduce
+the resulting set of rules. It is clear that maxsup can im-
+prove the performance, but could potentially degrade the
+quality of the results signi cantly. To analyze the perfor-
+mance and quality of these two approaches, we set = 20
+and maxsup = minsup +0:2 for QAR. For the WAR ap-
+proach, the density d and the total number of grids N for
+each itemset are set to 1.5 and 1 million, respectively.
+The quality of the resulting rules is analyzed via two mea-
+surements: recall and accuracy. Since the datasets are gen-
+erated arti cially, we know the set R of all existing rules.
+First, we compute the volume of each rule r 2 R, denoted
+by Vr. For any rule set R0, the recall respectively, accu-
+racy of R0 with respect to R is computed as follows. For
+each r 2 R r0 2 R0, nd the rule r0 2 R0 r 2 R such
+that the overlap of r and r0 is the largest, i.e., Vr r0
+is the largest. Next, the individual recall accuracy of r0
+r with respect to r r0 is computed as
+V r r
+0
+Vr
+V
+r r
+0
+Vr
+0
+.
+The overall recall accuracy of R0 with respect to R is the
+average of the individual recalls accuracies for each r 2R.
+Figure 3a shows the average execution time of the two ap-
+proaches with respect to minsup. WAR on average is a cou-
+ple order of magnitude faster than QAR, even though the
+execution time of both approaches increases exponentially
+with decrease of minsup because the complexity is approx-
+imately linear to the number of counters, which usually in-
+creases exponentially with smaller minsup. Note that the
+Y-axis is in log-scale. Figure 3b shows the recall ratio
+of the two algorithms with respect to the minimum sup-
+port threshold. WAR has a signi cant higher recall value
+than QAR because a signi cant amount of important rules
+are pruned by the maxsup threshold in QAR. Finally, we
+examine the accuracy of the two approaches. The weight
+domain of each item in WAR is partitioned into much ner
+grids than that in QAR for 2, 3, and 4-itemsets for which
+most rules exist. As a result, with the ner partition, the
+WARapproach produces much moreaccurate rules than the
+QAR approach as shown in Figure 3c.
+
+7. CONCLUSION
+In this paper, we have investigated a new class of interest-
+ing problem: weighted association rules, which have wide
+implications. We proposed a two-fold approach, where the
+frequent itemsets are rst generated without considering
+weight and then the maximum WARs are derived using an
+ordered" shrinkage approach. Experimental results show
+thatourproposedapproach notonlyoutperformsdirectgen-
+eralization of previous work by an order of magnitude, but
+also produces better quality results.
+
+8. REFERENCES
+1 R. Agrawal and R. Srikant. Fast algorithms for mining
+association rules. Proc. 20th VLDB, 1994.
+2 R. Agrawal, J. Gehrke, D. Gunopulos, and P.
+Raghavan. Automatic subspace clustering of high
+dimensional data for data mining application. Proc.
+ACM SIGMOD, 1998.
+3 R. Srikant and R. Agrawal. Mining quantitative
+association rules in large relational tables. Proc. ACM
+SIGMOD, 1996.
+4 W. Wang, J. Yang, and P. Yu. E cient mining of
+weighted association rules WAR. IBM Research Report
+RC 2169297734,March, 2000.
+
+
+
+
+274
+

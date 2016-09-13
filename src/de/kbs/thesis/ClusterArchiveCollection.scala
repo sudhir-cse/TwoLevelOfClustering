@@ -23,14 +23,14 @@ import org.apache.spark.ml.clustering.KMeansModel
 
 object ClusterArchiveCollection {
   
+  val firstLevelClustersNum: Int = 5
+  val firstLevelClusterMaxItr: Int = 50
+  
+  val secondLevelClustersNum: Int = 3
+  val secondLevelClusterMaxInt: Int = 50
+  
   def main(arg: Array[String]): Unit = {
-    
-    val firstLevelClustersNum: Int = 5
-    val firstLevelClusterMaxItr: Int = 50
-    
-    val secondLevelClustersNum: Int = 3
-    val secondLevelClusterMaxInt: Int = 50
-    
+     
   //Create spark session with the name 'Clustering in Archive Collection' that runs locally on all the core 
 		val spark = SparkSession.builder()
 		 	.master("local[*]")
@@ -48,6 +48,8 @@ object ClusterArchiveCollection {
 		
 		//Compute K-means model Hierarchy
 		computeModelHierarchy(spark, preProcessedTrainingData, firstLevelClustersNum, firstLevelClusterMaxItr, secondLevelClustersNum, secondLevelClusterMaxInt)
+		
+		computeTopicsHierarchy(spark)
 		  
    spark.stop()
     
@@ -73,7 +75,6 @@ object ClusterArchiveCollection {
 		val schema = StructType(fields)
 
 		//Apply schema to RDD
-		//This is input for pipeline
 		val trainingDF = spark.createDataFrame(tempData, schema)
 		trainingDF.show()
 
@@ -127,7 +128,7 @@ object ClusterArchiveCollection {
 		.setInputCol("stopWordsFiltered")
 		.setOutputCol("featuresTF")
 		.setVocabSize(100)
-		.setMinDF(5)
+		//.setMinDF(1)
 		.fit(dataset)
 		
 	 val tf  = tfModel.transform(dataset)
@@ -146,7 +147,7 @@ object ClusterArchiveCollection {
 	//now sort by weight
 	val sortedVocabAndWeight = vocabAndWeight.sortWith((tuple1, tuple2) => tuple1._2 > tuple2._2)
 	
-	sortedVocabAndWeight.foreach(println)
+	//sortedVocabAndWeight.foreach(println)
 	 
 	val impoTopics = sortedVocabAndWeight.map((tuple) => tuple._1)
 	
@@ -191,14 +192,14 @@ object ClusterArchiveCollection {
 		//save as temporary table to run SQL queries
 		firstLevelDF.createOrReplaceTempView("firstLevelTable")
 		
-		println("All the clusters are: ")
+		println("All clusters are: ")
 		//Iterate over all the clusters
 		for (clusterIndex <- 0 until firstLevelClustersNum ){
 		  
 		  val clusterDF = spark.sql(s"SELECT * FROM firstLevelTable WHERE clusterPrediction = $clusterIndex")
 		  
 		  //Drop the following columns as they are not needed for computing model for second level topics: featuresTF, featuresTFIDF and clusterPrediction
-		  val clusterDFWithRemovedFS = clusterDF.drop("featuresTF", "featuresTFIDF", "clusterPrediction")  //Dataset with removed features space
+		  val clusterDFWithRemovedFS = clusterDF.drop("featuresTF", "featuresTFIDF", "clusterPrediction")  //DataSet with removed features space
 		  //clusterDFWithRemovedFS.show()
 		  
 		  //compute features space for second level topic
@@ -221,12 +222,63 @@ object ClusterArchiveCollection {
 		  //Create a temporary table for each set of subtopics
 		  secondLevelKmeansModel.transform(tfidfForSLT).createOrReplaceTempView(s"secondLevelTable_$clusterIndex")
 		 
-		}
-		
-		spark.sql("SELECT * FROM secondLevelTable_0").show()
-		
+		}		
   }
+  
+  //Computes topics Hierarchy
+  //This method assume that temp
+  def computeTopicsHierarchy(spark: SparkSession): Dataset[Row] = {
+    
+    //Holds final topics tuple(mainTopic, subTopic)
+    var topicsSet: Set[(String, String)] = Set()
+    
+    for (firstLevelClusterIndex <- 0 until firstLevelClustersNum){
+      
+      val firstLevelClusterDF = spark.sql(s"SELECT stopWordsFiltered FROM firstLevelTable WHERE clusterPrediction = $firstLevelClusterIndex")
+      val mainTopic = computeTopic(firstLevelClusterDF)
+      
+      //Iterate over all its sub-clusters
+      for(secondLevelClusterIndex <- 0 until secondLevelClustersNum){
+        
+        val secondLevelClusterDF = spark.sql(s"SELECT stopWordsFiltered FROM secondLevelTable_$firstLevelClusterIndex WHERE clusterPrediction = $secondLevelClusterIndex")
+        val subTopic = computeTopic(secondLevelClusterDF)
+        
+        topicsSet = topicsSet+((mainTopic, subTopic))
+      } 
+    }
+    
+    println("List of First level topics are :-")
+    topicsSet.foreach(println)
+     
+    val topicsDF = spark.createDataFrame(topicsSet.toSeq).toDF("MainTopic", "SubTopic")
+    val sortedTopicsDF = topicsDF.sort("MainTopic")
+    
+    println("Topic DataFrame: ")
+    sortedTopicsDF.show(false)
+   
+    return topicsDF
+   
+  }
+  
 }
+
+/*
+ * Important references:-
+ * 
+ * Tables:
+ * 
+ * Main   -   firstLevelTable
+ * 
+ * Second  -  secondLevelTable_$clusterIndex
+ * 
+ * Models:
+ * 
+ * First Level -  models/firstLeveTopiclModel
+ * 
+ * Second Level  -   models/secondLeveTopiclModel/subModel_$clusterIndex
+ */
+
+
 
 //+--------------------+--------------------+--------------------+--------------------+--------------------+--------------------+-----------------+
 //|            fileName|         fileContent|               words|   stopWordsFiltered|          featuresTF|       featuresTFIDF|clusterPrediction|

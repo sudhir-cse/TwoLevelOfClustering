@@ -1,0 +1,956 @@
+Active Learning using Adaptive Resampling
+
+
+Vijay S. Iyengar
+IBM Research Division
+T.J. Watson Research Center
+P.O. Box 218, Yorktown
+Heights, NY 10598, USA
+
+vsi@us.ibm.com
+Chidanand Apte
+IBM Research Division
+T.J. Watson Research Center
+P.O. Box 218, Yorktown
+Heights, NY 10598, USA
+
+apte@us.ibm.com
+Tong Zhang
+IBM Research Division
+T.J. Watson Research Center
+P.O. Box 218, Yorktown
+Heights, NY 10598, USA
+
+tzhang@watson.ibm.com
+
+
+ABSTRACT
+Classi cation modeling a.k.a. supervised learning is anex-
+tremely useful analytical technique fordeveloping predictive
+and forecasting applications. The explosive growth in data
+warehousing and internet usage has made large amounts of
+data potentially available for developing classi cation mod-
+els. For example, natural language text is widely available
+in many forms e.g., electronic mail, news articles, reports,
+andwebpagecontents. Categorization ofdataisacommon
+activity which can be automated to a large extent using su-
+pervised learning methods. Examples ofthis include routing
+of electronic mail, satellite image classi cation, and charac-
+ter recognition. However, these tasks require labeled data
+sets of su ciently high quality with adequate instances for
+training the predictive models. Much of the on-line data,
+particularly the unstructured variety e.g., text, is unla-
+beled. Labeling is usually a expensive manual process done
+by domain experts. Active learning is an approach to solv-
+ing this problem and works by identifying a subset of the
+data that needs to be labeled and uses this subset to gen-
+erate classi cation models. We present an active learning
+method that uses adaptive resampling in a natural way to
+signi cantly reduce the size of the required labeled set and
+generates a classi cation model that achieves the high ac-
+curacies possible with currentadaptive resampling methods.
+
+
+Categories and Subject Descriptors
+I.2.6 Arti cial Intelligence : Learning; I.5.1 Pattern
+Recognition: Models; H.2.8 Database Managemen t:
+Database Applications|data mining
+
+General Terms
+Data mining, machine learning, classi cation, active learn-
+ing, adaptive resampling
+1. INTRODUCTION
+Supervised learning methods are being used to build classi-
+cation models in various domains like nance, marketing,
+and healthcare 5 . Classi cation techniques have been de-
+veloped within several scienti c disciplines, including statis-
+tics, pattern recognition, machine learning, neural nets and
+expert systems 30 . The quality and the quantity of train-
+ing data used by these supervised methods is an important
+factor in the prediction accuracy of the derived models. In
+many applications, getting data with the class labels is dif-
+cult and expensive since the labeling is done manually by
+experts. A frequently cited example is electronic mail rout-
+ing based on categories. Training data is usually obtained
+bymanually labeling anumberofinstances ofmail. Another
+such example is categorizing web pages based on content.
+One approach to solving this problem is to select the data
+that need to be labeled such that a small amount of labeled
+training data su ces to build a classi er with su cient ac-
+curacy. Random sampling is clearly ine ective since thevar-
+ious classes can have very skewed distributions in the data
+and instances of the infrequent classes can get omitted from
+the random samples. Strati ed sampling 8 is a method de-
+veloped to address this problem with random samples. The
+unlabeled data is partitioned based on the attributes ofeach
+instance in the data. Sampling is done separately from each
+partition and can be biased based on the expected di culty
+in classifying the data in each partition. However, it be-
+comes more di cult to generate these partitions for high
+dimensional data and it is not clear how to e ectively ap-
+ply this approach on data typically seen in many real life
+applications.
+Activelearningis a term coined to represent methods where
+the learning algorithm assumes some control over the sub-
+set of the input space used in the modeling 9, 10 . In this
+paper, active learning will mean learning from unlabeled
+data, where an oracle can be queried for labels of speci c
+instances, with the goal of minimizing the number of ora-
+cle queries required. Active learning has been proposed in
+various forms 2, 10, 11, 12, 17, 23, 24, 27 . We will discuss
+in more detail the earlier works in active learning related to
+the approach used in this paper.
+One approach to active learning is uncertainty sampling in
+which instances in the data that need to be labeled are iter-
+atively identi ed based on some measure that suggests that
+the predicted labels for these instances are uncertain. Vari-
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+91
+
+ous methods formeasuring uncertainty have been proposed.
+In 22 , a single classi er is used that produces an estimate
+of the degree of uncertainty in its prediction. An iterative
+process then selects some xed number of instances with
+maximum estimated uncertainty for labeling. The newly
+labeled instances are added to the training set and a classi-
+er generated using this larger training set. This iterative
+process continues until the training set reaches a speci ed
+size. This method is generalized in 21 by using two clas-
+si ers, the rst one to determine the degree of uncertainty
+and the second one to do the classi cation. In this work, a
+probabilistic classi er was chosen for the rst task based on
+e ciency considerations and C4.5rule induction waschosen
+for the second task.
+Another related approach is called Query by Committee 27,
+16 . In one version of the query by committee approach
+two classi ers consistent with the already labeled training
+data are randomly chosen. Instances of the data for which
+the two chosen classi ers disagree are then candidates for
+labeling. The emphasis here has been to prove theoretical
+results about this approach.
+Adaptive resampling methods are being increasingly used
+to solve the classi cation problem in various domains with
+high accuracies 15, 7, 28 . In this paper, we use the term
+adaptive resampling to refer to methods like boosting that
+adaptively resample data biased towards the misclassi ed
+points in the training set and then combine the predictions
+of several classi ers. Various explanations have been put
+forth forthe classi cation accuracies achieved by these tech-
+niques 26, 18 . Adaptive resampling methods like boosting
+are also useful in selecting relevant examples even though
+their original goal was to improve the performance of weak
+learning algorithms 14 . The application of boosting to se-
+lective labeling has been suggested in 14 without algorith-
+mic details or experimental results. A related application of
+boosting to select a subset of labeled instances for nearest
+neighbor classi ers has beenexplored in 15 . Theclosest re-
+lated work 1 combines the Query by Committee approach
+with bagging and boosting techniques. In this paper we use
+a more general formulation that separates the two roles for
+a classi er in such approaches. This allows us to plug in dif-
+ferent classi ers including an oracle for one of these roles
+and gain additional insight on factors in uencing the results
+achieved. Other di erences between our method and 1 re-
+late to practical aspects in the application that impact the
+computational requirements and will be discussed later in
+the paper.
+This paper applies adaptive resampling to the active learn-
+ing task in a direct way that will be described in the next
+section. The goal is to retain some of the advantages of
+adaptive resampling methods, e.g., accuracy and robustness
+of the generated models, and combine it with a reduction in
+the required size of the labeled training set. Comparisons
+will also be made between using either one or two classi ers
+intheadaptive resampling framework 21 . Experimental re-
+sults using benchmarks from various domains are presented
+in thepaper to illustrate the thesizes ofthe labeled training
+sets needed to get adequate classi cation accuracy.
+2. DESCRIPTION OF OUR METHOD
+Adaptive resampling e.g., 15, 28  selects instances from a
+labeled training set with the goal of improving the classi -
+cation accuracy. The selection process adapts by biasing in
+favor of those instances that are misclassi ed by the ensem-
+ble of classi ers generated. We explore a direct application
+ofthis frameworktochoose which oftheunlabeled instances
+should belabeled in anactivelearning task. Since theactual
+labels are unknown for these instances in an active learning
+task, guessed labels generated by a classi er will be used
+instead.
+Method ALARInput: Unlabeled data U,
+Output: Labeled training set L,
+Output: Classi er C
+Choose initial subset to start process
+1 Select an initial subset S0 2 U.
+Label instances in S0. Remove S0 from U and add it to L.
+A subset of instances selected for labeling in each phase
+2 For each phase p
+3
+Guess labels G for each instance in U
+using classi cation method M1.
+Multiple rounds of adaptive resampling
+4
+Use adaptive resampling on training set L
+using classi cation method M2 to generate
+an ensemble E of classi cation models.
+Select subset of instances to add to training set
+for use by adaptive resampling in the next phase
+5
+Ifnot last phase
+6
+Select subset Sp 2 U using weights W
+calculated for each instance in U using G and E.
+Remove Sp from U and add it to L.
+Build combined classi er using voting
+7 Combine the ensemble E of classi cation models
+to form a resultant classi er C.
+endALAR
+
+Figure 1: Description of Active Learning using
+Adaptive Resampling comments are italicized
+
+Consider a moredetailed description ofthemethod ALAR
+given in Figure 1. It is assumed that apart from the unla-
+beled data U provided to the method, an expert is available
+to label any selected instance in U. The method produces
+as output a classi er C and a selectively labeled training
+set L that might have other uses e.g., for use by another
+classi er.
+Instances are selected from the unlabeled data U for label-
+ing in an iterative process. The initial subset S0 is typically
+chosen at random. Instances in S0 are labeled by the expert
+and moved from U to the labeled training set L statement
+1. Additional instances from U will be labeled and added
+to L in phases. In each phase, the labeled training set L
+is used by a classi cation method M1 to guess the labels
+G for the unlabeled instances in U statement 3. The set
+L with the instances labeled so far is used in an adaptive
+resampling framework using a classi cation method M2 to
+generate an ensemble E of classi cation models statement
+4. Many variations for adaptive resampling have been pro-
+posed and they di er in the details of weighting function for
+
+
+
+92
+
+resampling and the classi cation method used. The exper-
+imental results in this paper were generated using decision
+trees for the classi cation method M2. The resampling was
+done using the normalized version ofthe following weighting
+function wi for each instance i in L 28 :
+wi=1+errori3
+1
+where errori is the cumulative error for instance i over all
+the classi cation models in the ensemble E.
+The ensemble E of classi cation models is used with the
+guessed classes G for the unlabeled data to select more in-
+stances in U for labeling in the next phase statement 6.
+Intuitively, the weights W forselecting any instance in Ufor
+labeling should be biased towards those which are misclassi-
+ed in the ensemble E assuming the validity of the guessed
+class labels G. In our experiments, we use Equation 1 again
+to compute the weights W, but with the cumulative error
+being calculated using the guessed class labels G as refer-
+ence. A set of instances Sp is selected in each phase by
+sampling using the normalized version of weights W.
+Typically, the iterative addition of instances from U to the
+labeled set L could continue until a speci ed size of L has
+been reached or the model quality improvements taper o .
+The nal classi er C is generated by combining the classi -
+cation models in the ensemble E statement 7. We explore
+acouple ofvariations inthegeneration ofC.Inthe rstcase,
+all theclassi cation models inEarecombined. Inthesecond
+case, oncethelabeled training setLiscomplete, anewsetof
+classi cation models is generated using adaptive resampling
+with this complete set L earlier models in E are discarded.
+The second case corresponds to using our method to gen-
+erate a labeled training set L and then using the adaptive
+resampling method with L. In our experiments, we use un-
+weighted voting across the set of classi cation models being
+combined to produce the nal classi er C 7, 28 .
+Two variations of the ALAR method will be considered in
+the experiments discussed in the next section. In the rst
+approach, refered to as ALAR-vote-E, we combine using
+unweighted voting the ensemble of classi cation models E
+available in each phase for use as the classi cation model
+M1. This approach takes advantage of the reported e ec-
+tiveness of voting methods e.g., 15  in providing guessed
+labels. In the second approach, refered to as ALAR-3-nn,
+two distinct classi cation methods are utilized. A nearest
+neighbor method 3-NN is used for classi cation method
+M1. In both approaches decision trees are used for classi -
+cation method M2. The comparison of the performance of
+thesetwoapproaches isinteresting given earlier comparisons
+between one and two classi er methods e.g., 21 .
+Otherimportantparametersthatcanbevariedinthemethod
+in Figure 1 arethenumber ofphases, number ofpoints tobe
+selected forlabeling in each phase and the number ofrounds
+of adaptive resampling with the training set of each phase.
+Thevalues used forthese parametersin ourexperiments will
+be given in the next section along with other experimental
+details.
+3. EXPERIMENTS
+This section presents the results of applying our method
+to benchmarks in various domains. The rst benchmark
+internet-ads we will consider is based on an application to
+identify images that are Internet advertisements 6 . An ap-
+plication to remove advertisements after identi cation was
+evaluated usingthisbenchmarkbyitsdonorin 19 . Threeof
+the1558 featuresencode thegeometry oftheimage. Mostof
+theremaining binaryfeaturescaptureoccurrencesofphrases
+in the URL, the anchor text, and text near the anchor text.
+In this paper, only the 2359 records in the benchmark with-
+out any missing data are used. Theoriginal paper 19 using
+this data reported results using the accuracy measure. The
+skewed distribution of the two classes ad, nonad leads us
+to use instead the usual information retrieval measures of
+recall and precision for the more infrequent class ad. All ex-
+periments with this benchmark are done using 10-fold cross
+validation.
+In the rst experiment we will use random sampling to cre-
+ate training sets of various sizes. For each training set cre-
+ated, two types of classi cation models are constructed and
+evaluated against the test set. The rst type of model is
+a decision tree constructed using the tree package DMSK
+29 . The second type of model is created using adaptive re-
+sampling of the training set with 100 DMSK trees. Figure 2
+showstheresultsaveragedovertenexperimentsforeachpar-
+tition in the 10-fold cross validation. The arithmetic mean
+of precision and recall is the metric displayed. The results
+obtained for the single tree are comparable to the results
+presented in 19 . The quality of precision recall degrades
+substantially for the single tree from 89.4 to 71.3 when
+the randomly chosen training set size is reduced by a factor
+of ten to 212. On the other hand, adaptive resampling with
+the randomly chosen subsets AR-random is more robust.
+The precision recall metric for AR-random with the entire
+training data is 92.3, which is better to begin with. When
+the training set is cut in size randomly by a factorof ten the
+metric for AR-random degrades to 84.8. Many of the ear-
+lier works in active learning give comparisons with classi ers
+like the single tree case shown in Figure 2. However, with
+the prevalence and success of adaptive resampling methods
+now, it is moreinteresting to compare theaccuracy ofactive
+learning methods using AR-random as the baseline 1 .
+Theimprovement in prediction accuracybyusing theALAR
+method over AR-random is shown in Figure 3. The AR-
+random performance curve is repeated for comparison. The
+curves marked ALAR were achieved by using the ALAR
+method of Figure 1 with the following set of parameters. A
+total of 4 phases after the initial addition of S0 were used
+with equal number of instances being labeled in each phase.
+In each phase 25 rounds of adaptive resampling was done
+with the labeled training set available at that point. How-
+ever, for the last phase after all the additions to the labeled
+training set this was increased to 100 rounds of adaptive re-
+sampling. The combined classi er was obtained by voting
+over all the 200 trees in the ensemble. This set of param-
+eters was used for all the experiments in the paper except
+when noted otherwise.
+The curves ALAR-vote-E and ALAR-3-nn depict the re-
+sults achieved by two variations of the ALAR method. The
+
+
+
+93
+
+21
+53
+106
+212
+531
+2124
+30
+40
+50
+60
+70
+80
+90
+100
+
+
+
+
+Size of training set
+Average
+of
+Recall
+and
+Precision
+(percentage)
+AR-random -->
+
+
+
+
+<-- single tree
+
+
+
+
+Figure 2: Results using random sampling on benchmark internet-ads
+
+ALAR-vote-E curve was achieved by using the unweighted
+majority vote amongst the ensemble ofmodels E forclassi -
+cation method M1. The ALAR-3-nn curve was achieved by
+using 3-NN as the classi cation method M1. The results in
+Figure 3 indicate that there is a very slight loss of accuracy
+using ALAR-vote-E and ALAR-3-nn even when the train-
+ing set size is reduced by a factor of four. When further
+reductions are made in the size of the labeled training set,
+the accuracy of both methods ALAR-vote-E and ALAR-
+3-nn degrades, though it continues to remain better than
+AR-random. For this benchmark, ALAR-vote-E performs
+slightly better than ALAR-3-nn for most of the training set
+size range.
+Anotherinteresting curveplottedinFigure3iscalledALAR-
+oracle. This curve is achieved by using an oracle for classi-
+cation method M1. Obviously, this is not a practical solu-
+tion since the labels for instances in U will not be known.
+However, the ALAR-oracle curve can be used to assess the
+impact of the accuracy of the classi cation methods used
+for M1 e.g., 3-NN and vote-E on the ALAR method. The
+gap between ALAR-oracle and ALAR-vote-E ALAR-3-nn
+widens as the allowed size of the labeled set is reduced.
+This is caused in part by the quality of guesses in both
+ALAR-vote-E and ALAR-3-nn getting worse as the size of
+the labeled set available to them decreases. All the ALAR
+results can be impacted by changing the parameters for the
+ALAR method e.g.,number of phases, number of instances
+added for labeling in each phase. We have experimented
+with these parameters to some extent, but will use the same
+set of parameter values across all the benchmarks.
+The next benchmark we will consider is satimage from the
+UCI Repository 6 . This benchmark contains spectral val-
+uesforpixels inasatellite image 36attributes andthegoal
+is to predict the soil type 6 classes. The given training set
+has 4435points and thetestsethas2000 points. TheALAR
+method was applied with the same set of parameters as de-
+scribed earlier and the results averaged over 10 experiments
+on the given test set are plotted in Figure 4. As before the
+AR-random curve is used as the baseline and the goal for
+accuracy is that achieved by AR-random average error =
+8.54, = 0.17 with the entire training set of size 4435.
+Both ALAR-vote-Eand ALAR-3-nnachieve comparable ac-
+curacy with only 2217 labeled instances. With 2217 labeled
+instances ALAR-3-nn achieves average error = 8.83, =
+0.19, and ALAR-vote-E achieves average error =8.67,
+= 0.34. Interestingly, both ALAR-3-nn and ALAR-vote-
+E achieve accuracy similar to ALAR-oracle for much of the
+training set size range.
+TheALARmethodreferFigure 1producesalabeled train-
+ing set L of the speci ed size in addition to the classi er C.
+We explored the use of this labeled training set with this
+benchmark. Three di erent classi ers were used to compare
+three training sets: a ALAR-3-nn generated labeled set of
+size 2217, arandom subset ofsize 2217, and the entire train-
+ingsetofsize4435. Thethreeclassi ers were5-NN,adaptive
+resampling using 100 DMSK trees, and a single DMSK tree.
+Table 1 presents the average percentage errors and standard
+deviation in parenthesis over ten experiments. For this
+benchmark, the smaller labeled set produced by ALAR-3-
+nn can be used by these three classi ers to produce fairly
+accurate models when compared to the results using the en-
+tire training set. However, further investigations are needed
+to determine whether, in general, the labeled sets are useful
+with other classi ers.
+Thenextbenchmarkisletter-recognitionfromtheUCIRepos-
+itory 6 . The 16 attributes capture statistical moments and
+edge counts for the english alphabets in various fonts with
+the goal of determining the displayed alphabet 26 classes.
+The benchmark speci es a training set with 16K instances
+and a test set with 4K instances. The results of applying
+the ALARmethod are shown in Figure 5. Both ALAR-3-nn
+and ALAR-vote-E achieve the accuracy goal with only 8000
+labeled instances.
+ThelastbenchmarkusedistheMod-Aptesplit oftheReuters
+data set available from 20 . Only the top ten categories are
+considered. For each of them we solve the binary classi ca-
+tion problem of being in or out of that category. We used
+the notion of information gain 31 to select a set of 500 at-
+tributes for each of the ten binary classi cation problems.
+
+
+
+94
+
+21
+53
+106
+212
+531
+2124
+55
+60
+65
+70
+75
+80
+85
+90
+95
+
+
+
+
+Size of training set
+Average
+of
+Recall
+and
+Precision
+(percentage)
+-o- ALAR-oracle
+
+
+
+-*- ALAR-3-nn
+-.- ALAR-vote-E
+
+
+
+-x- AR-random
+
+
+
+
+Figure 3: Results using ALAR methods on benchmark internet-ads
+
+
+
+
+44
+110
+221
+443
+1108
+2217
+4435
+8
+10
+12
+14
+16
+18
+20
+22
+24
+26
+
+
+
+
+Size of training set
+Error
+(percentage)
+-o- ALAR-oracle
+-*- ALAR-3-nn
+-.- ALAR-vote-E
+-x- AR-random
+
+
+
+
+Figure 4: Results using ALAR methods on benchmark satimage
+
+This feature selection method requires labels and hence is
+not applicable for truly unlabeled data 21 . Also, a re-
+duction in the size of the labeled set in this experimental
+framework does not translate to a corresponding reduction
+in the labeled set needed for the Reuters classi cation prob-
+lem. However, this experimental framework has been used
+in earlier works 24 . An internally available decision tree
+package customized for text applications was used for this
+benchmark. As is customary with this benchmark, we use
+the micro-average measure 3 , in which the confusion ma-
+trices for the ten categories are added and overall precision
+and recall computed. Ten random runs were performed and
+the micro-average of the arithmetic mean of recall and pre-
+cision is given in Figure 6. Thereis only aslight degradation
+in the accuracy with just 960 labeled instances using either
+ALAR-vote-E or ALAR-3-nn method.
+
+4. DISCUSSIONS
+The experimental results in the previous section indicate
+that the ALAR-3-nn and ALAR-vote-E methods perform
+similarly on those benchmarks. Clearly, there is no ev-
+idence in our experiments to justify the added computa-
+tional cost of a separate classi cation method like K-NN
+for M1. ALAR-vote-E is a more natural and direct way
+to apply adaptive resampling to the task of active learning
+whencompared toALAR-3-nn. Onsomeofthe benchmarks
+internet-ads, reuters the ALAR method using the oracle
+does signi cantly better than ALAR-vote-E, especially for
+the smaller sizes of the training set. Part of the explanation
+forthisis thatthequality oftheguesses getworseasthesize
+of the labeled training set decreases. However, variations in
+the behavior across the various benchmarks require further
+investigation.
+It is hard to directly compare the results obtained using the
+ALAR methods with those obtained by earlier approaches
+to active learning. Clearly, the performance of any active
+learning method depends heavily on the benchmark and its
+usage. Earlier works on active learning also report signi -
+cant reduction in the required size of labeled training set.
+However, the baseline target accuracy is chosen di erently
+in each case. For example, in 21 the baseline target is
+
+
+
+
+95
+
+Classi er
+Random ALAR-3-nn
+Entire
+used
+subset
+generated
+training
+subset
+set
+size 2217 size 2217 size 4435
+5-NN
+10.88 0.47 9.79 0.17
+9.65
+adaptive
+resampling 10.09 0.38 8.63 0.23 8.54 0.17
+using trees
+Single tree 16.33 0.76 15.29 0.7
+14.8
+
+Table 1: Use of ALAR-3-nn generated subset with some classi ers and comparisons
+
+
+
+
+160
+400
+800
+1600
+4000
+8000
+16000
+0
+5
+10
+15
+20
+25
+30
+35
+40
+45
+50
+
+
+
+
+Size of training set
+Error
+(percentage)
+-o- ALAR-oracle
+-*- ALAR-3-nn
+-.- ALAR-vote-E
+-x- AR-random
+
+
+
+
+Figure 5: Results using ALAR methods on benchmark letter-recognition
+
+set by the accuracy achieved by C4.5 rules on the full la-
+beled set. As we have seen in Figure 2 adaptive resampling
+classi cation methods can signi cantly improve the baseline
+target over single tree classi ers. This has also been pointed
+out in the work in 1 which includes boosted results in the
+baseline.
+Adaptive resampling with trees is a computationally inten-
+sive process and the ALAR method inherits this computa-
+tional complexity if decision trees are chosen for the classi-
+cation method M2. The values for the parameters of the
+ALAR method were chosen in our experiments based on
+computational complexity and accuracy considerations. In-
+stances are chosen for labeling and added to the training
+set in phases. Each phase needs to have enough rounds of
+adaptive resampling to train the ensemble of classi ers ad-
+equately to the training set for that phase. Adding only
+one instance in each phase as in 1 would lead to too many
+phases and toomany rounds ofadaptive resampling. Hence,
+in our experiments the total number of rounds of adaptive
+resampling, which impacts the computational cost, wascho-
+sen to be comparable to earlier usage e.g., 15 . Having
+chosen this, the number of phases is determined based on
+trading o having enough rounds per phase for adaptive re-
+sampling versus having enough phases with ne grain con-
+trol for adding instances for labeling.
+As mentioned above, computational considerations lead us
+to select multiple instances for labeling in each phase. This
+opens up the issue of how these instances are chosen. One
+approach would be to extend the greedy method of picking
+one instance in 1 to picking multiple instances with the
+largest weights W in Figure 1. Instead, we have used a
+randomized method by creating a probability function us-
+ing the selection weights Equation 1 and using it to pick
+multiple instances without replacement. The comparison
+for the benchmark satimage is given in Figure 7. For this
+benchmark the probabilistic method ALAR-vote-E per-
+formsbetterthan thegreedy method Greedy-E forsmaller
+training set sizes. A plausible explanation is that picking
+multiple instancesinagreedyfashion maybeincluding more
+instances that are redundant for the modeling. Combining
+these methods to improve the selection process needs to be
+explored further.
+In practice, the active learning process would be stopped
+by detecting diminishing improvement in the quality of the
+models being built. Convergence detection has been studied
+for the case of random sampling by estimating the slope of
+the learning curve 25 . The learning curve may not be well
+behaved in the active learning case making this task more
+complicated. This also makes the more general problem
+of determining a good schedule for adding labeled points
+harder than the random sampling case 25 .
+There are other variations of this method still to be ex-
+
+
+
+
+96
+
+96
+240
+480
+960
+2400
+9600
+70
+75
+80
+85
+90
+95
+
+
+
+
+Size of training set
+Micro-average
+of
+(Recall
+and
+Precision)/2
+(percentage)
+
+
+
+-o- ALAR-oracle
+
+-*- ALAR-3-nn
+
+-.- ALAR-vote-E
+-x- AR-random
+
+
+
+
+Figure 6: Results using ALAR methods on the top ten categories of the benchmark reuters
+
+
+
+
+44
+110
+221
+443
+1108
+2217
+4435
+5
+10
+15
+20
+25
+30
+35
+40
+
+
+
+
+Size of training set
+Error
+(percentage)
+
+
+
+
+ALAR-vote-E ---->
+<---- Greedy-E
+
+
+
+
+Figure 7: Comparing greedy and probabilisticselection methods on benchmark satimage
+
+plored. Use of simpler classi cation methods for M2 will be
+explored in future work. A related problem with the use of
+decision treesnot addressed in this paper is thatofattribute
+selection forunlabeled data 21 . Anothervariation tobeex-
+plored is in the function e.g.,Equation 1 used foradaptive
+resampling relating importance of selecting an instance to
+some measure of error. The adaptive resampling literature
+has explored this and the related subject of over tting any
+noisy labels in the training set 4, 13, 18 . The concern over
+over tting of noise labels is not directly applicable in the
+active learning context since the error measure is computed
+using guessed labels.
+
+5. CONCLUSIONS
+Dealing with vast amounts of unlabeled data is a growing
+problem in many domains. We have presented a direct way
+of using adaptive resampling methods for selecting a subset
+of the instances for labeling. The experiments with vari-
+ous benchmarks indicate that this method is successful in
+signi cantly reducing the size of the labeled training set
+needed without sacri cing the classi cation accuracy when
+compared with a state-of-the-art method like adaptive re-
+sampling with trees.
+
+Acknowledgements
+We would like to thank the anonymous referees for their
+helpful comments.
+
+6. REFERENCES
+1 N. Abe and H. Mamitsuka. Query learning strategies
+using boosting and bagging. In Proceedings of the
+InternationalConference on Machine Learning,pages
+1 9, 1998.
+2 D. Angluin. Queries and concept learning. Machine
+Learning, 24:319 342, 1988.
+3 C. Apte, F. Damerau, and S. Weiss. Automated
+learning of decision rules for text categorization. ACM
+Transactions on Information Systems, 123:233 251,
+July 1994.
+4 E. Bauer and R. Kohavi. An empirical comparison of
+
+
+
+97
+
+voting classi cation algorithms: Bagging, boosting,
+and variants. Machine Learning, 36:105 142, 1999.
+5 M. Berry and G. Lino . Data Mining Techniques: For
+Marketing, Sales, and Customer Support. John Wiley
+and Sons, Inc., 1997.
+6 C. Blake, E. Keogh, and C. Merz. UCI repository of
+machine learning databases. University of California,
+Irvine, Dept. of Information and Computer Science,
+URL=http: www.ics.uci.edu mlearn -
+MLRespository.html,
+1998.
+7 L. Breiman. Arcing classi ers. The Annals of
+Statistics,263:801 849, 1998.
+8 W. Cochran. Sampling Techniques.John Wiley and
+Sons, Inc., 1977.
+9 D. Cohn, L. Atlas, and R.Ladner. Training
+connectionist networks with queries and selective
+sampling. In Advancesin Neural Information
+Processing Systems 2. Morgan Kaufmann, 1990.
+10 D. Cohn, L. Atlas, and R.Ladner. Improved
+generalization with active learning. Machine Learning,
+15:201 221, 1994.
+11 D. Cohn, Z. Ghahramani, and M. Jordan. Active
+learning with statistical models. Journal of Arti cial
+Intelligence Research,4:129 145, 1996.
+12 D. Cohn, Z. Ghahramani, and M. Jordan. Active
+learning with mixture models. In Multiple model
+approachesto modeling and control. Taylor and
+Francis, 1997.
+13 T. G. Dietterich. An experimental comparison of three
+methods for constructing ensembles of decision trees:
+Bagging, boosting and randomization. Machine
+Learning,402, August 2000.
+14 Y. Freund. Sifting informative examples from a
+random source. In Advancesin Neural Information
+Processing,pages 85 89, 1994.
+15 Y. Freund and R. Schapire. Experiments with a new
+boosting algorithm. In Proceedings of the
+InternationalConference on Machine Learning,pages
+148 156. Morgan Kaufmann, 1996.
+16 Y. Freund, H. Seung, E. Shamir, and N. Tishby.
+Information, prediction, and query by committee. In
+Advancesin Neural Information Processing Systems 5,
+pages 337 344. Morgan Kaufmann, 1992.
+17 Y. Freund, H. Seung, E. Shamir, and N. Tishby.
+Selective sampling using the query by committee
+algorithm. Machine Learning, 28:133 168, 1997.
+18 J. Friedman, T. Hastie, and R. Tibshirani. Additive
+logistic regression: A statistical view of boosting.
+Technical Report Technical Report, Stanford
+University, Dept. of Statistics, July 1998.
+19 N. Kushmerick. Learning to remove internet
+advertisements. In Proceedings of the Third
+InternationalConference on AutonomousAgents,
+pages 175 181, 1999.
+20 D. Lewis. Reuters 21578 data set.
+URL=http: www.research.att.com lewis -
+reuters21578.html.
+21 D. Lewis and J. Catlett. Heterogeneous uncertainty
+sampling for supervised learning. In Proceedings of the
+Eleventh International Conference on Machine
+Learning, pages 148 156, 1994.
+22 D. Lewis and W. Gale. A sequential algorithm for
+training text classi ers. In Proceedingsof the
+SeventeenthAnnual ACM-SIGR Conference on
+Research and Development in Information Retrieval,
+pages 3 12, 1994.
+23 R. Liere and P. Tadepalli. Active learning with
+committees for text categorization. In Proceedings of
+the Fourteenth National Conference on Arti cial
+Intelligence,pages 591 596, 1997.
+24 A. McCallum and K. Nigam. Employing em in
+pool-based active learning for text classi cation. In
+Proceedings of the Fifteenth InternationalConference
+on Machine Learning, pages 350 358, 1998.
+25 F. Provost, D. Jensen, and T. Oates. E cient
+progressive sampling. In Proceedings of the Fifth ACM
+SIGKDD InternationalConference on Knowledge
+Discovery and Data mining, pages 23 32, 1999.
+26 R. Schapire, Y. Freund, P. Bartlett, and W. Lee.
+Boosting the margin: A new explanation for the
+e ectiveness of voting methods. The Annals of
+Statistics,265:1651 1686, 1998.
+27 H. Seung, M. Opper, and H. Sompolinsky. Query by
+committee. In Proceedings of the Fifth ACM
+Workshop on Computational Learning Theory, pages
+287 294, 1992.
+28 S. Weiss, C. Apte, F. Damerau, D. Johnson, F. Oles,
+T. Goetz, and T. Hampp. Maximizing text-mining
+performance. IEEE Intelligent Systems and their
+applications,144:63 69, July August 1999.
+29 S. Weiss and N. Indurkhya. Data-miner software kit
+DMSK. URL=http: www.data-miner.com, 1998.
+30 S. M. Weiss and C. A. Kulikowski. Computer Systems
+that Learn. Morgan Kaufmann, 1991.
+31 Y. Yang and J. Pedersen. A comparitive study on
+feature selection in text categorization. In ICML'97,
+Proceedingsof the FourteenthInternationalConference
+on Machine Learning, pages 412 420, 1997.
+
+
+
+
+98
+

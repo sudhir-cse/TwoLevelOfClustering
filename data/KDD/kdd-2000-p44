@@ -1,0 +1,1553 @@
+Ongoing Management and Application of Discovered
+Knowledge in a Large Regulatory Organization: A Case
+Study of the Use and Impact of NASD Regulation's
+Advanced Detection System (ADS)
+Ted E. Senator*
+NASD Regulation, Inc.
+5 Choke Cherry Road
+Rockville, MD 20850
+senatort@nasd.com
+
+ABSTRACT
+This paper describes a case study of an ongoing, deployed, KDD
+application ­ NASD Regulation's Advanced Detection System
+(ADS), which monitors activity on the Nasdaq Stock Market ­
+from the perspective of how organizations and systems are
+impacted by the continuous long-term use of KDD in a dynamic
+domain. It discusses knowledge management techniques that have
+been developed for and applied to discovered knowledge. It
+points out special considerations resulting from the regulatory
+environment as well as general lessons applicable to all
+organizations that may come to rely on KDD as an integral part of
+their business operations. It describes our modifications to
+accepted KDD processes that are needed to account for the long-
+term use of KDD as part of a dynamic business environment.
+
+Keywords
+Case Study, KDD Application, KDD Process, Knowledge
+Management, Fraud Detection
+
+1.
+INTRODUCTION
+NASD Regulation's Advanced Detection System (ADS) is a KDD
+application that has been in continuous operational use since mid-
+1997. ADS is used to discover and detect patterns of regulatory
+interest in the trade, quotation (dealer and inside) and order data
+transactions in the Nasdaq Stock Market and other markets
+subject to NASD Regulation's jurisdiction. ADS generates
+"breaks," which are significant leads to potentially violative
+behavior, based on knowledge consisting of patterns representing
+approved regulatory criteria, and provides these breaks to market
+analysts for review, investigation, and when appropriate,
+regulatory action. Patterns are matched against transaction data
+which has been loaded, cleansed, transformed, summarized, and
+integrated. Breaks, patterns, and their supporting transactions are
+presented in graphical and textual visualizations for review and
+evaluation by market analysts and KDD specialists. ADS includes
+knowledge management components used by KDD specialists for
+specifying and maintaining the regulatory knowledge and for
+controlling the regulatory processing. Knowledge discovery
+components support two complementary efforts ­ (1) determining
+how best to detect instances of known or suspected types of
+violative behavior and (2) identifying unknown types of
+potentially violative behavior.*
+
+Successful use of ADS required development of a KDD
+process and associated procedures that fit our business and
+technical environments. Our process focuses on the ongoing
+management and application of discovered knowledge in ADS. It
+is a modified version of the commonly accepted KDD process
+model described in reference [2]. It de-emphasizes automated
+mining as a key to knowledge discovery and augments it with
+other tools that restructure transaction data, create new
+representations of complex sets of transactions, and use
+visualizations to present both patterns and underlying data to
+analysts so they can evaluate patterns by examining their results in
+the detection process. It is motivated by business needs for:
+·
+Integrated and ongoing detection and discovery on current,
+dynamic data
+·
+Support for multiple domains and users
+·
+Regular break evaluation, management, processing, and
+tracking
+·
+Policy approval and management acceptance of the business
+use of discovered knowledge
+·
+Periodic pattern evaluations and updates to reflect changes in
+market participant behavior, market structure, market data,
+and regulatory priorities
+·
+Equitable and equal treatment of all market participants
+·
+Full inclusion of and partnership with end users at all stages
+of pattern discovery, development, and deployment
+·
+Fit with organizational processes for development and
+operation of information systems
+
+This paper is organized as follows. Following this
+introduction, section 2 is a brief overview of ADS. Section 3
+describes ADS knowledge. Sections 4 and 5 describe the business
+
+
+*
+The views expressed in this paper are solely those of the author
+and do not represent an official policy statement of NASD
+Regulation, Inc.
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+44
+
+and technical environment driven additions and
+modifications to the standard KDD process that are
+used for ADS. Section 6 presents an overall KDD
+process model and section 7 concludes.
+
+2.
+ADS OVERVIEW
+This section provides an overview of ADS,
+emphasizing recent modifications. Reference [5]
+provides a complete description of ADS, including
+the
+business
+tasks,
+application
+components
+(especially the data warehouse, detection and
+discovery engines, and user interface), use and
+payoff, and development and deployment process.
+Key ADS milestones are listed in Table 1 and
+summarized in this section; details of the features
+are described in other sections of this paper.
+
+ADS components include a data warehouse of
+market information; additional data tables that
+represent and store not only the regulatory
+knowledge (i.e., patterns) but also a complete audit
+trail of break generation and disposition; programs
+that implement the standard KDD-process data
+preparation
+steps
+of
+loading,
+cleansing,
+transforming,
+summarizing, and integrating; data mining programs; pattern-
+matching
+detection
+programs
+for
+regulatory
+processing;
+knowledge management programs; specialized visualizations that
+depict market information and relationships; and graphical user
+interfaces for users, supervisors, and KDD analysts.
+
+ADS is organized into distinct domains, which correspond to
+distinct user groups, each of which may have its own business
+processes, is responsible for monitoring compliance with a
+specific set of market rules, and which has its own knowledge
+base (i.e., set of patterns). ADS began operations as a single
+domain in June 1997. Other domains have been added at various
+times thereafter. Adding domains involves development of a
+tailored break browser, additional data sources and/or attributes in
+the data warehouse, additional visualizations tailored to the
+domain's key attributes and relationships, and discovery of
+appropriate knowledge represented as detection patterns.
+
+In September 1997 ADS became one of the first production
+applications of Oracle 8. This conversion was necessary in order
+to take advantage of the ability to partition large data tables for
+performance and to use bit mapped indexes, for selection queries
+(for detection and discovery) and for ad-hoc user initiated OLAP
+type queries. In 1998 the application underwent a significant
+restructuring, with the separation of underlying components for
+detection, discovery, and knowledge management from the
+knowledge bases, data warehouse, data preparation programs, and
+user and system interfaces. This separation was enabled by the
+generalization of the underlying ADS discovery, detection, and
+knowledge management functions into a software suite known as
+the "KDD Explorer" toolkit by SRA International, Inc., NASD
+Regulation's software development contractor for ADS. Order
+data was added to trade and quotation data in a separate schema
+when it became available in March 1999. An additional
+application, the Enhanced Audit Trail, which combines trade,
+quote, and order data and shares the ADS data warehouse, was
+implemented to provide query functionality at the same time; its
+functions are gradually being integrated with the break detection
+and discovery capabilities. A separate environment for discovery
+tasks was established in September 1999 in order to remove
+complex and unpredictable jobs from the production environment.
+In 1999 a Knowledge Management Board was established to
+provide a mechanism for senior management to own and control
+ADS knowledge. An upgrade to a new version of KDD Explorer
+with significantly enhanced capabilities is scheduled for August
+2000.
+
+During ADS' operational use, volume in the Nasdaq market
+has exploded. In 1997 ADS processed approximately 900,000
+transactions (trades, quotes, and insides) per day; in early 2000
+this number had increased to between four and five million, with
+an additional 20 million order records. (See figure 1.) Coverage
+Table 1. ADS Milestones
+
+Date
+Milestone
+April 1996
+Proof of Concept initiated
+
+January 1997
+Full Scale Development initiated
+
+June 1997
+Late Trade Reporting domain operational
+
+July 1997
+Market Integrity domain operational
+
+Sept. 1997
+Oracle 8 Conversion
+
+January 1998
+Best Execution domain implemented
+
+May 1998
+KDD Explorer toolkit implemented
+
+January 1999
+ECN domain implemented
+
+Feb. 1999
+CQS AutoQuoting domain implemented
+
+March 1999
+Order Data included
+
+March 1999
+Equity Audit Trail implemented
+
+May 1999
+Knowledge Management Board established
+
+Sept. 1999
+Discovery Environment established
+
+May 2000
+DMA, L/X, LOD domains operational
+
+August 2000
+KDD Explorer 1.3 Upgrade
+0
+500,000
+1,000,000
+1,500,000
+2,000,000
+2,500,000
+3,000,000
+
+
+
+
+Feb-
+97
+Jun-
+97
+Oc
+t-
+97
+Feb-
+98
+Jun-
+98
+Oc
+t-
+98
+Jan-
+99
+Ma
+y-
+99
+Aug-
+99
+De
+c-
+99
+0
+200,000,000
+400,000,000
+600,000,000
+800,000,000
+1,000,000,000
+1,200,000,000
+1,400,000,000
+1,600,000,000
+1,800,000,000
+
+
+
+
+Quotes
+Trades
+Shares
+LT
+MI
+BE
+ECN&
+AQ
+EAT
+
+?
+Transactions
+(Trades/Quotes)
+Shares
+Nasdaq Volume
+
+
+
+
+Figure 1: Nasdaq Market Volume
+
+
+
+
+45
+
+has grown from just the Nasdaq market to include trades in the
+Over the Counter Bulletin Board and the Over the Counter market
+and trades and quotes in the Third market. Changes to Nasdaq
+trading and quotation systems have necessitated changes to the
+ADS data structures and corresponding modifications to the
+knowledge bases. ADS stores between six to nine months of
+market data on-line, depending on market volumes; the database
+currently occupies 2.5 TB and is growing.
+
+ADS is an example of a break detection system, a category of
+KDD application introduced in reference [3] and discussed in
+more detail in reference [7], which shares characteristics with the
+problem class called "activity monitoring" in reference [1]. Both
+these application classes deal with the challenges of changing and
+time-oriented data pointed out in reference [6].
+3.
+ADS KNOWLEDGE
+This section describes the components used to manage knowledge
+in ADS. It then describes the growth and change of knowledge
+during ADS' operational life. ADS knowledge consists primarily
+of explicit patterns and datasets used for regulatory break
+detection. ADS knowledge is described and organized according
+to terms defined in table 2. ADS knowledge is stored in a database
+schema, restricted to KDD specialists, providing seamless access
+to the knowledge, the market data, and the breaks, and an audit
+trail of changes to the knowledge. Because the regulatory function
+is subject to review and auditing by both internal and external
+groups, it is necessary to maintain a complete history not only of
+patterns but also of jobs. Some operational metadata is also stored
+and managed as knowledge to provide needed adaptability
+3.1
+Knowledge Management Components
+Knowledge management components are used by KDD specialists
+for discovery and validation of new knowledge, continuous
+validation and tuning of existing knowledge, retirement of
+obsolete knowledge, controlling and tracking the application of
+knowledge, and documentation and communication of knowledge
+to affected business and technical staffs. Each type of knowledge
+identified in Table 2 has a corresponding component for creation,
+modification, and review.
+3.1.1
+Scenarios and Patterns
+Use: All break detection knowledge in ADS is hierarchically
+organized in domains, scenarios, and patterns. Domains cover
+broad regulatory areas and consist of one or more scenarios.
+Scenarios refer to specific activities of regulatory interest and
+consist of one or more patterns, of either a rule or sequence type.
+Rule patterns detect aggregates of potential violations matching
+specified conditions, according to thresholds for support and
+confidence. Sequence patterns specify complex sets of market
+conditions which must occur in a specified time order. Pattern
+details describe both how to detect breaks and what variables and
+market data transactions to bind to detected breaks for display to
+analysts who review the breaks. Any modifications are made to
+new copies to preserve a complete audit trail of changes.
+Management: Figure 2 shows the Rule Analyzer, available to
+any user, with which rules may be entered or modified and
+interactively tested against portions of the market data. A version
+of this tool also runs as the Rule Editor, available to KDD
+analysts, with which rule scenarios and patterns may be entered or
+Table 2. ADS Terminology
+ADS Term
+Definition
+
+Domain
+A part of ADS corresponding to a specific
+user team, business process, regulatory rule,
+and knowledge base
+Scenario
+An ordered set of real world events
+
+Dataset
+An abstract view of selected, merged, and
+transformed data used for detection or
+discovery
+Pattern
+A representation of a scenario in terms of
+expected data values and relationships.
+Break
+A specific instance (match) of a pattern to
+the real-world data
+Job
+A specific execution match of a set of
+patterns against data for a specific time
+period
+
+
+
+
+Figure 2: Rule Editor / Analyzer
+Figure 3: Sequence Editor
+
+
+
+
+46
+
+modified on a permanent basis. Sequence
+patterns and scenarios are entered or modified via
+the Sequence Editor, shown in Figure 3.
+Sequence patterns describe a non-deterministic
+template match against an ordered sequence of
+market data transactions. Since these patterns can
+be quite complex, their creation and testing
+involves close interaction between the market
+analysts and KDD analysts. Sequence matching
+is, in fact, the key feature of ADS that enables
+detection of patterns of interest.
+3.1.2
+Datasets
+Use: Datasets define an abstract data layer which
+serves as the source of all input to break
+detection and displays in ADS. Some decisions
+may be made at this layer for performance
+reasons, e.g. filtering trades by size or late
+reporting status. Thus, dataset definitions are
+considered part of the break detection knowledge
+stored in the metadata.
+Management: A Dataset Editor allows KDD analysts to define
+data transformations needed for efficient use by the detection and
+discovery algorithms. An example is shown in Figure 4. In the
+figure the list of desired attributes is specified (projection), a
+source table is joined with summary tables, derived attributes are
+computed, and filters (selection) are defined. The definition of this
+transformation is stored in the metadata tables, and, if desired, a
+DB view is defined which implements the transformation.
+3.1.3
+Jobs
+Use: Jobs are stored with all parameters needed to execute them.
+During the execution, salient entities found in the input data are
+enumerated and stored in the run table. These are key identifiers,
+such as trading firms or securities issues, over which the pattern
+detection process iterates. Since much of the discovery is the
+result of trial runs of patterns over data, control and audit of jobs
+and job parameters is critical to the effective use of ADS for this
+type of manual discovery.
+Management: ADS provides job editors to assist in this task.
+The job editor allows KDD analysts to specify a set of patterns,
+date range and other parameters of the particular algorithm, and
+one or more datasets to define the source data for the break
+detection runs. Salient entities are also chosen to define how the
+total market is to be broken up for separate iterations of the
+algorithms. Figure 5 shows a portion of the routine jobs run for
+one domain of ADS over a period of less than a month.
+3.1.4
+Breaks
+Use: Breaks are detected instances of patterns in the input market
+data, aggregated summary data, or in previously detected breaks.
+They possess links to matched input and specific values of pattern
+variables bound during the match process. Since they are the
+focus of regulatory investigations, it is important to maintain them
+intact, as well as an audit trail of their creation and
+annotation by investigating analysts. Thus, breaks,
+matches, and variables are retained permanently, along
+with links to the patterns and jobs which detected them.
+Management:
+Breaks are created by break detection
+patterns, run either routinely or on an ad-hoc basis under
+control of jobs. The main window of the ADS GUI, called
+the Break Browser, is available to all users for viewing
+breaks and their details. Access to editors for updating
+status, comments, and dispositions of breaks is restricted to
+authorized analysts and their supervisors. Figure 6 depicts
+the break browser for the Late Trade Reporting Domain,
+displaying a Rule type break which has been selected.
+Details of the break (e.g. all the trades matched by either
+side of the rule) are available via menus in tabular form.
+Analysts may also group breaks for administrative clarity
+and convenience. However, they cannot alter the data, the
+matches, or any of the bound variable details resulting
+from the detection process.
+3.1.5
+GUI components
+Use: Display formats, attribute names, and break status
+codes are stored in the metadata for convenience in
+maintaining the software as user requirements change.
+Figure 4: Dataset Editor
+Figure 5: Sequence Job Editor
+
+
+
+
+47
+
+Management: These system components are currently maintained
+via the software control process. However, their storage in
+database tables allows for much more rapid modification as
+business requirements change in the dynamic environment in
+which ADS operates.
+3.1.6
+Break Management
+Use: ADS includes features for break management. A break
+grouping function allows for related breaks to be grouped for
+purposes of review and analysis. Break grouping occurs
+automatically in some domains (in which an individual break
+represents an individual instance of potentially violative behavior
+and for which it is desirable to review the breaks aggregated over
+time for specific market participants or issues). Break grouping
+may also be performed manually by analysts. Break assignment
+(to individual analysts) is available and used by
+some, but not all domains. Alternative methods of
+automatic break assignment are supported to
+conform to different business operational processes.
+For example, some groups assign breaks on a round-
+robin basis, others have analysts assigned to specific
+broker/dealer
+firms.
+Manual
+assignment,
+reassignment, etc. are also supported. After review,
+breaks may be closed, and closing reasons captured.
+These closing reasons are used to analyze the
+effectiveness of the patterns that create the breaks as
+part of the continual evaluation and feedback about
+the patterns in the knowledge base. A break deletion
+function is available; however, its use is tightly
+controlled. It is intended to eliminate breaks that
+were generated as a result of system or data errors
+and for which the breaks will be regenerated after
+the error is corrected. Breaks that were generated
+properly are never deleted as this would destroy the
+integrity of the regulatory audit trail.
+Management: These tables are maintained directly
+by the users through the application software, except
+for break deletion, which is operated as a controlled
+batch-job.
+3.2
+Knowledge Growth and Change
+Knowledge in ADS is measurable in three identifiable
+dimensions: (1) the amount of knowledge in the system, (2) the
+amount of knowledge that is used for detection, and (3) the
+number of resulting breaks. The amount of knowledge may be
+counted at different levels of abstraction ­ starting from the
+number of domains, continuing through the number of scenarios
+and patterns, and finally, at the most detailed level, the number of
+conditions in the patterns. These different levels of abstraction for
+measuring the amount of knowledge in ADS are all useful for
+different purposes, and do not correspond exactly because of the
+differing degrees of complexity that may be introduced when
+going from one level to another. The amount of applied
+knowledge measures the product of the amount of knowledge as
+applied to the number of transactions; it tells us how the
+knowledge is used. Finally, the number of breaks, which is
+typically broken down by domain and scenario, tells us
+how many potential violations are detected by the
+application of the knowledge to the data. The figures below
+show not only the cumulative growth in ADS knowledge
+but also the introduction and removal of knowledge,
+accomplished according to the knowledge management
+processes described later in this paper with the tools
+described in section 3.1.
+
+Figure 7 shows the changes in the number of
+scenarios in ADS over time, summed over all domains.
+Since each scenario represents a particular type of activity,
+growth in this knowledge dimension represents breadth of
+scope of surveillance. Similarly, Figure 8 shows the
+changes in the number of pattern match components.
+Because of the complexity of sequence patterns, individual
+"row match" elements are counted to measure the depth or
+specificity of the knowledge applied.
+
+Regulatory coverage can be measured by estimating
+the number of "Regulatory Operations (ROPs)" executed
+Figure 6: Break Browser
+
+
+
+
+-10
+0
+10
+20
+30
+40
+50
+
+
+
+
+Ju
+l-97
+Sep
+-97
+
+No
+v-
+97
+
+Ja
+n-98
+M
+ar-98
+Ma
+y-
+98
+
+Ju
+l-98
+Sep
+-98
+
+No
+v-
+98
+
+Ja
+n-99
+M
+ar-99
+Ma
+y-
+99
+
+Ju
+l-99
+Sep-99
+No
+v-
+99
+
+Ja
+n-00
+
+
+Months (7/97 - 2/00)
+Chan
+ge
+in
+Numb
+er
+ofScen
+ar
+ios
+Activated
+Deactivated
+Net
+
+
+
+
+Figure 7: Scenario Growth/Change in ADS
+
+
+
+
+48
+
+by break detection jobs. A ROP is defined as the application of
+one rule pattern or row component of a sequence pattern to one
+market data transaction. Figure 9 plots the number of MROPs
+(Million ROPs) over selected months. It depicts the coverage of
+ADS in regular jobs running production level break detection
+patterns.
+
+Regulatory Operations provide a measure of how much
+surveillance is being performed by ADS. It is a measure that is
+independent of the number of potential violations, a desirable
+feature because a goal of ADS is to increase the integrity of the
+marketplace, and fewer violations translates to an increase, rather
+than a decrease, in effectiveness. It scales with the transaction
+volume and with the addition of additional data sources. It also
+increases as the knowledge becomes more precise, decreasing the
+number of false positive breaks generated by the system.
+
+The number of detected breaks is one obvious natural
+measure of system activity and productivity; however, it can be
+highly misleading if not interpreted correctly. As patterns become
+more specific, and thus more precise, the number of breaks
+decreases, although the overall surveillance value increases. In
+addition, as surveillance proves effective, the regulated
+community alters its behavior by reducing the incidents of
+violations. Thus, a reduction in the number of breaks for a
+specific scenario is a success of the system. Removal of a
+pattern from regular use represents official recognition of the
+lack of need to surveill for a particular type of violative
+behavior that no longer occurs. On the other hand, the number
+of breaks can increase due to increases in market volume and
+increases in the number of domains, scenarios, and patterns in
+the system.
+
+Figure 10 shows overall numbers of breaks in ADS
+aggregated across all domains. The growth over time is caused
+primarily by the increases in market volume and the
+dominance in the aggregate figures of breaks representing
+specific instances of violations and which result from only a
+small number of the scenarios in the system.
+4.
+BUSINESS DRIVEN KDD
+PROCESS NEEDS AND SOLUTIONS
+This section discusses techniques we have developed and are
+applying to manage the knowledge in ADS. It discusses the
+ADS KDD process as stages in a knowledge life-cycle, from
+initial discovery and application thorough validation and
+approval, incorporation into the regulatory criteria, use in
+detection, ongoing enhancement, and, if warranted, retirement. It
+then describes our Knowledge Management Board which was
+established to ensure that ADS knowledge is being developed and
+applied in accordance with business needs. It also describes the
+"scenario and pattern" document we use to communicate
+knowledge to business and technical users.
+4.1
+Knowledge Life-Cycle
+Knowledge in ADS moves through four distinct phases, as it is
+discovered, applied, validated, and used. At each stage there is a
+well defined environment for the knowledge and for the process
+that is followed. At any given time, there are various scenarios in
+each stage. Transitions between stages require various approvals.
+The four stages are:
+·
+Analysis
+·
+Development
+·
+Experimentation/Validation
+·
+Deployment
+
+The first stage, analysis, begins with an identified regulatory
+need based on a regulatory responsibility and authority. A
+scenario of improper activity is hypothesized. Analysis attempts to
+answer the question "how can we most effectively surveill for the
+scenario?" by determining what data and techniques can be used
+to distinguish the relevant activity from the background of normal
+market activity. Business processes, available data sources, and
+surveillance tools are examined and evaluated. If it is determined
+that ADS can be used for surveillance of the particular activity,
+patterns may be hypothesized and tested to validate this
+conclusion. The development of these patterns involves the
+typical
+KDD
+steps
+of
+data
+selection,
+preprocessing,
+transformation, in addition to the iterative testing of sets of
+conditions that validate that a pattern can be effective. Small
+amounts of data are used (e.g., a few firms and/or issues over a
+small number of days). Analysis activities take place in a database
+under control of the KDD analysts, in which they can experiment
+-800
+-600
+-400
+-200
+0
+200
+400
+600
+800
+1000
+
+
+
+
+Ju
+l-97
+Sep
+-97
+
+No
+v-97
+Jan-
+98
+
+Mar-
+98
+
+May
+-98
+Ju
+l-98
+Sep
+-98
+
+No
+v-98
+Jan-
+99
+
+Mar-
+99
+
+May
+-99
+Ju
+l-99
+Sep
+-99
+
+No
+v-99
+Jan-
+00
+
+
+
+Months (7/97 - 2/00)
+Change
+in
+Num
+berof
+M
+atc
+h
+Comp
+one
+nts
+Activated
+Deactivated
+Net
+
+
+
+
+Figure 8: Pattern Conditions Growth/Change in ADS
+
+
+
+
+0
+500
+1000
+1500
+2000
+2500
+3000
+3500
+
+
+
+
+Selected Months (7/97 - 1/00)
+Millio
+n
+Regulat
+ory
+Operat
+io
+ns
+(M
+ROPs)
+
+
+
+
+Jul,199
+7
+
+
+Jan,
+1998
+Jul,199
+8
+
+
+Jan,
+1999
+Jul,199
+9
+
+Oct,
+1999
+Nov,1999
+Dec,1999
+Jan,
+2000
+
+
+
+
+Figure 9: Million Regulatory Operations in ADS
+
+
+
+
+49
+
+with appropriate attribute definitions and pattern specifications.
+The output of this process is typically a decision to develop ADS
+patterns to surveill for the scenario of interest. Another output
+may also be requirements for enhancements to the ADS
+application itself, for additional data elements, displays, or even
+enhancements to the pattern specification language.
+
+Once it is determined to proceed to the second stage, pattern
+development begins in the ADS Discovery environment. Market
+analysts with expertise in the domain work in conjunction with
+the KDD analyst to determine the appropriate conditions for the
+patterns. Typically, several weeks to a month of data is used at
+this stage, and all firms and issues are evaluated. This larger
+amount of data ensures that the pattern is valid across the entire
+market and over time. During this stage we use the data attributes
+that will be available in the application when the pattern is
+installed in the production system. Results are examined and
+analyzed, and an iterative process of modification begins until a
+pattern capable of distinguishing the activity of interest emerges.
+Data mining may also be applied as part of this process to
+determine attributes of the scenario of interest. This process
+continues iteratively until the pattern is deemed to cover the all
+violations of interest number of potential violations with an
+acceptable number of "false alarms." It is a general practice to
+begin pattern development with a fairly loose set of parameters as
+the set of candidate breaks that are generated will be likely to
+contain all the real examples of potential violations. We can then
+examine the distributions of real and false breaks as a function of
+each parameter and determine the appropriate thresholds for
+distinguishing real and false breaks.
+
+When a pattern is yielding acceptable results, it is inserted
+into the regular ADS detection job stream. This insertion requires
+approval by the application software Configuration Control Board
+because it impacts production operations. Performance metrics
+from the discovery environments and analyses such as the result
+of Oracle "explain plans" that indicate how data queries are
+decomposed are included in the information presented to the
+CCB. When the CCB approves insertion of the pattern into the
+job stream, it is given a status of EXP, or experimental. Including
+the pattern in the regular job stream provides continuous results to
+the end users who will be responsible for the breaks generated by
+the pattern. It allows them to evaluate the pattern in a real
+environment, with live data. Note that at this point the datasets do
+not remain fixed, so the validity of the patterns in the dynamic
+market environment can be evaluated. Additional pattern
+modifications may be made during this stage of a pattern's life.
+
+After the pattern has been providing consistently valuable
+results for at least a month, the domain experts and the KDD
+specialist recommend promotion of the pattern from EXP status to
+BRK status. BRK status indicates that the pattern is producing
+results of regulatory value on a regular basis and that Market
+Regulation is formally responsible for processing all breaks that
+are generated by the pattern. This promotion requires approval by
+the Knowledge Management Board (KMB).
+
+As a pattern is used during normal operations, and as the
+resultant breaks are analyzed and investigated, suggestions for
+further tuning of pattern definition emerge. These suggestions are
+evaluated in the Discovery environment so the results of the
+proposed modifications may be compared to the results from the
+unmodified patterns in production. At least two common weeks of
+breaks must be generated and compared in order to accept
+changes to patterns in production. Changes are implemented in
+production after approval from both the CCB (because the change
+could impact job performance) and with the approval of two
+Knowledge Management Board members ­ the business manager
+with responsibility for the domain and the KDD Team Director.
+These last two approvals ensure the business and technical quality
+of the proposed change. A full meeting of the KMB is not
+required because the need for these changes occurs more
+frequently than monthly scheduled meetings.
+
+During normal regulatory operations, investigations and
+cases result which may lead to enforcement actions of various
+types. Typically, as firms become aware of these investigations
+and enforcement actions, they modify their behavior so as to
+reduce or eliminate the improper behavior. This deterrent effect is
+a key benefit of the surveillance, as it results in a market that is
+more fair to all participants. As the behavior is reduced, the need
+for comprehensive surveillance may also ebb. Alternative means
+of surveillance may also be developed. Lack of breaks on an
+ongoing basis indicates that the type of behavior which a pattern
+can detect is no longer occurring in the market. A pattern may be
+proposed for retirement if it is no longer needed. Pattern
+retirements require KMB approval.
+4.2
+Knowledge Management Board
+The Knowledge Management Board (KMB) was established to
+provide a mechanism for explicit business ownership of the ADS
+knowledge. Since the knowledge is the organization's criteria for
+detecting potentially violative behavior, it must be not only valid
+from a significance perspective but also officially approved as a
+criterion for detection for conformance with market rules,
+regulatory policies, and management priorities. The KMB is
+chaired by the Executive Vice President of the Market Regulation
+Department. Its members consist of his direct reporting managers
+responsible for the business areas which use ADS and other key
+staff including the Director of Business Information Management,
+the Director of the KDD team, the Director of Compliance, and
+the Program Manager for ADS. The KMB ensures that ADS
+knowledge in ADS reflects regulatory policies, it establishes
+priorities for knowledge discovery tasks, it ensures consistency
+and coordination across domains, and, finally, is the customer for
+newly discovered knowledge. (By definition, previously unknown
+types of potentially violative behavior do not have a business unit
+0
+20000
+40000
+60000
+80000
+100000
+120000
+
+
+
+
+Jul,19
+97
+
+
+Jan,
+199
+8
+
+
+Aug,
+19
+98
+
+
+Jan,
+199
+9
+
+Jul,19
+99
+Oct,19
+99
+Nov,19
+99
+Dec,19
+99
+
+
+Jan,
+200
+0
+
+
+
+
+Selected Months (7/97 - 1/00)
+Ove
+rallNumb
+er
+ofBreaks
+
+
+
+
+Figure 10: Monthly ADS Breaks
+
+
+
+
+50
+
+responsible for surveillance; as the customer for this new
+knowledge, the KMB can determine appropriate actions and
+assign responsibilities.) KMB approval is required to initiate
+work on new scenarios, to promote a scenario to BRK status,
+and to retire a scenario.
+
+The KMB processes and procedures have evolved since it
+was established in mid-1999. We initially thought that it would
+be used solely in a decision making capacity; however, we
+quickly realized that it was an effective knowledge distribution
+channel as well. For this reason, we implemented a standing
+procedure whereby one domain of ADS is reviewed in detail at
+each meeting. This review includes the regulatory actions
+resulting from each of the scenarios and establishment of
+priorities for future efforts.
+4.3
+Domain Meetings
+Because ADS is used and enhanced on a regular basis, weekly
+meetings are conducted with each domain team. The KDD
+analyst with primary responsibility for the domain conducts the
+meeting. These meetings are the primary setting at which the
+iterative discovery process is conducted. The domain team and the
+KDD specialist jointly review breaks and analyze the effects of
+pattern conditions and parameters on the quality of the breaks.
+They determine when patterns are ready for transition between
+stages and make recommendations to the appropriate approval
+authority. Meeting discussions are documented so as to have a
+record of all discussions and the rationale for recommendations.
+These meetings are also used to communicate regulatory actions
+being undertaken as a result of ADS breaks, to perform detailed
+requirements analysis for new data elements or software, and to
+update users on programmatic concerns and issues.
+4.4
+Scenario and Pattern Documentation
+While the business users of the knowledge contained in ADS are
+the analysts, attorneys, and managers in the Market Regulation
+Department of NASD Regulation, there are many others who are
+impacted by it. In order to communicate the regulatory knowledge
+to affected parties, a single document called the ADS Scenario
+and Pattern (S&P) document has been created. It is produced and
+maintained by the KDD team. It is also useful for describing the
+ADS knowledge from different perspectives than a simple printing
+out of the patterns in their formal representation. The S&P
+document supplements our software artifacts. The business
+objective, scenario description, and pattern change histories are
+used by the KMB and other business analysts. Ideas for tuning
+and future development are used to set work priorities. Technical
+staff use the lists of data sources and bound variables to determine
+impacts of changes to data elements on the patterns and of
+patterns
+on
+displays
+and
+downstream
+systems.
+Planned
+improvements to the scenario and pattern document will include
+performance analyses of patterns and business results from the
+patterns. Because scenarios and patterns are updated continually,
+the document is issued on a regular schedule. Between formal
+versions, a working copy is updated as necessary.
+
+The S&P document is organized by domain and by scenario.
+Standard subsections corresponding to the scenario and pattern
+lifecycle in ADS are included for each scenario. Subsections
+corresponding to a scenario that has not yet reached a particular
+point in the lifecycle are simply not present. Key milestones in the
+scenario/pattern lifecycle are also tracked in the S&P document.
+Because of the organization of the business users of ADS, the two
+level structure of domains and scenarios is appropriate. The
+contents of the document reflect the needs of its users ­ when a
+need is identified by a particular group for information about ADS
+scenarios and patterns, a subsection is added to the S&P
+document to meet that need. Having a single document with all
+relevant information instead of a set of potentially overlapping
+documents, each of which is customized to a particular audience,
+is easier to create and maintain, and requires only that when a
+particular audience for the document reviews it that they focus
+only on the sections of interest to them. Since the document is
+maintained electronically, this cost is minimal.
+5.
+TECHNOLOGY DRIVEN KDD
+PROCESS NEEDS AND SOLUTIONS
+Because ADS knowledge is used in a regular production
+application, processes for managing it must correspond to
+processes used to manage software and operate our information
+processing systems. This section discusses impacts to our
+information systems and processes resulting from the use of ADS.
+5.1
+Software Engineering Processes
+The ADS application is managed according to NASD's software
+engineering processes. These include processes for system
+development, system changes, and system operations. The
+knowledge discovery and management functions in ADS must
+function in conjunction with these software engineering
+processes. Results of the analysis phase of the knowledge
+management process may provide inputs to the software
+development processes as requirements for changes to the
+detection or discovery engines or the knowledge management
+components or as requirements for data loading, cleansing,
+integration, summarization or transformation. Pattern changes,
+including especially introduction of new patterns to the
+production environment, because they impact production capacity
+(storage and processing), require software configuration control
+board
+approval.
+Conversely,
+the
+knowledge
+management
+processes are dependent on and constrained by the software
+processes in terms of the available resources, operational
+constraints
+on
+job
+scheduling,
+backups,
+archiving,
+and
+maintenance, and by the available indexes and views of the
+database. In general, it is beneficial for us to be able to manage
+ADS as a knowledge-based system using the responsive
+Background
+Knowledge
+
+
+
+
+Multiple
+Data Sources
+Integrated
+Data
+Patterns
+Approved
+Patterns
+(Knowledge)
+
+
+
+Load and Integrate Data
+Compute Derived Attributes
+Link Records
+Create Summaries
+Develop Patterns:
+Automated Mining and
+Manual Discovery
+Evaluation
+
+
+
+
+Enhanced &
+Transformed
+Data
+
+
+
+
+Figure 11: Modified Standard KDD Process
+
+
+
+
+51
+
+knowledge management processes in order to meet business needs
+for flexibility and response. However, when performance
+considerations take precedence over flexibility and adaptability,
+implementing a specific feature by computing an attribute as part
+of the data preparation or transformation is more efficient.
+
+When new versions of ADS are released, regression testing is
+conducted by the Quality Control staff to ensure that various
+functions still operate as they should. For the detection jobs, it is
+necessary to maintain a fixed set of data with known results to use
+for the regression testing in order to ensure not only that
+unmodified patterns still execute but also that they provide the
+same results on the same data.
+5.2
+Environments
+When ADS was designed and first deployed, it was anticipated
+that the same database instance would serve to support discovery
+and detection operations. In fact, ADS contains functions for
+"promoting" discovered patterns into the regular detection stream
+on either an individual or organizational basis. However, the
+processing capacity needed for complex analytical queries
+generated by automated data mining or even by manual
+experimentation with patterns was so significant that it could not
+be supported in the same environment as the regular ADS data
+loads, transformations, and detection jobs, combined with end-
+user reviews and queries. To resolve this issue, we established a
+separate discovery environment which is updated monthly and
+contains a replica of the ADS market data. It does not contain the
+production generated breaks and the patterns; rather, it has
+versions of patterns and breaks that result from the pattern
+development step in the knowledge management process. Because
+market analysts participate so extensively in this process, they
+have access to the discovery environment as well. We also have a
+third environment used for analysis which is populated on an ad-
+hoc basis by the KDD analysts for each project.
+
+ADS detection jobs are run on a regular basis against the
+most recent market data which must be selected from the
+warehouse containing a much larger data volume. This selection
+of the most recent data shortly after it has been loaded is an
+expensive operation. This has led to the development of a
+"breakmart" which would contain only the most recent market
+data and would be used for the detection jobs only. After the
+detection jobs are run against the breakmart data, it would be
+emptied and updated with new data. The patterns that are used
+against the breakmart would be those in the permanent data tables
+and the breaks would be stored back into the permanent tables as
+well.
+5.3
+System Dependencies
+ADS was originally conceived as a system with no downstream
+dependencies. However, since it became operational, a "report
+card" containing various market participant statistics has been
+developed. Included in these statistics are ADS breaks for some
+scenarios and domains. This has led to two types of dependencies:
+system-level and knowledge-level. At the system level, we must
+be careful when changing patterns whose breaks are included in
+the report card so as not to alter bound variables or other
+parameters which determine inclusion. At the knowledge level, a
+more subtle tradeoff has arisen. When we improve a pattern, a
+discontinuity in the number of breaks can result. This may cause
+report card users to misinterpret the reported results.
+6.
+KDD PROCESS FOR ONGOING,
+DYNAMIC DOMAINS
+This section presents the overall ADS KDD process model. It
+modifies and augments the commonly accepted KDD process
+model described in reference [2], shown in modified form as
+figure 11. Modifications are: explicit recognition of multiple data
+sources and an associated integration step, removal of a data
+selection step (since we do not sample), specialization of the
+preprocessing and transformation operations, and addition of
+manual discovery with background knowledge to automated
+mining for pattern development.
+
+The overall KDD process model used in ADS augments the
+model depicted in figure 11 for detection and discovery purposes.
+It consists of two linked iterative loops which share common
+elements. Common elements in the two loops are identical, but are
+depicted twice for clarity. The first loop describes the knowledge
+discovery aspects of pattern development (i.e., the development
+and validation stages discussed in section 4.1) and the second
+loop the knowledge application aspects of break detection (i.e.,
+the deployment stage). The discovery loop is depicted in figure 12
+and the detection loop in figure 13. Steps added to figure 11 are
+outlined in bold. The loops interact at two key points, which are
+those for which KMB approval is required: (1) approved patterns
+which result from the discovery loop are inserted into the
+detection loop and (2) business needs identified in the detection
+Background
+Knowledge
+
+
+
+
+Multiple
+Data Sources
+Integrated
+Data
+Patterns
+Load and Integrate Data
+Compute Derived Attributes
+Link Records
+Create Summaries
+Develop Patterns:
+Automated Mining and
+Manual Discovery
+
+
+Evaluation
+
+
+
+
+Enhanced &
+Transformed
+Data
+Break Detection:
+Pattern Matching
+EXP Breaks
+Approved
+Patterns
+(Knowledge)
+Software and Data
+Requirements
+Business
+Need
+
+
+Software
+Engineering
+Processes
+
+
+
+
+Figure 12: ADS KDD Process -- Discovery
+
+
+
+
+Multiple
+Data Sources
+Integrated
+Data
+Load and Integrate Data
+Compute Derived Attributes
+Link Records
+Create Summaries
+Evaluation
+
+
+
+
+Enhanced &
+Transformed
+Data
+Break Detection:
+Pattern Matching
+BRK Breaks
+
+
+
+
+Regulatory
+Actions
+Review &
+Analysis
+Approved
+Patterns
+(Knowledge)
+Business
+Need
+
+
+
+
+Figure 13: ADS KDD Process -- Detection
+
+
+
+
+52
+
+loop initiate work in the discovery loop. The discovery loop also
+interacts with the software engineering processes.
+
+Key features of this combined model are the interaction
+between the discovery and detection functions which supports the
+continuous execution of both discovery and detection processes,
+the feedback to the software development process from the
+knowledge discovery process, and the use of the results of the
+software development process for the knowledge discovery
+process. It incorporates management reviews of discovered
+knowledge to ensure compliance with policies and priorities in
+addition to statistical validity. It explicitly evaluates discovered
+knowledge in terms of its use in a production system. It relies on
+available background knowledge and on tools which query and
+evaluate highly structured representations rather than on data
+mining algorithms which typically recognize only records and
+attributes. Our process does depend on the usual steps of data
+preparation and transformation to be a success, as well as on an
+extensive evaluation step. Most important, it retains and depends
+on the interactive and iterative nature of KDD.
+7.
+CONCLUSION
+ADS is a business success at NASD Regulation. It has
+significantly increased the effectiveness of the comprehensive
+surveillance of the Nasdaq Market from multiple perspectives and
+enabled the Market Regulation Department to perform better its
+functions thoroughly and effectively. ADS has required changes
+in business and technology processes because it makes our
+regulatory knowledge explicit and not only provides the
+opportunity for but also the necessity to manage and use our
+regulatory
+knowledge
+explicitly,
+consistently,
+and
+comprehensively.
+The integrated
+discovery and
+detection
+components in ADS provide the ability to make our regulatory
+criteria more effective at distinguishing activity of true regulatory
+interest from normal market activity. The ultimate measure of
+success of ADS is the effectiveness of the resultant regulatory
+actions taken, available at www.nasdr.com.
+
+Reference [4] discusses the unique challenges of managing
+inductive knowledge, concentrating on the validation and
+verification issues of managing statistical significance and
+inductive bias when KDD is applied over time. We have
+addressed the problem from a different perspective ­ that of its
+use in a large, regulatory organization in multiple domains.
+Incorporating its proposals for tracking the identity of data
+samples used and the candidate models considered in the
+inductive process into our business driven processes would be a
+further step forward in practical applications of scientifically-
+based KDD methods.
+
+From a KDD perspective, ADS has demonstrated the need
+for more thorough integration of KDD groups with business users
+on a continuing basis. It suggests that as KDD becomes an
+integral part of business operations, KDD staff are needed on an
+ongoing (as opposed to a project) basis to work in close
+cooperation with domain experts and end users.
+
+8.
+ACKNOWLEDGMENTS
+The entire KDD team in the Market Regulation has helped
+develop and implement the innovations described in this paper
+and are responsible for support of the ADS application and users.
+These people are: Henry Goldberg, Tomasz Dybala, Ping Shyr,
+Dennis Lee, Aung Aung Win, and Roger Brill. Henry Goldberg
+also contributed extensively to section 3 of this paper.
+Department Management who approved and use the policies,
+processes, and procedures described in the paper are Executive
+Vice President Stephen Luparello, Vice President Tom Gira,
+Directors Holly Lough, Jim Bohlin, and Susan Decker, and ADS
+Business Program Manager, J. Dale Kirkland. All managers and
+staff who use ADS contribute to the knowledge bases. The
+NasTech/EDS technical staff who develop, operate and support
+ADS include Len Gatrell and Randy Klarin and their teams. SRA
+International, Inc. designed and developed much of the original
+ADS application software. We would also like to thank Ed
+Morgan who was the ADS technology program manager during
+the time much of the work described in this paper was undertaken
+and who encouraged and enabled its accomplishment.
+
+9.
+REFERENCES
+[1] Fawcett, Tom and Provost, Foster., "Activity
+Monitoring: Noticing Interesting Changes in
+Behavior," in Proceedings of the Fifth ACM SIGKDD
+International Conference on Knowledge Discovery
+and Data Mining (KDD-99), pp. 53-62, ACM, 1999.
+
+[2] Fayyad, Usama et. al., "Knowledge Discovery and
+Data Mining: Towards a Unifying Framework," in
+Proceedings of the Second International Conference
+on Knowledge Discovery and Data Mining (KDD-96),
+pp. 82-88, AAAI Press, 1996.
+
+[3] Goldberg, Henry G. and Senator, Ted E., "Break
+Detection Systems" in AI Approaches to Fraud
+Detection and Risk Management, Technical Report
+WS-97-07, AAAI Press, 1997.
+
+[4] Jensen, David, "Unique Challenges of Managing
+Inductive Knowledge," in AI and Knowledge
+Management. AAAI Technical Report WS-97-09,
+AAAI Press, 1997.
+
+[5] Kirkland, James D., Senator, Ted E., et. al., "The
+NASD Regulation Advanced Detection System
+(ADS)," AI Magazine 20(1):55-67, 1999.
+
+[6] Piatesky-Shapiro, Gregory, et. al., "An Overview of
+Issues in Developing Data Mining and Knowledge
+Discovery Applications," in Proceedings of the Second
+International Conference on Knowledge Discovery
+and Data Mining (KDD-96), pp. 89-95, AAAI Press,
+1996.
+[7] Senator, Ted E. and Goldberg, Henry G., "Break
+Detection Systems." To appear in W. Kloesgen and J.
+Zytkow (eds.), Handbook of Knowledge Discovery and
+Data Mining, 2000.
+
+
+
+
+53
+

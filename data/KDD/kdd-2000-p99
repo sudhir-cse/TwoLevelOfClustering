@@ -1,0 +1,898 @@
+Efficient search for association rules
+
+
+Geoffrey I. Webb
+School of Computing and Mathematics
+Deakin University
+Geelong, Vic. 3217, Australia
+
+webb@deakin.edu.au
+
+
+
+ABSTRACT
+This paper argues that for some applications direct search
+for association rulescanbemoree cientthanthetwostage
+process of theApriori algorithm which rst ndslarge item-
+sets whic hare then used to identifyassociations. In par-
+ticular, it is argued, Apriori can impose large computa-
+tional overheadswhen the number of frequen titemsets is
+very large. This will often be the case when association rule
+analysis is performed on domains other than basket analy-
+sis or when it is performed for basket analysis with basket
+information augmented by other customer information.An
+algorithm is presented that is computationally e cient for
+associationruleanalysesduringwhichthen umberofrulesto
+be found can be constrained and all data can be maintained
+in memory.
+
+Categories and Subject Descriptors
+H.2.8 DatabaseManagement: DatabaseApplications|
+datamining;I.2.6 Arti cialIntelligence : Learning;H.3.3
+InformationStorageandRetrieval: InformationSearch
+and Retrieval
+
+General Terms
+Association Rule, Search
+
+1. INTRODUCTION
+The Apriori algorithm 2 and its derivatives 15, 11, 17
+have become the de facto standard for discovering associa-
+tion rules. This paper presents an alternative approach to
+association rule discovery that may be more e cient when
+all data can be retained in memory and the number of can-
+didate itemsets cannot be adequately constrained by con-
+sidering individual itemsets in isolation. Given the current
+availability of very large memory machines, many potential
+applications of the new algorithm may satisfy the rst con-
+straint. Many data miners will consider their time more
+valuable than the cost of a few extra gigabytes of memory.
+The Apriori algorithm relies on constraining the number
+of itemsets by considering features of itemsets in isolation,
+most commonly, by placing a lower limit on the frequency
+of an itemset, below which itemsets will not be considered.
+This is often feasible for simple basket analysis, as few com-
+binations of products will be bought together in large quan-
+tities. Ho wever,even for bask etanalysis, the numbers of
+frequen titemsetsmayrapidlyincreaseifsimplebasketanal-
+ysisisaugmentedbyconsideringsocio-economic orotherat-
+tributes of the customers. Augmenting simple basket anal-
+ysis in this way can add much to the ric hness of the knowl-
+edge gained. Ho wever,if a customer description attribute
+is common to 50 of the customer base then that attribute
+will occur frequently with a large number of item combina-
+tions. Add a number of suc h attributes to the analysis and
+the number of frequent itemsets can rapidly expand to an
+extent where application of Apriori becomes infeasible.
+The same problem occurs when association rule analysis is
+applied to domains other than basket analysis. Association
+rules can be a very valuable tool for discovering in teresting
+inter-relationshipsbetweenvariables inmanydi erenttypes
+of domain, as they do not lter through a machine learning
+bias the rules that are presented to the user. This enables
+the user to identifythe interesting rules rather than rely-
+ing on a machine learning system to determine the rules of
+interest.
+Thispaperdescribeshowasearchalgorithmcantakeadvan-
+tage of in ter-association-rule constraints to nd association
+rules e ciently.
+
+2. BACKGROUND
+Early approaches to identifying in teresting rules from data
+were dominated by attempts to form small sets of rules for
+accurate classi cation of further previously unsighted data
+9, 7, 13. Forthe most part, borrowingfrom an elegant
+characterization of mining optimized rules by Bayardo and
+Agrawal 3, this activity can be characterized as follows:
+
+A training set is a nite set of records where each
+record is an element to which we apply Boolean pred-
+icates called conditions.
+A rule consists of twoconditions or combinations of
+conditions typically conjunctions or, less frequen tly,
+disjunctions called the antecedentand consequent. A
+rule with anteceden tA and consequent C is denoted
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+99
+
+as A!C.
+The search is limited to exploring rules that have as
+consequentthevaluesofadistinguishedattribute,called
+the class attribute.
+The search seeks a set of rules that optimize some
+function of quality. The search is usually incremental,
+adding one rule at a time. The quality function usu-
+allyattemptsoftenindirectlytotrade-o complexity
+against errors on the training set.
+In consequence, the rules selected tend to have an-
+tecedents that select subsets of the training set that
+are strongly dominated by a single class variable.
+
+In the nineties, this research program took two divergent
+branches. On one hand, a number of researchers explored
+techniquesforidentifyinglargenumbersofclassi cationrules
+4, 8, 10, 12, 14, 16. This work was distinguished by the
+removal of the objective of using the rules for classi cation
+and hence of the requirement that a small number of rules
+be identi ed. Rather, all rules that satis ed some criterion
+of interestingness were sought. Interestingness was usually
+evaluatedbysomemeasurethatledtoidenti cation ofrules
+forwhichtheantecedentidenti edsubsetsofthetrainingset
+that were dominated bya single value of the class attribute,
+the intent being to predict the occurrence of that value.
+The other branch was association rule discovery 1. As-
+sociation rule discovery di ers in intent from most other
+rule discovery paradigms. While the other paradigms have
+concentrated on nding rules that are predictive of a sin-
+gle, preselected,classvariable,associationrulediscoveryhas
+been motivated by nding rules that predict increased fre-
+quency of an attribute value, or collection of attribute val-
+ues, without limitation on the values that may appear in
+the consequent of a rule. Association rule discovery can be
+distinguished by the aims of
+
+discovering all rules that satisfy a given set of con-
+straints,
+an emphasis on processing large training sets, and
+allowing anyavailable condition toappear as either an
+antecedent or consequent.
+
+Duetoitsemphasisonanalysisoflargedatasets, association
+rule discovery has concentrated on algorithms that process
+data via database access whereas the other branches of rule
+discovery have tended to concentrate on algorithms that re-
+tain all data in memory. This has led to the developmentof
+very di erent forms of algorithm. Association rule discov-
+eryalgorithmshavesoughttominimizethenumberofpasses
+through the data due to the very high time overheads that
+these imply when accessing a database. This is less of a
+concern when data is retained in memory.
+Recent research has started to bring these two divergent
+branches of rule discovery research back together. Bayardo
+and Agrawal 3 present a variant of the OPUS search al-
+gorithm 18, developed in the context of classi cation rules
+research, to discover key rules of the type sought by as-
+sociation rule discovery. However, as is typical in classi ca-
+tionrules research, theirtechniqueconsiders onlythesearch
+space for a single consequent at a time, limiting its applica-
+bility in the most common association rule activity, market
+basket analysis, where it is often desirable to consider every
+product as a possible candidate rule consequent.
+This paper presents techniques for employing the OPUS
+search algorithm for rule discovery where the search space
+encompasses rules for which the antecedent can contain any
+conjunction of available predicates and the consequent can
+be any single predicate. It is further distinguished by the
+ability to e ciently nd a prespeci ed number of rules that
+maximizeanarbitraryfunctionmeasuringrulequality. This
+distinguishes the approach from typical association rule al-
+gorithms that explore all rules that satisfy prespeci ed con-
+straints. This distinction is particularly signi cant. For
+dense search spaces, typical rule constraints may result in
+numbers of itemsets that make the Apriori approach infea-
+sible. The ability to restrict search to a prede ned number
+of target rules can allow the new algorithm to e ciently
+process such search spaces.
+A major concern in developing association rule algorithms
+has been minimizing the number of database accesses that
+are required. I contend that the need to do this is reduced
+if the database is retained in main memory. I further con-
+tend that doing so is now feasible for a large range of data
+mining tasks due to the increase in the availability of very
+large memory computers. However, I recognize that there
+will always remain some tasks for which it is not feasible to
+retain a su cient sample of cases in memory for acceptable
+association rule discovery. The techniques explored in this
+paper do not address that scenario.
+
+2.1 The Apriori algorithm
+The Apriori algorithm discovers association rules in two
+steps, utilizing the concept of an itemset. An itemset is
+a conjunction of conditions1. A large itemset is an item-
+set that occurs more frequently than a prede ned minimum
+frequency. The Apriori algorithm exploits the observation
+that many common measures of the value of an associa-
+tion rule are functions of the frequency of LHS, RHS, and
+LHS^RHS, where LHS andRHS represent, respectively,
+the itemsets for the antecedent and consequent of the asso-
+ciation rule.
+The two top-level steps of the Apriori algorithm are:
+
+1. Find all large itemsets.
+2. Generate association rules from the large itemsets.
+
+The rst stage plays two roles,
+
+1. limiting the number of rules that need be explored to
+1
+In basket analysis the relevant conditions are predicates,
+one for each of the available items, each of which is true i
+the corresponding item was purchased bya customer, hence
+the name itemset.
+
+
+
+100
+
+those for which the union of the LHS and RHS occur
+with su cient frequency, and
+2. caching the relevantinformation about those itemsets,
+speci cally theirfrequency,so thatthesearch for asso-
+ciation rules need not repeatedly access the database
+to compute them.
+
+This strategy can be very successful at reducing the num-
+ber of passes through the data base. Indeed, variants of the
+approach can reduce database access to two passes 15, 17.
+However, wheretherearenumerouslargeitemsets, theover-
+headsofitemsetmaintenanceandmanipulationcanseverely
+impact upon the computational feasibility of the approach.
+A dramatic illustration of this is provided in Section 3,
+below. In this example, applying Apriori with standard
+settings to the Cover Type data set, with just 120 items,
+but with many items occurring very frequently, results in
+14,567,892 large item sets. With so many large itemsets,
+management and manipulation of those itemsets creates a
+large computational burden.
+
+2.2 The OPUS search algorithm
+The move towards search for large numbers of classi ca-
+tion rules resulted in the development of algorithms for e -
+cient traversal of the search spaces involved. These initially
+relied upon assigning an arbitrary order to the conditions
+which was then used to structure the search space so that
+each combination of conditions was considered just once. A
+search space with four conditions a, b, c, and d structured
+in this manner is presented in Fig. 1.
+Suchasearchspaceisexponentialinsize. Ifthereare10,000
+conditions, a gure commonly exceeded in market basket
+analysis, the search space size is 210
+;
+000
+. Clearly it will
+only be possible to explore such a search space if it can be
+pruned. Under xed structure search, algorithms typically
+seek branches that cannot contain a solution2, and prune
+those branches. Fig. 2 demonstrates the e ect of pruning
+the branch for condition c from the xed-structure search
+space illustrated in Fig. 1. As can be seen, this removes
+only one node from the search space.
+Theidenti cationofbranchestobeprunedrequirespruning
+rules. These identifyregions of thesearch space thatcannot
+contain a solution. In rule discovery search, many pruning
+rules consider for a given node N whether any search node
+in the space below N that contains a given condition C can
+be a solution. Thus, the pruning illustrated in Fig. 1 may
+have resulted from a pruning rule identifying that no node
+containing c may contain a solution. In this case, the ideal
+outcome would be the removal from the search space of all
+nodes containing c, as illustrated in Fig 3. As can be seen,
+this approximately halves the remaining search space3
+2
+What constitutes a solution will depend upon the search
+objective. For example, inassociation rule discovery, a solu-
+tion might any set of conditions that is a frequent itemset.
+3
+Itdoes not exactly halve the remaining search space as the
+root node has already been visited, as, depending upon the
+searchtechnique,mayhavethenodecontainingc,andhence
+these nodes should not be counted as part of the remaining
+search space.
+An elegant method of achieving this outcome is to reorder
+the search space so that any condition to be pruned at a
+node precedes all conditions not to be pruned. This is the
+OPUSs strategy 18. This algorithm guarantees that every
+pruning action approximately halves the remaining search
+space. The OPUSo algorithm 18 extends OPUSs for opti-
+mization search, using a heuristic that reorders the search
+space to maximize the amount of the space associated with
+the least promising search operator4. This is illustrated in
+Fig. 4. The OPUS algorithms have been demonstrated to
+support e cient complete search of a number of standard
+rule discovery search tasks18.
+Afurtherapproachtopruningisprovidedbyinclusiveprun-
+ing 19. Whereastheexclusivepruningactionsillustrated
+above involve excluding from the search space those nodes
+containing a particular condition, inclusive pruning results
+intheexclusionof allnodesthatdo not containagivencon-
+dition. Likeexclusivepruning,eachinclusivepruningaction
+approximately halves the remaining search space.
+
+2.3 Efficient search for association rules
+Many frequent itemsets will relate to association rules that
+are not of interest. This might be addressed by placing ad-
+ditional constraints upon the itemsets that are considered.
+It is possible, although computationally expensive, to take
+account of therelationship betweenthe antecedentandcon-
+sequent of association rules that might be derived from an
+itemset, such as the potential lift5. However, this would
+require duplicating during the rst stage much of the work
+of the second stage of the Apriori algorithm. More impor-
+tantly, it is not possible to impose constraints that rely on
+relationships between association rules, such as only nd-
+ing itemsets that could participate in the 1000 association
+rules with the highest lift. It will often be the case that the
+end users to receive the association rule reports will only
+be interested in considering a limited number of association
+rules. Selecting a prespeci ed number of those that maxi-
+mize a particular measure will be desirable from the user's
+perspective and can be used to constrain a directed search
+for association rules.
+Search for association rules can be tackled as a search pro-
+cess that starts with general rules rules with one condition
+ontheLHSandsearchesthroughsuccessivespecializations
+rules formed by adding additional conditions to the LHS.
+Such search is unordered. That is, the order in which suc-
+cessivespecializations areaddedtoaLHS isnotsigni cant.
+A^B^C !X isthesameisC^B^A!X. Animportant
+component of e cient search in this context is minimizing
+the number of association rules that need be considered. A
+key technique used to eliminate potential association rules
+from consideration is optimistic pruning. Optimistic prun-
+ingoperatesbyforminganoptimisticevaluationofthehigh-
+estrulevaluethatmayoccurinaregion of thesearch space.
+4
+In rule search each condition can be considered a search
+operator. Formally, the search operator is the inclusion of
+theconditioninthesetofconditionsassociated withanode.
+5
+Lift isafrequentlyutilized measureof association ruleutil-
+ity. The lift of an association rule =
+jLHS^RHSj
+jLHSj
+=j
+RHS
+j
+n
+where jXj is the number of cases with conditions X and
+n is the total number of cases in the data set.
+
+
+
+101
+
+Figure 1: A xed-structure search space
+
+
+
+
+Figure 2: Pruning a branch from a xed-structure search space
+
+
+
+
+Figure 3: Pruning all nodes containing a single operator from a xed-structure search space
+
+
+
+
+102
+
+Figure 4: Pruning with a restructured search space
+
+An optimistic evaluation is one that cannot be lower than
+the actual maximum value. If the optimistic value for a re-
+gion is lower than the lowest value that can be of interest,
+then that region can be pruned. If search seeks the top m
+association rules, then it can maintain a list of the top m
+rules encountered so far during the search. If an optimistic
+evaluation is lower than the lowest value of a rule in the top
+m, then the corresponding region of the search space may
+be pruned. Other pruning rules may identify regions that
+can be pruned because they can contain only rules that fail
+to meet prespeci ed constraints such as:
+
+minimum support the frequency in the data of the
+RHS or of the RHS and LHS in combination;
+minimum lift as de ned in footnote 5; or
+being one of the top massociation rules on some spec-
+i ed criteria.
+
+I use the term credible rule to denote association rules for
+which, at some given point in a search, it is possible that
+therulewillbeofinterest,usingwhatevercriteriaofinterest
+apply for the given search.
+If we restrict association rules to have a single condition on
+the RHS, two search strategies are plausible,
+
+1. for each potential RHS condition explore the space of
+possible LHS conditions; or
+2. for each potential LHS combination of conditions ex-
+plore the space of possible RHS conditions.
+
+The former strategy leads to the most straight-forward im-
+plementation as it involves a simple iteration through a
+straight-forward search for each potential RHS condition.
+However, this implies accessing the count of the number of
+cases covered by the LHS many times, once for each RHS
+condition for which an LHS is considered. At theveryleast
+thisentailsthecomputationaloverheadsofcachinginforma-
+tion. At the worst it requires a pass through the data each
+time the value is to be utilized. While a pass through the
+datahaslower overheadswhenthedataisstoredinmemory
+rather than on disk, it is still a time consuming operation
+that must be avoided if computation is to be e cient.
+These considerations mitigate in favor of the second strat-
+egy. We systematically explore the space of possible LHS
+condition combinations, searching from the general to the
+speci c. During this process we track the set of condi-
+tions that can appear on the RHS of a credible rule in
+the search beyond the current point. We then organize the
+search to attempt to minimize the number of LHS condi-
+tion combinations that are explored. A single pass through
+the data can be performed for every LHS combination dur-
+ing which all statistics are collected for both the LHS and
+each of the RHS conditions currently under consideration.
+We prune from the search space any regions of potential
+LHSs for which optimistic evaluation can ascertain no RHS
+can result in a credible rule. The relative e ciency of this
+approach against the Apriori approach will depend on the
+cost of a pass through the data lower favoring the new di-
+rectsearch, thenumberoffrequentitemsetslowerfavoring
+Apriori, and the number of LHS combinations that must
+be explored lower favoring direct search.
+Table 1 displays the algorithm that results from applying
+theOPUSsearchalgorithm 18 toobtaine cientsearchfor
+this search task. The algorithm is presented as a recursive
+procedure with three arguments,
+
+CurrentLHS: the set of conditions in the LHS of the rule
+currently being considered.
+AvailableLHS: thesetofconditionsthatmaybeaddedto
+the LHS of rules to be explored below this point
+AvailableRHS: the set of conditions that may appear on
+the RHSof a rule in the search space at this point and
+below
+
+The initial call to theprocedure sets CurrentLHSto fg, and
+AvailableLHS and AvailableRHS to the sets of conditions
+thataretobeconsideredontheLHSandRHSofassociation
+rules, respectively.
+Step 2ciiA records each credible association rule as it is
+evaluated. If the search seeks the m best rules on some
+metric, once m rules have been added at this step, as new
+rules are added, therule with the lowest value on themetric
+can be removed from the table of best rules. A rule will
+not be credible if it fails other constraints, such as minimal
+strength, or, once the table is full, has lower value on the
+
+
+
+103
+
+Table 1: The OPUS search algorithm adjusted for
+search for association rules
+
+Algorithm: OPUS ARCurrentLHS, AvailableLHS,
+AvailableRHS
+
+com CurrentLHS is the set of conditions in the LHS
+of the rule currently being considered.
+
+com AvailableLHS is the set of conditions that may
+be added to the LHS of rules to be explored
+below this point
+
+com AvailableRHS is the set of conditions that
+may appear on the RHS of a rule in the search
+space at this point and below
+
+1. SoFar :=
+fg
+2. FOR EACH P in AvailableLHS
+
+a NewLHS := CurrentLHS
+fPg
+b AvailableLHS := AvailableLHS - P
+
+c IF pruning rules cannot determine that
+8x 
+AvailableLHS:
+8y 2
+AvailableRHS:
+:crediblex
+NewLHS
+!
+y THEN
+
+i. NewAvailableRHS = AvailableRHS
+ii. FOR EACH Q in AvailableRHS
+A. IF credibleNewLHS
+!
+Q THEN
+record NewLHS
+!
+Q
+B. IF pruning rules determine that
+8x 
+AvailableLHS: x =
+fg _
+:crediblex
+NewLHS
+!
+Q THEN
+NewAvailableRHS :=
+NewAvailableRHS - Q
+iii. IF NewAvailableRHS
+6= fg
+THEN
+OPUS ARNewLHS, SoFar,
+NewAvailableRHS
+iv. SoFar := SoFar
+fPg
+evaluation metric than the worst rule in the table of best
+rules.
+Step 2c prunes conditions from the space of those explored
+ontheLHSofarule. Ratherthanexploringthespaceofpos-
+sibleLHSsetsbeyondthecurrentone,optimistictechniques
+with low computational overheads should be employed. For
+example, if jCurrentLHS fPgj is less than minimumsup-
+port then no rule in the relevant space of possible rules
+can achieve minimum support as all are specializations of
+jCurrentLHS fPgj and hence cannot have higher sup-
+port.
+Step 2ciiB prunes conditions from the space of those ex-
+plored on the RHS of a rule. Optimistic rules with low
+computational overheads should be employed here also. For
+example, if jCurrentLHS fPgj = 0 then no credible rule
+will exist in the relevant space of possible rules.
+For both of the pruning steps, the exact pruning rules to be
+employed will depend upon the speci c constraints for the
+search.
+Without pruning this algorithm will systematically explore
+the entire search space. The pruning step removes from the
+search space below a node all and only those rules contain-
+ing the identi ed condition. It follows, therefore, that the
+algorithm is complete, always nding the target association
+rules, so long as the pruning rules employed are correct.
+ThisalgorithmisbasedonOPUSsratherthanOPUSo. This
+is because the more e cient OPUSo requires at least two
+passes through theavailable LHSconditions at each node of
+the search tree, one to select and sort the LHS conditions
+and the second to makethe recursive call for each LHSwith
+theappropriatesecondandthirdarguments. Theoverheads
+of doing this are excessive for this search task because an
+evaluation of which RHS conditions should be retained for
+each LHS would need to be performed in both loops. If
+there are a very large number of potential RHS conditions,
+either calculating this each time or caching the information
+between loops, will have very high overheads. For example,
+if thereare 1,000 conditionsthentheremightbe1,000 LHSs
+foreachofwhich1,000 potentialRHSvaluesneedtobecon-
+sidered. Examining each of the resulting 1,000,000 possible
+combinations twice would clearly be undesirable as would
+caching such a large number of values. Thus, a single pass
+approach is employed that sacri ces the e ciencies to be
+gained from dynamic reordering on optimistic value but de-
+livers far greater e ciency in processing a search node than
+would otherwise be possible.
+
+3. AN EXAMPLE
+The largest dataset in the UCI machine learning repository
+was subjected to association rule analysis using both the
+Apriori algorithm and the above OPUS search. The Cover
+TypedatasetwasselectedasthelargestoftheUCImachine
+learning repository datasets. A data set from the machine
+learning repository was used instead of one from the UCI
+KDD repository due to ease of access by the researcher.
+The Cover Typedataset was alreadyin a formatthatcould
+be directly employed by both the Apriori and OPUS search
+software without further data manipulation.
+
+
+
+104
+
+The Cover Type data set was collected for the purpose of
+predictingforestcovertypefromcartographicvariablesonly
+5. However, it is quite conceivable that association rule
+analysis might also detect interesting inter-relationships be-
+tween those cartographic variables in addition to between
+them and the variable describing the forest cover. 581,012
+casesaredescribedby55attributes. Thetencontinuousval-
+uedattributeswerediscretizedintothreesub-rangeswithas
+close as possible to equal numbers of cases within each sub-
+range. The remaining 45 attributes were all binary. In con-
+sequence there were 120 attribute-values, each of which was
+treated as a separate condition for association rule analysis
+purposes. Notethatthistreatmentresults inmanyfrequent
+items, as for each binary attribute at least one value must
+occur for 50 of the cases.
+The publicly available apriori system developed by Borgelt
+6 was applied to the Cover Type dataset. This implemen-
+tation of Apriori generates rules with a single RHS condi-
+tion and multiple LHS conditions, thus exploring the same
+space of rules as the OPUS based algorithm. It generated
+14,567,892 itemsets when employedwith its default settings
+maximum itemset size of 5; minimum coverage of 10 of
+the data for the LHS of a rule; minimum strength of 80.
+The coverage of a set of conditions is the proportion of the
+training set for which the conditions are true. The strength
+of anassociation isthecoverage oftheunionoftheLHSand
+RHS divided by the coverage of the LHS. From the mini-
+mumLHS coverage and strength apriori can determinethat
+only itemsets with coverage of 8 or higher need be gener-
+ated. This required 96 hours and 44 minutes CPU time on
+a 350MHz PIII linux computer. It was not possible to com-
+plete the generation of all association rules as the le size
+limit was exhausted after 30,677,279 rules were generated.
+The OPUS AR algorithm was applied to the same data on
+the same computer. The same search space was explored to
+nd the top 1000 associations on lift.
+Four pruningrules were employed. To describe these we use
+the following abbreviations.
+
+covers is the coverage of the set of conditions s, the
+proportion of the training set for which the conditions
+in s are all true.
+strengthLHS ! RHS is the strength of associa-
+tion rule LHS ! RHS. strengthLHS ! RHS =
+coverLHS RHS=coverLHS.
+
+The rst pruning rule, used at step 2c, prunes any condi-
+tion P for which coverNewLHS minLHScover, where
+minLHScover is the minimum allowed LHS coverage. No
+superset of such a LHS can exceed the minimum LHS cov-
+erage as the coverage of a superset of conditions must be no
+larger than the coverage of the original set of conditions.
+The second pruning rule is used at step 2ciiB. It prunes
+any RHS condition Q for which coverNewLHS fQg
+minRHScover, where minRHScover = minLHScover 
+min strength and min strength is the minimum allowed
+value for association strength. This is the minimumallowed
+coverage for LHS RHS for any association. The justi ca-
+tion for this rule mirrors that for the previous.
+Thenextpruningruleisalsousedatstep2ciiB. Thisrules
+utilizes an optimistic assessment of the maximum value of
+association strength for a rule with Q as the consequent
+in the search space below the current node. First we de-
+termine the maximum number of specialization operations
+that may be applied to the current node to reach a node
+in the search space below the current node. max spec =
+minmax LHS size , jNEWLHSj;jSOFARj, where
+max LHS size is the maximum number of conditions al-
+lowed in a LHS. There may be no more specializations than
+there are conditions available to specialize by jSOFARj.
+Nor may there be more specializations than allowed by the
+constraint on the numberof conditions permitted in a LHS.
+Next we determine an upper limit on the maximum reduc-
+tion in coverage that may result from the addition of any
+one condition to the LHS of an association in the search
+space below thecurrentnode. Allassociations inthissearch
+space cover subsets of the items covered by the associa-
+tion for the current node. Hence, no condition may re-
+move more items from the cover of an association in that
+search space than it removes from the cover of the associ-
+ation for the current node. Hence max cover reduction =
+maxcoverLHS,coverLHS fcg:c2SOFAR.
+The nextstepis todeterminetheminimumcoverage for the
+LHS of a rule in the search space below the current node. It
+is not possible for the coverage to be reduced by more than
+max specmax cover reduction. Nor is it possible for it
+to be reduced below the minimum allowed LHS coverage.
+Hence, min cover = maxminLHScover;coverLHS ,
+max specmax cover reduction.
+If min cover coverLHS fQg then the optimistic as-
+sessment of the maximum strength opt strength for an
+association with Q as consequent that may lie below the
+current node is 1.0 on the basis that the specializations may
+remove from the cover of LHS all cases that are not covered
+by Q.
+Otherwise, opt strength = coverLHS fQg=min cover,
+theresultthatwouldbeobtainedifallreductionincoverage
+removed cases covered by the LHS but not the RHS of the
+associations.
+If opt strength min strength, where min strength is a
+constraint on the minimumallowed value for strength, then
+the RHS condition Q can be pruned.
+The nal pruning rule also applies at step 2ciiB. This rule
+determinesan optimistic valuefor lift for associations in the
+search space below the currentnode that haveQ as a conse-
+quent. Liftismaximizedwhenstrengthismaximized. Thus,
+opt lift=opt strength=coverfQg. Ifopt lift min lift,
+where min lift is the minimum allowed lift, then the RHS
+condition Q can be pruned. Note that min lift could be
+a global constraint on associations, but may also be deter-
+mineddynamically. Inthecurrentapplication,min liftwas
+initialized to zero. However, once the target number of as-
+sociations had been added to the table of best association
+
+
+
+105
+
+rules, at step 2ciiA, min lift was progressively updated
+to equal the minimum value of lift for a rule in the table.
+Hence,asthesearchprogressedandtheoverallqualityofthe
+associations in the table improved, more stringent pruning
+could occur.
+Using these pruning rules, a total of 384,312 association
+rules were evaluated and only 84,639 distinct antecedents
+considered. This took 48 minutes and 9 seconds CPU time.
+To nd the top 100 associations on lift required the explo-
+ration of 204,264 association rules involving 51,678 distinct
+antecedents and took 26 minutesand 49 seconds CPU time.
+
+4. DISCUSSION
+The above example demonstrates that using OPUS search
+andpruningthesearchspaceonthebasisofinter-relationships
+between itemsets, it can be feasible to perform e cient as-
+sociation rule analysis on data sets for which the Apriori
+approach is infeasible. Whether or not this is useful de-
+pends, of course, upon whether there are inter-itemset con-
+straints that shouldbe appliedfor thegiven association rule
+application. It seems plausible, however, that for many ap-
+plications an upper-limit on the numberof association rules
+to be generated will be appropriate, and this can be all that
+is required to enable e cient search.
+Furthersearchconstraints, suchasSC-Optimality 3, might
+usefully be employed to deliver even greater computational
+e ciency within the OPUS AR framework.
+ThatOPUS ARhaswiderapplicationthanthesingledataset
+examined herein is demonstrated by the commercial associ-
+ation rule discovery system Magnum Opus6. This system,
+thatutilizestheOPUS ARalgorithm, isroutinelyemployed
+for commercial association rule discoveryfromdatasets con-
+taining millions ofcases eachdescribedbytensof thousands
+of variables.
+Association rule discovery has been rmly rooted in the do-
+main of market basket analysis. However, prior to the pop-
+ularization of market basket analysis, a number of machine
+learning researchers were exploring techniques with many
+similarities to association rule discovery. These researchers
+were exploring the use of complete or extensive search to
+form large rulesets inthebelief thatsuchrulesets couldpro-
+vide insight or other utility beyond that obtained from the
+small rulesets normally generated by machine learning sys-
+tems 8, 12, 14, 16. The current work can be viewed as
+a direct descendent of this research e ort, extending it by
+utilizing the e cient OPUS search algorithm and by utiliz-
+ing metrics of rule value developedwithin the eld of basket
+analysis.
+
+5. CONCLUSIONS
+I have presented an algorithm for association rule analy-
+sis based on the e cient OPUS search algorithm. This ap-
+proachisdistinguishedfromthewidelyutilizedApriorialgo-
+rithm by its ability to use inter-relationships between item-
+setstoconstrainthenumberofitemsetsthatareconsidered.
+Itisdistinguished froma numberof recentruleminingalgo-
+6
+Magnum Opus is distributed by Rulequest Pty Ltd,
+http: www.rulequest.com.
+rithms, that have been presented as alternatives to Apriori
+4, 3, 10, by exploring associations containing all available
+conditions as consequents. However, the approach has the
+potential disadvantage, compared with Apriori, that it re-
+quires many more passes through the data. Where the data
+can be maintained in main memory this need not be a se-
+rious handicap. The availability of very large memory com-
+puters means that quite sizeable data sets can be retained
+in main memory. Where the data cannot be maintained in
+main memory, however, this approach to association rule
+discovery is unlikely to be feasible.
+A simple example has been used to demonstrate the poten-
+tial advantage of the new approach in some applications.
+Analysis of the Cover Typedata set requiresgeneration and
+analysis of 14,567,892 itemsets when the Apriori algorithm
+isutilized, evenwhentheitemsetsizeisrestrictedto ve. In
+contrast, nding the 1000 association rules with the highest
+values of lift within the same constraints required evalua-
+tion of only 677,129 rules and 33,613 distinct antecedents.
+With the implementations employed, the OPUS search was
+completed with all 1000 rules identi edin less than 15 CPU
+minutes while it took apriori more than 96 CPU hours just
+to generate the itemsets. This starkly illustrates the poten-
+tial advantages of the new approach.
+
+Acknowledgements
+Iamverygrateful toChristian Borgelt for makinghis excel-
+lent implementation of the Apriori algorithm publicly avail-
+able. I am also grateful to Jock A. Blackard and the UCI
+machine learning repository librarians Catherine Blake and
+Chris Mertz for providing access to the Cover Type data.
+
+6. REFERENCES
+1 R. Agrawal, T. Imielinski, and A. Swami. Mining
+associations between sets of items in massive
+databases. In Proceedings of the 1993 ACM-SIGMOD
+International Conference on Management of Data,
+pages 207 216, 1993.
+2 R. Agrawal, H. Mannila, R. Srikant, H. Toivonen, and
+A. I. Verkamo. Fast discovery of association rules. In
+U. M. Fayyad, G. Piatetsky-Shapiro, P. Smyth, and
+R. Uthurusamy, editors, Advances in Knowledge
+Discovery and Data Mining, pages 307 328. AAAI
+Press, Menlo Park, CA., 1996.
+3 R. J. Bayardo, and R. Agrawal. Mining the most
+interesting rules. In Proceedings of the Fifth ACM
+SIGKDD International Conference on Knowledge
+Discovery and Data Mining, pages 145 154, 1999.
+4 R. J. Bayardo, R. Agrawal, and D. Gunopulos.
+Constraint-based rule mining in large, dense
+databases. Data Mining and Knowledge Discovery,
+42 3:217 240, 2000.
+5 J. A. Blackard. Comparison of Neural Networks and
+Discriminant Analysis in Predicting Forest Cover
+Types. PhD thesis, Colorado State University
+Department of Forest Sciences, Fort Collins, Colorado,
+1998.
+
+
+
+106
+
+6 C. Borgelt. apriori. Computer Software
+http: fuzzy.cs.Uni-Magdeburg.de borgelt , February
+2000.
+7 P. Clark and T. Niblett. The CN2 induction
+algorithm. Machine Learning, 3:261 284, 1989.
+8 S. H. Clearwater and F. J. Provost. RL4: A tool for
+knowledge-based induction. In Proceedings of Second
+Intl. IEEE Conf. on Tools for AI, pages 24 30, Los
+Alamitos, CA, 1990. IEEE Computer Society Pres.
+9 R. S. Michalski. A theory and methodology of
+inductive learning. In R. S. Michalski, J. G. Carbonell,
+and T. M. Mitchell, editors, Machine Learning: An
+Arti cial Intelligence Approach, pages 83 129.
+Springer-Verlag, Berlin, 1983.
+10 S. Morishita and A. Nakaya. Parallel
+branch-and-bound graph search for correlated
+association rules. In Proceedings of the ACM SIGKDD
+Workshop on Large-Scale Parallel KDD Systems,
+volume LNAI 1759, pages 127 144. Springer, Berlin,
+2000.
+11 J. S. Park, M.-S. Chen, and S. Y. Philip. An e ective
+hash based algorithm for mining assiociation rules. In
+Proceedings of the ACM SIGMOD International
+Conference on Management of Data, pages 175 186.
+ACM Press, 1995.
+12 F. Provost, J. Aronis, and B. Buchanan. Rule-space
+search for knowledge-based discovery. CIIO Working
+Paper IS 99-012, Stern School of Business, New York
+University, , NY, NY 10012, 1999.
+13 J. R. Quinlan. Generating production rules from
+decision trees. In IJCAI 87: Proceedings of the Tenth
+International Joint Conference on Arti cial
+Intelligence, pages 304 307, Los Altos, 1987. Morgan
+Kaufmann.
+14 R. Rymon. Search through systematic set
+enumeration. In Proceedings KR-92, pages 268 275,
+Cambridge, MA, 1992.
+15 A. Savasere, E. Omiecinski, and S. Navathe. An
+e cient algorithm for mining association rules in large
+databases. In Proceedings of the 21st International
+Conference on Very Large Data Bases, pages 432 444.
+Morgan Kaufmann, 1995.
+16 R. Segal and O. Etzioni. Learning decision lists using
+homogeneous rules. In AAAI-94, Seattle, WA, 1994.
+AAAI press.
+17 H. Toivonen. Sample large databases for association
+rules. In Proceedings of the 22nd International
+Conference on Very Large Data Bases, pages 134 145.
+Morgan Kaufmann, 1996.
+18 G. I. Webb. OPUS: An e cient admissible algorithm
+for unordered search. Journal of Arti cial Intelligence
+Research, 3:431 465, 1995.
+19 G. I. Webb. Inclusive pruning: A new class of pruning
+rule for unordered search and its application to
+classi cation learning. In Proceedings of the
+Nineteenth Australasian Computer Science
+Conference, pages 1 10, Melbourne, January 1996.
+
+
+
+
+107
+

@@ -1,0 +1,1939 @@
+Efficient Closed Pattern Mining in the Presence of Tough
+Block Constraints
+
+
+
+
+
+Krishna Gade, Jianyong Wang, George Karypis
+Computer Science Department, Digital Technology Center, & Army HPC Research Center
+University of Minnesota, Minneapolis, MN 55455
+{gade, jianyong, karypis}@cs.umn.edu
+
+
+
+ABSTRACT
+Various constrained frequent pattern mining problem for-
+mulations and associated algorithms have been developed
+that enable the user to specify various itemset-based con-
+straints that better capture the underlying application re-
+quirements and characteristics. In this paper we introduce a
+new class of block constraints that determine the significance
+of an itemset pattern by considering the dense block that is
+formed by the pattern's items and its associated set of trans-
+actions. Block constraints provide a natural framework by
+which a number of important problems can be specified and
+make it possible to solve numerous problems on binary and
+real-valued datasets. However, developing computationally
+efficient algorithms to find these block constraints poses a
+number of challenges as unlike the different itemset-based
+constraints studied earlier, these block constraints are tough
+as they are neither anti-monotone, monotone, nor convert-
+ible. To overcome this problem, we introduce a new class of
+pruning methods that significantly reduce the overall search
+space and present a computationally efficient and scalable
+algorithm called CBMiner to find the closed itemsets that
+satisfy the block constraints.
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database applications--
+Data Mining
+
+
+
+This work was supported in part by NSF CCR-
+9972519, EIA-9986042, ACI-9982274, ACI-0133464, and
+ACI-0312828; the Digital Technology Center at UMN; and
+by the Army HPC Research Center under the auspices of
+the Department of the Army, Army Research Laboratory
+(ARL) under Cooperative Agreement number DAAD19-01-
+2-0014. The content of which does not necessarily reflect
+the position or the policy of the government, and no offi-
+cial endorsement should be inferred. Access to research and
+computing facilities was provided by the Minnesota Super-
+computing Institute.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD'04, August 22­25, 2004, Seattle, Washington, USA.
+Copyright 2004 ACM 1-58113-888-1/04/0008 ...$5.00.
+General Terms
+Algorithms, Theory
+
+
+Keywords
+Closed pattern, Tough constraint, Block constraint
+
+
+1. INTRODUCTION
+Finding frequent patterns in large databases is a funda-
+mental data mining task with extensive applications to many
+areas including association, correlation, and causality rule
+discovery, rule-based classification, and feature-based clus-
+tering. As a result, a vast amount of research has focused on
+this problem resulting in the development of numerous effi-
+cient algorithms. This research has been primarily focused
+on finding frequent patterns corresponding to itemsets and
+sequences, but the ubiquitous nature of the problem has also
+resulted in the development of various algorithms that find
+frequent spatial, geometric, and topological patterns, as well.
+In recent years, researchers have recognized that in many
+application areas and problem settings frequency is not the
+best measure to use in determining the significance of a pat-
+tern as it depends on a number of other parameters such as
+the type of items that it contains, the length of the pattern,
+or various numerical attributes associated with the individ-
+ual items. In such cases, even though frequent pattern dis-
+covery algorithms can still be used as a pre-processing step
+to identify a set of candidate patterns that are subsequently
+pruned by taking into account the additional parameters,
+they tend to lead to inefficient algorithms as a large number
+of the discovered patterns will eventually get eliminated. To
+address this problem, various constrained frequent pattern
+mining problem formulations have been developed that en-
+able the user to focus on mining patterns with a rich class of
+constraints that capture the application semantics [14, 25,
+19]. The key property of these itemset constraints is that
+they are usually (or can be converted to) anti-monotone or
+monotone, making it possible to develop computationally ef-
+ficient algorithms to find the corresponding patterns.
+In this paper we introduce a new class of constraints re-
+ferred to as block constraints, which determine the signifi-
+cance of an itemset pattern by considering the dense block
+that is formed by the pattern's items and its associated set of
+transactions. Specifically, we focus on three different block
+constraints called block size, block sum, and block similar-
+ity. The block size constraint applies to binary datasets, the
+block sum constraint applies to datasets in which each in-
+stance of an item has a non-negative value associated with
+
+
+138
+Research Track Paper
+
+it that can vary across transactions, and the block similarity
+constraint applies to datasets in which each transaction cor-
+responds to a vector-space representation of an object and
+the similarity between these objects is measured by the co-
+sine of their vectors. According to the block size constraint,
+a pattern is interesting if the size of its dense block (obtained
+by multiplying the length of the itemset and the number of
+its supporting transactions) is greater than a user-specified
+threshold. Analogously, according to the block sum con-
+straint, a pattern is interesting if the sum of the values of
+its dense block is greater than a user-specified threshold. Fi-
+nally, according to the block similarity constraint a pattern
+is interesting if its dense block accounts for a certain user-
+specified fraction of the overall similarity between the objects
+in the entire dataset.
+Finding patterns satisfying the above constraints has ap-
+plications in a number of different areas. For example, in the
+context of market-basket analysis, the block-size and block-
+sum constraints can be used to find the itemsets that account
+for a certain fraction of the overall quantities sold or rev-
+enue/profit generated, respectively, whereas in the context
+of document clustering, the block similarity constraint can
+be used to identify the set of terms that bring a set of docu-
+ments together and thus correspond to thematically related
+words (commonly referred to as micro-concepts [11]).
+Developing computationally efficient algorithms to find these
+block constraints is particularly challenging because unlike
+the different itemset-based constraints studied earlier, these
+block constraints are tough as they are neither anti-monotone,
+monotone, nor convertible [19]. To overcome this problem,
+we introduce a new class of pruning methods that can be used
+to significantly reduce the overall search space and make it
+possible to develop computationally efficient block pattern
+mining algorithms. Specifically, we focus on the problem of
+finding the closed itemsets satisfying the proposed block con-
+straints and present a projection based mining framework,
+called CBMiner that takes advantage of a matrix-based rep-
+resentation of the dataset. CBMiner pushes deeply the var-
+ious block constraints into closed pattern mining by using
+three novel classes of pruning methods called column prun-
+ing, row pruning, and matrix pruning that when combined
+lead to dramatic performance improvements. We present
+an extensive experimental evaluation using various datasets
+that shows that CBMiner not only generates more con-
+cise result set, but also is much faster than the traditional
+frequent closed itemset mining algorithms. Moreover, we
+present an interesting application in the context of docu-
+ment clustering that illustrates the usefulness of the block
+similarity constraint in micro-concept discovery.
+The rest of the paper is organized as follows. Section 2
+introduces some basic definitions and notations. Section 3
+formulates the problem and motivates each one of the three
+block constraints. Section 4 describes some related work.
+Section 5 derives the framework for mining closed blocks,
+while Section 6 discusses in detail how to efficiently mine
+closed patterns with tough block constraints. The thorough
+performance study is presented in Section 7. Finally, Sec-
+tion 8 provides some concluding remarks.
+
+2. DEFINITIONS AND NOTATION
+A transaction database is a set of transactions, where each
+transaction is a 2-tuple containing a transaction id and a set
+of items. Let I be the complete set of distinct items and T
+be the complete set of transactions. Any non-empty set of
+items is also called an itemset and any set of transactions
+is called a transaction set. The frequency of an itemset X
+(denoted as freq(X)) is the number of transactions that con-
+tain all the items in X, while the support of X is defined as
+(X)=freq (X)/|T |. For a given minimum support thresh-
+old  (0 <   1), X is said to be frequent if (X)  . A
+frequent pattern X is called closed if there exists no proper
+super-pattern of X with the same support as X. An item-
+set constraint C is a predicate on the power set 2I, i.e.,
+C : 2I  {TRUE,FALSE}. An itemset constraint C is
+anti-monotone if for any itemset X that satisfies C, all the
+subsets of X also satisfy C, and C is monotone if all the su-
+persets of X satisfy C. For example, the constraint (X)  
+is anti-monotone, while (X)   is monotone. An itemset
+constraint is tough if it is neither anti-monotone nor mono-
+tone, and cannot be converted to either anti-monotone or
+monotone constraint.
+A block is defined as a 2-tuple B = (I,T), consisting of
+an itemset I and a transaction set T, such that T is the
+supporting set of I. The size of a block B is defined as
+BSize(B) = |I| × |T |. A weighted block is a block B = (I,T )
+with a weight function w defined on the cross-product of
+the itemset and transaction set, i.e., w : I × T  R+,
+where R+ is the set of positive real numbers. The sum of a
+weighted block B is defined as BSum(B) =
+P
+tT,iI
+w(t,i).
+A (weighted) block B = (I,T) is said to be a (weighted)
+closed block if and only if there exists no other (weighted)
+block B = (I ,T ) such that I  I and T = T. Given a
+(weighted) block B = (I,T), a (weighted) block B = (I ,T )
+is a proper superblock of B if I  I and T  T. In such a
+case B is called a (weighted) proper subblock of B . We will
+use B  B to denote that B is a proper superblock of B
+and B  B to denote that B is a proper subblock of B .
+A block constraint C is a predicate on 2I × 2T , i.e., C :
+2I × 2T  {TRUE,FALSE}. A block B is called a valid
+block for constraint C if it satisfies constraint C (i.e., C(B)
+is TRUE). A block constraint C is a tough constraint if
+there is no dependency between the satisfaction/violation of
+a constraint by a block and the satisfaction/violation of the
+constraint by any of its superblocks or subblocks.
+A transaction-item matrix M is a matrix where each row
+r represents a transaction and each column c represents an
+item in T such that the value of the (r,c) entry of the matrix,
+denoted by M(r,c) is one iff transaction r supports c, oth-
+erwise M(r,c) is zero. Similarly a weighted transaction-item
+matrix M is a transaction-item matrix where for each row
+r and for each column c, M(r,c) is equal to w(r,c) (where
+w is a positive weight function defined on all transaction-
+item pairs in T ). A (weighted) block B = (I,T) can be
+redefined as a (weighted) dense submatrix of the (weighted)
+transaction-item matrix M formed with the rows of T and
+columns of I such that r  T and c  I we have M(r,c) =
+1 (M(r,c) > 0).
+Given a pre-defined ordering of the columns of M and a
+set p of columns in M, a p-projected matrix w.r.t. M, M|p,
+is defined as the submatrix of M containing only the rows
+that support itemset p and the columns that appear after p
+in matrix M. For any transaction t in M|p, its size is defined
+as the number of non-zero elements in its corresponding row
+of M|p and will be denoted by |t|. For any column x of M|p,
+the matrix obtained by keeping only the rows of M|p that
+contain x is denoted as M|xp. For each matrix M|p and M|xp
+we will denote their set of corresponding transactions and
+items as T |p, T |xp, I|p, and I|xp, respectively.
+
+
+139
+Research Track Paper
+
+Given a set of m-dimensional vectors A = {d1,d2,...,dn},
+the composite vector of A is denoted by D and is defined
+to be
+P
+d
+A
+d. Given a weighted block B = (I,T), the
+composite vector of the block is denoted by BI and is the
+|I|-dimensional vector obtained as follows. For each item
+i  I, the ith dimension of BI, denoted by BI(i), is equal
+to
+P
+tT
+w(t,i), otherwise if i /
+ I, BI(i) = 0. Also, given
+a p-projected matrix M|p, the composite vector of an item
+x within M|p is denoted by Bx and is the |I|-dimensional
+vector obtained from the transactions included in T |xp such
+that for every i  I|xp, Bx(i) =
+P
+t
+T
+|x
+p
+w(t,i), otherwise if
+
+i /
+ I|xp, Bx(i) = 0.
+Given a matrix M, the column-sum of column i in M
+is denoted by csumM(i) and is defined to be equal to the
+sum of the values of the column i of M, i.e., csumM(i) =
+P
+t
+M(t,i). Similarly, the row-sum of row t in M is denoted
+by rsumM(t) and is defined to be equal to the sum of the
+values of the row t of M, i.e., rsumM(t) =
+P
+i
+M(t,i).
+
+3. PROBLEM DEFINITION
+In this paper we develop efficient algorithms for finding
+valid closed blocks that satisfy certain tough block constraints.
+Specifically, we focus on three types of block constraints that
+are motivated and described in this section.
+
+Block Size Constraint In the context of market-basket
+analysis we are often interested in finding the set of itemsets
+each of which accounts for a certain fraction of the overall
+number of transactions that was performed during a certain
+period of time. Given an itemset I and its supporting set
+T, the extent to which I will satisfy this constraint will de-
+pend on whether or not |I|×|T| is no less than the specified
+fraction. Finding this type of itemsets is the motivation be-
+hind the first block-constraint that we study, which focuses
+on finding all blocks B = (I,T) whose size is no less than
+a certain threshold. Specifically, given a binary transaction
+database T , the block-size constraint is defined as
+
+BSize(B)  N,
+(1)
+
+where 0 <   1 and N is the total number of non-zeros in
+the transaction-item matrix of T , i.e., N =
+P
+t
+T
+|t|.
+Note that depending on the size of the itemsets associated
+with each valid block, the minimum required size of the cor-
+responding transaction set will be different. Small itemsets
+will require larger transaction sets, whereas large itemsets
+will lead to valid blocks with smaller transaction sets. As a
+result, even if an itemset I is not part of a valid block, an
+extension of I, I , may become valid (e.g., cases in which the
+support of I does not significantly decrease compared to the
+support of I). Similarly, an itemset I which is not part of
+any valid block may contain subsets that are part of some
+valid blocks (e.g., cases in which the support of the subset is
+significantly greater than the support of I). Consequently,
+the block-size constraint is a tough constraint as it is neither
+anti-monotone nor monotone, and cannot be converted to
+either anti-monotone or monotone constraints.
+
+Block Sum Constraint In cases in which there is a non-
+negative weight associated with each individual transaction-
+item pair (e.g., sales or profit achieved by selling an item to
+a customer), in addition to finding all itemsets that satisfy
+a certain block-size constraint we may also be interested in
+finding the itemsets whose corresponding weighted blocks
+have a block-sum that is greater than a certain threshold.
+For example, in the context of market-basket analysis, these
+itemsets can be used to identify the product groups that
+account for a certain fraction of the overall sales, profits, etc.
+Motivated by this, the second block-constraint that we study
+extends the notion of the block-size constraint to weighted
+blocks. Formally, given a transaction database T , and a
+weight function w the block-sum constraint is defined as
+
+BSum(B)  W,
+(2)
+
+where 0 <   1 and W is the sum of the weights of
+
+all the transaction-item pairs in the database, i.e., W =
+P
+t
+T
+,i
+I
+w(t,i). Note that since the block-sum constraint
+is a generalization of the block-size constraint it also repre-
+sents a tough constraint.
+
+Block Similarity Constraint The last block constraint
+that we will study is motivated by the problem of find-
+ing groups of thematically related words in large document
+datasets, each potentially describing a different micro-concept
+present in the collection. One way of finding such groups is
+to analyze the document-term matrix associated with the
+dataset and find sets of words that satisfy either a user spec-
+ified minimum support constraint or a block-size constraint
+(as defined earlier). However, the limitation of these ap-
+proaches is that they do not account for the weights that
+are often associated with the various words as a result of
+the widely used tf-idf (term-frequency--inverse document-
+frequency) vector-space model. In general, groups of words
+that have higher weights will more likely represent a the-
+matically coherent concept than words that have very low
+weights, even if the latter groups have higher support. This
+often happens with words that are common in almost all the
+documents and will be assigned very low weight due to their
+high document frequency.
+One way of addressing this problem is to first apply the
+tf-idf model on each document vector, scale the resulting doc-
+ument vectors to be of the same length (e.g., unit length),
+and then find the groups of related words by using the pre-
+viously defined block-sum constraint. However, within the
+context of the vector-space model, a more natural way of
+measuring the importance of a group of words is to look at
+how much they contribute to the overall similarity between
+the documents in the collection. In other words, the micro-
+concept discovery problem can be formulated as that of find-
+ing all groups of words such that the removal of each group
+from their supporting documents will decrease the aggregate
+similarity between the documents by a certain fraction. In
+general, groups of words that are large, supported by many
+documents, and have high weights will tend to contribute a
+higher fraction to the aggregate similarity and hence form
+better micro-concepts.
+Discovering groups of words that satisfy the above prop-
+erty led us to develop the block-similarity constraint that is
+defined as follows. Let A = {d1,d2,.. .,dn} be a set of n doc-
+uments modeled by their unit-length tf-idf representation of
+the set of documents, let m be the distinct number of terms
+in A, let B = (I,T) be a weighted block with I being a set
+of words and T being its supporting set of documents, let
+S be the sum of the pairwise similarities between the docu-
+ments in A, and let S be the sum of the pairwise similarities
+between the documents in A obtained after zeroing-out the
+entries corresponding to block B. The similarity of the block
+B is defined to be the loss in the aggregate pairwise similar-
+
+
+140
+Research Track Paper
+
+ity resulting from removing B, i.e., BSim(B) = S - S , and
+the block-similarity constraint is defined as
+
+BSim(B)  S,
+(3)
+
+where 0 <   1.
+In this paper, we will measure the similarity between two
+documents di and dj in A by computing the dot-product
+of their corresponding vectors di and dj (i.e., sim(di,dj) =
+di · dj). Since the documents in A have already been scaled
+to be of unit length, this similarity measure is nothing more
+than the cosine of their respective vectors, which is used
+widely in information retrieval. The advantage of the dot-
+product-based similarity measure is that it allows us to easily
+and efficiently compute both S and S . Specifically, if D is
+the composite vector of A, it can be shown that S = D · D.
+Similarly, if B = (I,T) is a weighted block of A, and BI
+is its corresponding composite vector it can be shown that
+S = (D - BI) · (D - BI). As a result, the similarity of a
+block B = (I,T) is given by
+
+BSim(B) = S - S = 2D · BI - BI · BI.
+(4)
+
+To simplify the presentation of the three block constraints
+and the associated algorithms, in the rest of this paper we
+will consider the set of documents A as forming a weighted
+transaction-item matrix M whose rows and columns corre-
+spond to the documents and terms of A, respectively. As a
+result, each matrix entry M(i,j) will be equal to di(j) (i.e.,
+the value in the di's vector along the jth dimension).
+
+4. RELATED RESEARCH
+Efficient algorithms for finding frequent itemsets in large
+databases have been one of the key success stories in data
+mining research [2, 5, 3, 9, 29]. One of the early compu-
+tationally efficient algorithms was Apriori [2], which finds
+frequent itemsets of length l based on the previously mined
+frequent itemsets of length (l-1). More recently, a set of
+database-projection-based methods [1, 9, 20] have been de-
+veloped that significantly reduce the complexity of finding
+frequent long patterns. This study extends the projection-
+based method to mine valid sub-matrices with tough block
+constraints.
+The frequent itemset mining algorithms usually generate
+a large number of frequent itemsets when the support is
+low. To solve this problem, two general classes of techniques
+were proposed. The first is mining closed/maximal patterns.
+Typical examples include Max-Miner [3], A-close [17], MA-
+FIA [7], CHARM [29], CFP-tree [15], and CLOSET+ [24].
+The redundant pattern pruning and column fusing methods
+adopted by CBMiner have been popularly used in different
+forms by several previous studies [3, 28, 21, 7, 29, 24, 15].
+The second class focuses on mining constrained patterns by
+integrating various anti-monotone, monotone, or convertible
+constraints. The constrained association rule mining prob-
+lem was first considered in [23] but only for item specific
+constraints. Since then a number of different constrained fre-
+quent pattern mining algorithms have been proposed [4, 16,
+19, 6, 18, 13, 12]. All these algorithms concentrate on con-
+strained itemset mining with various anti-monotone, mono-
+tone, succinct or convertible constraints.
+Very recently some work [26] has been done to push ag-
+gregate constraints in the context of iceberg-cube computing.
+This algorithm mines aggregate constraints in the GROUP
+BY partitions of an SQL query by using a divide-and-appro-
+ximate strategy. The algorithm makes use of the strategy
+to derive a sequence of weaker anti-monotone constraints for
+a given non-anti-monotone constraint to prune the nodes in
+the search tree. Recently the LPMiner algorithm [22] was
+proposed to mine itemsets with length-decreasing support
+constraints. It uses a novel SVE property to prune the un-
+promising transactions of the projected databases based on
+the length of the transactions. Later the SVE property has
+been used to mine closed itemsets with length decreasing
+support constraints [27]. We also explore the SVE property in
+the context of mining closed patterns with block constraints
+in Section 6.2 to prune the unpromising rows of a prefix-
+projected matrix.
+
+
+5. MATRIX-PROJECTION BASED
+PATTERN MINING
+In this section we describe the ClsdPtrnMiner algo-
+rithm, which forms the basis of CBMiner algorithm. Cls-
+dPtrnMiner follows the widely used projection-based pat-
+tern mining paradigm [1, 9, 20], which can be used to ef-
+ficiently mine the complete set of frequent patterns in a
+depth-first search order and as we will see later, it can be
+easily adapted to mine valid closed block patterns. A key
+characteristic of ClsdPtrnMiner (as well as CBMiner)
+is that it represents the transaction database T using the
+transaction-item matrix M and employs a number of effi-
+cient sparse matrix storage and access schemes, allowing it
+to achieve high computational efficiency. For the remain-
+der of this section we describe the basic structure of Cls-
+dPtrnMiner for the problem of enumerating all patterns
+satisfying a constant minimum support constraint and then
+introduce several pruning methods to accelerate the frequent
+closed pattern mining. The extension of this algorithm for
+finding the closed blocks that satisfy the three tough block
+constraints described in Section 3 will be described later in
+Section 6.
+
+5.1 Frequent Pattern Enumeration
+Given a database, the complete set of itemsets can be orga-
+nized into a lattice if the items are in a predefined order, and
+the problem of frequent pattern mining then becomes how
+to traverse the lattice to find the frequent ones. The ClsdP-
+trnMiner algorithm adopts the depth-first search traversal
+and uses the downward closure property to prune the in-
+frequent columns from further mining. Figure 1(a) shows a
+database example with a minimum support 0.5. If we re-
+move the set of infrequent columns, {b,f,h,i,k,m}, and sort
+the set of frequent columns in frequency-increasing order,
+then part of the lattice (i.e., pattern tree) formed from col-
+umn set {g,a,c,e,d} can be organized into the one shown
+in Figure 1(b). Each node in the lattice is labeled in the
+form p:q, where p is a prefix itemset and q is the set of lo-
+cal columns appeared in the p-projected matrix, M|p. At a
+certain node during the depth-first traversal of the lattice,
+if the corresponding prefix p is infrequent, we stop mining
+the sub-tree under this node. Otherwise, we report p as a
+frequent pattern, build its projected matrix, M|p, find its
+locally frequent columns in M|p and use them to grow p to
+get longer itemsets.
+To store the various projected matrices efficiently, we adopt
+the CSR sparse storage scheme [8]. The CSR format utilizes
+two one-dimensional arrays: the first stores the actual non-
+zero elements of the matrix in a row (or column) major order,
+
+
+141
+Research Track Paper
+
+{}:{g,a,c,e,d}
+
+
+
+
+g:{a,c,e,d}
+a:{c,e,d}
+c:{e,d}
+e:{d}
+d
+
+
+
+
+ga:{c,e,d} gc:{e,d} ge:{d} gd
+ac:{e,d} ae:{d} ad
+ce:{d}
+cd
+ed
+
+
+
+gac:{e,d} gae:{d} gad gce:{d}gcd ged
+ace:{d} acd aed
+ced
+
+
+
+
+gace:{d}
+gacd gaed
+gced
+aced
+
+
+
+
+gaced
+TID
+Items
+
+1
+c, d, e, f, g,i
+2
+a, c, d, e, m
+3
+a, b, d, e, g, k
+4
+a, c, d, h
+(b)
+(a)
+
+
+
+
+Figure 1: (a) A transaction database with   0.5;
+(b) The pattern tree.
+
+
+and the second stores the indices corresponding to the be-
+ginning of each row (or column). To ensure that both the
+matrix projection as well as the column frequency count-
+ing are performed efficiently, we maintain both the row- and
+the column-based representation of the matrix. The overall
+complexity of the algorithm depends on the two key steps
+of sorting and projecting. We used the radix sort algorithm
+to sort the column frequencies which has a time complexity
+that is linear in the number of columns being sorted, and
+because of our matrix-storage scheme, projecting the ma-
+trix on the column is linear on the number of non-zeros in
+the projected matrix. Our matrix-projection based pattern
+enumeration method shares some of the ideas with the re-
+cently developed array-projection based method [20], which
+was shown to achieve good performance, especially for sparse
+datasets.
+
+5.2 Frequent Closed Pattern Mining
+The above frequent pattern enumeration method can find
+the complete set of frequent itemsets. To get the set of fre-
+quent closed itemsets, we need to check whether a newly
+found itemset is closed or not and sift out the redundant (i.e.,
+non-closed) ones. The pattern closure checking in ClsdP-
+trnMiner works as follows. We maintain the set of frequent
+closed itemsets mined so far in a hash-table H using the sum
+of the transaction-IDs of the supporting transactions as the
+hash-key [28, 29]. Upon getting a new itemset p, we check
+against the set of already mined closed itemsets which have
+the same hash-key value as the one derived from p's sum of
+transaction-IDs, to see if there is any itemset that is a proper
+superset of p with the same support. If that is the case, p is
+non-closed, otherwise the union of p and the set of its local
+columns with the same support as p forms a closed itemset.
+In the pattern enumeration process, some prefix itemsets
+or columns are unpromising to generate closed itemsets and
+thus can be pruned. ClsdPtrnMiner adopts two pruning
+methods, redundant pattern pruning and column fusing [3,
+28, 21, 7, 29, 24].
+
+1. Redundant Pattern Pruning (RPP)
+Once we
+find that a prefix itemset is non-closed, that is, it is a
+proper subset of another already mined closed itemset
+with the same support, it can be safely pruned, and the
+sub-tree under the node corresponding to this prefix
+will not be traversed.
+
+2. Column Fusing (CF) This optimization performs
+two different tasks. First, it fuses the dense columns
+(i.e., those columns with the same support as the cur-
+rent prefix p) of the projected matrix M|p to the pre-
+fix itemset p and removes them from M|p, and thus
+avoiding projections on them. Second, it fuses columns
+in M|p that have identical supporting transaction sets
+into a single column, and removes the original columns
+from M|p. By fusing them, the algorithm reduces the
+number of projections that need to be performed, as
+it essentially allows for the pattern to grow by adding
+multiple columns in a single step.
+
+By integrating the above optimization methods with the
+frequent pattern enumeration process, we get the ClsdP-
+trnMiner algorithm as shown in Algorithm 5.1. It takes
+as input the current pattern p, the p-projected matrix M|p,
+the given minimum support , and the current hash-table H.
+The algorithm initially sorts the columns of M|p and elimi-
+nates any infrequent columns and then proceeds to perform
+Column Fusing. After that it enters its main computational
+loop which extends p by adding each column a  M|p, checks
+to see if p  {a} can be pruned by comparing it against H
+(Redundant Pattern Pruning), projects M|p on a, checks to
+see if p  {a} is closed, and finally calls itself recursively for
+pattern p  {a}.
+
+
+Algorithm 5.1: ClsdPtrnMiner(p, M|p, ,H)
+
+Sort the columns ofM|p in frequency increasing order
+Prune the columns in M|p whose support is less than 
+if no column is frequent
+then return
+Do Column Fusing for the columns in M|p
+for each column a  M|p
+
+
+
+
+do
+8
+>
+>
+>
+>
+>
+>
+>
+<
+>
+>
+>
+>
+>
+>
+>
+:
+if p  {a} is a Redundant Pattern
+then continue
+Project M|p on a to get M|p
+{a}
+if there is no dense column in M|p
+{a}
+
+then
+
+Output the closed pattern p  {a}
+Insert p  {a} into the hash-table H
+ClsdPtrnMiner(p  {a}, M|p
+{a}
+,,H)
+return
+
+
+
+
+6. CLOSED BLOCK MINING WITH
+TOUGH CONSTRAINTS
+Like the traditional frequent closed pattern mining algo-
+rithms, ClsdPtrnMiner works under the constant support
+threshold framework and uses the downward closure prop-
+erty to prune infrequent columns. However, with tough
+block constraints, the nice properties derived from the anti-
+monotone (or monotone) constraints no longer hold to be
+used to prune search space. Designing effective pruning
+methods for tough block constraints is especially challeng-
+ing. To address this challenge we developed three classes of
+pruning methods, called column-pruning, row-pruning and
+matrix pruning, which eliminate the unpromising columns,
+rows and projected matrices from mining. The specific de-
+tails of these pruning methods are different for each of the
+three block constraints and will be described later in this
+section.
+By incorporating these three pruning methods with the
+overall structure of ClsdPtrnMiner, we can easily derive
+the CBMiner algorithm that mines the set of all valid closed
+block patterns. The pseudo code for CBMiner is shown in
+Algorithm 6.1. It takes as input the current pattern p, the
+p-projected matrix M|p, the hash-table H that stores the
+
+
+142
+Research Track Paper
+
+valid closed blocks that were discovered so far, and the block-
+constraint C corresponding to either the block-size, block-
+sum, or block-similarity constraint. Since it is derived from
+ClsdPtrnMiner algorithm, it has many steps in common
+and for this reason we will only describe its key differences.
+
+
+Algorithm 6.1: CBMiner(p, M|p,H, C)
+
+Sort the columns ofM|p in frequency increasing order
+if matrix M|p can be pruned
+then return
+Prune the columns in M|p
+if no column is valid
+then return
+Do Column Fusing for the columns in M|p
+for each column a  M|p
+
+
+
+
+do
+8
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+<
+
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+:
+if p  {a} is a Redundant Pattern
+then continue
+let B = (p  {a}, T |a
+p
+)
+Project M|p on a to get M|p
+{a}
+if
+dense column in M|p
+{a}
+and C(B) = TRUE
+
+then
+
+Output the closed block B
+Insert B into the hash-table H
+Prune the rows of M|p
+{a}
+CBMiner(p  {a}, M|p
+{a}
+,H, C)
+return
+
+
+
+The first difference has to do with the pruning methods.
+Specifically, instead of using the constant support-based col-
+umn pruning, CBMiner uses the newly proposed column-
+pruning, row-pruning and matrix pruning methods, which
+are derived from the tough block constraints. The second
+difference has to do with the implementation of the column
+fusion optimization for the block-sum and block-similarity
+constraints. In the case of the block-sum constraint, the val-
+ues of the fused columns correspond to the sum of the values
+of their constituent columns. This ensures that the resulting
+fused matrix contains all necessary information to correctly
+evaluate the constraints. In the case of the block-similarity
+constraint, since the correct evaluation of the constraints re-
+quires access to the individual column-values, we do not per-
+form any column fusion.
+Following we will introduce in detail the three pruning
+methods, column-pruning, row-pruning and matrix pruning,
+in terms of the three different block constraints. Note that
+the details of the proofs of the Lemmas appeared in this
+section can be found in [10].
+
+6.1 Column Pruning
+Given a prefix itemset p and its projected matrix M|p, the
+idea behind column pruning is to identify for each column
+x  M|p a necessary condition that must be satisfied such
+that there is a valid block B = (p  , T |p
+
+) for which 
+is a subset of the columns in M|p and x  . Using this
+condition, we can then eliminate from M|p all the columns
+that do not satisfy it, as these columns cannot be part of
+a valid block that contain p. Note that for each column x
+that we eliminate, we prevent the exploration of the sub-
+tree associated with the pattern p  {x}, thus, significantly
+reducing the overall search space.
+
+6.1.1 Block Size
+The necessary condition for the block-size constraint is
+encapsulated in the following lemma (Refer to Section 2 for
+a description of the notation used).
+
+Lemma 6.1. (Block-Size Column Pruning) Let p be a
+pattern and x a column in M|p. Then in order for x to be
+part of a valid block that satisfies the block-size constraint
+of Equation 1 and is obtained from extending p by adding
+columns from M|p, the following must hold:
+
+BSize(p, T |xp) +
+X
+
+t
+T
+|x
+p
+|t|  N.
+(5)
+
+
+For each column in M|p, Equation 5 can be evaluated by
+adding up the lengths of the rows that it supports. These
+sums can be computed for all the columns by performing a
+single scan of the p-projected matrix.
+
+6.1.2 Block Sum
+The necessary condition for the block-sum constraint is
+similar in nature to that of the block-size constraint and is
+encapsulated in the following lemma.
+
+Lemma 6.2. (Block-Sum Column Pruning) Let p be a
+pattern and x a column of M|p. Then in order for x to be
+part of a valid block that satisfies the block-sum constraint of
+Equation 2 and is obtained by extending p with columns in
+M|p, the following must hold:
+
+BSum(p, T |xp) +
+X
+
+t
+T
+|x
+p
+,j
+I|p
+M|p(t,j)  W.
+(6)
+
+
+
+Note that the summation on the left-hand-side of Equa-
+tion 6 is nothing more than the sum of the non-zero elements
+of each row in T |xp.
+The various quantities required to evaluate Equation 6 can
+be computed efficiently by performing a single scan of the
+block (p,T |xp) to compute the sum of each row, and two scans
+of the matrix M|p. The first scan will compute the sum of
+the non-zero elements of each row, and the second scan will
+compute the summation term in Equation 6 for each column.
+
+6.1.3 Block Similarity
+Let D be the composite vector of T and consider a p-
+projected weighted matrix M|p. The necessary condition
+for the block-similarity constraint is encapsulated in the fol-
+lowing lemma.
+
+Lemma 6.3. (Block-Similarity Column Pruning) Let
+p be a pattern, (p,T |p) its corresponding block, and x a col-
+umn of M|p. Then in order for x to be part of a block that
+satisfies the block-similarity constraint of Equation 3 and is
+obtained by extending p with columns in M|p, the following
+must hold:
+
+2D · (Bx + Bp)  S
+(7)
+
+For each column of M|p, evaluating the above equation
+incurs a computational cost equivalent to one scan of the p-
+projected matrix, which is very costly. So, we make use of
+the following lemma, which approximates Equation 7.
+
+Lemma 6.4. (Approximate Block-Similarity Column
+Pruning) Let  be the maximum value across the m dimen-
+sions of vector D and  be the maximum row-sum over all the
+rows of the p-projected matrix M|p. Then in order for x to
+be part of a block that satisfies the block-similarity constraint
+of Equation 3 and is obtained by extending p with columns
+in M|p, the following must hold:
+
+freq(x) 
+S - 2D · Bp
+2
+(8)
+
+
+
+143
+Research Track Paper
+
+In a single scan of the projected matrix, we can compute
+the frequency of all its columns along with the value of .
+Hence the complexity is of the order of the size of the pro-
+jected matrix.
+
+6.2 Row Pruning
+Given a pattern p and its projected matrix M|p, the idea
+behind row pruning is to identify for each row t  M|p a
+necessary condition that must be satisfied such that there
+is a valid block B = (p  ,T |p
+
+) for which   t. Using
+this condition, we can then eliminate from M|p all the rows
+that do not satisfy it, as these rows cannot be part of a valid
+block that contain p. By eliminating such rows we reduce the
+size of Mp and thus reduce the amount of time required to
+perform subsequent projections and enhance future column
+pruning operations.
+To derive such conditions we make use of the Smallest
+Valid Extension (SVE) principle, originally introduced in [22]
+for finding itemsets with length-decreasing support constraint.
+In the context of block constraints considered in this paper,
+the smallest valid extension of a prefix p is defined as the
+length of the smallest possible extension  to p (where 
+is a set of columns in M|p), such that the resulting block
+B = (p ,T |p
+
+) is valid for a given constraint C. That is,
+
+SVE(p) = min
+
+I|p
+{|| | C(p  ,T |p
+
+) = TRUE}.
+
+Knowing the SVE of a pattern, we can then eliminate all the
+rows whose length is smaller than the SVE value. Note that
+the SVE of a pattern that already corresponds to a valid block
+will be by definition zero. For this reason, the row-pruning
+is only applied when the pattern p does not correspond to a
+valid block.
+In the rest of this section we describe how to obtain such
+SVE-based necessary conditions for the block-size, block-
+sum, and block-similarity constraints.
+
+6.2.1 Block Size
+The SVE of a pattern p for the block-size constraint is
+given by the following lemma.
+
+Lemma 6.5. (Block-Size Row Pruning) Let p be a pat-
+tern such that B = (p, T |p) does not satisfy the block-size
+constraint. Then the smallest valid extension of p for the
+block-size constraint of Equation 1 is
+
+SVE(p) 
+N - BSize(B)
+|T |p|
+.
+(9)
+
+The complexity of computing the SVE(p) is (1).
+
+6.2.2 Block Sum
+The SVE of a pattern p for the block-sum constraint is
+given by the following lemma.
+
+Lemma 6.6. (Block-Sum Row Pruning) Let p be a pat-
+tern such that B = (p, T |p) does not satisfy the block-sum
+constraint, and z be the maximum column-sum over all columns
+of M|p. Then the smallest valid extension of p for the block-
+sum constraint of Equation 2 is
+
+SVE(p) 
+W - BSum(B)
+z
+.
+(10)
+
+The complexity of computing the SVE(p) is of the order of
+the size of the projected matrix as we need one scan of the
+projected matrix to compute the maximum of the column-
+sums.
+6.2.3 Block Similarity
+Let D be the composite vector of T and consider a p-
+projected weighted matrix M|p. The column-similarity of
+column x in M|p is denoted by csimM|p(x) and is defined
+to be equal to
+
+2D(x)csumM|p(x) - csum2M|p(x).
+Given this definition, the SVE of a pattern p for the block-
+similarity constraint is given by the following lemma.
+
+Lemma 6.7. (Block-Similarity Row Pruning) Let p be
+a pattern such that B = (p, T |p) does not satisfy the block-
+similarity constraint, and z is the maximum column-similarity
+over all columns of M|p. Then the smallest valid extension
+of p for the block-similarity constraint of Equation 3 is
+
+SVE(p) 
+S - BSim(B)
+z
+.
+(11)
+
+The complexity of computing the SVE(p) is identical to
+that for the block-sum constraint.
+
+6.3 Matrix Pruning
+Given a prefix itemset p and its projected matrix M|p, the
+column pruning and row pruning methods are very effective
+in pruning some unpromising columns and rows from M|p.
+However, in many cases the whole projected matrix M|p
+cannot be used to generate any valid block patterns and thus
+can be pruned. Hence we developed another class of pruning
+method called matrix pruning in order to further prune the
+search space in terms of the block size, block sum, and block
+similarity constraints.
+
+6.3.1 Block Size
+The necessary condition for the block-size constraint is
+encapsulated in the following lemma.
+
+Lemma 6.8. (Block-Size Matrix Pruning) Let p be a
+pattern and t a transaction in M|p. Then in order for M|p
+to be used to generate any valid block that satisfies the block-
+size constraint of Equation 1 and is obtained by extending p
+with some columns in M|p, the following must hold:
+
+BSize(p, T |p) +
+X
+
+t
+T
+|p
+|t|  N.
+(12)
+
+
+The sums in Equation 12 can be computed by a single scan
+of the p-projected matrix M|p.
+
+6.3.2 Block Sum
+The necessary condition for the block-sum constraint is
+stated in the following lemma.
+
+Lemma 6.9. (Block-Sum Matrix Pruning) Let p be a
+pattern, x a column in M|p, and t a transaction in M|p.
+Then in order for M|p to be used to generate any valid block
+that satisfies the block-sum constraint of Equation 2 and is
+obtained by extending p with some columns in M|p, the fol-
+lowing must hold:
+
+BSum(p, T |p) +
+X
+
+t
+T
+|p,x
+I|p
+M|p(t,x)  W.
+(13)
+
+
+Note that the summation on the left-hand-side of Equa-
+tion 13 is nothing more than the sum of the non-zero ele-
+ments of each row in T |p and can be computed in one scan
+of the p-projected matrix.
+
+
+144
+Research Track Paper
+
+6.3.3 Block Similarity
+Using the definition of the column-similarity introduced in
+Section 6.2.3, the necessary condition for the block-similarity
+constraint can be stated as follows:
+
+Lemma 6.10. (Block-Similarity Matrix Pruning) Let
+p be a pattern, x a column of M|p, and csimM|p(x) the
+column-similarity of x in M|p. Then in order for M|p to
+be used to generate any valid blocks that satisfy the block-
+similarity constraint of Equation 3 and is obtained from ex-
+tending p with some columns in M|p, the following must
+hold:
+
+BSim(p, T |p) +
+X
+
+x
+I|p
+csimM|p(x)  S
+(14)
+
+
+
+The column-similarities of all the columns can be com-
+puted in a single scan of the p-projected matrix.
+
+
+Table 1: Dataset Characteristics.
+Data
+# Trans
+# Items
+A.(M.)tran.len.
+gazelle
+59601
+498
+2.5(267)
+pumsb*
+49046
+2089
+50.5(63)
+big-market
+838466
+38336
+3.12(90)
+Sports
+8580
+126373
+258.3(2344)
+T10I4Dx
+200k-1000k
+10000
+10(31)
+
+
+
+
+7. EXPERIMENTAL EVALUATION
+We evaluated the performance of CBMiner for finding
+blocks that satisfy the three block constraints using four real
+datasets (gazelle, pumsb*, big-market, and sports) and a se-
+quence of synthetic datasets (T10I4Dx). The characteris-
+tics (number of transactions, number of items and the av-
+erage(maximum) transaction lengths) of these datasets are
+shown in the Table 1. The gazelle dataset contains the click-
+stream data from Gazelle.com. The pumsb* dataset contains
+census data and big-market dataset contains the transaction
+information of a retail store. The sports dataset is a doc-
+ument dataset obtained from San Jose Mercury (TREC).
+The synthetic dataset series T10I4Dx were generated from
+IBM dataset generator, with average transaction length of
+10, number of distinct items of 10,000, and average frequent
+itemset length of 4. This dataset was used for scalability tests
+by varying the number of transactions from 200k to 1000k.
+All the experiments were performed on a 2GHz Intel P4 pro-
+cessor with 2GB of memory running Linux. CBMiner was
+implemented in C.
+
+7.1 Results
+The experimental evaluation was performed along three
+different dimensions. First, we compared the performance
+of the various pruning methods used by CBMiner for dif-
+ferent datasets and block constraints. Second, we evaluated
+the scalability characteristics of CBMiner as the number of
+transactions increases. Third, we compared CBMiner's per-
+formance against that achieved by traditional closed frequent
+itemset mining algorithms. The motivation behind this com-
+parison is twofold: (i) it allows us to verify the extent to
+which the closed block constraints lead to a more concise set
+of patterns than that produced by existing closed frequent
+itemset approaches, and (ii) it provides a reference point by
+which to judge the underlying efficiency of CBMiner's im-
+plementation.
+5
+10
+15
+20
+25
+30
+35
+40
+45
+50
+
+
+
+
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+0.45
+0.5
+Time
+(in
+seconds)
+
+
+
+
+% Minimum BSize
+CP+RP+MP
+CP
+RP
+MP
+
+
+
+
+0
+200
+400
+600
+800
+1000
+1200
+1400
+
+
+
+
+6
+6.5
+7
+7.5
+8
+8.5
+9
+9.5
+10
+Time
+(in
+seconds)
+
+
+
+
+% Minimum BSum
+CP+RP+MP
+CP
+RP
+MP
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+
+
+
+
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+0.45
+0.5
+Time
+(in
+seconds)
+
+
+
+
+(1/10000) Minimum BSim
+CP+RP+MP
+CP
+RP
+MP
+
+
+
+
+0
+200
+400
+600
+800
+1000
+1200
+
+
+
+
+200
+300
+400
+500
+600
+700
+800
+900 1000
+Time
+(in
+seconds)
+
+
+
+
+Base Size in K Tuples
+BSize
+BSum
+BSim
+Fig 2. Pruning methods (gazelle)
+Fig 3. Pruning methods (pumsb*)
+
+
+
+
+Fig 5. Scalability test (T10I4Dx)Fig 4. Pruning methods (big-market)
+
+
+7.1.1 Effectiveness of the Pruning Methods
+We evaluated the effectiveness of the three newly pro-
+posed pruning methods, Column Pruning (CP), Row Prun-
+ing (RP), and Matrix Pruning (MP), and their combination
+(CP+RP+MP). Fig. 2 shows these results for the BSize con-
+straint and dataset gazelle, Fig. 3 shows the results for the
+BSum constraint and dataset pumsb*, while Fig. 4 shows
+the results for the BSim constraint and dataset big-market.
+These results show that the combination of all the three
+pruning techniques is always faster than each individual prun-
+ing method, and for the BSize and BSum constraints the
+overall ranking of the pruning effectiveness among the three
+methods is Column Pruning > Matrix Pruning > Row Prun-
+ing, while for the BSim constraint Matrix Pruning is more
+effective than Row Pruning and Column Pruning.
+Note that if we do not apply any of the three pruning meth-
+ods, CBMiner degenerates to ClsdPtrnMiner (denoted as
+No-Pruning) and it performs poorly. For example, without
+any pruning for the gazelle dataset with BSize constraint of
+0.4% its runtime is 205.23 seconds, while the corresponding
+runtime for CP+RP+MP is only 2 seconds (as shown in Fig.
+2). For this reason we do not show the curves corresponding
+to No-Pruning in Figs. 2­4.
+
+7.1.2 Scalability Study
+We used the synthetic dataset series T10I4Dx for the scal-
+ability test of CBMiner, where `x' indicates the base size
+and varies from 200K to 1000K tuples. In the experiments
+we fixed the BSize, BSum, and BSim threshold all at 0.01%.
+From Fig. 5, we can see that CBMiner has linear scalability
+on all the three constraints in terms of the base size.
+
+7.1.3 Constrained vs. all closed block pattern mining
+In comparing with closed pattern mining algorithms, we
+chose one of the recently developed closed itemset mining
+algorithms, CLOSET+ [24], for our comparisons. We com-
+pared CBMiner with CLOSET+ by providing the minimum
+frequency of the valid closed block patterns generated by
+CBMiner as the absolute minimum support to CLOSET+.
+This ensures that CLOSET+ will discover all the patterns
+found by CBMiner. However, CLOSET+ will find addi-
+tional patterns that do not satisfy the block constraints.
+We performed numerous experiments to compare CBMiner
+with CLOSET+ for all the three block constraints and us-
+
+
+145
+Research Track Paper
+
+1
+10
+100
+1000
+10000
+100000
+1e+06
+1e+07
+
+
+
+
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+0.45
+0.5
+#
+of
+Patterns
+(in
+logscale)
+
+
+
+
+% Minimum BSize
+CBMiner
+Closet+
+
+
+
+
+1
+10
+100
+1000
+10000
+
+
+
+
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+0.45
+0.5
+Time
+(in
+seconds
+on
+logscale)
+
+
+
+
+% Minimum BSize
+CBMiner
+Closet+
+
+
+
+
+1
+10
+100
+1000
+10000
+100000
+1e+06
+1e+07
+
+
+
+
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+#
+of
+Patterns
+(in
+logscale)
+
+
+
+
+% Minimum BSum
+CBMiner
+Closet+
+
+
+
+
+1
+10
+100
+1000
+10000
+100000
+
+
+
+
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+Time
+(in
+seconds
+on
+logscale)
+
+
+
+
+% Minimum BSum
+CBMiner
+Closet+
+Fig 6. No. Patterns (gazelle)
+Fig 7. Runtime (gazelle)
+
+
+
+
+Fig 8. No. Patterns (sports)
+Fig 9. Runtime (sports)
+
+
+ing the datasets shown in Table 1. Due to limited space, we
+only show part of the results. Figs. 6­7 show the compari-
+son results for the BSize constraint and dataset gazelle, while
+Figs. 8­9 show the results for the BSum constraint and the
+sports dataset. The results show that in general, CBMiner
+is substantially faster than CLOSET+. This is primarily due
+to the fact that, as it was expected, CLOSET+ produces sig-
+nificantly more patterns than those produced by CBMiner.
+For datasets with short transactions like gazelle and big-
+market, CBMiner can be order(s) of magnitude faster than
+CLOSET+, and finds order(s) of magnitude fewer patterns.
+While for the datasets with long transactions like pumsb*,
+and sports, CLOSET+ is a little faster at high block thresh-
+old of BSize and BSum, but once the threshold is lowered,
+there is an explosive increase in the number of frequent closed
+itemsets (e.g., with BSize/BSum 0.2% CLOSET+ generates
+several orders of magnitude more patterns than CBMiner).
+These results illustrate that the pruning methods used by
+CBMiner are indeed effective in reducing the overall search
+space, leading to substantial performance improvements.
+
+
+Table 2: Summary of document datasets used for the
+application.
+Data
+No. of documents
+No. of terms
+No. of classes
+Classic
+7089
+12009
+4
+Sports
+8580
+18324
+7
+LA1
+3204
+31472
+6
+
+
+
+7.2 Application - Micro Concept Discovery
+Finally, we demonstrate an application for the three block
+constraints in the context of document clustering by show-
+ing that the blocks discovered by these constraints repre-
+sent sets of documents that have a great chance of belong-
+ing to the same cluster and hence can be used to identify
+potential cores of natural clusters in data as well as the-
+matically related words. For this application we chose two
+additional document datasets viz., LA1 and Classic in ad-
+dition to Sports. The LA1 dataset contains articles that
+appeared in LA Times news, whereas the Classic dataset
+contains abstracts of technical papers. Some of the charac-
+teristics of these datasets are shown in Table 2. We scaled
+the document vectors using the well known tf-idf scaling and
+normalized using L2-norm and used our closed block min-
+ing algorithm with block size, block-sum and block-similarity
+constraints. From the patterns that were found we chose the
+1000 highest ranked patterns on the basis of the constraint
+value. For example, for the block sum constraint, we se-
+lected the top-1000 blocks ranked on block sum and in the
+same way for block-size and block-similarity constraints. For
+each of the top-1000 blocks we computed the entropies of the
+documents that formed the supporting set of the block and
+took the average of the 1000 entropies. Similarly, we com-
+puted the average block pattern frequency and average block
+pattern length. For comparison purposes, we also used the
+CLOSET+ algorithm to find a set of frequent closed itemsets
+and also selected the 1000 most frequent itemsets discovered
+by CLOSET+. Fig. 10 shows the average entropy, frequency,
+and length of the various patterns discovered by the four al-
+gorithms for the three datasets. Note that the CLOSET+
+results are labeled as "freq".
+From these results we can see that the average entropy
+of the patterns discovered by the four schemes are quite
+small, indicating that all of them do reasonably well in iden-
+tifying itemsets whose supporting documents are primarily
+from a single class. Despite that, we can see that the block-
+similarity constraint outperforms the rest, as it leads to the
+lowest entropies (i.e., purest clusters) for all datasets. This
+verifies our initial motivation for defining the block-similarity
+constraint, as it is able to better capture the characteristics
+of the underlying datasets and problem, and discover sets of
+words that are thematically very related. The block-size and
+the itemset support constraints show some inconsistency in
+finding good concepts as they do not account for the weights
+associated with the terms in the document-term matrices.
+On the other hand the block-sum constraint does reasonably
+well as it was able to take into account the differences in
+the terms weights provided by the L2-norm and tf-idf scal-
+ing for the document vectors. Also note that the highest
+ranked patterns discovered by the frequent closed mining al-
+gorithm (CLOSET+) are in general quite short compared
+to the length of the patterns discovered by the block con-
+straints.
+
+8. CONCLUSION AND FUTURE WORK
+In this paper we studied how to mine valid closed pat-
+terns with tough block constraints and proposed a matrix-
+projection based framework called CBMiner for mining closed
+block patterns in transaction-item or document-term ma-
+tricies effectively. Under this framework we mainly discussed
+three typical block constraints viz., block size, block sum and
+block similarity. Some widely adopted properties derived
+from the anti-monotone or monotone constraints no longer
+hold to be used to prune search space for these tough block
+constraints. As a result, we specifically proposed three novel
+pruning methods, column pruning, row pruning and matrix
+pruning, which can push deeply the block constraints into
+pattern discovery and prune the unpromising columns, rows,
+and projected matrices effectively.
+The research in this paper can be extended along two dif-
+ferent directions. First, the CBMiner algorithm and its
+pruning methods assume that the entire dataset can fit into
+the main memory, which is not true for very large datasets.
+Extending the matrix-based projection approach along with
+the row-, column-, and matrix-pruning methods to a disk-
+based implementation is a required step for mining these
+datasets. Second, we believe that the underlying principles
+utilized by the three pruning methods are quite general and
+can be used (i) by other frequent pattern mining approaches,
+
+
+146
+Research Track Paper
+
+0
+200
+400
+600
+800
+1000
+1200
+1400
+1600
+1800
+
+
+
+
+freq
+size
+sum
+sim
+freq
+size
+sum
+sim
+freq
+size
+sum
+sim
+
+
+classic classic classic classic sports sports sports sports
+la1
+la1
+la1
+la1
+
+
+Constraint & Dataset
+Pattern
+Frequency
+
+
+
+
+0
+0.02
+0.04
+0.06
+0.08
+0.1
+0.12
+
+
+
+
+freq
+size
+sum
+sim
+freq
+size
+sum
+sim
+freq
+size
+sum
+sim
+
+classic classic classic classic sports sports sports sports la1
+la1
+la1
+la1
+
+
+Constraint & Dataset
+Entropy
+
+
+
+
+0
+5
+10
+15
+20
+25
+
+
+
+
+freq
+size
+sum
+sim
+freq
+size
+sum
+sim
+freq
+size
+sum
+sim
+
+
+classic classic classic classic sports sports sports sports la1
+la1
+la1
+la1
+
+
+Constraint & Dataset
+Pattern
+Length
+
+
+
+
+Fig. 10 Evaluation of the quality of the top-1000 patterns discovered by various algorithms.
+
+and (ii) to prune the search space of other tough constraints.
+Identifying the conditions under which such extensions are
+possible can greatly help in extending existing algorithms
+and expanding the type of tough constraints that can effi-
+ciently be solved.
+
+
+9. REFERENCES
+[1] R. Agarwal, C. Aggarwal, V. Prasad, and V. Crestana. A
+tree projection algorithm for generation of large itemsets for
+association rules. IBM Research Report, RC21341,
+November 1998.
+[2] R. Agrawal and R. Srikant. Fast algorithms for mining
+association rules. In Proc. of the VLDB'94, September 1994.
+[3] R. Bayardo. Efficiently mining long patterns from
+databases. In Proc. of the ACM SIGMOD'98, June 1998.
+[4] R. Bayardo, R. Agrawal, and D. Gunopulos. Constrained
+based rule mining for large dense databases. In Proc. of the
+ICDE'99, March 1999.
+[5] S. Brin, R. Motwani, J. D. Ullman, and S. Tsur. Dynamic
+itemset counting and implication rules for market basket
+data. In Proc. of the ACM SIGMOD'97, May 1997.
+[6] C. Bucila, J. Gehrke, D. Kifer, and W. White. Dualminer :
+A dual-pruning algorithm for itemsets with constraints. In
+Proc. of the ACM SIGKDD'02, July 2002.
+[7] D. Burdick, M. Calimlim, and J. Gehrke. Mafia: A maximal
+frequent itemset algorithm for transactional databases. In
+Proc. of the ICDE'01, April 2001.
+[8] A. Grama, A. Gupta, G. Karypis, and V. Kumar.
+Introduction to Parallel Computing: Design and Analysis of
+Algorithms, 2nd Edition. Adison Wesley Publishing
+Company, 2003.
+[9] J. Han, J. Pei, and Y. Yin. Mining frequent patterns
+without candidate generation. In Proc. of the ACM
+SIGMOD'00, May 2000.
+[10] K. Gade, J. Wang, and G. Karypis. Effcient Closed Pattern
+Mining in the Presence of Tough Block Constraints.
+Technical Report TR #03­45, Department of Computer
+Science and Engineering, University of Minnesota,
+Minneapolis, MN, 2003. Available on the WWW at
+http://cs.umn.edu/~karypis/publications.
+[11] G. Karypis and E. H. Han. Fast supervised dimensionality
+reduction algorithm with applications to document
+categorization & retrieval. In Proc. of the ACM CIKM'00,
+November 2000.
+[12] D. Kifer, C. Bucila, J. Gehrke, and W. White. How to
+quickly find a witness. In Proc. of the ACM PODS'03, June
+2003.
+[13] C.K.-S. Leung, L.V.S. Lakshmanan, and R.T. Ng.
+Exploiting succinct constraitnts using fp-trees. In ACM
+SIGKDD Explorations, Volume 4, 2002.
+[14] B. Liu, W. Hsu, and Y. Ma. Mining association rules with
+multiple minimum supports. In Proc. of the ACM
+SIGKDD'99, August 1999.
+[15] G. Liu, H. Lu, W. Lou, and J.X. Yu. On computing and
+querying frequent patterns. In Proc. of the ACM
+SIGKDD'03, August 2003.
+[16] R. Ng, Laks V. S. Lakshmanan, J. Han, and T. Mah.
+Exploratory mining via constrained frequent set queries. In
+Proc. of the ACM SIGMOD'99, June 1999.
+[17] N. Pasquier, Y. Bastide, R. Taouil, and L. Lakhal.
+Discovering frequent closed itemsets for association rules. In
+Proc. of the ICDT'99, January 1999.
+[18] J. Pei and J. Han. Constrained frequent pattern mining : A
+pattern-growth view. In ACM SIGKDD Explorations,
+Volume 4, 2002.
+[19] J. Pei, J. Han, and L.V.S. Lakshmanan. Mining frequent
+itemsets with convertible constraints. In Proc. of the
+ICDE'01, April 2001.
+[20] J. Pei, J. Han, H. Liu, and S. Nishio et al. H-mine : Hyper
+structure mining of frequent patterns databases. In Proc. of
+the ICDM'01, November 2001.
+[21] J. Pei, J. Han, and R. Mao. Closet: An efficient algorithm
+for mining frequent closed itemsets. In Proc. of the
+DMKD'00, May 2000.
+[22] M. Seno and G. Karypis. Lpminer: An algorithm for finding
+frequent itemsets using length-decreasing support
+constraint. In Proc. of the ICDM'01, November 2001.
+[23] R. Srikant, Q. Vu, and R. Agrawal. Mining associations
+rules with item constraints. In Proc. of the ACM
+SIGKDD'97, August 1997.
+[24] J. Wang, J. Han, and J. Pei. Closet+: Searching for the
+best strategies for mining frequent closed itemsets. In Proc.
+of the ACM SIGKDD'03, August 2003.
+[25] K. Wang, Y. He, and J. Han. Mining frequent itemsets
+using support constraints. In Proc. of the VLDB'00,
+September 2000.
+[26] K. Wang, Y. Jiang, J. Xu Yu, G. Dong, and J. Han. Pusing
+aggregate constraints by divide-and-approximate. In Proc.
+of the ICDE'03, March 2003.
+[27] J. Wang and G. Karypis. BAMBOO: Accelerating closed
+itemset mining by deeply pushing the length-decreasing
+support constraint. In Proc. of the SDM'04, April 2004.
+[28] M. Zaki. Generating non-redundant association rules. In
+Proc. of the ACM SIGKDD'00, August 2000.
+[29] M. Zaki and C. Hsiao. Charm: An efficient algorithm for
+closed itemset mining. In Proc. of the SDM'02, April 2002.
+
+
+
+
+147
+Research Track Paper
+

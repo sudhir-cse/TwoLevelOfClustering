@@ -1,0 +1,1726 @@
+DualMiner: A Dual-Pruning Algorithm for Itemsets with
+Constraints
+
+
+Cristian Bucila, Johannes Gehrke and
+Daniel Kifer
+Dept. of ComputerScience
+Cornell University
+{cristi,johannes,dkifer} @cs.cor nell.edu
+Walker White
+Departmentof Mathematics
+Universityof Dallas
+wmwhite @ udallas.edu
+
+
+
+ABSTRACT
+
+Constraint-based mining of itemsets for questions such as
+"find all frequent itemsets where the total price is at least
+$50" has received much attention recently. Two classes of
+constraints, monotone and antimonotone, have been iden-
+tified as very useful. There are algorithms that efficiently
+take advantage of either one of these two classes, but no
+previous algorithms can efficiently handle both types of con-
+straints simultaneously.
+In this paper, we present the first
+algorithm (called DualMiner) that uses both monotone and
+antimonotone constraints to prune its search space.
+We
+complement a theoretical analysis and proof of correctness
+of DualMiner with an experimental study that shows the
+efficacy of DualMiner compared to previous work.
+
+
+1.
+INTRODUCTION
+Mining frequent itemsets in the presence of constraints
+is an important data mining problem [5, 9, 10, 11, 12].
+(We assume that the reader is familiar with the terminol-
+ogy from the association rules literature [2].) The problem
+can be stated abstractly as follows. Let M be a finite set
+of items from some domain (for example, products in a gro-
+cery store). All the items have a common set of descriptive
+attributes (i.e., the name, brand, or price of the item). In
+the remainder of this paper, we will assume without loss of
+generality that each item has the same single descriptive at-
+tribute, and for convenience we will associate an item with
+its attribute value. A predicate over a set of items is a con-
+dition that the set has to satisfy. Thus by "a predicate over
+a set of items X," we always mean a predicate over the as-
+sociated set of attribute values of the items in X.
+(In the
+remainder of this paper, we will use the terms predicate and
+constraint interchangeably.) We can now define the prob-
+lem of constrained-based market basket analysis as follows:
+
+*Research conducted at Cornell University with the Intelli-
+gent Information Systems Institute
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commexcialadvantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish,to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD '02 Edmonton, Alberta, Canada
+Copyright 2002 ACM 1-58113-567-X/02/0007...$5.00.
+Given a set of predicates P1,P2,... ,Pn, find all sets in the
+powerset of M that satisfy PI A P2 A .. · A Pn ·
+Important classes of constraints, most notably monotone
+and antimonotone, have been introduced by Ng et al. [10,
+9, 5, 11, 12] and there exist algorithms that are designed to
+take advantage of each class of constraints.
+However, the
+main deficiency in such algorithms is that they efficiently
+handle only one class of constraints. More recently, Raedt
+and Kramer [13] have generalized these algorithms to al-
+low several types of constraints, but their generalization can
+handle only one type of constraint at a time. We present a
+new algorithm, DualMiner, which can simultaneously take
+advantage of both monotone and antimonotone predicates to
+efficiently mine constraint-based itemsets.
+Previous work has shown that the search space of all item-
+sets forms a lattice. Actually, the search space of all itemsets
+forms a special type of lattice, namely an algebra, and we
+use algebras to succinctly represent the output in much the
+same way that maximal frequent itemsets can be used to
+succinctly represent the set of all frequent itemsets [4]. This
+representation adds to the efficiency of DualMiner and nat-
+urally leads to the following cost metrics as comparisons be-
+tween different algorithms: number of nodes (in the search
+space) examined, number of evaluations of the antimono-
+tone predicate and number of evaluations of the monotone
+predicate.
+Not all predicates have the same cost structure. For ex-
+ample, given an itemset X, the predicate rain(X) >_ c can
+be calculated in constant time if the size of the set X is
+bounded (which is generally true) regardless of the number
+of transactions in the database. However, the cost of count-
+ing the support of an itemset X may depend on the current
+node being examined.
+For example, when using bitmaps
+as in the MAFIA algorithm [6], the cost also depends on
+the number of transactions in the database.
+As we shall
+see, different cost structures require different strategies for
+traversal through She search space; by design, DualMiner is
+traversal strategy agnostic, and thus can accommodate the
+traversal strategy that is best for the dataset at hand.
+
+Preliminaries
+Let us first formally introduce monotone and antimonotone
+constraints. We begin by introducing the most popular an-
+timonotone constraint, support.
+Consider a database that
+consists of a collection of nonempty subsets of M called
+transactions.
+For a database ~D and a subset X C M, we
+define the function support(X) to be the number of trans-
+
+
+
+
+42
+
+{}
+Frequent
+Notfrequent
+{A}
+{B}
+It}
+[D}
+
+
+
+{A,B}
+{A,C}
+[A,D}
+{B,C}
+{B,D/
+[C,D]
+
+
+
+lAmB,C}
+{A,B,D] {A,C,D} {B,C,D}
+
+
+{A,B,C,DI
+
+
+Figure
+1: Frequent
+Itemsets for M = {A, B, C, D}
+
+
+
+
+actions in 73 which contain the set X (the "support" of X). 1
+Note that we can choose the predicate support(X) > c (for
+some constant c), and thus make the problem of frequent
+itemset mining a special case of the problem of constrained-
+based market analysis.
+We can now introduce the notion of an antimonotone
+predicate such as support(X) > c.
+
+Definition 1. Given a set M, a predicate P defined over
+the powerset of M is antimonotone if
+
+VS, J : (J C S C M A P(S)) =~ P(J)
+
+That is, if P holds for S then it holds for any subset of S.
+
+The advantage of an antimonotone predicate P is that if
+a set X does not satisfy P, then no superset of X can satisfy
+P. Whenever we find such a set X, we can prune away a
+substantial part of the search space. This pruning can result
+in substantial improvements in performance. This technique
+is effective because, for any small set A, there is a significant
+probability that any given larger set is actually a superset
+of A. This is a consequence of the fact that the search space
+forms a lattice and hence the larger sets are the simply the
+unions of the smaller sets.
+For example, consider the itemset lattice illustrated in
+Figure 1 (with the set of items M = {A, B, C, D}).
+The
+typical frequent itemset algorithm looks at one level of the
+lattice at a time, starting from the empty itemset at the
+top. In this example, we discover that the itemset {D} is
+not frequent.
+Therefore, when we move on to successive
+levels of the lattice, we do not have to look at any supersets
+of {D}. Since half of the lattice is composed of supersets of
+{D}, this is a dramatic reduction of the search space.
+The collection of all itemsets does not just form a lattice;
+it also forms a Boolean algebra (which we will call an alge-
+bra). Like a lattice, an algebra has union and intersection,
+but it also has complementation.
+In the algebra of item-
+sets, the complement of a set is the result of subtracting
+it from the set of all items.
+For example, in the algebra
+illustrated in Figure 1, the complement of {D} is the set
+{D} = {A, B, C}. In any algebra, complementation intro-
+duces a notion of duality. Every property or operation has
+a dual, and given any algorithm, we can construct a new
+algorithm by replacing everything with its dual. Figure 1
+illustrates this duality. Suppose we wanted to find the item-
+sets of our algebra that are not frequent. We can again use
+
+1We will drop the dependency on 73 from all our definitions.
+a levelwise algorithm, this time starting from the maximal
+itemset ~ -- {A, B,C, D} at the bottom.
+As we move up
+levels in our algebra by removing elements from our item-
+sets, we can eliminate all subsets of a frequent itemset. For
+example, the itemset {A, B, C} is frequent so we can remove
+half of the algebra from our search space just by inspecting
+this one node. Hence we see that infrequent is the dual of
+frequent, that subset is the dual of superset, and that the
+dual of any set is its complement.
+In the previous example, we took advantage of the fact
+that the predicate support(X) < c for infrequent itemsets is
+monotone.
+
+Definition 2. Given a set M, a predicate Q defined over
+the powerset of M is monotone if
+
+VS, J: (S C J C M A Q(S)) ~ Q(J)
+
+That is, if Q holds for S then it holds for any superset of S.
+
+While it may seem unnatural to search for infrequent item-
+sets, monotone predicates do appear naturally when we add
+constraints to frequent itemset analysis. For example, the
+constraint max(X) > b is monotone.
+Other constraints,
+while not monotone themselves, have monotone approxima-
+tions that are useful in pruning the search space. Pei and
+Han [11] have suggested several monotone approximations
+for the constraints avg(X) < a and avg(X) > b; however,
+there are no known effective antimonotone approximations
+for these constraints.
+The fact that many constraints are monotone or have
+monotone approximations motivates the need for an algo-
+rithm to find all sets that satisfy a conjunction of antimono-
+tone and monotone predicates. Clearly, the conjunction of
+antimonotone predicates is antimonotone and the conjunc-
+tion of monotone predicates is monotone. So our algorithm
+need only consider a predicate of the form P(X) A Q(X),
+where P(X) is antimonotone (a conjunction of antimono-
+tone predicates) and Q(X) is monotone (a conjunction of
+monotone predicates).
+While a similar problem has been considered by Raedt
+and Kramer [13], their algorithm performs a levelwise search
+with respect to the antimonotone predicate, followed by a
+levelwise search on the output with respect to the mono-
+tone predicate. If the monotone predicate is highly selective,
+this approach unnecessarily evaluates a large portion of the
+search space. Furthermore, the output of the first pass need
+not have a nice algebraic structure, and may be difficult to
+traverse. To the best of our knowledge, our algorithm is the
+first to use the structures of both P and Q simultaneously
+to avoid unnecessary evaluations of these potentially costly
+predicates.
+Thus our cost metrics are the number of sets
+X E 2M for which we evaluate P and also the number of
+sets for which we evaluate Q.
+
+Summary of our contributions:
+
+· We introduce the algorithm DualMiner, an algorithm
+that can prune using both monotone and antimonotone
+constraints (Sections 2 and 3). This is the very first
+algorithm in the literature that can prune using both
+monotone and anti-monotone constraints.
+
+· We give several non-trivial optimizations to the basic
+algorithm (Section 4).
+
+
+
+
+43
+
+· We analyze the complexity of our algorithm and com-
+pare it to other algorithms from the literature
+(Section 5).
+
+· In a thorough experimental study, we show that DualMiner
+significantly outperforms previous work
+(Section 6).
+
+
+2.
+OVERVIEW OF THE ALGORITHM
+
+2.1
+Subalgebras
+One of the advantages of the MAFIA algorithm is that it
+only searches for maximal frequent itemsets [6]. Not only
+does this permit several optimizations in the algorithm, it
+provides a very concise representation of the output. For ex-
+ample, in Figure 1, the maximal frequent itemset {A, B, C}
+uniquely defines the collection of all frequent itemsets in this
+algebra.
+Because our algorithm considers the conjunction of a an-
+timonotone predicate with a monotone predicate, the item-
+sets in the output of the algorithm are no longer closed
+under subset.
+For example, let the prices associated with
+A, B, C, D be 1, 2, 3, 4, respectively, and suppose we apply
+the predicate max(X.price) < 4 A min(X.price) <_ 2 to the
+algebra in Figure 1; while {A, B, C} satisfies this predicate,
+the subset {A} does not.
+Therefore, it is not enough to
+search for only maximal itemsets (or, similarly, for minimal
+itemsets).
+However, there is a suitable analogue of a maximal fre-
+quent itemset for thiscase. Our search space isthe powerset
+of M, which we willreferto as 2m. This space isan algebra
+with maximal (top) element M, minimal (bottom) element
+0, the binary operations n and U, and the complementation
+operator --. Given any collectionof elements r C_ 2M that is
+closed under n and U, we can define an algebra for r using
+the followingdefinitions.
+
+1. T=
+U
+X isthe top element of r.
+XEF
+
+2. B=
+N
+X isthe bottom element of r.
+xEr
+
+
+3. For any A ~ r, ~ = T \ A.
+
+Given thisfact,we define the notion of a subalgebra appro-
+priately.
+
+Definition 3. A subalgebra of 2M is any collectionof sets
+r C_ 2~ closed under N and U.
+
+Due to the structures of P and Q, the collection of all sets
+X E 2M for which P(X) A Q(X) is true can be represented
+as a collection of subalgebras, which in turn can each be
+compactly represented as a pair (T, B) where T is the top
+of the subalgebra and B is the bottom.
+Clearly if both
+P(T) and Q(B) are true then any superset X of B which
+is also is a subset of T satisfies P(X) A Q(X).
+We will
+refer to this collection of subalgebras as goodsubalgebras to
+distinguish them from subalgebras whose members do not
+necessarily satisfy P and Q. A maximal good subalgebra is
+a good subalgebra that is not contained in any other good
+subalgebra.
+Since our subalgebras are defined by the top and bottom,
+our algorithm will simultaneously work from both ends of
+.
+.
+.
+.
+.
+.
+.
+ii~iiTi:iiiiiiiiiiii:~
+
+
+
+
+I
+
+
+Figure 2: Simultaneously Pruning with P and Q
+
+
+
+the algebra 2M. We can do this fairly efficiently, because the
+combinatorial explosion of the algebra occurs in the middle
+and not at the ends.
+Furthermore, while the sets on one
+end may be quite large, we can easily code them by the
+elements of M that they are missing instead of the elements
+that they contain. This will not affect our ability to evaluate
+most constraints. If we know both the average and size of M,
+then computing the average and size of A is no more difficult
+than computing the average and size of its complement A;
+this fact is true of most statistical functions.
+Our algorithm is levelwise; at each level we will prune
+the algebra with P on one end, and with Q on the other
+end. As an example, consider the algebra illustrated in Fig-
+ure 2. At the first level, we see that {B} does not satisfy
+P, and hence we remove all supersets of {B}. Furthermore,
+we see that {A} := {B, C, D} does not satisfy Q and so we
+remove all subsets of {A}. We are left with the subalgebra
+({A}, {A, C, D}). We can then repeat the algorithm on this
+subalgebra, but this is unnecessary.
+Since Q is monotone
+and {A} satisfies Q, we know every element of this subal-
+gebra satisfies Q. Similarly, since {A, C, D} satisfies P, all
+elements of this subalgebra satisfy P. So we can determine
+that ({A}, {A, C, D}) is the only maximal good subalgebra
+without evaluating any of the interior nodes.
+Note that if our query requires itemsets to be frequent, the
+larger sets that we test with Q will probably not be actual
+frequent itemsets. However, for any single element x, the
+sets not containing x comprise half of the algebra. There-
+fore, there is some advantage to applying our constraints to
+very large sets, even though they may not satisfy P.
+
+2.2
+Example Run-through
+Suppose the database consists of the following two trans-
+actions: ABCD and E. The prices of A and B are both
+26, the prices of C and D are both 1 and the price of E is
+100. Furthermore, let P be the predicate support > 1 and
+let Q be the predicate total_price > 50. Figure 3 shows the
+evaluation tree of DualMiner. Each node r in the tree has
+a state that can be represented as an ordered triple of the
+form (X, Y, Z). We shall refer to the set X as IN(r), Y as
+CHILD(r) and Z as OUT(r). When it is unambiguous, we
+shall just refer to IN, CHILD, and OUT. Initially we are at
+the root node c~with state (0, ABCDE, 0). Since every ele-
+ment is frequent, we cannot prune with P. We also cannot
+prune with Q since no single element is required to be in
+a set in order for its total price to exceed 50 (had Q been
+
+
+
+
+44
+
+a :(0,ABCDE, O)
+
+
+
+
+(E, BCD,
+[(A,B~D,E)I
+
+(E, CO, AB)
+L(AB, CD,E) J
+
+(E,D, ABC)
+~ :(ABC,D,E)
+...
+
+(E, O,ABED)
+e : (ABED, O,E)
+...
+
+
+Figure 3: Evaluation Tree
+
+
+
+
+total_price > 99 then clearly a set must contain E or it will
+not satisfy Q). Thus we have a choice. We choose an ele-
+ment, such as E, from CHILD(a) and explore what happens
+when a set contains this element. This leads to the creation
+of node fl with state (E, ABED, 0). Since no itemset con-
+tains both .E and A (i.e. EA does not satisfy P), we can
+remove A from consideration and move it from CHILD(fl) to
+OUT(fl). Now fl has state (E, BeD, A). The same is done
+with B, C and D and fl ends up in state (E, 0,ABED). We
+can interpret this to mean that every set that contains E
+and does not contain any of the items A, B, C, D satisfies P
+and Q. So the first algebra that we found is the singleton
+(E, E).
+After examining sets that contain E (in node fl) we go
+to node 7 to explore sets that do not contain E.
+For this
+reason 3, has the initial state (0, ABED, E).
+We cannot
+prune using P, but now we see that a set not containing
+E has no hope of satisfying Q unless it contains A. Thus
+the state of 7 changes to (A, BCD, E). Another iteration
+of pruning show that any superset of A not containing E
+does not satisfy Q unless it also contains B. The state of
+becomes (AB, CD, E). (Note that IN(3') = {A, B} satisfies
+both P and Q and none of 7's ancestors have this property.
+This means that AB is the minimal set of a subalgebra). At
+this point we cannot prune with any of our predicates (and
+so 3' has reached its final state).
+Once again we have to
+make a choice. A choice on C leads to the node 8 with state
+(ABe, D, E) (here we examine what happens when a set
+contains A, B and C but not E). We cannot do any pruning
+at node 8, so we make another choice and arrive at the node e
+with state (ABED, 0,E). We knew that AB satisfied Q and
+now we know ABeD satisfies P (otherwise D would have
+been moved to OUT(5)). From the monotone property of Q
+and antimonotone property of P we know that (AB, ABED)
+is an algebra that satisfies P and Q (all supersets of AB that
+are subsets of ABeD satisfy both P and Q). In addition to
+this, knowing that ABeD satisfies P means that we do not
+have to examine the right children of nodes 8 and e. It is
+clear that those nodes would only examine sets that belong
+to the algebra (AB, ABED). Thus the algorithm completes
+with the output (E,E) and (AB, ABCD).
+The sequence
+{e, 8, ~} is called a complete left chain due to its appearance
+in 3 (this idea will be formalized in Section 4). In the next
+two sections, we will refer back to this example and Figure 3
+for illustrative purposes. Unless otherwise mentioned, when
+we refer to the states of f~ and 3' we are referring to their
+final states.
+
+
+3.
+DUALMINER
+The basic algorithm dynamically builds a binary tree 7.
+Each node ~- E 7 corresponds to a subalgebra of 2M, which
+we refer to as SUBALG(r).
+Note that these are not nec-
+essarily "good" subalgebras. Each subalgebra is associated
+with the following objects.
+
+I. rnewAn _C 2M is one of the two (implicit) labels as-
+sociated with the edge coming in to r.
+If r is the
+root, then rnew_ln is defined to be 0. Otherwise, if a
+is the parent of r, then rnew_in is generated from a
+and represents items that should be included in every
+element of SUBALG(T) but are not necessarily con-
+tained in every element of SUBALG(¢). In our exam-
+ple, 7new.an = (A, B}, 8new.aa = {C}.
+
+2. mew.out C_ 2M is the other label associated with the
+edge coming in to r.
+If r is the root, then mew_out
+is defined to be 0.
+Otherwise, if a is the parent of
+r, then mew_out is generated from a and represents
+items that should not be included in any element of
+SUBALG(r) but which are included in some element
+of SUBALG(a).
+In our example, 7...... t = {E},
+8new.out = O.
+
+3. IN(v) is the minimal set of this subalgebra.
+Every
+element in SUBALG(r) is a superset of IN(v). IN(m)
+is thus defined as:
+
+IN(v) = U pn~w.Jn
+p~r
+
+Here ~ is the standard ancestral relation; p .~. r if
+p is either r or an ancestor of r.
+In our example,
+IN 8 = {A, B, C}
+
+4. OUT(r) is the complement of the maximal set of this
+subalgebra. Every element in SUBALG(r) is a subset
+of OUT(v). As with IN(v),
+
+OUT(v) = U P...... t
+p..~r
+
+
+In our example, OUT(8) = {E}. We will maintain the
+invariant that IN(v) A OUT(m) = 0.
+
+5. CHILD(v) is a macro for IN(v) U OUT(m) and so is the
+set of items representing the atoms of SUBALG(r).
+That is, every nontrivial element of SUBALG(r) is a
+union of some sets of the form IN(T) U {x} (where x E
+CHILD(m)). In our example, CHILD(7) = {O, D}.
+
+Collectively, we refer to these objects as the state of r.
+As we dynamically build our tree, we classify nodes as
+either determined or undetermined and the classification of
+each node will change during the course of the algorithm. By
+default, every node starts out as undetermined. If a node
+is undetermined, then the state of r may change. Because
+the state may change, we define the sth-iteration of a node
+r to be the sth state assigned to it during the algorithm.
+For convenience, we refer to this as rs; hence the sth version
+of IN(v) is IN(rS). If we simply write 7", then we mean the
+most recent iteration of r in our algorithm. Note that we
+
+
+
+
+45
+
+do not consider r s to be a parent of r s+l. Thus the node
+has three iterations and IN(7 I) = {A} (because we start
+counting at 0).
+At each stage, we visit a node that is undetermined and
+make it determined. We continue until all the nodes of 7
+are determined.
+Our traversal strategy is irrelevant; any
+traversal strategy that visits parents before children is ac-
+ceptable. This allows our algorithm some flexibility for the
+sake of optimizations.
+Therefore, at the highest level, we
+have DUAL.MINER, illustrated in Algorithm 1.
+
+
+Algorithm
+1 : DUAL_MINER
+
+1: Anew.in, Anew_out 4-.-
+2:R~-0
+3: while There are undetermined nodes do
+4:
+Traverse to the next undetermined node 7.
+5:
+G ~-- EXPAND.NODE(r)
+6:
+7~ ~-- ~U G
+7:
+Mark r as determined.
+8: end while
+9: Answer = "R.
+
+
+Let A be the initial node. IN(A) = OUT(A) = O. Note
+that by ore7 definition of A, SUBALG(A) is the algebra 2M.
+The algorithm EXPAND.NODE(r) expands the tree 9" to
+break the algebra SUBALG(r) into smaller, disjoint sub-
+algebras that may be more easily searched.
+This is done
+by adding children to r that specify further subalgebras of
+SUBALG(r). It is important that the children of r repre-
+sent disjoint subalgebras of SUBALG(r).
+This is not dif-
+ficult because our algorithm ensures that no undetermined
+node has any children.
+All we have to do is chose some
+item x E CHILD(r), and split SUBALG(7) into those sets
+containing x and those sets not containing x. The result is
+EXPAND_NODE, shown in Algorithm 2.
+
+
+Algorithm
+2 : EXPAND.NODE(r)
+
+Require: r is an undetermined node.
+Returns:
+G, a good subalgebra or ¢
+1: G ~- PRUNE(r)
+2: if CHILD(r) is not empty then
+3:
+Choose some x E CHILD(T).
+4:
+pnewAn,~ ......
+t ~-- {X}
+5:
+pne~_out, ~new.Jn ~-- 0
+0:
+Add p and V as children of r.
+7: end if
+8: return G
+
+
+As mentioned above, the pruning strategy in PRUNE uses
+both ends of our algebra, evaluating both P and Q to gener-
+ate successive states for r. When we prune with respect to
+P, we look at each item x E CHILD(r). If IN(r) t.J{x} does
+not satisfy P, then the antimonotone property of P implies
+that no superset of IN(r) LJ{x} satisfies P. This is equiv-
+alent to saying that no element of SUBALG(r) containing
+x satisfies P. Therefore, we can put x into rne.... t, further
+restricting SUBALG(r).
+Putting this all together, we get
+MONO_PRUNE, which is shown in Algorithm 3.
+An analogous result holds for pruning with respect to Q.
+If we replace everything in the algorithm MONO_PRUNE
+by its dual notion, we get ANTI_PRUNE, the algorithm for
+pruning with respect to Q. This is shown in Algorithm 4.
+Algorithm
+3 : MONO_PRUNE(7 ~)
+
+Require: IN(r ~) ,,satisfies P
+Returns:
+r TM
+s+l
+~
+s
+1: 7hew_in
+mew.in
+s+l
+s
+2: rnew_out ~ 7~ew_out
+3: for all x E CHILD(r s) do
+4:
+if IN(r s) t3 (x} does not satisfy P then
+s+l
+4--
+s+l
+II I
+"~
+5:
+rnew_out
+" 7~lew_out ~ tZj
+6:
+CHILD(r :~+1) ~-- CHILD(r s+l) - {x}
+7:
+end if
+8: end for
+9: return
+r s+l
+
+
+
+Algorithm 4 : ANTI_PRUNE(r ~)
+
+Require:
+OUT(T s) satisfies Q
+Returns:
+r s+z
+s+l
+~
+s
+1: rnew_in
+YnewAn
+s+i
+s
+2: 7~ew..out ~
+7~ew..out
+3: for all x E CHILD(r s) do
+4:
+if OUT(r s) t3 (x} does not satisfy Q then
+s+l
+4--
+~+I
+5:
+7;~ewj.
+r,;~w_l. u {x}
+6:
+CHILD(r ~*') ~- CHILD(r ~+I) - {x}
+7:
+end if
+8: end for
+
+
+
+Both of these algorithms assume that SUBALG(r) is an
+interesting algebra.
+It is possible that, as ANTI.PRUNE
+puts elements into 7,ew_ln, IN(r) no longer satisfies P.
+In
+this case, no element of the subalgebra satisfies P, so we
+will not need to do further pruning or to construct children
+for this node. The easiest way to signify this is to empty
+CHILD(r) by adding CHILD(r) to rn.... t. We represent
+this straightforward action as EMPTY_CHILD.
+It is clear that these pruning algorithms affect each other.
+The output of MONO_PRUNE is determined by IN(r), which
+is in turn modified by the algorithm ANTI_PRUNE. Simi-
+larly, MONO_PRUNE modifies OUT(r), which determines
+the output of ANTI.PRUNE. Therefore, it makes sense to
+interleave these algorithms until we reach a fixed point. The
+resulting pruning algorithm PRUNE(r) is shown in Algo-
+rithm 5.
+Note that PRUNE is the most extreme pruning strat-
+egy. It will not affect the correctness of our algorithm to
+do less pruning. We may chose only to do a fixed number
+of passes on each of the algorithms MONO_PRUNE and
+ANTI_PRUNE. We may even choose to skip one or both
+of them altogether. This allows us some flexibility for opti-
+mization, as discussed in Section 4.
+The correctness of this algorithm should be somewhat
+clear from the accompanying discussion.
+However, for a
+more rigorous proof, we present the following.
+
+Definition 4. The depth of a node r s is an ordered pair
+(p, s) where p is the number of nodes (excluding r) whose
+descendants include 7, and s is the most recent iteration of
+r. We define an ordering >-n on depth as follows: (pl, sl) >_,
+(p2, s2) if pl > p2 or (pl = p2) ^ (sl > s2).
+
+THEOREM 1. An set A satisfies P A Q i/and only if A
+is an element o/a subalgebra returned by PRUNE at some
+point in the algorithm.
+
+
+
+
+46
+
+Algorithm
+5 : PRUNE(r)
+
+Returns:
+A good subalgebra or 0.
+1: s ~ 0 (Note, at this point r = 7-0 by definition)
+2: repeat
+3:
+if IN(r s) satisfies P then
+4:
+r ~+x ~-- MONO..PRUNE(r ~)
+5:
+else
+6:
+r ~+1 ~-- EMPTY_CHILD(v')
+7:
+end if
+8:
+s ~-- s + 1//Pruning
+has changed the iteration
+9:
+if OUT(r ~) satisfies Q then
+10:
+.?r~+l ~-- ANTI_PRUNE(r')
+11:
+else
+12:
+r ~+I ~-- EMPTY_CHILD(r ~)
+13:
+end if
+14:
+s ~-- s + 1//Pruning
+has changed the iteration
+15: until .?rnSewa~= rnSe-wl_lnand .?r~e.... t = "?r~-wl_out
+16: if IN(r ~) satisfies Q and OUT(T ~) satisfies P then
+17:
+return (IN(re), OUT(r'))
+18: else
+19:
+return 0
+20: end if
+
+
+
+PROOF. We will prove the direction assuming that A sat-
+isfies P AQ; the other direction is clear. Define the predicate
+INCLUDED~ as:
+
+INCLUDED~(A) = IN(r) C A C OUT(`?.-)
+(1)
+
+Note that INCLUDEDx0(A) is true (where A is the root
+node of 'Y). Let .?r~ be the node of greatest depth for which
+(1) holds. If IN(r ~) satisfies Q and OUT(r') satisfies P then
+clearly we are done.
+Otherwise, after calculating IN(r s)
+and OUT(T s) in PRUNE, the algorithm would either call
+EMPTY_CHILD(re), go through another pruning iteration,
+or add a child to r ~ in EXPAND.NODE.
+If the algorithm called EMPTY_CHILD(r ~) is called then
+either IN(r') fails to satisfy P or OUT(r s) fails to satisfy Q.
+In the first case, since P is monotone, -~P is antimonotone
+and this implies that A fails to satisfy P, a contradiction.
+The second case is similar because of symmetry.
+If we go through another pruning iteration, then we get
+r ~+1 from either MONO_PRUNE or ANTI.PRUNE. In ei-
+ther case, it is clear that INCLUDED~.,+I (A) holds, which
+contradicts the maximality of the depth of r ~.
+If we add a child to r ~ then let x E CHILD(r) be the
+item defining the two children of r in EXPAND.NODE. By
+symmetry, assume without loss of generality that x E A,
+and let p be the child of 7- such that x E pnew.dn. Then
+INCLUDEDpo(A) holds, which is also contradiction.
+[]
+
+
+4.
+OPTIMIZATIONS
+The algorithm outlined above is in its most primitive form
+in order to make it easy to follow. There are severM places
+in which it can be optimized. The most obvious optimiza-
+tion is to remove calls to MONO_PRUNE or ANTI_PRUNE
+that we know will not actually do any pruning.
+For ex-
+ample, if rnSew.an is empty and a is the parent of r, then
+IN(r') = IN(a).
+Therefore, there is nothing to be gained
+calling MONO_PRUNE on r s when r~ew.an is empty. A sim-
+ilar result holds for ANTI_PRUNE when r~ew_out is empty.
+Similarly, in the non-degenerate case, we run the same
+pruning algorithm on r ~+2 that we run on r'. Hence there
+is no point pruning r s+2 with MONO_PRUNE if r,s~+~.an=
+r~ew_in. Part of this rationale is captured by the repeat-
+until loop in PRUNE. However, this loop continues until
+both rnew_in and rnew_out achieve a fixed point.
+A more subtle optimization is an analogue of the HUT
+strategy from the MAFIA algorithm [6].
+In a standard
+depth-first traversal (of a frequent itemset algorithm), we
+know that if every element of the leftmost branch satisfies
+P, then everything to the right must also satisfy P (i.e. ev-
+erything to the right is a subset of a set in the leftmost
+branch). To generalize that concept, we introduce the fol-
+lowing definition.
+
+Definition 5. A complete left chain is a sequence of nodes
+{rk}~<,~ such that the following all hold.
+
+1. CHILD(r0) = 0
+
+2. rk+l is the parent of rk for all k < n.
+
+3. (rk) ..... t = 0 for all k < n.
+
+Looking at Figure 3, we see that {e, ~, 3'} forms a complete
+left chain.
+If we replace (rk)new..out with (rk)new_in in the
+previous definition, we get a complete right chain.
+
+The antimonotone property of P and monotone property
+of Q imply the following.
+
+PROPOSITION 2. If {rk}k<n is a complete left chain, ev-
+ery element of SUBALG(r,~) satisfies P.
+Furthermore, if
+IN(Tn) satisfies Q, then every element of SUBALG(rn) sat-
+isfies P/x Q. A similar result holds when {rk}k<n is a com-
+plete right chain.
+
+This means that once we find a node r such that
+CHILD(r) = 0 and rnew.o,~t = 0, we need only find the least
+a ~ 1"such that
+
+1. There is a complete left chain from r to a.
+
+2. IN(a) satisfies Q.
+
+These two properties imply that all of SUBALG(a) satisfy
+P A Q. In this case, we should consider every descendant of
+a to be determined, and choose the sibling of o" to be our
+next node in our traversal strategy.
+We are interested in complete left chains from T to o"even
+if IN(a) does not satisfy Q. We still know that every ele-
+ment of SUBALG(o') satisfies P. Hence we no longer need
+to evaluate MONO.PRUNE for nodes in SUBALG(a) even
+though we have to traverse them. A similar argument holds
+for Q if IN(a) satisfies Q.
+Because we value complete right chains as much as com-
+plete left chains in our algorithm, it may be advantageous
+to take a "steady state" approach to our traversal strategy.
+In this approach, if we are visiting the left child of a node
+(i.e. a child r such that r~°ew_out = 0), we should continue
+choosing the left child as we descend the tree. Similarly, if
+we are visiting the right child of a node, we should continue
+choosing the right child as we descend the tree.
+The traversal strategy also depends on the cost structure
+of P. For example, suppose P is a support constraint and
+support counting is done using bitmaps, as in the MAFIA
+algorithm. If we continue to visit left children (starting from
+
+
+
+
+47
+
+a node a), then the total cost of evaluating P on IN(r) (for
+each node ~ that we expand) is almost the same as the cost
+of evaluating P on OUT(a). Therefore, there is no point in
+checking if OUT(a) satisfies P, since we will find this out
+during our traversal of left children at almost the same cost.
+However, if P is a constraint of the form min(X) > c then
+evaluating P takes constant time and so we can evaluate P
+on OUT(a) in the hope that this will result in fewer nodes
+being expanded.
+Other MAFIA optimizations [6], such as keeping a partial
+list of maximal frequent itemsets (or minimal sets that sat-
+isfy Q) may also be used to reduce the number of predicate
+evaluations.
+
+
+5.
+COMPLEXITY
+We can consider the antimonotone predicate P and mono-
+tone predicate Q to be oracles whose answers satisfy the an-
+timonotone (resp. monotone) constraints. Thus we identify
+the predicate P with the oracle that evaluates P on a set
+of items (and similarly for Q). The underlying dataset 29
+and set of all items 27 are assumed to be arbitrary but fixed
+and so need not be mentioned explicitly. Given these pre-
+liminaries, we can define the following sets (~ will be used
+to denote an oracle/predicate which is either monotone or
+antimonotone):
+
+Theory of ~ :
+
+Border of P :
+Th(fl)=
+{SI[2(S)}
+
+B(P)=
+{SIVTCS:P(T)
+
+^ vw ~ s: -uP(W)}
+
+Border of Q:
+B(Q)=
+{SIVTDS:Q(T)
+
+^ vw c s: -Q(W)}
+
+Positive Border of ~ :
+B+(fl) =
+B(fl) n Th(n)
+
+Negative Border of ~ :
+B-(~) =
+B(fl) n Th(-~fl)
+
+Note that B-(fl) is equivalent to B(fl) - B+(fl) and is used
+for pruning while B+(~) is used to verify that a set of items
+satisfy fL This observation leads to the following proposi-
+tion by Gunopulos et al. [7]:
+
+PROPOSITION 3. Given a monotone or antimonotone pred-
+icate ~, computing Th(~) requires at least IB(fl)l callsto the
+oracle ~.
+
+In the sequel, quantities such as "l B(~)l evaluations of ~"
+will be written as "l B(~)la evaluations." Analogously, to
+compute all sets of items that satisfy P and Q (i.e. Th(P) N
+Th(Q) - which we shall refer to as Th(P A Q)) we have the
+following bounds:
+
+PROPOSITION 4. Computing Th(P A Q) using the oracle
+model requires at least ITh(Q)n B(P)IP +lTh(P) n B(Q)IQ
+oracle calls.
+
+
+PROOF. The search space consists of four regions: Th(P)O
+Wh(Q), Th(P) n Th(-~Q), Th(~P) n Wh(Q) and Th(-~P) N
+Th(-~Q).
+The first region cannot be described more suc-
+cinctly than by the set of tops (Th(Q) n B+(P)) and by
+the set of bottoms (Th(P) N B+(Q)) of maximal subalge-
+bras.
+The second and third regions are areas where only
+one predicate can be used to prune the search space. Thus
+knowing Th(P) n B-(Q) is necessary to prune part of the
+second region, while B(Q) is sufficient to prune all of it
+(neither bounds arc., very tight for reasons discussed later).
+Similar statements hold for the third region. Thus we need
+at least
+
+[Wh(Q) n B+(P)]p + ]Th(Q) n B+(P)[Q
+
++[ Th(Q) n B-(P)[p + [Th(P) o B(Q)I Q
+
+= [Wh(Q) n B(P)[p + [Wh(P) n B(Q)[Q
+
+oracle calls.
+[]
+
+The presence of the fourth region (Th(~P) N Th(-~Q))
+shows why the hounds are not very tight. This region can
+be pruned using B-(P) n Th(-~Q) or B-(Q) n Th(~P) or by
+using various sets from each of those borders.
+The best
+choice relies heavily on the relative costs and cost structures
+of P and Q as well as the structure of the areas they prune.
+For example, pruning some areas with P may require many
+sets from B'(P)ATh(-~Q) while pruning the same area with
+Q may require less sets from B-(Q) n Th(-~P). There may
+also be a lot of redundancy due to heavy overlapping of
+regions pruned by various sets in B-(P) n Th(-~Q).
+For the regions where only one predicate can be used to
+prune (such as Th(Q)ATh(-~P)) we have similar issues. This
+region can be pruned by evaluating P on the B+(-~PAQ) (i.e.
+the minimal sets that satisfy Q but not P). This set includes
+the necessary Th(Q) O B-(P) (as required by the previous
+proposition). However, we can also use the following subset
+of B-(P) to prune the same region:
+
+M={SISEB-(P)
+A 3TETh(-~P) NTh(Q) A T_DS}
+
+There are situations where either collection has a smaller
+cardinality, howew~r .h4 has the added benefit of pruning
+some of Th(-~Q) O Th(--P) as well.
+
+5.1
+Existing Algorithms
+Running times for algorithms that mine constrained item-
+sets tend to be highly correlated with the number of predi-
+cate evaluations that are required (since the predicates are
+evaluated for each candidate set that is generated). Thus we
+use the number of evaluations of P and Q as the cost metric
+for analyzing DualMiner and various alternative algorithms.
+The Apriori algorithm for computing Th(P) requires ex-
+actly ]Th(P) U B-(P)Ip oracle queries (since the collection
+of non-frequent candidate sets it generates is precisely the
+negative border). Similarly, its dual algorithm for calculat-
+ing Th(Q) requires exactly ITh(Q)UB- (Q) Io oracle queries.
+MAFIA, in contrast to Apriori, uses a depth-first traver-
+sal strategy.
+Because of this, MAFIA cannot use a can-
+didate generation algorithm as good as Apriori.
+In fact,
+it is possible that MAFIA tests the support of sets out-
+side Th(P) U B-(P).
+For example, given the set of items
+{A, B, C, D, E}, if the transaction ABCD is frequent but
+CE is not, it is possible that MAFIA test the support of
+the transactions A, then AB then ABC, then ABCD and
+ABCDE. However ABCDE is not in Th(P), nor is it in
+B(P) since CE is not frequent. If a set S is frequent, or
+has a frequent subset of size IS[ - 1, then it is possible that
+MAFIA will test its support and so MAFIA will use at most
+(N+ 1)Th(P) oracle calls (where N is the number of items).
+This is a very loose upper bound since MAFIA looks for
+maximal frequent itemsets and has various optimizations
+that reduce the number of sets in Th(P) whose support
+needs to be checked (such as the HUT strategy which can
+avoid testing the exponentially many subsets of a maximal
+
+
+
+
+48
+
+frequent itemset). Let S be the collection of all sets in Th(P)
+for which MAFIA evaluates P. Then MAFIA will evaluate
+P for at most NIS[ sets outside Th(P). Thus MAFIA uses
+heuristics to reduce the size of S. It also has smaller mem-
+ory requirements that Apriori (due to its depth-first rather
+than breadth-first traversal of the search space) and avoids
+Apriori's expensive candidate generation algorithm. In ad-
+dition, there is experimental evidence to show that it is more
+efficient than Apriori [6].
+Computing Th(P A Q) can be done naively by separately
+running Apriori or MAFIA (using P), the corresponding
+dual algorithm (using Q) and then intersecting the results.
+This algorithm, which will be referred to as INTERSECT,
+clearly has a worst case bound [Th(P)UB- (P)IP+I Th(Q)t3
+B- (Q)[Q oracle queries (when using Apriori).
+Another naive approach, POSTPROCESS, computes
+Th(P) and then post-processes the output by evaluating Q
+for each element of the output.
+This can be done using
+[Th(P) U B-(P)[p + [Th(P)[Q oracle evaluations. POST-
+PROCESS does not leverage the monotone properties of Q,
+and so can be improved as in [12]: for each x E Th(P)
+that is found, evaluate Q(x) unless we know Q(t) is true for
+some t c x. This algorithm (when using Apriori), which
+we will refer to as CONVERTIBLE, evaluates Q on every
+set in Th(P) n (Th(-~Q) t.AB+(Q)) and thus uses [Th(P) tJ
+B-(P)Ip + [Th(P) nTh(~Q)[Q + [Th(P) n B+(Q)[Q pred-
+icate evaluations.
+Assuming P is more selective than Q
+(as is usually true when P contains a support constraint),
+the CONVERTIBLE algorithm will tend to dominate both
+POSTPROCESS and INTERSECTION. It will also be very
+efficient when Q is not very selective since then ]Th(-~Q)] is
+small.
+One more alternative to DualMiner is an enhanced version
+of Mellish's algorithm [13]. This algorithm outputs two sets
+S and G (the collection of tops of all maximal subalgebras
+and the collection of all bottoms, respectively). While this
+representation is very compact, considerable work needs to
+be done to output Th(P A Q) from its result.
+The algo-
+rithm takes as input a predicate of the form cl Ac2 A. ··Ac,~
+where each cz is either a monotone or antimonotone pred-
+icate. MELLISH+ computes S and G for Cl (using a top-
+down or bottom-up levelwise algorithm similar to Apriori).
+The borders are then refined using c2 and a levelwise algo-
+rithm that starts at the appropriate border S or G (depend-
+ing on the type of the constraint c2). This process is then
+repeated for the predicates ca,..., c,. This algorithm is very
+likely to waste computation because it does not combine all
+the monotone predicates into one (more selective) monotone
+predicate (through the use of conjunctions) and similarly for
+antimonotone predicates. The result is that predicate eval-
+uations occur for sets that could have already been pruned.
+For this reason the running time is heavily influenced by the
+order in which the predicates are presented to the algorithm.
+To avoid this, we can merge all the antimonotone predicates
+into one (and similarly for the monotone ones) and then
+use the antimonotone predicate first (since it is likely to be
+more selective). Assuming P has a support constraint (and
+is thus probably more selective than Q) it makes sense to
+run the bottom-up levelwise algorithm for P first. If top-
+down algorithm is then run for Q, the resulting complexity
+is similar to CONVERTIBLE. If the bottom-up version is
+used for Q then we can get the following upper bounds:
+ITh(P) U S(P)[p + [Wh(P) N Th(Q)[Q + [Th(P) n B'(Q)[Q
+evaluations.
+The main distinction between DualMiner and its com-
+petitors is that DualMiner interleaves the pruning of P and
+Q.
+The other algorithms can be logically separated into
+two phases (even though they may not be implemented that
+way): finding Th(P) and then refining the result to com-
+pute Th(P) N Th(Q). This is not very efficient for selective
+Q since its pruning power is not used in the first phase.
+
+5.2
+DualMiner
+As the results for MAFIA indicate, it is possible that
+DualMiner (using depth-first traversal) can make an oracle
+call for a set outside Th(P)UB(P) and Th(Q)UB-(Q). How-
+ever, the same thing can happen for a breadth-first traversal
+strategy.
+The reason for this is that pruning with Q can
+eliminate some frequent itemsets from consideration. This
+prevents the use of the Apriori candidate generation algo-
+rithm: for a given set S, we may not be able to verify (with-
+out additional evaluations of P) that all of its subsets of size
+IS[ - 1 are frequent. Thus using a depth-first or breadth-
+first strategy, DualMiner will never make more than (N +
+1)[ Wh(P)tp + (N+ 1)[ Th(Q)[Q +t Wh(P) nTh(-~Q)[Q oracle
+calls. The last term in the sum is the result of DualMiner
+testing for the bottom of a subalgebra. This is an overly pes-
+simistic upper bound since it does not take into account the
+savings we get from pruning Th(P) with Q and vice-versa.
+Also, optimizations can be used to reduce the number of
+evaluations of P and Q. For example, for depth-first strat-
+egy, we can use the same optimizations that MAFIA uses
+[61.
+The output representation with subalgebras is more com-
+pact than with just itemsets. However, DualMiner does not
+output the most compact representation. This happens be-
+cause every time a choice on an item is made, the search
+space is split in two halves, and if a subalgebra exists that
+covers parts of both halves then that subalgebra would also
+be split.
+It turns out that a subalgebra can be split ar-
+bitrarily many times. This fragmentation problem can be
+addressed either by trying to merge the resulting subalge-
+bras or by using some strategies in choosing the splitting
+item to minimize the fragmentation problem (for example if
+Q is sum(price) > 100, we may choose an item with large
+price - this resulted in an algorithm that will be referred
+to as DualMiner+q in the experiments).
+The second ap-
+proach is more promising, even though we cannot eliminate
+the problem entirely.
+An example that illustrates the fragmentation problem is
+the following. Suppose the items are A1, A2,..., An, B, C,
+with prices 1, 1,..., 1, n + 1, n + 1, the transaction database
+contains transactions A1Az...AnB and A1A2...A,~C. Let
+P be frequency(iternset) _>threshold(> 0) and let Q be
+~ie~t.... t price(i) > n.
+The most compact representa-
+tion of the solution in this case is (B, A1Az...AnB) and
+(C, AIA2...AnC), which happens if the algorithm first He-
+lects B, then C (or first C then B). If the first choices are
+made on some Ai's (as is very likely for DualMiner without
+using some clever strategies) then these two subalgebras can
+become very fragmented.
+
+6.
+EXPERIMENTAL RESULTS
+While DualMiner interleaves the pruning of P and Q, the
+other algorithms (POSTPROCESS, MELLISH+, INTER-
+SECTION, CONVERTIBLE)
+essentiallycalculateTh(P)
+
+
+
+
+49
+
+and then refine the result (any algorithm that does this will
+be called a "2-phase" algorithm). If Q has little selectivity,
+then CONVERTIBLE is expected to be the best algorithm,
+since it examines Th(-,Q) (which should be a small set).
+However, if Q is selective then it is possible that 2-phase
+algorithms waste too much time finding Th(P).
+Our ex-
+periments show that in this case DualMiner beats even a
+"super" 2-phase algorithm (where the second phase is com-
+puted at no cost). To make this evaluation, we assume that
+P is more expensive than Q to evaluate.
+If P is a sup-
+port constraint and Q is a constraint on the sum of prices,
+it is reasonable to expect that P is about N times more
+expensive to compute than Q (where N is the number of
+transactions in the database). We use a more conservative
+estimate and say that P is only 100 times as expensive as Q
+(P = 100Q). For the first phase of the 2-phase algorithms,
+we used a MAFIA implementation since it turns out to be
+more efficient than Apriori. We used the IBM data genera-
+tor to create the transaction files. Prices were selected using
+either uniform or Zipf distributions.
+We also compare the evaluations of Q for DualMiner (us-
+ing depth-first traversal) and an implementation of CON-
+VERTIBLE that uses a MAFIA-style traversM for the first
+phase.
+The predicate Q was of the form sum(price) >
+qthreshold (the value of qthreshold is taken from the x-
+axis), and P was a support constraint. Here we also show
+results for DualMiner+q, an optimization which chooses the
+most expensive item to split on.
+Figures 4 and 5 show the number of evaluations of Q for
+CONVERTIBLE, DualMiner and DualMiner+q vs. the se-
+lectivity of Q, using a uniform and a Zipf price distribution,
+respectively. The y-axis is the number of evaluations of Q
+and the x-axis is the threshold that the sum of prices in an
+itemset must exceed. As expected, CONVERTIBLE makes
+much less oracle calls when Q is not selective, but DualMiner
+does better as the selectivity of Q increases. There is a sharp
+spike in the graph for the Zipf distribution. At this point
+DualMiner needs more evaluations of Q even though it is
+more selective. This could be a characteristic of the distri-
+bution and the fact that DualMiner may evaluate Q outside
+Th(Q) when it is looking for the bottom of a subalgebra.
+Figures 6 and 7 compare total oracle queries for DualMiner
+and the first phase of the 2-phase algorithms (using uniform
+and Zipf price distributions, respectively). Here P is 100
+times as expensive as Q. The y-axis is the weighted sum
+Ep -t- ~
+(where Ep is the number of evaluations of P, and
+100
+similarly for Q) and the x-axis is the same as before.
+Figure 8 compares total oracle queries for DualMiner and
+the first phase of the 2-phase algorithms. The y-axis is the
+weighted sum Ep + EQ (P and Q are weighted equally) and
+the x-axis is the same as before.
+DualMiner does very well when Q is selective and inexpen-
+sive; it is also competitive when Q is just as expensive as P
+and is also selective (keeping in mind that all 2-phase algo-
+rithms need to do an extra refinement step with Q). When Q
+is expensive and not very selective, DualMiner performs too
+many evaluations of Q (in this circumstance, CONVERT-
+IBLE would be the algorithm of choice, since it does not
+waste time pruning with an ineffective Q and only looks at
+Th(-~Q), which is a relatively small set).
+
+7.
+RELATED WORK
+Agrawal et al. first introduced the problem of mining fre-
+ntrans = 10000, avglen = 15, patten = 10, nitems = 1000, unif dist, support = 0.4%
+800OO
+
+70O00
+O
+60000
+
+
+$400OO
+
+..~ 30000
+E
+==
+~o 20000
+p-
+/ '....
+q .........
+/
+"11..
+
+/I
+~ .....
+
+
+
+
+,/
+',,
+
+//
+',,
+
+....(
+'
+......
+:
+10
+100
+1000
+10000
+100000
+Q threshold
+
+
+Figure 4: Evaluations of Q vs. Selectivity of Q
+
+
+ntrans = 1CX)00,avglen = 15, patten = 10, nitems = 1000, zipf dist, support = 0.8%
+4OOOO
+/
+|
+~............ .
+.............
+
+
+35000 J-
+A
+/ DuolMiner
+,
+/
+/
+\ / Convertible---x ....
+.~ 30000[
+//~, X DualMiner+q..........
+
+
+o2oooo~
+_
+~
+..._.~._............
+.....
+~
+.~:.....
+.
+.
+.
+.
+.
+/
+-...
+
+3
+15000
+:
+-N..
+
+
+/
+'..
+
+
+10
+100
+1000
+10000
+100000
+Q threshold
+
+
+Figure 5: Evaluations of Q vs. Selectivity of Q
+
+
+ntrans = 10000, avglen = 15, patlen = 10, nitems = 1000, unif dist, suppod = 0.4%
+8OOOO
+
+
+70000
+.......
+=...-...m..-...*......,......-,.......N
+
++
+-"-..
+~
+DualMiner
+,
+~.~
+\
+DualMiner+q ----x....
+60000
+"'x...
+~
+Mafia (P only) -..--=-....
+g
+
+
+40000
+"\\
+
+30OO0
+
+
+
+._
+10000
+
+
+
+~
+0
+.
+.
+.
+.
+.
+.
+.
+.
+o
+-
+-
+-
+10
+100
+1000
+10000
+100000
+Q threshold
+
+
+Figure 6: Oracle Calls (Ep + 1E0~0)VS Selectivity of Q
+
+
+quent itemsets I1, 3, 2]. This work was later generalized to
+include constraints other than support in [10, 9]. These pa-
+pers introduced the concepts of monotone and antimonotone
+constraints and introduced methods for using them to prune
+the search space. The classes of monotone and antimono-
+tone constraints were further generalized by Pei et al. [12]
+and also studied by Pei and Han [11]. This problem was
+
+
+
+
+50
+'
+
+ntrens = 10000, avglen = 15, patlen = 10, niterns = 1000, zipf dist, support = 0.4%
+
+8 5 0 0 0
+.
+.
+.
+.
+.
+,
+.
+.
+.
+.
+,
+.
+.
+.
+.
+,
+. . . . . .
+
+DualMiner
+,
+80000
+DualMiner+q----· ....
+
+a.
++ 75000
+..............................._~.-...----~~""~""~
+Mafia........
+(P 0nly) .........
+
+
+
+~
+65CXX3
+"\
+
+~
+S0000
+\x
+
+~
+5500(I
+
+50000
+c
+45000
+\
+·~
+40000
+\
+
+35000
+. . . . . . . . . . . . . . . . . . .
+,
+. . . . . . . . . . .
+= \
+10
+1CX~
+1000
+10000
+100(]00
+
+Q
+threshold
+
+
+
+
+Figure 7: Oracle Calls (Ep + 1Eo~o)vs Selectivity of Q
+
+
+ntrans = 10000, avglen = 15, patlen = 10, nitems = 1000, uni! dist, support = 0.8%
+
+70000
+.......
+,
+.....
+,
+.....
+,
+.......
+
+OualMiner
+,
+,.,~ ....... ~
+DualMiner+q----x ....
++
+Mafia (only P) ----* ....
+
+
+soooo
+8
+
+
+
+
+......m.----.-m-.--.-~--.--a..--.--u.-:~-.--.-.-a..--..mmm-----.---.m-~---.--.--.---m.....-.·
+C
+xx\,
+
+10000
+x\\
+
+
+
+0
+10
+100
+1000
+10000
+100000
+
+Q threshold
+
+
+Figure 8: Oracle Calls (Ep + EQ) vs Selectivity of Q
+
+
+also given a theoretical treatment by Gunopulos, Khardon,
+Mannila and Toivonen [7]. However, none of previous work
+was able to prune using both monotone and antimonotone
+constraints simultaneously.
+
+
+8.
+CONCLUSIONS AND FUTURE WORK
+It is clear from our experiments that taking advantage
+of the structures of bothmonotone and antimonotone predi-
+cates yields good results. In the case of constrained frequent
+itemsets, the use of a monotone predicate to remove from
+consideration what can be considered "uninteresting" item-
+sets is beneficial.
+The success of DualMiner in exploiting the structures of
+two classes of constraints leads to several interestingareas of
+future work. Can other similar classes of constraints, such
+as convertible constraints [12], be incorporated as well? Can
+predicates such as variance(X) _<c (which do not seem to
+have "nice" structures) also be used efficiently? We are also
+interested in what kinds of implications this has for mining
+constrained sequential patterns.
+Acknowledgments. This work was sponsored by NSF
+grants IIS-0121175 and IIS-0084762, by the Cornell Intelli-
+gent Information Systems Institute, and by generous gifts
+from Microsoft and Intel. We thank the anonymous review-
+ers for helpful comments.
+9.
+REFERENCES
+[1] R. Agrawal, T. Imielinski, and A. N. Swami. Mining
+association rules between sets of items in large
+databases. In P. Buneman and S. Jajodia, editors,
+Proceedings of the 1993ACM SIGMOD International
+Conference on Management of Data, Washington,
+D.C., May 26-28, 1993, pages 207-216. ACM Press,
+1993.
+[2] R. Agrawal, H. Mannila, R. Srikant, H. Toivonen, and
+A. I. Verkamo. Fast Discovery of Association Rules. In
+U. M. Fayyad, G. Piatetsky-Shapiro, P. Smyth, and
+R. Uthurusamy, editors, Advances in Knowledge
+Discovery and Data Mining, chapter 12, pages
+307-328. AAAI/MIT Press, 1996.
+[3] R. Agrawal and R. Srikant. Fast algorithms for mining
+association rules in large databases. In J. B. Bocca,
+M. Jarke, and C. Zaniolo, editors, VLDB'94,
+Proceedings of 20th International Conference on Very
+Large Data Bases, September 12-15, 1994, Santiago de
+Chile, Chile, pages 487-499. Morgan Kaufmann, 1994.
+[4] R. J. Bayardo. Efficiently mining long patterns from
+databases. In Haas and Tiwary [8], pages 85-93.
+[5] R. J. Bayardo, R. Agrawal, and D. Gunopulos.
+Constraint-based rule mining in large, dense
+databases. Data Mining and Knowledge Discovery,
+4(2/3):217-240, 2000.
+[6] D. Burdick, M. Calimlim, and J. Gehrke. Mafia: A
+maximal frequent itemset algorithm for transactional
+databases. In ICDE 2001. IEEE Computer Society,
+2001.
+[7] D. Gunopulos, H. Mannila, R. Khardon, and
+H. Toivonen. Data mining, hypergraph transversals,
+and machine learning. In Proc. PODS 1997, pages
+209-216, 1997.
+[8] L. M. Haas and A. Tiwary, editors. SIGMOD 1998,
+Proceedings ACM SIGMOD International Conference
+on Management of Data, June 2-4, 1998, Seattle,
+Washington, USA. ACM Press, 1998.
+[9] R. T. Ng, L. V. S. Lakshmanan, J. Han, and T. Mah.
+Exploratory mining via constrained frequent set
+queries. In A. Delia, C. Faloutsos, and
+S. Ghandeharizadeh, editors, SIGMOD 1999,
+Philadephia, Pennsylvania, USA, pages 556-558.
+ACM Press, 1999.
+[10] R. T. Ng, L. V. S. Lakshmanan, J. Han, and A. Pang.
+Exploratory mining and pruning optimizations of
+constrained association rules. In Haas and Tiwary [8],
+pages 13-24.
+[11] J. Pei and J. Ham Can we push more constraints into
+frequent pattern mining? In ACM SIGKDD
+Conference, pages 350-354, 2000.
+[12] J. Pei, J. Han, and L. V. S. Lakshmanan. Mining
+frequent item sets with convertible constraints. In
+ICDE 2001, pages 433-442. IEEE Computer Society,
+2001.
+[13] L. D. Raedt and S. Kramer. The levelwise version
+space algorithm and its application to molecular
+fragment finding. In Proceedingsof the Seventeenth
+International Joint Conference on Artificial
+Intelligence (IJCAI 2001), pages 853-862, August
+2001.
+
+
+
+
+51
+

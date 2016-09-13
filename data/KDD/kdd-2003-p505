@@ -1,0 +1,820 @@
+Using Randomized Response Techniques for
+Privacy-Preserving Data Mining
+
+
+
+
+
+Wenliang Du and Zhijun Zhan
+Department of Electrical Engineering and Computer Science
+Syracuse University, Syracuse, NY 13244
+Tel: 315-443-9180 Fax: 315-443-1122
+Email: {wedu,zhzhan}@ecs.syr.edu
+
+
+ABSTRACT
+Privacy is an important issue in data mining and knowledge
+discovery. In this paper, we propose to use the randomized
+response techniques to conduct the data mining computa-
+tion. Specially, we present a method to build decision tree
+classifiers from the disguised data. We conduct experiments
+to compare the accuracy of our decision tree with the one
+built from the original undisguised data. Our results show
+that although the data are disguised, our method can still
+achieve fairly high accuracy. We also show how the param-
+eter used in the randomized response techniques affects the
+accuracy of the results.
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications -
+Data Mining
+
+Keywords
+Privacy, security, decision tree, data mining
+
+1. INTRODUCTION
+The growth of the Internet makes it easy to perform data
+collection on a large scale. However, accompanying such
+benefits are concerns about information privacy [1]. Because
+of these concerns, some people might decide to give false in-
+formation in fear of privacy problems, or they might simply
+refuse to divulge any information at all. Data-analysis and
+knowledge-discovery tools using these data might therefore
+produce results with low accuracy or, even worse, produce
+false knowledge.
+Some people might be willing to selectively divulge infor-
+mation if they can get benefit in return [11]. Examples
+
+
+This material is based upon work supported by the Na-
+tional Science Foundation under Grant No. 0219560 and
+by the Center for Computer Application and Software En-
+gineering (CASE) at Syracuse University.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA.
+Copyright 2003 ACM 1-58113-737-0/03/0008 ...$5.00.
+of the benefit provided include discount of purchase, use-
+ful recommendations, and information filtering. However, a
+significant number of people are not willing to divulge their
+information because of privacy concerns. In order to under-
+stand Internet users' attitudes towards privacy, a survey was
+conducted in 1999 [3]. The result shows 17% of respondents
+are privacy fundamentalists, who are extremely concerned
+about any use of their data and generally unwilling to pro-
+vide their data, even when privacy protection measures were
+in place. However, 56% of respondents are a pragmatic ma-
+jority, who are also concerned about data use, but are less
+concerned than the fundamentalists; their concerns are often
+significantly reduced by the presence of privacy protection
+measures. The remaining 27% are marginally concerned and
+are generally willing to provide data under almost any con-
+dition, although they often expressed a mild general concern
+about privacy. According to this survey, providing privacy
+protection measures is a key to the success of data collection.
+After data are collected, they can be used in many data
+analysis and knowledge discovery computations, the results
+of which can benefit not only the data collectors but also
+their customers; those benefits include market trend analy-
+sis, better services, and product recommendation. A widely
+used useful knowledge discovery method is Data Mining.
+Data mining, simply stated, refers to extracting or "min-
+ing" knowledge from large amounts of data [6]; its goal is
+to discover knowledge, trends, patterns, etc. from a large
+data set. Examples of the knowledge include classification,
+association rules, and clustering. As we mentioned before,
+because of privacy concerns, collecting useful data for data
+mining is a great challenge: on one hand, such data collec-
+tion needs to preserve customers' privacy; on the other hand,
+the collected data should allow one to use data mining to
+"mine" useful knowledge.
+In this paper, we particularly focus on a specific data
+mining computation, the decision-tree based classification,
+namely we want to find out how to build decision trees when
+the data in the database are disguised. We formulate our
+DTPD Problem (Building Decision Tree on Private Data) in
+the following:
+
+Problem 1. (DTPD: Building Decision Tree on Private
+Data) Party A wants to collect data from users, and form a
+central database, then wishes to conduct data mining on this
+database. A sends out a survey containing N questions; each
+customer needs to answer those questions and sends back
+the answers. However, the survey contains some sensitive
+questions, and not every user feels comfortable to disclose
+
+
+505
+
+his/her answers to those questions.
+How could A collect
+data without learning too much information about the users,
+while still being able to build reasonably accurate decision
+tree classifiers?
+
+We propose to use the Randomized Response techniques
+to solve the DTPD problem. The basic idea of random-
+ized response is to scramble the data in such a way that
+the central place cannot tell with probabilities better than
+a pre-defined threshold whether the data from a customer
+contain truthful information or false information. Although
+information from each individual user is scrambled, if the
+number of users is significantly large, the aggregate informa-
+tion of these users can be estimated with decent accuracy.
+Such property is useful for decision-tree classification since
+decision-tree classification is based on aggregate values of a
+data set, rather than individual data items.
+The contributions of this paper are as follows: (1) We
+modify the ID3 classification algorithm [6] based on ran-
+domized response techniques and implement the modified
+algorithm. (2) We then conducted a series of experiments
+to measure the accuracy of our modified ID3 algorithm on
+randomized data. Our results show that if we choose the ap-
+propriate randomization parameters, the accuracy we have
+achieved is very close to the accuracy achieved using the
+original ID3 on the original data.
+The rest of the paper is organized as follows: we discuss re-
+lated work in Section 2. In Section 3, we briefly describe how
+randomized response technique work. Then in Section 4, we
+describe how to modify the ID3 algorithm to build decision
+trees on randomized data. In Section 5, we describe our
+experimental results. We give our conclusion in Section 6.
+
+
+2. RELATED WORK
+Agrawal and Srikant proposed a privacy-preserving data
+mining scheme using random perturbation [2]. In their scheme,
+a random number is added to the value of a sensitive at-
+tribute. For example, if xi is the value of a sensitive at-
+tribute, xi + r, rather than xi, will appear in the database,
+where r is a random number drawn from some distribution.
+The paper shows that if the random number is generated
+with some known distribution (e.g. uniform or Gaussian
+distribution), it is possible to recover the distribution of the
+values of that sensitive attribute. Assuming independence
+of the attributes, the paper then shows that a decision tree
+classifier can be built with the knowledge of distribution of
+each attribute.
+Evfimievski et al. proposed an approach to conduct pri-
+vacy preserving association rule mining based on random-
+ized response techniques [5]. Although our work is also
+based on randomized response techniques, there are two sig-
+nificant differences between our work and their work: first,
+our work deals with classification, instead of association rule
+mining. Second, in their solution, each attribute is indepen-
+dently disguised. When the number of attributes becomes
+large, the data quality will degrade very significantly.
+Another approach to achieve privacy-preserving data min-
+ing is to use Secure Multi-party Computation (SMC) tech-
+niques. Several SMC-based privacy-preserving data min-
+ing schemes have been proposed [4, 7, 9]. [7] considers the
+problem of the decision tree building over horizontally par-
+titioned data, i.e., one party has a set of records (rows) and
+the other has another set of different records. [9] and [4] con-
+sider the problems of association rule mining and decision
+tree building respectively over vertically partitioned data,
+i.e., for each record, some of the attributes (columns) are in
+one source, and the rest are in the other source. These stud-
+ies mainly focused on two-party distributed computing, and
+each party usually contributes a set of records. Although
+some of the solutions can be extended to solve our DTPD
+problem (n party problem), the performance is not desir-
+able when n becomes big. In our proposed research, we fo-
+cus on centralized computing, and each participant only has
+one record to contribute. All records are combined together
+into a central database before the computations occur. In
+our work, the bigger the value of n is, the more accurate the
+results will be.
+
+
+3. RANDOMIZED RESPONSE
+Randomized Response (RR) techniques were developed in
+the statistics community for the purpose of protecting sur-
+veyee's privacy. We briefly describe how RR techniques are
+used for single-attribute databases. In the next section,
+we propose a scheme to use RR techniques for multiple-
+attribute databases.
+Randomized Response technique was first introduced by
+Warner [10] in 1965 as a technique to solve the following
+survey problem: to estimate the percentage of people in a
+population that has attribute A, queries are sent to a group
+of people. Since the attribute A is related to some confiden-
+tial aspects of human life, respondents may decide not to
+reply at all or to reply with incorrect answers. Two mod-
+els (Related-Question Model and Unrelated-Question Model
+have been proposed to solve this survey problem. We only
+describe Related-Question Model in this paper.
+In this model, instead of asking each respondent whether
+he/she has attribute A, the interviewer asks each respondent
+two related questions, the answers to which are opposite to
+each other [10]. For example, the questions could be like the
+following:
+
+1. I have the sensitive attribute A.
+
+2. I do not have the sensitive attribute A.
+
+Respondents use a randomizing device to decide which
+question to answer, without letting the interviewer know
+which question is answered. The randomizing device is de-
+signed in such a way that the probability of choosing the
+first question is , and the probability of choosing the sec-
+ond question is 1 - . Although the interviewer learns the
+responses (e.g. "yes" or "no"), he/she does not know which
+question was answered by the respondents. Thus the respon-
+dents' privacy is preserved. Since the interviewer's interest
+is to get the answer to the first question, and the answer to
+the second question is exactly the opposite to the answer to
+the first one, if the respondent chooses to answer the first
+question, we say that he/she is telling the truth; if the re-
+spondent chooses to answer the second question, we say that
+he/she is telling a lie.
+To estimate the percentage of people who has the at-
+tribute A, we can use the following equations:
+P(A = yes) = P(A = yes) ·  + P(A = no) · (1 - )
+P(A = no)
+= P(A = no) ·  + P(A = yes) · (1 - )
+where P(A = yes) (resp. P(A = no)) is the proportion of
+the "yes" (resp. "no") responses obtained from the survey
+
+
+506
+
+data, and P(A = yes) (resp. P(A = no)) is the estimated
+proportion of the "yes" (resp. "no") responses to the sensi-
+tive questions. Getting P(A = yes) and P(A = no) is the
+goal of the survey. By solving the above equations, we can
+get P(A = yes) and P(A = no) if  =
+1
+2
+. For the cases
+where  =
+1
+2
+, we can apply Unrelated-Question Model where
+two unrelated questions are asked with one probability for
+one of the questions is known.
+
+
+4. BUILDING DECISION TREES ON DIS-
+GUISED PRIVATE DATA
+
+4.1 Data Collection
+The randomized response techniques discussed above con-
+sider only one attribute. However, in data mining, data sets
+usually consist of multiple attributes; finding the relation-
+ship among these attributes is one of the major goals for
+data mining. Therefore, we need the randomized response
+techniques that can handle multiple attributes while sup-
+porting various data mining computations. Work has been
+proposed to deal with surveys that contain multiple ques-
+tions [8]. However, their solutions can only handle very low
+dimensional situation (e.g. dimension = 2), and cannot be
+extended to data mining, in which the number of dimensions
+is usually high. In this paper, we propose a new randomized
+response technique for multiple-attribute data set, and we
+call this technique the Multivariate Randomized Response
+(MRR) technique. We use MRR to solve our privacy pre-
+serving decision tree building problem.
+Suppose there are N attributes, and data mining is based
+on these N attributes. Let E represent any logical expres-
+sion based on those attributes. Let P(E) be the proportion
+of the records in the whole disguised data set that satisfy
+E = true. Let P(E) be the proportion of the records in
+the whole undisguised data set that satisfy E = true (the
+undisguised data set contains the true data, but it does not
+exist). P(E) can be observed directly from the disguised
+data, but P(E), the actual proportion that we are interested
+in, cannot be observed from the disguised data because the
+undisguised data set is not available to anybody; we have
+to estimate P(E). The goal of MRR is to find a way to
+estimate P(E) from P(E) and other information.
+For the sake of simplicity, we assume the data is binary,
+and we use the finding of the probability of (A1 = 1)(A2 =
+1)  (A3 = 0) as an example to illustrate our techniques1,
+i.e., in this example, we want to know P(A1 = 1  A2 =
+1  A3 = 0). To simplify our presentation, we use P(110) to
+represent P(A1 = 1A2 = 1A3 = 0), P(001) to represent
+P(A1 = 0  A2 = 0  A3 = 1), and so on.
+For the related model, users tell the truth about all their
+answers to the sensitive questions with the probability ;
+they tell the lie about all their answers with the probability
+1 - . For example, using the above example, assume an
+user's truthful values for attributes A1, A2, and A3 are 110.
+The user generates a random number from 0 to 1; if the
+number is less than , he/she sends 110 to the data collector
+(i.e., telling the truth); if the number is bigger than , he/she
+sends 001 to the data collector (i.e., telling lies about all
+the questions). Because the data collector does not know
+the random number generated by users, the data collector
+cannot know that is the truth or a lie.
+1
+"" is the logical and operator.
+Because the contributions to P(110) and P(001) par-
+tially come from P(110), and partially come from P(001),
+we can derive the following equations:
+P(110) = P(110) ·  + P(001) · (1 - )
+P(001) = P(001) ·  + P(110) · (1 - )
+
+By solving the above equations, we can get P(110), the
+information needed for decision tree building purpose.
+
+4.2 Building Decision Trees
+Classification is one of the forms of data analysis that can
+be used to extract models describing important data classes
+or to predict future data. It has been studied extensively
+by the community in machine learning, expert system, and
+statistics as a possible solution to the knowledge discovery
+problem. Classification is a two-step process. First, a model
+is built given the input of training data set which is com-
+posed of data tuples described by attributes. Each tuple is
+assumed to belong to a predefined class described by one
+of the attributes, called the class label attribute. Second,
+the predictive accuracy of the model (or classifier) is esti-
+mated. A test set of class-labeled samples is usually applied
+to the model. For each test sample, the known class label is
+compared with predictive result of the model.
+The decision tree is one of the classification methods. A
+decision tree is a class discriminator that recursively parti-
+tions the training set until each partition entirely or dom-
+inantly consists of examples from one class. A well known
+algorithm for decision tree building is ID3 [6]. We describe
+the algorithm below where S represents the training samples
+and AL represents the attribute list:
+ID3(S, AL)
+
+1. Create a node V.
+2. If S consists of samples with all the same class C then
+return V as a leaf node labeled with class C.
+3. If AL is empty, then return V as a leaf-node with the
+majority class in S.
+4. Select test attribute (TA) among the AL with the
+highest information gain.
+5. Label node V with TA.
+6. For each known value ai of TA
+
+(a) Grow a branch from node V for the condition
+TA = ai.
+(b) Let si be the set of samples in S for which TA =
+ai.
+(c) If si is empty then attach a leaf labeled with the
+majority class in S.
+(d) Else attach the node returned by ID3(si, AL -
+TA).
+
+According to ID3 algorithm, each non-leaf node of the tree
+contains a splitting point, and the main task for building a
+decision tree is to identify an attribute for the splitting point
+based on the information gain. Information gain can be
+computed using entropy. In the following, we assume there
+are m classes in the whole training data set. Entropy(S) is
+defined as follows:
+
+Entropy(S) = -
+m
+
+
+j=1
+Qj log Qj
+(1)
+
+
+
+507
+
+??
+Node V
+1
+0
+0
+1
+
+
+
+
+Ak
+Aj
+Ai
+
+
+
+
+Figure 1: The Current Tree
+
+
+where Qj is the relative frequency of class j in S. Based on
+the entropy, we can compute the information gain for any
+candidate attribute A if it is used to partition S:
+
+Gain(S,A) = Entropy(S) -
+vA
+(|
+Sv|
+|S|
+Entropy(Sv))
+(2)
+
+
+where v represents any possible values of attribute A; Sv
+is the subset of S for which attribute A has value v; |Sv| is
+the number of elements in Sv; |S| is the number of elements
+in S. To find the best split for a tree node, we compute in-
+formation gain for each attribute. We then use the attribute
+with the largest information gain to split the node.
+When the data are not disguised, we can easily compute
+the information gain, but when the data are disguised using
+the randomized response techniques, computing it becomes
+non-trivial. Because we do not know whether a record in
+the whole training data set is true or false information, we
+cannot know which records in the whole training data set
+belong to S. Therefore, we cannot directly compute |S|,
+|Sv|, Entropy(S), or Entropy(Sv) like what the original ID3
+algorithm does. We have to use estimation.
+Without loss of generality, we assume the database only
+contains binary values, and we will show, as an example,
+how to compute the information gain for a tree node V that
+satisfies Ai = 1 and Aj = 0 (suppose Ai and Aj are splitting
+attributes used by V 's ancestors in the tree). Let S be the
+training data set consisting of the samples that belong to
+node V , i.e. all data samples in S satisfy Ai = 1 and Aj = 0.
+The part of the tree that is already built at this point is
+depicted in Figure 1.
+Let E be a logical expression based on attributes. Let
+P(E) be the proportion of the records in the undisguised
+data set (the true but non-existing data set) that satisfy
+E = true. Because of the disguise, P(E) cannot be observed
+directly from the disguised data, and it has to be estimated.
+Let P(E) be the proportion of the records in the disguised
+data set that satisfy E = true. P(E) can be computed
+directly from the disguised data.
+To compute |S|, the number of elements in S, let
+E = (Ai = 1)  (Aj = 0)
+E = (Ai = 0)  (Aj = 1)
+
+If we use the randomized response technique with the
+related-question model, we can get the following equations:
+P(E) = P(E) ·  + P(E) · (1 - )
+P(E) = P(E) ·  + P(E) · (1 - )
+(3)
+
+We can compute P(E) and P(E) directly from the (whole)
+disguised data set. Therefore, by solving the above equa-
+tions (when  =
+1
+2
+), we can get P(E). Hence, we get
+|S| = P(E)  n, where n is the number of records in the
+whole training data set.
+To compute Entropy(S), we need to compute Q0 and
+Q1 first (we assume the class label is also binary for this
+example, and the class label is also disguised). Let
+E = (Ai = 1)  (Aj = 0)  (Class = 0)
+E = (Ai = 0)  (Aj = 1)  (Class = 1)
+
+Sometimes, the class label is not sensitive information,
+and is not disguised. Therefore, the information of the class
+label is always true information. We can slightly change the
+above definition of E as the following:
+E = (Ai = 1)  (Aj = 0)  (Class = 0)
+E = (Ai = 0)  (Aj = 1)  (Class = 0)
+
+We compute P(E) and P(E) directly from the (whole)
+disguised data set. Then we solve Equations 3 and get P(E).
+Therefore, Q0 =
+P (E)n
+|S|
+, Q1 = 1 - Q0, and Entropy(S) can
+be computed. Note that the P(E) we get here is different
+from the P(E) we get while computing |S|.
+Now suppose attribute Ak is a candidate attribute, and
+we want to compute Gain(S,Ak). A number of values are
+needed: |SAk=1|, |SAk=0|, Entropy(SAk=1), and Entropy(SAk=0).
+These values can be similarly computed. For example, |SAk=1|
+can be computed by letting
+E = (Ai = 1)  (Aj = 0)  (Ak = 1)
+E = (Ai = 0)  (Aj = 1)  (Ak = 0)
+
+Then we solve Equations 3 to compute P(E), and thus
+getting |SAk=1| = P(E)  n. |SAk=0| can be computed sim-
+ilarly.
+The major difference between our algorithm and the orig-
+inal ID3 algorithm is how P(E) is computed. In ID3 al-
+gorithm, data are not disguised, P(E) can be computed by
+simply counting how many records in the database satisfy E.
+In our algorithm, such counting (on the disguised data) only
+gives P(E), which can be considered as the "disguised"
+P(E) because P(E) counts the records in the disguised
+database, not in the actual (but non-existing) database. The
+proposed randomized response techniques allow us to esti-
+mate P(E) from P(E).
+
+4.3 Testing and Pruning
+To avoid over-fitting in decision tree building, we usually
+use another data set different from the training data set to
+test the accuracy of the tree. Tree pruning can be performed
+based on the testing results, namely how accurate the deci-
+sion tree is. Conducting the testing is straightforward when
+data are not disguised, but it is a non-trivial task when the
+testing data set is disguised, just as the training data set.
+Imagine, when we choose a record from the testing data set,
+compute a predicted class label using the decision tree, and
+find out that the predicated label does not match with the
+record's actual label, can we say this record fails the test-
+ing? If the record is a true one, we can make that conclusion,
+but if the record is a false one (due to the randomization),
+we cannot. How can we compute the accuracy score of the
+decision tree?
+
+
+508
+
+We also use the randomized response techniques to com-
+pute the accuracy score. We use an example to illustrate
+how we compute the accuracy score. Assume the number
+of attributes is 5, and the probability  = 0.7. To test a
+record 01101 (i.e. the value for the first attribute is 0, for
+the second attribute is 1, and so on), we feed both 01101 and
+its complement 10010 to the decision tree. We know one of
+the class-label prediction result is true. If both prediction
+results are correct (or incorrect), we can make an accurate
+conclusion about the testing results of this record. However,
+if the prediction result for 01101 is correct and for 10010 is
+incorrect, or vice versa, we can only make a conclusion with
+0.7 certainty. Therefore, when the number of testing records
+is large, we can estimate the accuracy score. Next we will
+show how to estimate the accuracy score.
+Using the (disguised) testing data set S, we construct an-
+other data set S by reversing the values in S (change 0 to 1
+and 1 to 0), i.e. each record in S is the complement of the
+corresponding record in S. We say that S is the complement
+of the data set S. We conduct the testing using both S and
+S. Similarly, we define U as the original undisguised testing
+data set, and U as the complement of U. Let P(correct) be
+the proportion of correct predictions from testing data set
+S, and P(correct) be the proportion of correct predictions
+from testing data set S. Let P(correct) be the proportion
+of correct predictions from the original undisguised data set
+U, P(correct) be the proportion of correct predictions from
+U. P(correct) is what we want to estimate.
+Because both P(correct) and P(correct) are partially
+contributed by P(correct), and partially contributed by
+P(correct), we have the following equations:
+
+P(correct) = P(correct) ·  + P(correct) · (1 - )
+P(correct) = P(correct) ·  + P(correct) · (1 - )
+P(correct) and P(correct) can be obtained from testing
+S and S. Therefore, by solving the above equations, we can
+get P(correct), the accuracy score of the testing.
+
+5. EXPERIMENTAL RESULTS
+
+5.1 Methodology
+To evaluate the effectiveness of our randomized-response-
+based technique on building a decision tree classifier, we
+compare the classification accuracy of our scheme with the
+original accuracy, which is defined as the accuracy of the
+classifier induced from the original data.
+We used a data set from the UCI Machine Learning Repos-
+itory2. The original owners of data set is US Census Bu-
+reau. The data set was donated by Ronny Kohavi and
+Barry Becker in 1996. It contains 48842 instances with 14
+attributes (6 continuous and 8 nominal) and a label describ-
+ing the salary level. Prediction task is to determine whether
+a person's income exceeds $50k/year based on census data.
+We used first 10,000 instances in our experiment.
+We modified the ID3 classificaiton algorithm to handle the
+randomized data based on our proposed methods. We run
+this modified algorithm on the randomized data, and built a
+decision tree. We also applied the original ID3 algorithm to
+the original data set and built the other decision tree. We
+
+2
+ftp://ftp.ics.uci.edu/pub/machine-learning-databases
+/adult
+then applied the same testing data to both trees. Our goal
+is to compare the classification accuracy of these two trees.
+Clearly we want the accuracy of the decision tree built based
+on our method to be close to the accuracy of the decision
+tree built upon the original ID3 algorithm.
+The following is our experiment steps:
+
+1. Preprocessing: Since our method assumes that the
+data set contains only binary data, we first transformed
+the original non-binary data to the binary. We split
+the value of each attribute from the median point of
+the range of the attribute. After preprocessing, we di-
+vided the data set into a training data set D and a
+testing data set B. We also call the training data set
+D the original data set. Note that B will be used for
+comparing our results with the benchmark results, it
+is not used for tree pruning during the tree building
+phase.
+
+2. Benchmark: We use D and the original ID3 algorithm
+to build a decision tree TD; we use the data set B to
+test the decision tree, and get an accuracy score. We
+call this score the original accuracy.
+
+3.  Selection: For  = 0.1, 0.2, 0.3, 0.4, 0.45, 0.51, 0.55,
+0.6, 0.7, 0.8, 0.9, 1.0, we conduct the following 4 steps:
+
+(a) Randomization: In this step, we need to create
+a disguised data set, G. For each record in the
+training data set D, we generate a random num-
+ber r from 0 to 1 using uniform distribution. If
+r  , we copy the record to G without any
+change; if r > , we copy the complement of the
+record to G, namely each attribute value of the
+record we put into G is exactly the opposite of the
+value in the original record. We perform this ran-
+domization step for all the records in the training
+data set D and generate the new data set G.
+(b) Tree Building: We use the data set G and our
+modified ID3 algorithm to build a decision tree
+TG.
+(c) Testing: We use the data set B to test TG, and
+we get an accuracy score S.
+
+(d) Repeating: We repeat steps 3a-3c for 50 times,
+and get S1, ... ,S50. We then compute the mean
+and the variance of these 50 accuracy scores.
+
+5.2 The Results
+Figure 2(a) shows the mean value of the accuracy scores
+for each different  values, and the original accuracy score.
+Figure 2(b) shows the variance of the accuracy scores for
+different 's. We can see from the figures that when  = 1
+and  = 0, the results are exactly the same as the original
+ID3 algorithm. This is because when  = 1, the random-
+ized data set G is exactly the same as the original data
+set D; when  = 0, the randomized data set G is exactly
+the opposite of the original data set D. In both cases, our
+algorithm produces the accurate results (comparing to the
+original algorithm), but privacy is not preserved in either
+cases because an adversary can know the real values of all
+the records provided that he/she knows the  value.
+When  moves from 1 and 0 towards 0.5, the degree of
+randomness in the disguised data is increased, the variance
+
+
+509
+
+0
+0.2
+0.4
+0.6
+0.8
+1
+0.7
+0.75
+0.8
+0.85
+
+
+
+
+
+Mean
+
+
+
+
+Original
+Our Result
+
+
+
+
+(a) Mean
+0
+0.2
+0.4
+0.6
+0.8
+1
+0
+1
+2
+3
+4
+5
+6
+x 10
+-3
+
+
+
+
+
+Variance
+
+
+
+
+(b) Variance
+
+
+Figure 2: Experiment Results
+
+
+of the estimation used in our method should become large.
+Our results have demonstrated this. However, as we ob-
+served from the results, when  is in the range of [0, 0.4] and
+[0.6, 1], our method can still achieve very high accuracy and
+low variance when comparing to the original accuracy score.
+When  is around 0.5, the mean deviates a lot from the
+original accuracy score, and the variance becomes large. The
+variance is caused by two sources. One is the sample size,
+the other is the randomization. Since we used the same
+sample size, the difference among variances when  is differ-
+ent mainly comes from the difference of the randomization
+level. When  is near 0.5, the randomization level is much
+higher and true information about the original data set is
+better disguised, in other words, more information is lost;.
+therefore the variance is much larger than the cases when 
+is not around 0.5.
+
+5.3 Privacy Analysis
+When  = 1, we disclose everything about the original
+data set. When  is away from 1 and approaches to 0.5,
+the privacy level of the data set is increasing. Our pre-
+vious example shows that for a single attribute, when  is
+close to 0.5, the data for a single attribute become uniformly
+distributed. On the other hand, when  = 0, all the true
+information about the original data set is revealed. When 
+is moving toward 0.5, the privacy level is enhancing.
+
+
+6. CONCLUSION AND FUTURE WORK
+In this paper, we have presented a method to build de-
+cision tree classifiers while preserving data's privacy. Our
+method consists of two parts: the first part is the multivari-
+ate data disguising technique used for data collection; the
+second part is the modified ID3 decision tree building algo-
+rithm used for building a classifier from the disguised data.
+We presented experimental results that show the accuracy
+of the decision tree built using our algorithm. Our results
+show that when we select the randomization parameter 
+from [0.6, 1] and [0, 0.4], we can get fairly accurate decision
+trees comparing to the trees built from the undisguised data.
+In our future work, We will apply our techniques to solve
+other data mining problems (i.e., association rule mining).
+We will also extend our solution to deal with the cases where
+data type is not binary.
+
+
+7. REFERENCES
+[1] Office of the Information and Privacy Commissoner,
+Ontario, Data Mining: Staking a Claim on Your Privacy,
+January 1998. Available from http://www.ipc.on.ca/
+web site.eng/matters/sum pap/papers/datamine.htm.
+[2] R. Agrawal and R. Srikant. Privacy-preserving data mining.
+In Proceedings of the 2000 ACM SIGMOD on Management
+of Data, pages 439­450, Dallas, TX USA, May 15 - 18 2000.
+[3] L. F. Cranor, J. Reagle, and M. S. Ackerman. Beyond
+concern: Understanding net users' attitudes about online
+privacy. Technical report, AT&T Labs-Research, April
+1999. Available from http://www.research.att.com/
+library/trs/TRs/99/99.4.3/report.htm.
+[4] W. Du and Z. Zhan. Building decision tree classifier on
+private data. In Workshop on Privacy, Security, and Data
+Mining at The 2002 IEEE International Conference on
+Data Mining (ICDM'02), Maebashi City, Japan, December
+9 2002.
+[5] A. Evfimievski, R. Srikant, R. Agrawal, and J. Gehrke.
+Privacy preserving mining of association rules. In
+Proceedings of 8th ACM SIGKDD International
+Conference on Knowledge Discovery and Data Mining,
+July 2002.
+[6] J. Han and M. Kamber. Data Mining Concepts and
+Techniques. Morgan Kaufmann Publishers, 2001.
+[7] Y. Lindell and B. Pinkas. Privacy preserving data mining.
+In Advances in Cryptology - Crypto2000, Lecture Notes in
+Computer Science, volume 1880, 2000.
+[8] A. C. Tamhane. Randomized response techniques for
+multiple sensitive attributes. The American Statistical
+Association, 76(376):916­923, December 1981.
+[9] J. Vaidya and C. Clifton. Privacy preserving association
+rule mining in vertically partitioned data. In Proceedings of
+the 8th ACM SIGKDD International Conference on
+Knowledge Discovery and Data Mining, July 23-26 2002.
+[10] S. L. Warner. Randomized response: A survey technique
+for eliminating evasive answer bias. The American
+Statistical Association, 60(309):63­69, March 1965.
+[11] A. F Westin. Freebies and privacy. Technical report,
+Opinion Research Corporation, July 1999. Availabe from
+http://www.privacyexchange.org/iss/surveys/sr990714.html.
+
+
+
+
+510
+

@@ -1,0 +1,1045 @@
+Mining Frequent Neighboring Class Sets
+in Spatial Databases
+
+Yasuhiko Morimoto
+IBMTokyoResearchLaboratory
+1623-14, Shimo-tsuruma,Yamato
+Kanagawa242-8502,Japan
+morimoto@jp.ibm.com
+
+
+ABSTRACT
+
+We consider the problem of finding neighboring class sets.
+Objects of each instance of a neighboringclass set are grouped
+using their Euclidean distances from each other. Recently,
+location-based services axe growing along with mobile com-
+puting infrastructure such as cellular phones and PDAs.
+Therefore, we expect to see the development of spatial databases
+that contains very large number of access records including
+location information. The most typical type would be a
+database of point objects. Records of the objects may con-
+sist of "requested service name," "number of packet trans-
+mitted" in addition to x and y coordinate values indicating
+where the request came from. The algorithm presented here
+efficiently finds sets of "service names" that were frequently
+close to each other in the spatial database. For example,
+it may find a frequent neighboring class set, where "ticket"
+and "timetable" are frequently requested close to each other.
+By recognizing this, location-based service providers can
+promote a "ticket" service for customers who access the
+"timetable."
+
+
+1.
+INTRODUCTION
+Recently, location-based services are growing along with
+mobile computing infrastructure such as cellular phones and
+PDAs. Consequently, we expect to work with spatial databases
+that contain a very large number of access records involving
+location information. Recent progress in computing facil-
+ities makes it possible to integrate geographic information
+systems (GIS) and large databases that contain spatial in-
+formation.
+Efficient data management and retrieval in such integrated
+GISs have already been investigated [5]. There are several
+research projects that focused on spatial data mining, i.e.,
+mining knowledge or frequent patterns in spatial contexts
+from huge spatial databases [9, 8, 4, 7, 6, 12, 3]. In this pa-
+per, we consider a spatial data mining problem of finding fre-
+quent neighboring class sets. The members of a neighboring
+
+
+
+
+Permissionto makedigitalor hardcopiesofall or partofthis workfor
+personalor classroomuse is grantedwithoutt~eprovidedthatcopies
+are not madeor distributedforprofitorcommcrcialadvantagcand that
+copiesbear thisnoticeand the fullcitationon thc firstpage.Tocopy
+otherwise,torepublish,to poston serversor to redistributeto lists,
+requirespriorspecificpermissionand/ora fee.
+KDD01 San FranciscoCA USA
+CopyrightACM2001 1-58113-391-x/01/08...$5.00
+Table 1: Access Reeords of Mobile Services
+
+
+ID
+Position
+Service
+..
+#Packets
+xxx
+(14975,27020)
+Weather
+..
+2
+xxx
+(16723,24301)
+Timetable
+..
+1
+xxx
+(15521,26441)
+Ticket
+..
+4
+
+
+xxx
+(14373,26752)
+Timetable
+..
+1
+
+
+
+
+class set are grouped according to their Euclidean distances
+from each other. Especially for emerging location-based ser-
+vices, such frequent neighboring class sets yield important
+insights for providing attractive location-sensitive advertise-
+ments, portals, promotions, and so forth.
+
+Spatial Database of Points
+Table 1 shows one of the most typical spatial databases con-
+taining point objects. The database contains access records
+of mobile services of a certain carrier or a location ser-
+vice provider. Each record in the database consists of at-
+tributes "Service," indicating the name of requested ser-
+vice, "#Packets," the number of packets transmitted in the
+request, and "Position," the x and y coordinate values in-
+dicating where the request came from.
+
+Neighboring Class Sets
+
+We consider the problem of finding class sets, which are
+sets of services in the database that are frequently issued
+close to each other. Assume that the points in Table 1 are
+distributed on the map in Figure 1. In the figure, the ac-
+cess records of Timetable, Ticket, and Weather services are
+shown as circles, triangles, and squares, respectively.
+Note that a circle (Timetable) lies close to a triangle
+(Ticket) four times. Similarly, a circle lies close to a square
+(Weather) three times and a triangle lies close to a square
+two times. Moreover, all three kinds of points lie close to
+each other two times.
+We call such class sets (sets of Service) neighboring class
+sets, where the objects form a close group with each other.
+If the number of instances of a neighboring class set is larger
+than a specified value, called the minimum support value, we
+call the class set a frequent neighboring class set.
+In this paper, we present an efficient algorithm for finding
+frequent neighboring class sets from a large spatial database.
+For example, we may find a pattern where Ticket and Timetable
+
+
+
+
+353
+
+· Timetable
+&.
+
+
+
+· Ticket
+$
+
+
+
+
+r~ Weather
+
+({eTimetable, ·Ticket}, 4)
+({Iq'imetable,DWeather}, 3)
+({·Ticket, nWeather}, 2)
+({Irrimetable, ·Ticket, nWeather}, 2)
+
+
+Figure 1: Neighboring Class Sets
+
+
+
+are requested close to each other as a frequent neighboring
+class set. By recognizing this, a location service provider can
+offer a Ticket service to customers who access the Timetable
+by displaying a link to Ticket services on their mobile de-
+vice.
+
+
+2.
+PRELIMINARIES
+
+2.1
+Neighboring Class Sets
+This paper assumes a database that contains x and y co-
+ordinate values like Table 1. We also assume that each point
+has some features like Service in the table. We classify each
+point by using such features. Therefore, we can assume that
+each point can have its own class label.
+Figure 2 shows an example of a valid instance of a neigh-
+boring class set. Let D be a user specified distance to judge
+whether the distance between two points is or is not close.
+The Euclidean distance d between any two points in a valid
+instance must be smaller than D. We denote dist(pi,pj)
+as the Euclidean distance between two points, pi and pj.
+In addition, let N be the user specified minimum support
+value. A frequent neighboring class set has more than N
+valid instances.
+We describe a neighboring class set that consists of k
+classes and has n support (the number of valid instances)
+as
+
+
+({cl, c2 .....
+c~}, n)
+
+where cl (i = 1,..., k) are classes of the set.
+The frequent neighboring class sets in the Figure 1 can be
+found, if we set the minimum support value N = 2 and the
+distance D as the diameter of the circles on the map.
+
+2.2
+Frequent k-Neighboring Class Set
+We call neighboring class sets that consist of k different
+classes k-neighboring class sets. Neighboring class sets that
+·
+d<D
+
+°
+
+
+
+
+({e, A, I,e}, n) ... n> N
+
+
+Figure 2: Valid Instance of Neighboring Class Set
+
+
+consist of only one class, k = 1, axe 1-neighboring class
+sets. Each instance of a 1-neighboringclass set contains only
+one point and, therefore, we cannot measure any distance.
+We define a 1-neighboring class set that has more than N
+(minimum support) points as a frequent 1-neighboring class
+set. For k > 2, we define a class set that has more than N
+valid instances as a frequent k-neighboring class set.
+
+2.3
+Grouping of Points
+Assume that we have point records that belong to one
+of three classes, circles, squares, and triangles. An in-
+stance of the 2-neighboring class set, {circles, squares},
+is a pair of an instance of {circles} and an instance of
+{squares}. We make instances of {circles, squares} so
+that each pair is the closest pair of a circle and a square,
+that is, the circle in a pair is the closest circle from the
+square in the pair and vice versa. Figure 3, left, shows how
+we group an instance of 2-neighboring class set.
+In the Figure, {"4", "1"} and {"5", "2"} axe valid in-
+stances of {circles, squares}. Similarly, {"4", "8"} is a
+valid instance of {circles, triangles}. And, {"2", "8"}
+is a valid instance of {squares, triangles}. As in the Fig-
+ure, any point object must belong to only one instance of
+a k-neighboring class set.
+(But a point of an instance of
+a k-neighboring class set may belong to an instance of an-
+other k-neighboring class set.) Notice that {"5", "3"} is not
+a valid instance of {circles, squares}. Even though the
+distance between the two point is less than D, object "5" is
+already belongs to an instance of {circles, squares}, {"5",
+"2"}.
+For each instance of a k-neighboring class set such that
+k > 2, we compute the center, whose coordinate value is
+k
+k
+((~'~j=l xj)/k, (~j=l yj)/k) where (xj,yj) are the x and y
+coordinate values of the j-th point in the instance. We use
+the center to represent the position of the instance of the k-
+neighboring class set. We can construct a (k+l)-neighboring
+class set from a k-neighboring class set by adding another
+class into the k-neighboring class set. We make an instance
+of the (k+ 1)-neighboringclass set by grouping an instance of
+the k-neighboring class set and the closest point of the other
+class. We choose the closest point from the center of each in-
+stance, denoted by "+" as shown in the Figure 3, right. The
+closest triangle from the center of {"4", "1"} is "8". There-
+fore, {"4", "1", "8"} is an instance of {circles, squares,
+triangles}. Though "8" is also the closest triangle from
+the center of {"5", "2"}, the center of {"4", "i"} is closer.
+Note that instances of k-neighboring class sets for k > 2
+may be different depending on the order of classes as they
+axe grouped. We will discuss this later in this paper.
+
+2.4
+Properties of a k-Neighboring Class Set
+Let C~ be a neighboring class set that contains k different
+
+
+
+
+354
+
+O
+7
+O
+4
+60
+a 4
+6
+·
+
+
+
+8
+I1
+[]
+7
+[]
+3
+~
+,~
+3
+~
+=.
+D
+D
+Instances of
+Instance of
+2-neighboring class set
+3-neighboring class set
+
+({O, Ira}, 2)
+1"4", "1"}, {"5", "2"}
+({O, · ,~.}, 1)
+({O, A}, I) {"4", "8"}
+{"4", "1", "8"} '
+(~, ~,
+t) {"2","8"}
+
+
+Figure 3: Grouping of Points
+
+
+
+
+Ck
+Ck'
+Ck.l
+({e, A,I},
+nk)
+({e, A, @}, nk')
+({e, &,l,@},
+nk.l)
+
+
+Figure 4: A Priori Generation of Valid Instances
+
+
+classes. Let sup(C~) be support of Ck. Figure 4 shows an
+example of a valid instance of Ck+x. The figure illustrates
+that a neighboring class set that consists of four classes and
+nk+~ support value,
+
+Ck+l = ({circles, triangles, squares, diamonds}, nk+l).
+
+If the instance of the 4-neighboring class set Ck+l is valid,
+every three-point combination chosen from the instance (the
+4 points) is also valid. For example, the two subsets, an in-
+stance of C~ = ({circles, triangles, squares}, nk) and an
+instance of C~ = ({circles, triangles, diamonds}, n'k) axe
+also valid.
+Therefore, it is obvious that nk > nk+t and
+nrk ~ nk+l.
+Based on the observation, if a k-neighboring class set is
+not frequent, (k + 1)-neighboring class sets that contain all
+the k classes must not be frequent.
+
+
+3.
+INDEXING STRUCTURES AND ALGO-
+RITHMS
+
+3.1
+A Priori Generation
+We specify the distance value D and the minimum sup-
+port value N. Then we compute the frequent 1-neighboring
+class set by using N. We can easily compute all frequent 1-
+neighboring class sets by scanning the database once. From
+all frequent 1-neighboring class sets, we generate k-ne!ghboring
+class sets for k > 2 by using a variation of the a priori algo-
+rithm presented in [1].
+We use following Alg. 3.1, Apriori-Gen for Neighboring
+Class Sets, for finding all frequent (k + 1)-neighboring class
+sets from all frequent k-neighboring class sets. We assume
+that we can order all classes and we can order all class sets.
+In each iteration of the algorithm, each instance I has two
+variables, "corresponding additional point, cp(I)," and "dis-
+tance value between the center of I and the cp(I), dcp(I)."
+ALG. 3.1. Apriori-Gen for Neighboring Class Sets
+
+
+· Input: Sk = {C~[i], i = 1, ..., m}
+(set of all frequent k-neighboring class sets)
+· Output: Sk+l
+(set of all frequent (k + 1)-neighboring class sets)
+
+[1]For(i = 1; i < m; i + +)
+[2]
+For each valid instance of Ck[i] E Sk,
+compute the center. (Let Gi be the set of all centers.)
+[3]
+Construct a Voronoi diagram of Gi.
+[4]
+ForO=i+l;j<m;j++
+)
+(Let Ck+l[i,j] be the union set of C~[i] U C~[j].)
+[5]
+If Ck+l [i,j] has just k + 1 classes and
+all k classes combinations chosen from Ck+x [i, j]
+are frequent, then do the following:
+[6]
+Initialize sup(Ck+l[i, j]) = 0.
+[7]
+For each instance Ii of C~[i],
+initialize ep(Ii) = null and dcp(Ii) = ¢x~.
+[8]
+For each valid instance Ij of Ck LJ]:
+(Let pj be the point of the class cj
+such that cj E C~[j] and cj ¢ Ck[i].)
+[9]
+Find the nearest center, g* E Gi from pj.
+(Let I* be the corresponding instance of g* .)
+[10]
+For each point, pii (ii = 1, ...,k), in I.~,
+examine whether or not dist(pj,pii) < D.
+[11]
+If all points in I* satisfy the inequality, do:
+[12]
+If dcp(I*) > dist(g*,pj), do:
+[13]
+lf cp(I.~) == null, sup(Ck+l[i,j]) + +.
+[141
+cp(I.~) = pj.
+[15]
+dcp(I*) = gist(g*, pj).
+[16]
+If sup(Ck+l[i,j]) > N, make valid instances
+of C~+1[i,j] from the instances I~ of C~ [i]
+such that cp(ll)! = null.
+[17]
+Add C~+1[i, j] into Sk+t.
+
+
+In Alg. 3.1, we made an instance of a (k + 1)-neighboring
+class set by grouping an instance of a k-neighboring class
+set and the closest point of another class. Instances of k-
+neighboring class set for k > 2 may different depending on
+the order of the class as added into the class set. Therefore,
+the support value of a k-neighboring class set for k > 2 may
+be slightly different. In general data mining applications,
+it is much more important to know what are the frequent
+neighboring class sets than to know what is the exact sup-
+port value of each neighboring class set. Therefore, the ef-
+ficient approximate algorithm is adequate for our purposes
+here.
+
+3.2
+Voronoi Diagrams and Point Location
+In Alg. 3.1 Step [9], we use a Voronoi diagram for finding
+the nearest point from a set of points. A Voronoi diagram is
+an efficient data structure for this purpose [2]. Assume that
+we have a set of n points, P = {pl, ...,p~}, in a plane, then
+the Voronoi diagram of P, Vor(P), is the subdivision of the
+plane into n regions, called "Voronoi regions," one for each
+point, called a "Voronoi point."
+Let pi E P be a Voronoi point of Vor(P) and Reg(pi) be
+the corresponding Voronoi region. The Voronoi diagram has
+the following property. A point q lies in the region Reg(pi)
+if and only if dist(q, pj) >_dist(q,pi) for each pj E P with
+j#i.
+
+
+
+355
+
+Figure 5: Quaternary Tree
+
+
+We can find the nearest point p* E P from a point q
+efficiently by using this property of the Voronoi diagram
+Vor(P). Alg. 3.2, often called point location, is one such
+algorithm.
+
+ALG. 3.2. Point Location in Voronoi Diagram
+1
+
+
+· Input1: q (a point)
+oInput$: Vor(P) (the Voronoi diagram of P)
+eOUtput: p* (the point in P nearest to q)
+
+[1] Choose an arbitrary starting point pi G P.
+[2]Initialize the distance value as dmi,~= dist(pi,q).
+[3] Collect Voronoi regions, ~, that is adjacent to Reg(pi).
+[4]For each Voronoi region Reg(pj) G ~:
+[5]
+Ifdist(pi,q) < dm~,~, do:
+[6]
+dm~ = dist(pj, q).
+[7]
+p~ = p~.
+[8]
+Go to Step [3].
+[9] Return pi as p*.
+
+
+
+Though the worst case time complexity of Alg. 3.2 is O(n),
+the expected running time is approximately constant if we
+can start the algorithm from a Voronoi point that lies close
+to p* in Step [1].
+
+3.3
+Quaternary Tree Indexing
+In many GIS systems or spatial database systems, a qua-
+ternary tree like Figure 5 is often used for indexing a two
+dimensional plane. We used a quaternary tree for indexing
+sets of centers of valid instances of each frequent neighbor-
+ing class set. As the root note of the tree, we use a large
+rectangle that covers all the points in a database. Then, we
+divide the rectangle into four equal-sized subrectangles. We
+continue this division procedure for each rectangle, recur-
+sively. We set the depth of the quaternary tree so that the
+average number of points of a class in each leaf node is close
+to one, because this empirically performs well as measured
+by time and space efficiency. Since the width and depth of
+each leaf node of the tree is fixed when we execute Alg. 3.2..
+we can find a leaf node for each point in a constant time.
+For each k-neighboring class set, we assign a representa-
+tive center point to each leaf node as a label of the node. A
+label of a leaf node is chosen arbitrary from all center points
+that belong the node. We also assign a label to all other
+nodes of the tree. A label for an ancestor node is chosen
+from the labels of its child nodes. If there is no center point
+
+1In order to simplify the explanation, we omitted some ex-
+ceptional conditions, for example, the condition when q lies
+on the border of the Voronoi regions.
+]
+63
+
+
+
+
+Figure 6: Labeling of Each Node
+
+
+in a leaf node, we label the node null. Figure 6 shows an
+example of labeling of a quaternary tree.
+In Step [1] of Alg. 3.2, we search for the nearest point
+from the label of the leaf node that the point q lies in. If the
+label is null, we use the non-null label of its closest ancestor
+node. If the nearest point that is found by Alg. 3.2 is differ-
+ent from the corresponding label, we update the label to the
+nearest point adaptively. This quaternary tree indexing of
+Voronoi points and the heuristics for labeling of the nodes in
+the tree significantly improves the expected running time of
+Alg. 3.2. As a result, the expected running time for finding
+the nearest instance of a frequent neighboring class set will
+be approximately constant.
+
+3.4
+Yoronoi Diagram Construction
+In Alg. 3.1 Step [3], we construct Voronoi diagrams for
+each frequent k-neighboring class set. Algorithms for con-
+structing Voronoi diagrams have been investigated inten-
+sively. The problem is proved to be 12(nlogn) where n is
+the number of Voronoi points [2]. There is a known algo-
+rithm whose worst time complexity is O(nlog n), which is
+the optimal complexity.
+Ohya et al invented an efficient algorithm whose average
+time complexity is O(n), though the worst time complex-
+ity is O(n2) [10, 11]. In general, data mining applications
+prefer to an algorithm whose average running time is fast.
+Therefore, we used this efficient method.
+We first construct an initial (intermediate) Voronoi dia-
+gram, Vor(P3) that consists of three points among n Voronoi
+points. We incrementally update the intermediate Voronoi
+diagram by adding new Voronoi point one by one until all
+the Voronoi points are added. Figure 7 illustrates the incre-
+mental update procedure to construct the Voronoi diagram
+Vor(P,~+l) having rn + 1 points from the Voronoi diagram
+Vor(Pm) having m points. If new point p,~+l is added, we
+search the nearest Voronoi point p* in the intermediate dia-
+gram. Then, we draw a perpendicular bisector of p,~+l and
+p* in Reg(p*). Similarly, we draw a perpendicular bisector
+
+
+
+
+356
+
+Vor(Pm)
+/
+
+
+
+
+Vor(Pm+l)
+
+
+
+Figure 7: Incremental Construction of a Voronoi Di-
+agram
+
+
+
+in regions that are adjacent to Reg(p*).
+
+A method presented in [10, 11] uses a quaternary tree
+bucketing procedure to decide the order of Voronoi points to
+add in the incremental Voronoi diagram construction. The
+quaternary tree is also used to find the nearest Voronoi point
+in the intermediate diagram.
+
+
+4.
+EXPERIMENTS
+We implemented the proposed algorithm and performed
+several experiments to evaluate the performance. All exper-
+iments were clone on an IBM IntelliStation which consists of
+a Pentium II processor running at 450 MHz with 512 KB of
+L2 cache and 128 MB of real memory.
+
+4.1
+Performance of A Priori Generation
+The number of combinations to be examined by Alg. 3.1
+is affected by how we eliminate candidate neighboring class
+sets. Therefore, the overall performance of our algorithm is
+heavily affected by the input parameters, i.e., the distance
+D and the minimum support value N, and the contents of
+the database.
+In order to assess overall performance, we examine the
+running time of one iteration of Alg. 3.1 while changing
+the support value of neighboring class sets, sup(Ck[i]) and
+sup(Ck~]). Since the effect of the k value is negligible in
+the performance of one iteration, we set k = 1 in these ex-
+periments.
+We generated sets of synthetic C1[i] points and C1[j] points
+with several number of records. All records have an attribute
+for identification, a class label, and two coordinate values in
+the two-dimensional plane. We divided the execution time
+of the iteration into two parts: Voronoi and Examination.
+Voronoi is the time taken for constructing Voronoi diagrams
+by using the incremental method. Examination is the time
+for examining the valid instances of the new neighboring
+class set. Totalis the total time taken for one iteration of
+Alg. 3.1.
+Each graph of Figure 8, shows the relationships between
+the execution time for a fixed number of Sup(Ck~]) and var-
+ious numbers of Sup(Ck[i]). There are three lines in each
+graph, showing the execution times for Voronoi, Examina-
+tion phases and Total times. There is a gap in the execution
+time of the Voronoi in each graph. This gap comes from a
+change of the depth of the quaternary tree. We adjusted the
+depth of the tree so that the average number of points in each
+leaf is close to one. Therefore, we changed the depth accord-
+ing to Sup(C~[i]). When Sup(CA[i]) = 2048, we adaptively
+changed the depth of the trees. Notice that all the execution
+times of the Examination in Figure 8 are almost constant.
+"Z
+
+
+
+.E
+I'--
+
+
+
+
+ILl
+5.5
+5
+4.5
+4
+
+3.5
+3
+2.5
+2
+1.5
+
+1
+
+0.5
+
+
+
+
+14
+
+12
+
+lO
+G)
+
+._E 8
+I-
+
+._8 6
+Sup(Ck[j])=10000
+
+
+' Voro'noi
+',
+' ....----~..........' ........
+Examination ----*---- ,......................" ............
+Total
+...........
+,."
+
+
+
+
+I.U
+0
+i
+i
+i
+i
+i
+i
+i
+i
+i
+
+1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000
+
+Support Count of Ck[i]
+
+Sup(Ck[j])=160000
+
+
+' Voronoi
+',
+'
+'
+'
+Examination ----*---- .......................'~.................... ~ .....
+Total
+'"".:::'¢""
+
+
+
+
+2
+
+i
+i
+i
+i
+i
+i
+i
+i
+J
+
+1000 1500 2000 2500 3000 3500 4000 4500 5000 5500 6000
+
+Support Count of Ck[i]
+
+
+Figure 8: Time Dependence
+on Sup(Ck[i])
+
+
+Each graph in Figure 9, on the other hand, shows the
+relationships between the execution time for a fixed num-
+ber of Sup(C~[i]) and various numbers of Sup(Ck[j]). Be-
+cause Sup(C~[i]) is fixed in all of the experiments, the exe-
+cution times of the Voronoi are almost constant. The exe-
+cution times of the Examination have linear dependence on
+S~p(Cjj]).
+
+4.2
+Frequent Neighboring Class Set Examples
+We apply our algorithm for the NTT Townpage Database
+(a kind of telephone directory of commercial facilities like the
+Yellow Pages in the US), which was provided by NTT Busi-
+ness Information Service, Inc. We collected data on 138,858
+commercial facilities in Kanagawa prefecture, Japan. Each
+facility is categorized into one of 431 classes, for example,
+train stations, post offices, schools, cafes, and so on. We
+used the categories as class values. Each facility also has
+an address. We identified the x and y coordinate values of
+each record from its address and made a database of point
+records.
+We found the following frequent neighboring class sets
+from the point database. (The most frequent set for each
+k-neighboring class sets for k = 2, 3, 4, 5.)
+
+({Snack Bar, Beauty Salon}, 1791)
+({Diner, Tavern, Snack Bar}, 717)
+({Diner, Tavern, Snack Bar, Beauty Salon}, 333)
+({Diner, Tavern, Snack Bar, Club, Pub}, 146)
+
+We used distance D = 50m and minimum support N =
+100 for finding the class sets. Note that the commerciM fa-
+
+
+
+
+357
+
+ww
+E
+10
+
+9
+
+8
+
+7
+
+6
+
+5
+
+
+
+
+0
+0
+
+
+
+
+14
+
+
+
+
+10
+
+
+
+
+i=
+
+
+
+
+tu
+4
+Voron~l
+,
+Examination
+Total
+---- m....
+
+
+
+
+. . ...-"
+/.t/t
+
+
+. it'"
+
+..z
+7/"
+H'""
+/ f
+ry"
+.~--
+
+
+
+i
+i
+i
+i
+i
+20k
+40k
+60k
+80k
+100k
+
+Support Count of Ck[j]
+
+Sup(Ck[i])-6000
+
+
+Voron(~i
+,
+Examination ---~---
+Total --..m....
+Sup(Ckp])-2000
+
+
+
+
+...................//)J
+.............
+
+
+
+i
+i
+120k
+140k
+160k
+
+
+
+
+............--'""
+.y.--
+
+
+
+
+r.'"'~'"'"'""""""""""
+,../*'/~'/'//////"~¸
+
+
+J
+i
+i
+i
+...
+
+
+
+
+L
+i
+i
+i
+i
+i
+i
+20k
+40k
+60k
+8Ok
+lOCk
+120k
+140k
+160k
+
+Support Count of CIdII
+
+
+
+Figure 9: Time Dependence on Sup(Ck[j])
+
+
+cilities of the database tend to lie in urban areas. Moreover,
+the distance of 50m is relatively large compared with the
+population density in the urban areas of Kanagawa Prefec-
+ture, Japan.
+Therefore, we found many, about 2000, fre-
+quent neighboring class sets. We intentionally set these pa-
+rameters to examine the workablity of our algorithm for real
+spatial databases. It took around 3 to 4 minutes per run, in-
+cluding data I/O, for these large tests. But if we use smaller
+D or larger N values, it terminates within a minute in most
+cases.
+
+
+5.
+CONCLUDING REMARKS
+We have developed an algorithm for finding important
+spatial pattern called frequent neighboring class sets from
+spatial databases. The neighboring class sets are not just
+clusters that can be found by conventional clustering algo-
+rithms because each instance (cluster) of a set is guaranteed
+to have one object of each class in the set. Frequent neigh-
+boring class sets can be utilized for many applications such
+as location-based services, development planning, and area
+marketing.
+Current problems that we have to consider for the neigh-
+boring class sets function are as follows:
+
+· As shown in the experiment section, we might find too
+many frequent neighboring class sets to analyze the
+class sets intensively. We have to consider a method
+for filtering out uninteresting neighboring class sets.
+
+· We used fixed size pixels in the tree structured index-
+ing of spatial objects. The alternative is variable size
+indexing like k-D trees. The former can find the cor-
+responding node for a given location in constant time,
+while the latter can perform well even for skewed data.
+Since the difference of computation time is not so sig-
+nificant so far, we used the former approach.
+
+We have to specify distance value for each computa-
+tion. It sometimes is better if we can automatically
+set the distance value accordingly for a given spatial
+database.
+
+
+6.
+ACKNOWLEDGEMENTS
+The author would like to thank Harunobu Kubo, Akihiro
+Inokuchi of IBM Tokyo Res. Lab. and Takeshi Kanda of
+Univ. of Tokyo for their help for implementing the system.
+
+
+7.
+REFERENCES
+[1] R. Agrawal and R. Sril~nt. Fast algorithms for mining
+association rules. In Proc. of VLDB Conference, pp.
+487-499, 1994.
+[2] M. de Berg, M. van Kreveld, M. Overmars, and
+O. Schwarzkopf. Computational Geometry, Algorithms
+and Applications. Springer, 1997.
+[3] M. Ester, H.-P. Kriegel, J. Sander, M. Wimmer, and
+X. Xu. Incremental clustering for mining in a data
+warehousing environment. In Proe. of VLDB
+Conference, pp. 323-333, 1998.
+[4] M. Ester, H.-P. Kriegel, and X. Xu. Knowledge
+discovery in large spatial databases - focusing
+techniques for efficient class identification. In Proc. of
+the Int'l Symposium on Advances in Spatial
+Databases, SSD, LNCS, vol. 951, pp. 67-82.
+Springer-Verlag, 1995.
+[5] R. H. Giiting. An introduction to spatial database
+systems. VLDB Journal, 3(4):357-400, Oct. 1994.
+[6] J. Han, K. Koperski, and N. Stefanovic. GeoMiner: A
+system prototype for spatial data mining. ACM
+SIGMOD Record, 26(2):553-556, 1997.
+[7] E. M. Knorr and R. T. Ng. Finding aggregate
+proximity relationships and commonalities in spatial
+data mining. IEEE Trans. on Knowledge and Data
+Engineering, 8:884-897, Dec. 1996.
+[8] K. Koperski and J. Han. Discovery of spatial
+association rules in geographic information databases.
+In Proc. of the Int'l Symposium on Advances in
+Spatial Databases, SSD, LNCS, vol. 951, pp. 47-66.
+Springer-Verlag, 1995.
+[9] R. T. Ng and J. Han. Efficient and effective clustering
+methods for spatial data mining. In Proc. of VLDB
+Conference, pp. 144-155, 1994.
+[10] T. Ohya, M. Iri, and K. Murota. A fast voronoi
+diagram algorithm with quaternary tree bucketing.
+Information Processing Letters, 18(4):227-231, 1984.
+[11] T. Ohya, M. Iri, and K. Murota. Improvements of the
+incremental method for the voronoi diagram with
+computational comparison of various algorithms.
+Journal of the Operations Research Society of Japan,
+27(4):306-337, 1984.
+[12] W. Wang, J. Yang, and R. R. Muntz. STING: A
+statistical information grid approach to spatial data
+mining. In Proc. of VLDB Conference, pp. 186-195,
+1997.
+
+
+
+
+358
+

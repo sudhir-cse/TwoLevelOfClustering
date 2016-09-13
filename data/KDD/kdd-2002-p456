@@ -1,0 +1,1163 @@
+Extracting Decision Trees From Trained Neural Networks
+
+
+Olcay Boz
+AT&TLabs
+200 LaurelAve.
+Middletown,NJ 07748
+USA
+olcay@att.com
+
+
+ABSTRACT
+Neural Networks are successful in acquiring hidden knowledge
+in datasets. Their biggest weakness is that the knowledge they ac-
+quire is represented in a form not understandable to humans. Re-
+searchers tried to address this problem by extracting rules from
+trained Neural Networks.
+Most of the proposed rule extraction
+methods requked specialized type of Neural Networks; some re-
+quired binary inputs and some were computationally expensive.
+Craven proposed extracting MofN type Decision Trees from Neu-
+ral Networks. We believe MofN type Decision Trees are only good
+for MofN type problems and trees created for regular high dimen-
+sional real world problems may be very complex. In this paper,
+we introduced a new method for extracting regular C4.5 like Deci-
+sion Trees from trained Neural Networks. We showed that the new
+method (DecText) is effective in extracting high fidelity trees from
+trained networks. We also introduced a new discretization tech-
+nique to make DecText be able to handle continuous features and
+a new pruning technique for finding simplest tree with the highest
+fidelity.
+
+
+1.
+INTRODUCTION
+Neural Networks have good generalization capability. The most
+important weakness of Neural Networks is that they are like black
+boxes. Understanding the reasoning behind a Neural Network's
+output is not easy. Knowledge acquired by a Neural Network is
+represented by its topology, by the weights on the connections and
+by the activation functions of the hidden and output nodes. These
+representations are not easily understandable.
+Symbolic learning techniques produce more understandable out-
+puts but they are not as good as connectionist learning techniques
+in generalization [I, 8, 6, 10].
+In this paper, we present a new method for extracting Decision
+Trees from trained Feedforward Neural Networks. We show that
+the new method is able to create Decision Trees that are close in
+accuracy to the Neural Networks they are extracted from and pro-
+duce similar outputs (with high fidelity) like the Neural Network.
+Fidelity is the ability of the extracted Decision Tree to imitate the
+Neural Network it is extracted from. Fidelity is important if the
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributedfor profit or commercial advantage and that copies
+bear this notice and the full citation on the firstpage. To copy otherwise, to
+republish, to post on serversor to redistributeto lists, requires prior specific
+permission and/or a fee.
+SIGKDD '02 July 23-26, 2002, Edmonton, Alberta, Canada.
+Copyright2002 ACM 1-58113-567-X/02/0007 ...$5.00.
+rules extracted are going to be used for understanding the Neu-
+ral Network. We called the Decision Tree extraction algorithm
+DecText (Decision Tree extractor) [2]. We also developed new dis-
+cretization and pruning algorithms. The discretization algorithm is
+used for handling: continuous variables. Pruning algorithm tries to
+minimize tree size while maximizing fidelity.
+
+
+2.
+NEURAL NETWORK TO RULES
+Lack of explanation capability is one of the most important rea-
+sons why Neural :Networks do not get the necessary interest in some
+parts of the industry. In most of the real world applications (espe-
+cially in safety critical applications) users want to know the reason-
+ing behind the conclusion of a learning system or an expert system.
+Extracting If-l~en rules is usually accepted as the best way of
+extracting the knowledge represented in the Neural Network. Rules
+extracted from the trained net can be used for explaining the rea-
+soning behind the output of the system. They can also be used in
+other systems, like expert systems or in systems for discovering
+previously unknown features in the data (data mining). Generaliza-
+tion of the system can also be improved by having a better feature
+representation.
+Quality of the rules can be measured by Accuracy, Fidelity, and
+Comprehensibility. Fidelity is the fraction of instances on which
+Neural Network and the extracted rules give the same output. Com-
+prehensibility is measured by the size of the rule set and by the
+number of antecedents in each rule.
+Decision Trees can also be easily converted to If-Then rules.
+Therefore, converting a neural network to a decision tree is as good
+as extracting If-Then rules. TREPAN [5, 4] developed by Craven is
+a Decision Tree extraction method. It converts a Neural Network
+to a MofN type Decision Tree.
+
+2.1
+Trepan
+TREPAN treats the conversion as a learning process. TREPAN
+uses MofN type splits like ID2-of-3 [7]. An MofN expression is
+satisfied when at least M of its N conditions are satisfied.
+TREPAN has an Oracle that determines the class predicted by the
+network for each instance presented to it. Instances may be created
+randomly. Oracle is also used to determine class labels for the tree
+leafs and to select splits for creating tree's internal nodes. While
+creating new random instances, TREPAN uses empirical distribu-
+tions to model discrete valued features and kernel density estimates
+[9] to model continuous valued features.
+TREPAN uses local models which makes use of constraints. This
+improves accuracy for some domains but creates problems for some
+others because of scarce data at a node. TREPAN tries to overcome
+this deficiency by comparing the model at a node with the model of
+its closest parent which uses its own local model. If they are close,
+
+
+
+
+456
+
+parent's model is used at the node else, local model is created. Cre-
+ating local models by using MofN type constraints is much more
+difficult and expensive than by using regular constraints.
+TREPAN USeSa heuristic search which aims to increase the fi-
+delity for constructing MofN splits. It first finds a binary split by
+using information gain. TREPANsplits tWO valued features into
+two. If a feature has more than two values, binary splits based on
+each value are considered (e.g. computer = desktop? computer =
+laptop?). The binary split selected is used as a seed for the search
+process. Information gain is used as the evaluation function in the
+search. Candidate splits are created by adding a new member to
+the set and keeping m constant or by adding a new member and
+incrementingthe value ofm by one.
+TREPAN uses two stopping criteria. If a node covers the in-
+stances of a single class with high probability, it is made a leaf.
+It finds the proportion of examples (Pc) (the proportion of the num-
+ber of instances classified as the most common class to the number
+of total instances at the node) and the confidence interval for the
+class. It queries the oracle until prob(pc < (1 - ~) < t~). Eand ti
+are parameters to the algorithm. TREPANalso stops tree generation
+by limiting the depth of the tree.
+
+
+3.
+DECTEXT - DECISION TREE EXTRAC-
+TOR
+DecText extracts regular Decision Trees from trained feedfor-
+ward Neural Networks. The Decision Tree extracted from~the net-
+work mimics the network's behavior. It is the network's represen-
+tation in a more understandable form.
+/
+We have developed new splitting techniques, a new discretiza-
+lion method which uses Neural Network for making DecText be
+able to handle continuous variables and a new tree pruning tech-
+nique which tries to optimize fidelity while minimizingtree size.
+One of the problems with classical Decision Tree creation al-
+gorithms is that splitting tests toward the leave are selected using
+fewer instancesthan splittingtests toward the top of the tree. There-
+fore splitting tests toward the leave are less reliable. DecText can
+use unlabeled instances and find he classification for the unlabeled
+instances by using the trained Neural Network. By using unlabeled
+instances, we can use fixed number of instances to choose splitting
+features at any level in the tree. In some problem domains unla-
+beled instances are readily available (e.g. data from sensors etc.).
+If we have a mathematical model of the problem, we can create
+new instances by using that model. If we have neither, we can cre-
+ate a model from the dataset and we can create random instances
+by using the model.
+Continuous features are handled by using the new discretization
+method we developed. Discretization can be done globally (before
+creating the Decision Tree) or locally at each node of the tree. Dis-
+cretization algorithm creates N + 1 discrete values for the feature.
+If a continuous feature is used for splitting, N + 1 subnodes are
+created and that feature is not used again.
+Random instances are used only for choosing the best splitting
+feature and for labelingnodes which have no trainingdata instances
+available to label them.
+All leave are labeled by using the outputs of Neural Network on
+training data instances. If there are no training instances available
+at a node, n random instances are created (by using its parent's data
+model if local data modeling is being used or by using global data
+model if global data modeling is being used) and their outputs from
+the Neural Network are used for labeling the leaf. n is by default
+equal to the number of instances in the training dataset.
+By default, we do not use stopping criteria. We stop creating
+subnodes only if all the instances at a node are classified the same
+by the Neural Network or if the node is empty. User may limit
+the depth of the tree. If the tree reaches that depth all the nodes at
+that depth are made leave and they are labeled either by the avail-
+able dataset instances or by using random instances (if the node is
+empty). User may also enter a fidelity stopping value. If fidelity at
+a node is equal toor greater than the fidelity stopping value entered
+by the user, that node is made a leaf and is labeled by using the
+Neural Network's outputs of training set instances.
+Fidelity at a nonterminal node is found by finding the dominat-
+ing class (CD) from the training data instances at that node. Class
+values are found by using the outputs of the Neural Network for
+each instance. Then, the number of instances ([ScD 1)classified as
+the dominating class (Co) is found. [$CDI/ISI (ISl: number of
+training instances at the node) gives the fidelity at that node.
+
+3.1
+Splitting Methods
+We have developed 4 new splitting methods. SetZero splitting
+criteria tests the Neural Network's outputs for each feature to find
+the most relevant feature. SSE, ClassDiff and Fidelity splitting cri-
+teria check the partitions created by the features and choose the
+feature which creates the best partitions according the criteria they
+use.
+
+
+3.1.1
+SetZero Split
+In SetZero splitting algorithm, the feature which effects the out-
+puts of the trained Neural Network the most is chosen for splitting
+the dataset. Changes in the value of more relevant features effect
+classification more than the changes in the value of less relevant
+features. Therefore, the most relevant feature has the most predic-
+tive power on classification. For each node by using the dataset and
+the feature set available at that node we can find the feature with
+the most predictive power for the dataset at that node.
+We call the new method SetZero because for finding the rele-
+vance of a feature, we set its value to zero in each instance (to
+simulate removing the corresponding input node from the Neural
+Network) and find the difference in Neural Network's response to
+the new instance and the original instance.
+If an instance is {fl, f2 .... ,fnF } and the outputs from the Neu-
+ral Network for this instance are {ol, o~,..., o,~c), for timing the
+effect of fl on the outputs, a new instance {0, f2, · ··, fnF} is cre-
+ated. This instance is presented to the Neural Network and the out-
+puts {o~, o~,..., o~c } are found. The absolute difference Iol-o~1
+tells us how much fl is effecting ol.
+~
+(freq(o~, 8)/181)1o~-oiItells us how much fl is effecting
+the network, freq(oi, S) is the frequency of the instances classi-
+fied as o~ in the dataset. To be able to delete a feature by setting
+its value to zero more reliably, we train the network by using logis-
+tic activation function and scale the inputs to the range [0.1, 0.9].
+In this way, Neural Network will not be trained by using value 0.
+Therefore, weights will not be able to compensate for the value 0.
+
+3.1.2
+SSE Split
+SSE (Sum Squared Error) is calculated using the formula:
+
+
+SSE = ~ ~
+(t,,j - o,,j) 2
+(1)
+
+
+t: Teachingoutput o: NN'soutput
+n: #ofinstances m: #of¢lasses
+
+Splittingfeature should be chosen in a way to maximize the pos-
+sibility of a single class dominating each partition created. In SSE
+split, we measure the quality of each partition by using SSE value.
+To be able to find an SSE value for a partition we have to have a
+
+
+
+
+457
+
+teaching output. For unlabeled (i.e. random) instances, we find the
+output by testing them on the network. We find the classification for
+all the instances. Then, we find the dominating class in the dataset.
+We assume that all the instances in that partition should have been
+classified as the dominating class. Then, we set the teaching out-
+put to dominating class. If the instances are all classified the same
+with high confidence by the Neural Network then SSE will be low.
+If they are classified as different classes with low confidence then
+SSE will be high.
+In SSE Split, for feature f~, data subsets (S~j) for each parti-
+tion are found. Then, for each S~j, the dominating class is found
+by using Neural Network's outputs. Expected classification is set
+to dominating class for S~j and SSE~j is calculated for S~. To
+find SSEi value for feature .fl, all SSEi~ values are added for all
+partitions. Feature with the smallest SSE~ value will be used for
+splitting.
+
+
+
+3.1.3
+ClassDiff Split
+
+Like SSE split ClassDiff split also measures the quality of the
+partitions created by each feature. The reason we call this new
+algorithm ClassDiff splitting is that we use the difference between
+the maximum average NN output value and the second maximum
+average NN output value in the subsets to measure how good a
+partition is.
+In Neural Networks using one-of-m representation for classifica-
+tion, the difference between the highest output unit value and the
+second highest output unit value gives a good measure of the con-
+fidence of classification.
+ClassDiff value for a subset is calculated like this: 'First, a
+TotalOut vector with nC (nC: number of classes) members is
+created and each member is initialized to 0. Then, each instance
+is tested on the Neural Network to find nC output values(OutD.
+Out~ is added to TotalOut~.
+TotalOuti is divided by ISl
+(ISl: Number of instances in the dataset) to find AverageOuti.
+Then, the maximum valued AverageOut (AverageOutMax)
+and second maximum valued AverageOut (AverayeOutMax2)
+are found. ClassDiff value is the difference between these two
+(ClassDi f f = AverageOutMax - AverageOutMax2).
+For finding the splitting feature fi at a node, for each partition
+Sij of f~ elassDiff~ is calculated. Then, eclassDiffParti is
+found by adding all [(IS~ul/ISl) * dassDiffij] values for all the
+partitions of feature fi. IS~Jl is the number of instances in the jth
+partition of the ith feature. The feature with the highest classDiff-
+Part value is the most relevant feature.
+
+Here is another representation of the method we used:
+
+TotalOut~j[O to nC -
+1]: Vector with size nC for feature
+i partition j. Each element is initialized to 0. (nC : Number of
+classes)
+
+TotalOut~j[k]
+=
+~fo,-~u i.,t ..... O,j[k]
+
+AvgOutij[k]
+=
+TotalOuto[k]/IS~l
+
+
+ISij 1:# of instances in the jth partition
+
+
+AvgOutMaxij
+
+AvgOutMax2~j
+
+ClassDiffij
+
+ClassDi f f Parti
+=
+Maximum valued AvyOutij[k]
+
+=
+Second Max valued AvgOuti~ [k]
+
+=
+AvgOutMaxq - AvgOutMax2ij
+
+=
+Ej [S,jl/ISI · ClassDiffii
+3.1.4
+Fidelity Split
+
+Fidelity split chooses the feature which creates partitions with
+the highest total fidelity between the Neural Network and Decision
+Tree. Fidelity at. a node is found like this: First, the dominating
+class for the subset at a node (by using Neural Network's outputs)
+is found. Then, it is assumed that all the instances in that subset are
+supposed to be classified as the dominating class. The frequency of
+the instances classified as the dominating class in this subset gives
+us the fidelity at that node.
+For finding the most relevant feature at a node, for each
+feature f~, the dataset is partitioned into as many datasets as the
+number of values for feature fi.
+For each partition S~j of fl
+Fidelityiy is found. Then, FidelityPart~ is calculated by adding
+all Fidelity~j values for all the partitions of that feature. The
+feature with the laighest FidelityPart value is chosen as the most
+relevant feature.
+
+
+3.2 Training Data Modeling
+At each node, for finding the most relevant feature for splitting
+the dataset at that node, we use a certain number of instances. The
+default value used in DecText is the number of instances in the
+training set. But the value is user definable. If we have n train-
+ing data instances at a node and if we need m instances for finding
+the splitting feature, we create (m - n) random instances. Random
+instances are created by using a model of the dataset. To model
+the training dataset we used Kernel Density Estimate (KDE)[9]
+for continuous features and empirical distributions for discrete fea-
+tures. We tested both global model and the local model. In both we
+used local constraints for the features.
+Empirical distribution is the frequency of values in the dataset.
+KDE (Kernel Density Estimation) is calculated by using the for-
+mula:
+
+
+
+3
+
+m : number of training examples #1 : feature value for thejth example
+a : width of Gaussiankernel
+
+The method we used is a simple way of creating a model of the
+dataset and its effectiveness is limited. We can use a more compli-
+cated technique to create a better model from the data. If we use a
+complicated model creation method locally, it will be computation-
+ally expensive because it has to be created at each node. Another
+problem is that, toward the end of the tree number of training in-
+stances get scarce. This reduces the reliability of the model. Con-
+stralnts at the nodes help to reduce the size of the data domain but it
+may not be enough in all applications for creating a reliable model.
+We believe that creating random instances by using a global
+model has adwmtages. When a global model is used, user will
+have more flexibility in choosing the modeling technique he will
+use. User may also use domain knowledge or dependencies be-
+tween the features while creating the model. Models that are more
+complicated can be used since it will be created only once. There-
+fore, it will not be computationally expensive.
+
+3.3 ClassDiff Discretization
+We developed a new discrefization algorithm which uses Neural
+Network's outputs for finding cutpoints and for stopping creation
+of cutpoints. We call this new algorithm ClassDiff Discretization.
+The reason is that, we use the difference between the maximum
+average NN output value and the second maximum average NN
+output value in the subsets. For more infomaation on how to find
+ClassDiff value for a subset please refer to section 3.1.3.
+
+
+
+
+458
+
+Discretization is similar to splitting. The cutpoints found by the
+discretization algorithm should maximize the probability of having
+one class dominate the subsets created by the cutpoints.
+For finding the cutpoints, instances are first sorted by increasing
+value of the feature E The mid points of instances where classifica-
+tion of the Neural Network change are found. For each candidate
+cut point, the dataset is divided into two subsets and ClassDiff value
+is calculated for each subset.
+To find the ClassDiff (CD) value for a cut point, the ClassDiff
+values for the left and right subsets (Sl and S~) created by the cut-
+point are found. The final value is calculated by using the formula:
+
+ISzlcm(Sz)
+CDp(S) = ~
++
+CD(Sr)
+(3)
+
+
+The cut point with the maximum CD I, value is chosen as the
+final cut point. The subsets which have a ClassDiff value smaller
+than DiscStop are further partitioned recursively. DiscStop is user
+definable and the default is 0.4. This is a heuristic value. It gener-
+ally gives good results with not too many cutpoints.
+
+3.4
+Fidelity Pruning
+After the tree is extracted, it is first checked if any of the non-
+terminal nodes has children all classified the same.
+Such non-
+terminal nodes are made leave and children's label is assigned to
+them as their label. Checking non-terminal nodes starts from the
+bottom of the tree and it goes toward the root. This kind of pruning
+does not change fidelity of the tree.
+Fidelity Pruning tries to optimize fidelity of the tree wh!le trying
+to make it as simple as possible, m random instances by using the
+data model for the whole training dataset are created first, m is user
+defined. The default value for m is the number of instances in the
+training dataset. For all the non-terminal nodes of the tree the node
+is made a leaf and fidelity of the new tree is tested by using the
+random dataset. If fidelity is better than maxFidelity, new fidelity
+is assigned to maxFidelity and tree is saved in best tree. At the end
+best tree is returned as the pruned tree.
+While extracting the Decision Tree, the dominating class at each
+non-terminal node is saved. While pruning when a non-terminal
+node is turned into a leaf it is labeled by using the dominating class
+saved while extracting the tree.
+
+
+4.
+EVALUATION OF DECTEXT
+In this section, we will show that DecText extracts high fi-
+delity Decision Trees from trained Neural Networks. We will show
+that our discretization algorithm performs better than entropy dis-
+cretization. We will also show that Fidelity Pruning reduces num-
+ber of nodes and tree size without affecting fidelity or accuracy
+much.
+First, we report accuracy results for Neural Network, C4.5 and
+DecText for each dataset. We also compare number of nodes in the
+C4.5 trees and DecText trees. To be able to test the capabilities of
+the new algorithm better, for any of the tests we did not use pruning
+(except for the tests of the pruning algorithm). For comparing tree
+sizes and accuracy, we created unpruned trees by using C4.5 (we
+used the command c4.5 -ml -cl00 -f file base -u)..
+
+4.1
+Datasets Used For Evaluating DecText
+We used the datasets Vote, Vote-3, Heart, and Housing. Vote
+dataset contains votes from U.S. House of Representatives during
+the 98th congress. Heart dataset is concerned about heart disease
+diagnosis. The data was collected from the Cleveland Clinic Foun-
+dation. In this dataset we changed the feature "number of major
+vessels" from continuous to discrete with values "0,1,2,3". Hous-
+ing dataset concerns housing values in suburbs of Boston. The orig-
+inal class attribute was continuous representing median house value
+in $1000's. We converted this to a discrete valued class with 2 (0
+and 1) values each representing the ranges $0 - $20000, $20001 -
+$50000.
+Following Buntine, Niblet and Craven [3, 4] we removed the
+third feature "physician fee freeze" from the voting dataset and cre-
+ated vote-3 dataset. "physician fee freeze" feature makes the learn-
+ing task much easier by partitioning the dataset very well between
+the two classes.
+The datasets and their characteristics are listed in Table 1.
+
+Table 1: Datasets and their characteristics
+
+I
+II
+I
+Vote
+435
+16i
+16
+2
+61
+Vote-3
+435
+15
+15
+2
+61
+Heart
+297
+13
+6
+7
+2
+53
+Housing
+506
+13
+12
+1
+2
+41
+
+For training the Neural Network we used backpropagation mo-
+mentum algorithm. For learning factor we used 0.2 and for momen-
+tum factor we used 0.1 as starting points and changed those values
+to try to get the best classification from the Neural Network. We
+also tested different number of epochs (cycles) and different num-
+ber of hidden units for each dataset. For the hidden and output units
+we used logistic function as the activation function. In our tests for
+all the data sets we used 10(8,1,1) cross validation.
+The number of hidden units we used for each dataset are: Vote:
+40, Vote-3: 40, Heart: 20, Housing: 20
+The average number of epochs (cycles) we used for each dataset
+are: Vote: 150, Vote-3: 170, Heart: 200, Housing: 1800
+
+4.2
+Initial Test Results For DecText
+Test set accuracy results for Neural Networks, C4.5 and DecText
+are listed in Table 2. The results are the average of 10-fold cross
+validation for all datasets. The datasets are chosen so that Neural
+Network has better classification accuracy.
+
+Table 2: Test set accuracy for NN, DecText, and CCA.5
+
+Method ]l Vote(%)
+Vote-3(%)
+Heart(%)
+Housing(%) J
+
+NN
+95.4
+93.0
+83.5
+90.8
+DecText
+94.2
+88.2
+77.6
+86.0
+
+Fidelity results for DecText are listed in table 3. Accuracy and
+fidelity results are the results without using random instances and
+without any pruning. We used SetZero split for these initial tests.
+For discretization, entropy discretization was used. Later we will
+show that we can improve these results by using random instances
+and by using ClassDiff discretization technique.
+
+Table 3: Test set fidelity for DecText.
+
+[ Method I Vote(%) I Vote-3(%) i Xeaa<%) I Hou~i~g~%)1
+I DecText I
+96.0 I
+94.2 I
+84.5 [
+88.0 I
+
+We also compare the number of nodes in the trees and depth of
+the trees created by DecText and C4.5. The results are listed in ta-
+bles 4. Later we will show that we can reduce the number of nodes
+in a DecText tree by pruning without reducing (or sometimes by
+improving) fidelity and accuracy much. The results show that if all
+the features have discrete value, number of nodes in the trees are
+almost equal with C4.5. For continuous valued features, DecText
+
+
+
+
+459
+
+creates more nodes. This is mainly because C4.5 uses binary splits
+for continuous valued features. Although the number of nodes de-
+creases if binary splits are used, depth of the tree increases.
+
+Table 4: # nodes and tree size for C4.5 and DecText.
+
+Method, II Vote I Vote-3 I Heart
+Housing
+# Nodes
+
+DecText
+85.0
+149.8 164.0
+134.0
+Tree Size
+.,i,.11
+991 91
+,0,
+DecText
+7.7
+9.9
+7.8
+7.7
+
+We first tested new splitting techniques we developed. We also
+tested gain splitting technique to compare the results we get by us*
+ing the new techniques. We report the fidelity results in percentages
+and we also report the tree depth and the number of nodes in the
+trees. All the results are the averages of 10-fold cross validation
+tests.
+As it can be seen from the tables below, SetZero split gives much
+better results for the Vote and Vote-3 datasets. These datasets have
+more relevant features. SetZero sorts the features by their relevancy
+to the classes in the problem. The other splitting techniques sort
+the features by the quality of the partitions created. Therefore, if
+there are highly relevant features in the dataset SetZero will create
+much better results. If there are not any relevant features in the
+dataset other splitting techniques will create better results. Gain
+split creates the smallest trees.
+
+Table 5: Comparison of new splitting techniques.'
+
+Method
+II V°telV°te'3[
+Heart
+Housing
+Fidelity (%)
+SetZero
+96.0
+94.2
+84.5
+86.2
+SSE
+94.4
+92.8
+88.6
+87.4
+ClassDiff
+94.6[
+92.8
+88.0
+87.8
+Fidelity
+95.6
+92.1
+86.2
+87.2
+Gain
+95.3
+92.3
+84.8
+86.6
+Accuracy (%)
+SetZero
+94.2
+88.1
+76.2
+82.2
+SSE
+94.4
+88.1
+79.6
+83.8
+ClassDiff
+94.6
+88.6
+78.9
+83.4
+Fidelity
+95.1
+88.4
+78.6
+83.2
+Gain
+94.4
+89.5
+77.3
+84.2
+Tree Size
+SetZero
+7.7
+9.9
+7.5
+9.1
+SSE
+8.5
+10.0
+6.4
+7.9
+ClassDiff
+8.5
+9.9
+6.6
+7.6
+Fidelity
+8.8
+9.9
+6.1
+7.6
+Gain
+6.2
+7.5
+6,7
+7.5
+# Nodes
+SetZero
+85.0
+150.0
+163.8
+165.8
+SSE
+73.0
+126.0
+74.9
+105.5
+ClassDiff
+72.4
+127.0
+76.3
+103.7
+Fidelity
+73.0
+115.0
+74.0
+100.8
+Gain
+45.4
+85.0
+75.0
+87.4
+
+
+4.3
+Random Instances
+In this section, we report the tests on DecText by using random
+instances. Random instances are created while choosing the best
+splitting feature or while labeling a node if there are no training
+data instances available at the node. The number of instances to be
+used at each node is set to the number of instances in the training
+dataset. We tested creating random instances by using local model,
+and global model.
+Creating random instances for finding the splitting features and
+for labeling empty nodes improves fidelity results in almost all of
+the cases. For most of the tests, using global model gives slightly
+better results than using local model. Running the algorithm couple
+of times and choosing the tree with the best fidelity improves the
+results. In some domains because of the constraints of the features,
+we may not be able to create as many random instances we need to.
+In these cases, we use as many random instances we can create.
+
+Table 6: Local vs global random instances
+
+Method II Vote I Vote-3 I Heart
+Housing
+SetZero (%)
+Local
+I 96.5 I
+94.5 [ 85.5
+87.3
+Global
+97.2
+95.2
+86.5
+86.2
+SSE (%)
+Local
+958 I
+93.7 I
+89.7
+88.1
+Global
+96.5
+94.0
+89.7
+87.0
+ClassDiff (%)
+Local
+95.8[
+93.3I
+91.0
+88.0
+Global
+96.5
+93.6
+87.9
+88.6
+Fidelity (%)
+
+Global
+96.0
+93.5
+88.2
+87.9
+Gain (%)
+L~I
+[ 96.3 I
+93.0 I 87.6
+86.0
+Global
+96.2
+93.2
+87.2
+87.0
+
+
+4.4
+Fidelity Pruning Algorithm
+The results of the pruning algorithm are shown in Table 7. They
+show that tree size and number of nodes decreased considerably.
+Accuracy and fidelity increased for most of the cases. The only ex-
+ception is the housing data. This may be because housing data has
+mostly continuoas features. This needs to be investigated further.
+
+Table 7: New splitting techniques with fidelity pruning
+
+Method
+II Vote I Vote-3 ] Heart I Housing
+Fidelity (%)
+SetZem
+96.3
+93.7
+86.2
+81.8
+SSE
+95.8
+92.8
+90.0
+81.0
+ClassDiff
+96.3
+93.3
+89.0
+83.2
+Fidelity
+96.0
+91.9
+89.31
+80.4
+Gain
+95.8
+91.9
+88.0
+75.0
+Accuracy (%)
+SetZero
+94.4
+89.1
+77.2
+79.4
+SSE
+94.4
+88.1
+81.0
+77.4
+ClassDiff
+95.8
+89.5
+79.3
+80A
+Fidelity
+94.7
+88.1
+81.1
+78.4
+Gain
+94.4
+89.4
+79.7
+73.4
+Tree Size
+SetZ~o
+6.1
+8.3
+6.4
+6.7
+SSE
+4.4
+6.9
+4.6
+5.3
+ClassDiff
+5.1
+7.5
+4.2
+5.6
+Fidelity
+5.0
+6.7
+3.9
+4.8
+Gain
+4.6
+6.9
+4.7 i
+4.9
+i
+# Nodes
+SetZero
+45.1
+64.6
+79.4
+65.0
+SSE
+18.1
+42.1
+34.6
+44.0
+ClassDiff
+21.1
+47.2
+35.8
+40.8
+Fidelity
+18.4
+37.3
+30.7
+34.0
+Gain
+22.9
+38.2
+33.2
+31.8
+
+
+4.5 Entropy vs ClassDiff Discretization
+By fidelity comparison, Entropy and ClassDiff Discretization al-
+gorithms give very close results. ClassDiff Discretization results
+are slightly better than Entropy Discretization results.
+Housing
+dataset is dominated by continuous features. Heart dataset has more
+discrete feature.,; and discrete features are usually chosen at the top
+
+
+
+
+460
+
+of the tree for splitting. Therefore goodness of ClassDiff algorithm
+is more obvious from the Housing dataset results.
+Another advantage of using ClassDiff Discretization is that the
+level of discretization is user controllable by using ClassDiff pa-
+rameter. This parameter is used when we decide if we should fur-
+ther find cutpoints in a partition or not. If ClassDiff parameter is
+small (i.e. 0.1) we will get fewer cutpoints. If it is high (i.e. 0.8) we
+will get more cutpoints. Number of cutpoints will effect the fidelity
+and the complexity of the extracted tree. The fewer the cutpoints
+the more understandable the tree is.
+
+Table 8: Entropy vs ClassDiff Discretization.
+
+Method
+Heart (%)
+Heart (%) ] Housing (%)
+Housing (%)
+Entropy
+ClassDiff [ Entropy
+ClassDiff
+SetZero
+84.5
+84.8
+86.2
+87.4
+SSE
+88.6
+88.3
+87.4
+88.0
+ClassDiff
+88.0
+88.3
+87.8
+88.2
+Fidelity
+86.2
+86.6
+87.2
+88.2
+Gain
+84.8
+83.5
+!
+86.6
+87.6
+
+
+4.6
+Number Of Random Instances
+Number of random instances used at each node for finding the
+splitting feature effects the fidelity considerably. Increasing the
+number of random instances used for finding splitting features in-
+creased fidelity.
+
+Table 9: Random Instances.
+
+] Dataset
+I SplittingMethod # Random [Modelinstances
+MethodDiSc' (%)Fi~delity]
+
+Vote
+SetZero
+435
+Global
+97.2
+Vote-3
+SetZero
+500
+Global
+96.4
+Heart
+SSE
+5000
+Local
+ClassDiff
+94.4
+Housing
+ClassDiff
+506i Local
+ClassDiff
+91.0
+
+Here is the comparison of the results we reported in the begin-
+ning of the chapter and the best results we got.
+
+
+Table 10: Initial vs. Best fidelity results.
+
+Method [[ Vote(%)
+Vote-3(%)
+Heart (%) [ Housing (%)
+Basic]
+96.0
+94.2
+84.5 I
+88.0
+Best
+97.2
+96.4
+94.4
+91.0
+
+
+5.
+CONCLUSION
+Two of the most important criteria used for evaluating inductive
+machine learning algorithms are generalization and understandabil-
+ity. Neural Networks are good at generalizing on unseen data.
+However, they are like black boxes. The way they represent the
+knowledge they acquire is not comprehensible for humans. For
+safety critical real world applications, understanding the reasoning
+behind the Neural Network's output is very important.
+Several researchers addressed the problem by extracting rules
+from Neural Networks. Most of these methods were not applicable
+to general Neural Networks. Some required binary inputs. Some
+required special training algorithms. The ones applicable to general
+Neural Networks were computationally expemive,
+Craven addressed the problem by extracting MorN Decision
+Trees from trained Neural Network. MorN Decision Trees, we be-
+lieve, are harder to understand and deal with than regular Decision
+Trees. Morn type Decision Trees are more suitable for MorN type
+problems.
+We developed a new Decision Tree extraction technique
+(DecText). DecText extracts classical Decision Trees from trained
+Neural Networks and prunes the tree in a way to maximize the fi-
+delity between the tree and the Neural Network.
+We also intro-
+duced a new discretization method for making DecText be able to
+handle continuous features and a pruning method to minimize tree
+size while trying to maximize fidelity.
+We introduced 4 new splitting techniques for extracting Deci-
+sion Trees from Neural Networks. SetZero split works better than
+all when there are highly relevant features in the problem. SSE
+and ClassDiff work better in other cases. Fidelity split does not
+perform as good as SSE or ClassDiff most of the time. We also
+compared the results of splitting techniques with entropy gain split.
+We showed that most of the time the new splitting techniques per-
+form better than gain split. The reason entropy gain split and also
+fidelity split do not perform as good as the others is that entropy
+gain split and fidelity split use only classification for each instance.
+They do not take into account the values of the outputs of NN. Out-
+put values of NN give us valuable information about the network.
+For entropy gain split outputs 0.1, 0.9 and 0.49, 0.51 are the same
+because in both classification is the second class. However, the first
+one is a much better classification then the second one.
+
+6.
+REFERENCES
+[1] L. Atlas, R. Cole, J. Connor, M. E1-Sharkawi, R. J. Marks,
+V. Muthusamy, and E. Barnard. Performance comparisons
+between backpropagation networks and classification trees
+on three real-world applications. In Advances in Neural
+Information Processing Systems, volume 2, pages 622--629,
+1990.
+[2] O. Boz. Converting A Trained Neural Network ToA Decision
+Tree DecText - Decision TreeEtxractor. PhD thesis,
+Computer Science and Engineering, Lehigh University,
+2000.
+[3] W. Buntine and T. Niblett. A further comparison of splitting
+rules for decision-tree induction. Machine Learning, 8:75,
+1992.
+[4] M. W. Craven. Extracting Comprehensible Models from
+Trained Neural Networks. HaD thesis, Department of
+Computer Sciences, University of Wisconsin-Madison, 1996.
+(Also appears as UW Technical Report CS-TR-96-1326).
+[5] M. W. Craven and J. W. Shavlik. Extracting tree-structured
+representations of trained networks. In Advances in Neural
+Information Processing Systems, volume 8, pages 24-30,
+Denver, CO, 1996. MIT Press.
+[6] D. Fisher and K. McKusick. An empfical comparison of id3
+and back propagation. In Proceedings of the eleventh
+international Joint Conference on ArtO~cialIntelligence,
+pages 788 - 793, Detroit, 1989. Morgan Kaufmann.
+[7] P. Murphy and M. Pazzani. Id2-of-3: Constructive induction
+of n-of-m concepts for discriminators in decision trees. In
+Proceedings of the Eighth International Machine learning
+Workshop, pages 183-187, Evanston, IL, 1991. Morgan
+Kaufmann.
+[8] J. W. Shavlik, R. J. Mooney, and G. G. Towell. Symbolic and
+neural learning algorithms: An experimental comparison.
+Machine Learning, 6:111-143, 1991.
+[9] B. W. Silverman. Density Estimation for Statistics and Data
+Analysis. Chapman & Hall, London, 1986.
+[10] S. M. Weiss and I. Kapouleas. An empirical comparison of
+pattern recognition, neural nets, and machine learning
+classification methods. In J. W. Shavlik and T. G. Dietterich,
+editors, Readings in Machine Learning. Morgan Kaufman,
+San Mateo, CA, 1990.
+
+
+
+
+461
+

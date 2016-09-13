@@ -1,0 +1,562 @@
+IntelliClean : A Knowledge-Based Intelligent Data Cleaner
+
+
+Mong Li Lee, Tok Wang Ling and Wai Lup Low
+School of Computing
+National University of Singapore
+3 Science Drive 2, Singapore 117543
+fleeml,lingtw,lowwailug@comp.nus.edu.sg
+
+
+ABSTRACT
+Existing data cleaning methods work on the basis of com-
+puting the degree of similarity between nearby records in a
+sorteddatabase. Highrecallisachievedbyacceptingrecords
+with low degrees of similarity as duplicates, at the cost of
+lower precision. High precision is achieved analogously at
+the costoflowerrecall. This isthe recall-precision dilemma.
+In this paper, we propose a generic knowledge-based frame-
+work for e ective data cleaning that implements existing
+cleaning strategies and more. We develop a new method to
+compute transitive closure under uncertaintywhich handles
+the merging of groups of inexact duplicate records. Experi-
+mental results show that this framework can identify dupli-
+cates and anomalies with high recall and precision.
+
+1. INTRODUCTION
+The amount of data organizations are handling today is
+increasing at an explosive rate. The task of keeping the
+data in these large databases consistent and correct is in-
+surmountable. There are many causes to dirty data: misuse
+of abbreviations, data entry mistakes, control information
+hiding, missing elds, spelling, outdated codes etc. Due to
+the `garbage in, garbage out' principle, dirty data will dis-
+tort information obtained from it. Clean data is critical for
+many industries over a wide variety of applications 5].
+Research has shown the importance of domain knowledge
+in data cleaning. However, there has been little work on
+knowledgemanagementissuesfordatacleaning. Whattype
+of knowledge is suitable? How can we represent the domain
+knowledgeinaformthatwecanusefordatacleaning? How
+do we manage the knowledge? Data cleaners using existing
+methods also face the recall-precisiondilemma. Higher re-
+call is achieved by relaxing the criteria for records to be
+considered duplicates. This leads to lower precision as more
+recordswhicharenotduplicatesareclassi edassuch. Anal-
+ogously, we can have higher precision, but at the cost of
+lowerrecall. This paper addresses the main shortcomingsof
+existing methods.
+The rest of the paper is organized as follows. Section 2
+givesaconceptualmodelandbenchmarkingmetricsfordata
+cleaning. Section 3 surveys related works. Section 4 de-
+scribesourproposed knowledge-based framework. Section 5
+gives the performance results and we conclude in Section 6.
+
+2. PRELIMINARIES
+Figure 1 shows a high level conceptual data cleaning model.
+We start with a \dirty" dataset with a variety of errors and
+anomalies. Cleaning strategies are applied to the dataset
+with the objective of obtaining consistent and correct data
+as the output. The e ectiveness of the cleaning strategies
+will thus be the degree by which data quality is improved
+through cleaning. We de ne two metrics that benchmark
+the e ectiveness of data cleaning strategies :
+
+1. Recall. This is also known as percentagehits. It
+is de ned as the percentage of duplicate records be-
+ing correctly identi ed. Suppose we have 7 records
+A1 A2 A3 B1 B2 B3 C1,withfA1,A2,A3gandfB1,
+B2, B3g being di erent representations of records A
+and B respectively. A cleaning process which identi-
+esfA1,A2,C1gandfB1,B2gasduplicateswouldhave
+a recall of
+46
+100%=66:7%.
+2. False-Positive Error. This is the antithesis of the
+precision measure and sometimes referred to as false
+merges. It is de ned as the percentage of records
+wrongly identi ed as duplicates, i.e.
+no. of wrongly identi ed duplicates
+total no. of identi ed duplicates
+100%
+
+Inourexample,theprocessincorrectlyidenti edC1 as
+a duplicate record and will have a false-positive error
+of
+15
+100%=20%.
+
+
+3. RELATED WORKS
+Pre-processing dirty data prior to the data cleaning process
+leads to more consistent data and better de-duplication. 6]
+propose that record equivalence can be determined by view-
+ing their similarity at three levels: token, eld and record
+levels. External source les are used to remove typographi-
+cal errors and inconsistent use of abbreviations.
+The most reliable way to detect inexact duplicates is to
+compare every record with every other record. The Sorted
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+290
+
+Consistent Data
+Abbreviations
+
+Different Representation
+
+
+Spelling Variations
+Naming Conventions
+
+
+Dirty Data with
+Duplicate Records
+Unit Difference
+
+
+
+
+Cleansing Strategies
+
+
+
+
+Figure 1: An Overall Conceptual Model
+
+Neighbourhood Method (SNM) 4] reduces this O(N2) com-
+plexity by sorting the database on an application-speci c
+key and making pairwise comparisons of nearby records by
+sliding a window of xed size over the sorted database. If
+the window size is w, then every new record entering the
+window is matched with the previous w ;1 records. The
+rst record then moves out of the window. This method
+requiresonly wN comparisons, but itse ectiveness depends
+heavily on the ability of the chosen key to bring the inexact
+duplicates close together. The Duplicate Elimination SNM
+(DE-SNM) 4] improves on the SNM by processing records
+with exact duplicate keys rst. But the drawback of the
+SNM still persists. The clustering method avoids sorting
+the database by partitioning the database into independent
+clusters of approximately duplicate records 4]. However,
+this will result in many singleton clusters as the proportion
+of duplicates in a database is typically small.
+Multi-pass algorithms assumes that no single key is unique
+enough to bring all inexact duplicates together and employs
+the SNM cycle several times, each time using a di erent
+key to sort the database to reduce the chances of missed
+duplicates. These algorithms also compute the transitive
+closure over the identi ed duplicates 4, 8], that is, if A is
+equivalent to B, and B is equivalent to C, then A is also
+equivalenttoC under the assumptionoftransitivity. In this
+way, A and C can be detected as duplicates without being
+inthesamewindowduringanyoftheSNMruns. Whilethis
+canincreasetherecall,itisalsolikelytolowertheprecision.
+The Incremental Merge/Purge Procedure 9] use \represen-
+tative records" to avoid re-processing data when increments
+of data need to be merged with previously processed data.
+The main di culty with this method is the choice of repre-
+sentative records which characterize the database. 8] gives
+a domain-independent technique to detect approximate du-
+plicate records which is applicable to textual databases.
+
+4. AKNOWLEDGE-BASEDFRAMEWORK
+Althoughdomainknowledgehasbeenidenti edasoneofthe
+main ingredients for successful data cleaning 7], the issue
+ofknowledgerepresentationtosupportdatacleaningstrate-
+gieshasnotbeen welldealtwith. In thissection, wepresent
+a knowledge-based framework for intelligent data cleaning.
+This framework provides a systematic approach for repre-
+sentation standardization, duplicate elimination, anomaly
+detection and removal in dirty databases. The framework
+(see Figure 2) consists of three stages:
+Figure 2: A Knowledge-Based Cleaning Framework
+
+1. Pre-processing Stage.
+Data records are rst conditioned and scrubbed of
+any anomalies we can detect at this stage. Data type
+checks and format standardization can be performed
+(e.g. 01/1/2000, 1st January 2000 can be standard-
+ized to one format). Inconsistent abbreviations used
+in the data can be resolved at this stage (e.g. Occur-
+rences of `1'and `A' inthe sex eld will be replaced by
+`Male', and occurrences of `2' and `B' will be replaced
+by `Female'). Such record scrubbing can be done via
+reference functionsandlook-up tables. For example,a
+function can take in a dateand output itin aspeci ed
+formatfor the purpose of standardizing date represen-
+tations. A two-column look-up table might contain
+an abbreviation and its standardized equivalent. The
+outputofthisstagewillbeasetofconditionedrecords
+which will be input to the processing stage.
+2. Processing Stage.
+Conditionedrecordsarenextfedintoanexpertsystem
+engine together with a set of rules. Each rule will fall
+into one of the following categories :
+Duplicate Identi cation Rules. These rules spec-
+ify the conditions for two records to be classi ed
+as duplicates.
+Merge/Purge Rules. These rules specify how du-
+plicate records are handled. A simple rule might
+specifythatonlytherecordwiththeleastnumber
+of empty elds is to be kept in a group of dupli-
+cate records, and the rest deleted. More complex
+actions can be speci ed in a similar fashion.
+Update Rules. These rules specify the way data
+isto be updated in a particular situation. For ex-
+ample,ifthe quantity eld ofabook order record
+
+
+
+291
+
+is empty and the buyer has no other purchases,
+a rule speci es that the quantity eld should be
+updated with1. If thebuyer hasother purchases,
+the quantity should be the minimum of all pur-
+chases belonging to the buyer.
+Alert Rules. A user might want an alert to be
+raised when certain events occur. For example,
+data that shows a terminated employee is stillre-
+ceiving payments might be correct in the case of
+severance payments or might indicate erroneous
+data. These rules can also be used to alert users
+ofconstraintviolations,suchasfunctionaldepen-
+dencies and other integrity constraint violations.
+The rules are red in an opportunistic manner when
+pre-processed records are fed into the expert system
+engine, implemented using the Java Expert System
+Shell (JESS) 2]. The pattern matching and rule ac-
+tivation mechanisms of JESS make use of the Rete
+algorithm 1]. To avoid pairwise comparison for each
+and every record in the database (which may be infea-
+sible in large databases), we employ the SNM. Hence,
+the rules will only act on one window of records in the
+expert system engine at any point in time. After the
+duplicate record groups are identi ed, we consider us-
+ing a new method to compute the transitive closure
+under uncertainty for these groups to increase the re-
+call. The merge/purge rules will act on the duplicate
+record groups that satisfy their conditions.
+3. Validation and Veri cation Stage.
+Human intervention is required to manipulate the du-
+plicate record groups for which merge/purge rules are
+not de ned. The log report provides an audit trail for
+allactionsandthereasonsforactionsmadeduringthe
+pre-processing and processing stages. This log can be
+inspected for consistency and accuracy and if neces-
+sary, wrong merges and incorrect updates can be un-
+done. It can also be used for validating the rule base.
+Ifaruleconsistentlyclassi esthewrongrecordsasdu-
+plicates, or updates values incorrectly, then it should
+probablybe takenoutorhaveitsparameterschanged.
+
+4.1 The Rete Algorithm
+TheRete Algorithm 1]isan e cient methodfor comparing
+a large collection of patterns to a large collection of ob-
+jects. A basic production system checks each if-then state-
+ment to see which ones should be executed based on the
+facts in the database, looping back to the rst rule when it
+has nished. The computational complexity is of the order
+O(RFP), where R is the number of rules, P is the average
+number of patterns in the condition part of the rules, and F
+is the number of facts in the knowledge base. This escalates
+dramatically as the number of patterns per rule increases.
+The Rete Algorithm avoids unnecessary recomputation by
+remembering what has already been matched from cycle to
+cycle and then computing only the changes necessary for
+the newly added ornewlyremovedfacts 3]. As aresult, the
+computational complexity per iteration drops to O(RFP),
+or linear in the size of the fact base 2]. Saving the state
+of the system may consume considerable memory, but this
+trade-o for speed is often worthwhile.
+In the expert system engine of the proposed framework,
+data records are the facts. Rules are activated when records
+match the \patterns" speci ed in the rules. The actions in
+the consequent part of the rule will be executed.
+
+4.2 Rule Representation and Effectiveness
+Rules,whichformtheknowledge-baseoftheframework,are
+writtenintheJavaExpertSystemShell(JESS) 2]language.
+A rule will generally be of the form:
+if <condition> then <action>
+Theactionpartoftherulewillbeactivatedor red whenthe
+conditions are satis ed. We note here that complex predi-
+cates and external function references may be contained in
+both the condition and action parts of the rule. The rules
+are derived naturally from the business domain. The busi-
+ness analyst with subject matter knowledge is able to fully
+understandthegoverningbusinesslogicandcandevelopthe
+appropriate conditions and actions.
+The complexity of the rule language is an important issue
+in such applications. Although the declarative style of the
+JESS language makes it intuitive, some knowledge of the
+working of the Rete Algorithm is required for optimizing
+rule e ciency. Note that rules can be re-used without mod-
+i cationbydi erentapplicationsiftheypossesssimilarbusi-
+ness rules. This makes domain-speci c rule packages feasi-
+ble. Given the structure of the rule language, simple rules
+may be generated automatically when supplied with neces-
+sary parameters though rule optimization for more complex
+rules might require hand-coding.
+Well-developed rules are e ective in identifying true du-
+plicates but are strict enough to keep out similar records
+whicharenotduplicates. Higherrecallcanthenbeachieved
+with more rules. Hence, an increase in the number of well-
+developed rules can achieve higher recall without sacri cing
+precision, thereby resolving the recall-precision dilemma.
+
+4.3 Loss of Precision from Computation of
+Transitive Closure
+The rationaleforcomputingthetransitiveclosureafterrun-
+ning multi-passdatacleaningalgorithmshasbeen discussed
+in Section 3. However, we note that this procedure can
+raise the false-positive error as incorrect pairs are merged
+due tothe fact that we are dealing with inexact equivalence.
+Suppose we have two groups of very similar \duplicate"
+words: (FATHER,MATHER) and (MATHER,MOTHER).
+The transitive closure step will then merge the two groups
+intoasinglegroupof(FATHER,MATHER,MOTHER),which
+is obviously wrong since \FATHER" and \MOTHER" are
+two di erent words. This problem will magnify as more
+groups are merged into a single group due to di erent com-
+mon records linking various pairs. In this case, the rst pair
+will probably be very di erent from the last pair.
+We can reduce the number of wrongly merged duplicate
+groups by modifying the structure of Duplicate Identi ca-
+tion Rules to the form:
+if <condition> then
+<records are duplicates with certainty factor cf>
+where 0<cf 1. cf represents our con dence in the rule's
+e ectiveness in identifying true duplicates. We can assign
+
+
+
+292
+
+high certainty factors to rules we are con dent of being able
+to identify true duplicates. During the computation of the
+transitive closure, we compare the product of the certainty
+factors of the merge groups against a user-de ned thresh-
+old. This threshold represents how con dent we want the
+merges to be. Any merges that will result in a certainty
+factor less than the threshold will not be carried out. This
+is because as more groups are merged during the transitive
+closure step, we are less con dent that all the records in the
+resultant group are representations of the same real-world
+entity. We present 2 examples here for clarity. CF and TH
+represent the certainty factor and threshold respectively.
+Example 1. MergeRecords(AB)withCF=0.8,TH=0.7.
+Records A and B will be merged as CF >TH.
+Example 2. Merge Records (A B) with CF=0.9, (B C)
+with CF=0.85, (C D) with CF=0.8, TH=0.5.
+Thegroups(AB)and(BC)willbeconsidered rst,asthese
+groups have higher CFs. They will be merged to form (A B
+C) with CF = 0.765 (since 0:9 0:85 = 0:765). Then, this
+group will be merged with (C D) to form (A B C D) with
+CF=0.612 (since 0:765 0:8 = 0:612), and the CF is still
+greater than TH. However, if TH = 0.7, (A B C) and (C
+D) will remain separate, as the resultant CF of the merged
+group (0.612) will be less than TH.
+
+5. PERFORMANCE STUDY
+Based on the ideas and techniques presented in this paper,
+we implemented the IntelliClean system using Java 1.2 on
+a Pentium 200 MMX system with 64 MB RAM running
+Windows NT 4.0. Calls to the Oracle 8 database system
+are made using JDBC (Java Database Connectivity). The
+database server is a SUN Enterprise 450 server located in a
+remote machine connected via a local area network.
+We tested IntelliClean using two real world datasets : a
+Company dataset and a Patient dataset. The former re-
+quirescomplexmatchinglogicanddatamanipulation,while
+the latter is a much larger dataset containing many errors.
+
+5.1 Cleaning the Company dataset
+The company dataset has 856 records. Each record has 7
+elds: CompanyCode, CompanyName, FirstAddress, Sec-
+ond Address, Currency Used, Telephone Number, and Fax
+Number. Human inspection reveals 60 duplicate records.
+Problemsencountered include large number of empty elds,
+incomplete data, typographical errors, di erent representa-
+tionsfornamesandaddresses,misuseofdata eldsandvery
+similar representations for di erent entities.
+
+1. Pre-processing. The two address elds are joined into
+a single eld and abbreviations are standardized using
+a look-up table.
+2. Processing. Runs of SNM are conducted with vary-
+ing window sizes and number of duplicate identi ca-
+tion rules. The system detected 80% of the duplicates
+with7duplicateidenti cationrulesandkeptthefalse-
+positiveerroratlessthan8%. Figure3showsthee ect
+ofthenumberofrulesonrecall,precisionandruntime.
+3. Validation and Veri cation. The results are veri ed
+and manually inspected using the log le generated.
+
+The results show that recall increases with the number of
+rules, and more complex rules identi ed more true dupli-
+cates. Theruntimeofthesystemdependsonthecomplexity
+of the rules rather than the number of rules. We postulate
+that an increase in the number of e ective rules given addi-
+tionalbusinessknowledgegoverningthisdatasetcan leadto
+a further rise in recall while maintaining the false-positive
+error at low levels.
+The window size does not have much e ect on recall, unless
+the window size is comparable to the size of the dataset.
+This is because SNM's e ectiveness depends on inexact du-
+plicates being close to one another after sorting on a chosen
+key, and that their proximity depends only on the rst few
+critical characters of the key. Consider a simple case of a
+n-character key string and that two records will never be
+in the same window during the SNM window scan if any of
+the rst m characters are \far apart". If there is a single
+error in one of the keys, and the error is equally likely to
+be at any character of the string, then the probability of
+the character being one of the rst few critical characters
+is m=n. In the case of a 100-character key and the critical
+characters are the rst 3, the probability of two duplicates
+not being in a same window due to an error in the critical
+characters is 0.03. Hence, even if erroneous data is in the
+key, the records are still likely to appear in a same window
+during the SNM scanning process. In our example above,
+the probability that the 2 duplicate records being detected
+is 97%. This estimate will be even higher if we use multiple
+passes of the SNM with each pass employing a di erent key.
+Figure 4 shows the results of our experiments when we vary
+thewindowsizeandnumberofpasses. Notethatrecalldoes
+not increase much as window size increases from 5 to 30.
+
+5.2 Cleaning the Patient dataset
+The patient dataset contains 22122 records. This database
+has 60 elds, including the NRIC Number
+1
+, Sex, Date of
+Birth, Date of Screening, the Clinic Number and various
+elds containing codes for the results of a diabetes screen
+test.
+Three rules were used for this dataset : 2 duplicate identi -
+cation rules and 1 merge/purge rule:
+
+1. Duplicate Id. Rule 1. Certainty Factor 1.
+All 60 elds of the record match.
+2. Duplicate Id. Rule 2. Certainty Factor 0.9.
+MatchingDateofScreeningandmatchingNRICNum-
+ber after removing all non-numeric characters.
+3. Merge/Purge Rule. For all duplicate record groups
+withcertaintyfactor1,keeponerecordfromthegroup
+and delete the rest.
+1
+The Singapore National Registration Identi cation Card
+(NRIC)NumberisthelocalequivalentoftheSocialSecurity
+Number of the United States.
+
+
+
+293
+
+Figure 3: Recall, Precision and Runtime of Data Cleaning System on Company dataset (Window Size 10)
+
+
+
+
+Figure 4: The E ect of Window Size on Recall
+
+Dup. Id. Match Criteria
+Runtime(s) Duplicates
+Rule
+Found
+1
+All 60 elds match
+370.1
+8 (4 pairs)
+2
+Matching Date of
+464.7
+34 (17 pairs)
+Screening and NRIC
+1 + 2 Criteria of Rules 1 OR 2
+503.2
+34 (17 pairs)
+Table 1: Results of Processing the Patient dataset
+
+A total of 129 alerts, including check digit errors, format
+and domain value violations, were raised during the pre-
+processing stage which took 118.5 seconds. The results of
+the processing stage are shown in Table 1. Manual inspec-
+tion of the database revealed that we achieved 100% accu-
+racyandprecisionforthisexperiment. Althoughtherecords
+identi edbyRule1formasubsetofthoseidenti edbyRule
+2, we still include this rule as it identi es exact duplicates,
+whichtheMerge/PurgeRulecanhandleautomatically. The
+8records(4pairs)thatwereexactduplicateswereautomat-
+ically processed in this manner. The rest were marked for
+manual processing.
+
+6. CONCLUSION
+In this paper, we have presented a generic knowledge-based
+framework that can e ectively perform data cleaning on
+any textual database. This framework provides for e -
+cient representation and easy management of knowledge for
+data cleaning in an expert system. The recall-precision
+dilemma can also be resolved by specifying e ective rules.
+We have also outlined how the introduction of uncertainty
+into the computation of transitive closure can increase pre-
+cision. Consisting of three stages, this framework can sup-
+port a wide variety of cleaning strategies, of which existing
+methods form a subset. We are currently extending this
+framework to de-duplicate results returned by web search
+engines.
+
+7. REFERENCES
+1] C. Forgy. Rete: A fast algorithm for the many
+patterns/many objects match problem. Arti cial
+Intelligence, 19(1):17{37, 1982.
+2] E. J. Friedman-Hill. Jess, the java expert system shell,
+1999. Available at URL
+http://herzberg.ca.sandia.gov/jess/
+.
+3] J. Giarratano and G. Riley. Expert Systems : Principles
+and Programming (3rd Edition). PWS Publishing
+Company, Boston, 1998.
+4] M. Hernandez and S. Stolfo. The merge/purge problem
+for large databases. In Proceedings of the ACM
+SIGMOD International Conference on Management of
+Data, pages 127{138, May 1995.
+5] R. Kimball. Dealing with dirty data. DBMS Online,
+September 1996. Available at URL
+http://www.dbmsmag.com/9609d14.htm
+.
+6] M. L. Lee, H. Lu, T. W. Ling, and Y. T. Ko. Cleansing
+data for mining and warehousing. In Proceedings of the
+10th International Conference on Database and Expert
+Systems Applications (DEXA), pages 751{760, 1999.
+7] A. Maydanchik. Challenges of e cient data cleansing.
+DM Review, September 1999. Available at URL
+http://www.dmreview.com/editorial/dmreview/
+print action.cfm?EdID=1403
+.
+8] A. E. Monge and C. P. Elkan. An e cient
+domain-independent algorithm for detecting
+approximately duplicate database records. In
+Proceedings of the ACM-SIGMOD Workshop on
+Research Issues on Knowledge Discovery and Data
+Mining. Tucson, AZ, 1997.
+9] M. J. Waller. A comparison of two incremental
+merge/purge strategies. Master Thesis, University of
+Illinois, 1998.
+
+
+
+294
+

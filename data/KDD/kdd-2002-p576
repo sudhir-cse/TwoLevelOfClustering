@@ -1,0 +1,1126 @@
+Distributed Data Mining in a Chain Store Database of Short
+Transactions
+
+
+Cheng-Ru Lin, Chang-Hung Lee, Ming-Syan Chen and Philip S. Yu~
+Electrical Engineering Department
+IBM T.J.Waston Research Centert
+National Taiwan University
+P.O.Box 704
+Taipei, Taiwan, ROC
+Yorktown NY 10598, U.S.A.
+mschen@cc.ee.ntu.edu.tw
+psyu@us.ibm.com
+
+
+ABSTRACT
+
+In this paper, we broaden the horizon of traditional rule min-
+ing by introducing a new framework of causality rule min-
+ing in a distributed chain store database, Specifically, the
+causality rule explored in this paper consists of a sequence
+of triggering events and a set of consequential events, and is
+designed with the capability of mining non-sequential,inter-
+transaction information. Hence, the causality rule mining
+provides a very general framework for rule derivation. Note,
+however, that the procedure of causality rule mining is very
+costly particularly in the presence of a huge number of can-
+didate sets and a distributed database, and in our opin-
+ion, cannot be dealt with by direct extensions from existing
+rule mining methods. Consequently, we devise in this pa-
+per a series of level matching algorithms, including Level
+Matching (abbreviatedly as LM), Level Matching with Se-
+lective Scan (abbreviatedly as LMS), and Distributed Level
+Matching (abbreviatedly as Distibuted LM), to minimize
+the computing cost needed for the distributed data miningof
+causality rules. In addition, the phenomena of time window
+constraints are also taken into consideration for the develop-
+ment of our algorithms. As a result of properly employing
+the technologies of level matching and selective scan, the
+proposed algorithms present good efficiency and scalability
+in the mining of local and global causality rules. Scale-up
+experiments show that the proposed algorithms scale well
+with the number of sites and the number of customer trans-
+actions.
+Index Terms: knowledge discovery, distributed data min-
+ing, causality rules, triggering events, consequential events
+
+
+1.
+INTRODUCTION
+The progress in database technology has provided the
+foundation that made large stores of transactional data ubiq-
+uitous. The discovery of association relationship among a
+huge database has been known to be useful in selective mar-
+
+
+
+
+Permission to makedigitalor hard copies of all or pirt of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bearthisnoticeand the fullcitationonthefirstpage. To copy otherwise, to
+republish,topostonservers or toredistributeto lists,requires prior specific
+permission and/ora fee.
+SIGKDD'02Edmonton,Alberta,Canada
+Copyright2002ACM1-58113-567-X/02/0007...$5.00.
+keting, decision support, and business management [3]. A
+popular area of applications is the market basket analysis,
+which studies the buying behaviors of customers by search-
+ing for sets of items that are frequently purchased either
+together or in sequence. Since the earlier work in [1], sev-
+eral technologies on association rule mining have been devel-
+oped, including: (1) association rule mining [5, 14]; (2) in-
+cremental updating [8]; (3) mining of generalized [16], multi-
+dimensional rules [17]; (4) constraint-based rule mining [6,
+10] and multiple minimum supports issues [11]; (5) temporal
+association rule mining [7, 9]; (6) frequent episodes discovery
+[13]; and (7) sequential patterns mining [2, 15].
+While the discovery of association rules and sequential
+patterns among the transaction data in a huge commerce
+database has received a significant amount of research at-
+tention, as pointed out in [9], the existing models of rule
+mining might not be able to discover user preferred frequent
+patterns efficiently in a chain store database of short trans-
+actions due to the following fundamental problems.
+
+1. The technical challenge imposed by the distributed na-
+ture of the chain store database where data in different
+sites may' increase concurrently.
+
+2. The difficulty of mining association rules on a short
+transaction database.
+
+It is worth mentioning that since fewer items will be
+bought at the same time, the association rules we ob-
+tain will be those such as "TV and TV set are fre-
+quently purchased together", which, while being cor-
+rect by the definition, is of less interest to us in the
+association rule mining.
+
+3. Lack of long patterns for sequential pattern mining.
+
+In view of this, we broaden in this paper the horizon of
+traditional rule mining by introducing a new framework of
+causality rule mining in a distributed chain store database of
+short transactions. Such a short transaction database is, in
+our opinion, common in many real applications. Explicitly,
+we shall further explore in this paper the mining of causal-
+ity rules from a transaction database, where each event ma~,
+belong to multiple categories and the causality rule consists
+of (a) a sequence of triggering events and (b) a set of conse-
+quential events as introduced in [9]. Specifically, transaction
+patterns can be derived from collected data by observing
+the customer behavior in terms of cause and effect, or what
+will be referred to as triggering events and consequential
+
+
+
+
+576
+
+events. In this paper, the term "causality rule(s}", denoted
+by X ~ Y, will refer to a rule of describing certain customer
+behavior where some triggering events, i.e., X, lead to a set
+of consequential events, i.e., Y. Note that no specific order
+is assumed among the triggering/consequentialevents.
+Note that in mining causality rules, certain constraints
+such as the time constraint may additionally be imposed.
+For example, it is reasonable to require that all consequen-
+tial events occur within a certain period after the triggering
+event has transpired. One can view the time constraint as a
+moving window on deciding causality rules or as the setting
+of an upper bound on the time gap between two successive
+events in a causality rule.
+Furthermore, the emergence of network-based environ-
+ments has introduced a new important dimension to this
+problem; that is, the distributed nature of data source and
+computing. Distributed data mining is thus called for to
+offer the capability of analyzing distributed data by mini-
+mizing the corresponding cost. Design and implementation
+of distributed data mining techniques is thus becoming cru-
+cial for ensuring system scalability and interactivity as the
+data continues to grow drastically in size and complexity.
+Note, however, that to count the occurrence in the dis-
+tributed sequence database of each candidate k-event rule
+for causality rule mining, it is necessary to scan through the
+sequence database to do a sub-sequence matching. This pro-
+cedure is very costly particularly in the presence of a huge
+number of candidate sets and a distributed database, and in
+our opinion, cannot be dealt with by direct extensions from
+existing rule mining methods. To remedy this, we devise in
+this paper a series of level matching algorithms, i.e., Level
+Matching (abbreviatedly as LM), Level Matching with Se-
+lective Scan (abbreviatedly as LMS), and Distributed Level
+Matching (abbreviatedly as Distibuted LM), to minimize
+the computing cost needed for the distributed data miningof
+causality rules. In addition, the phenomena of time window
+constraints are also taken into consideration for the develop-
+ment of our algorithms. As a result of properly employing
+the technologies of level matching and selective scan, the
+proposed algorithms present good efficiency and scalability
+in the mining of local and global causality rules. Scale-up
+experiments show that the proposed algorithms scale well
+with the number of sites and the number of customer trans-
+actions.
+The rest of this paper is organized as follows. The prob-
+lem description of mining causality rules is given in Section
+2. Section 3 presents the proposed algorithms to deal with
+the distributed mining of causality rules for a chain store
+database. We empirically evaluate the performance of these
+algorithms in Section 4. This paper concludes with Section
+5.
+
+
+2.
+PROBLEM
+DESCRIPTION
+The mining process of causality rules, as described in [Y],
+can be best understood by an illustrative example described
+below Consider the database with the custgmer-sequences
+shown in Figure 1 which is borrowed from [9]. The minimum
+support is assumed to be 40% (i.e., two customer sequences).
+For ease of exhibition, we employ the symbol {A, B} as a
+non-ordered event sequence of event A and event B. On the
+other hand, < {A, B}, {D, E} > indicates "the occurrence
+of event sequence {A, B} before event sequence {D, E}"
+as a causality rule that {A, B} triggers {D, E}, denoted by
+Customer
+Buyinssequences
+CID
+'rid I /
+TII~
+]
+TID3
+St
+(B, C)
+A
+(D, E)
+$2
+D
+B
+$3
+(A, B)
+(C, D)
+E
+S4
+(A, B, E)
+Ss
+E
+D
+A
+Item Information
+Item
+I Product
+A
+irv
+B
+rv set
+C
+Sofa
+D
+Endtable
+E
+Lamp
+
+
+
+
+Figure 1: An illustrative example
+for the mining on
+a database of short transactions
+
+Largek-sequcnce[Supp.[.argck-sequeRcc~Sttpp,
+{A}
+4
+<{A}, {D}>
+2
+Lt
+{B}
+4
+L~ <{A},{E}> 2
+{C}
+2
+!<{a}, {D}> 2
+{D}
+4
+<{B},{E}> 2
+{E}
+4
+<{c),{E}> 2
+<{A},{n, E}>
+2
+<{B},{n,E}>
+2
+]one-tri~eriagrule(R~)]
+~g
+I
+mms~p=~
+I
+
+I
+{A)-*{D~)
+I
+{B}~
+{DE}
+
+
+
+
+Figure
+2:
+An example of generating
+large
+one-
+triggering event sequences with minsupp
+= 40%
+
+
+
+{A, B} ~ {D, E}. Figure 2 shows the profile of candidate
+k-event sets Ck and large k-event sets Lk in each pass.
+In the phase of discovering one-triggering causality rules,
+after the first pass of scanning over the database, we de-
+termine the large one-triggering event set. The large event
+sets together with their supports at the end of the second
+and the third passes are shown in Figure 2. No candidate is
+generated in the fourth pass. As a result, after pruning the
+redundant rules from Lk, the R 1set of one-triggeringcausal-
+ity rules contains the three event rules, i.e., {C} ~
+{E},
+{A} ~ {D, E} and {B} ~ {D, E}, shown in Figure 2.
+The phase of generating multi-triggeringcausality rules is
+processed to generate the causality rules with higher order
+triggering events, i.e., R3 where j > 2. According to the
+mining results of large 1 triggering k event sets, i.e., L~,
+in the first phase, candidate i triggering j event sets, i.e.,
+C~, can be sequentially generated by joining any two L~_-~
+where j > 2 and i > 3. Similarly, the database occurrences
+of each j-event rule in Cij are counted. As a result, the total
+causality rules from the database in Figure 1 are shown in
+Figure 3. Note that in a set of event rules, an event rule,
+e.g., X ~ Y, is redundant if X ~ Y is contained in any
+other event sequence. It is worth mentioning that the event
+rules {A, B} ~ {D}, {A, B} ~ {E}, {A, C} ~ {E} and
+{B, C} ~ {E} shown in Figure 3a, though having minimum
+supports, do not appear in the answer in Figure 3b because
+they are redundant.
+
+
+
+mlti-triggering rules (Rj Supp
+{A,B} ~
+{E}
+2
+{A,B}----¢,{D}
+2
+R21 {A,C}~ {E}
+2
+{B,C}--~ {E} ! 2
+{A,B}-4" {D,E}] 2
+R~iIA,s,C)~ {E~. 2
+(a)beforepruning
+nulti-triggering rules (Rj
+Pruning
+rain supp = 40%..
+[
+reductantrulesR2 {A,B}"'~ {D,E}i
+F~
+I
+R J {A, B, CF--b
+{El,
+
+
+
+(b)afterpruning
+
+
+
+Figure 3: R ~ sets of multi-triggering
+causality rules
+on mining the database in Figure 1 where j > 2
+
+
+
+
+577
+
+3. DISTRIBUTED CAUSALITY MINING
+As mentioned in [9], since the overall performance of min-
+ing causality rules is determined by the first phase, this
+problem can be reduced to the one of discovering all one-
+triggering causality rules for the same support threshold.
+For interest of space, we concentrate our presentation on
+mining one-triggering causality rules with the objective of
+distributed mining. To deal with this newly identified prob-
+lem in a chain store database, a series of algorithms with
+the technique of level matching is devised to contribute on
+the distributed mining of causality rules. In Section 3.1, we
+present algorithms Level Matching (abbreviatedly as LM)
+and Level Matching with Selective Scan (abbreviatedly as
+LMS).
+The algorithm Distributed evel Matching is devel-
+oped in Section 3.2.
+
+3.1
+Level Matching (LM)
+First, we present the overall concept of algorithm LM
+without describing the details of its pattern recognition process.
+The pseudo-code for algorithm LM is outlined below.
+
+Algorithm LM
+
+//Input: transaction database: db, window size: wsize, hash
+table size: hsize, and minimum support: min_ sup
+//Output: all one-triggering causality rules in db
+1. set C2 = preScan(db, winsize, hsize);
+2. set scanned
+list = C2;
+3. set k = 2;
+4. while(scanned_list ~ ¢) do
+5.
+set ds = getSearchDS(scanned_list);
+6.
+for each customer c in db do
+7.
+set tranx as an array of all transactions of c;
+8.
+countCandidate( ds, tranx, win_size);
+9.
+end for
+10.
+for each Ci in scanned
+list do
+//there is only one Ci for algorithm LM
+11.
+obtain Li by pruning Ci according to min_supp;
+12.
+output L~;
+13.
+end for
+14.
+set Ck+l = Lk * Lk;
+16.
+set scanned
+list = Ck+l;
+17.
+set k= k+T;
+18. end while
+
+In this algorithm, the sub-procedure preScan
+is invo-
+cated first to obtain the 2-event candidate rule set C2. In
+preSean, it scans the database once to get all frequent items
+L1 (e.g., those items bought by over 25% of customers), and
+then C2 is generated as {{c} ~ {r} [ c e I A r E I}. Hence,
+it can be seen that if the size of C1 is n then the size of
+C2 will be n 2, which will be huge in practical applications.
+In view of this, a hash method similar to that of algorithm
+DHP [14] is employed to further prune out infrequent can-
+didates from C2.
+The two functions, getSearehDS and eountCandidate,
+will be described in detail later. As their names imply, the
+function getSearehDS is used to construct, a search struc-
+ture of all candidate rules within scanned
+list and the func-
+tion countCandidate
+is utilized to recognize the patterns
+of the candidate rules hidden in the transactions of a cus-
+tomer.
+
+3.I. 1
+Construction of the search structure
+We next present the details of the functions, getSearehDS,
+used in algorithm LM.
+
+Function getSearehDS of algorithm LM
+
+//Predefine: a hash function, hash, which maps each con-
+sequential event to an integer i E [1, ]subnode[] and a limit
+of size of leaf node: leaf_ limit
+//Input: collections of candidate set: scanned_ list
+//Output: a search structure: an array root
+1. set each element in array root to be a new leaf node;
+2. for each candidate set c in scanned
+list do
+3.
+for each candidate s in c do
+4.
+set node = root[s.trigger];
+5.
+set level = 0;
+6.
+while (node is not leaf node) do
+7.
+set level = level + 1;
+8.
+set node = node.subnode[hash(s.items[level])];
+9.
+end while
+10.
+add c to node.patterns;
+11.
+if ( Inode.listl > leaf_limit)
+12.
+for each candidate s in node.patterns do
+13.
+if (Isl >= level)
+14.
+set idx = hash (s.items [level]);
+15.
+add e to node.subnode[idx].list;
+16.
+end for
+17.
+end if
+18.
+end for
+19. end for
+20. return array root;
+
+In this algorithm, a hash tree is employed as a key search-
+ing scheme. In each node of the constructed hash tree, a set
+"patterns" is utilized to keep all the stored candidates, and
+an array "subnode" is utilized to contain the child nodes of
+this node. The level of a child node is defined as the level of
+its parent node plus one, i.e., child.level = parent.level + 1,
+and the root node of the hash tree is at level 1. Once a can-
+didate is dispatched into a leaf node, it will be added to the
+set patterns. If a candidate is dispatched into an internal
+node, it is dispatched to the corresponding child according
+to the hash function.
+Note that, in a node of level i, the
+ith consequential event in the candidate s is used to obtain
+the index of subnode to which s is dispatched (as shown in
+Step 15 of function getSearchDS). After the update of the
+set patterns of a node, if the number of stored candidates
+is greater than leaf
+limit, then each candidate stored is
+dispatched to the children in the same manner described
+previously, where leaf_limit is a predefined value to limit
+the size of pat~:erns.
+
+3.1.2
+Pattern recognition with the time window con-
+straints
+
+We next use the following examples to illustrate the mean-
+ing of a window constraint.
+
+Example 3.1: Consider the transaction database shown in
+Figure 4. We assume the window size in this example is 5. It
+is noted that without the window constraint, the rule {A}
+{C} appears in three customers, i.e., Customers 1, 3 and 5.
+With the window constraint, the occurrence count of rule
+{A} ~ {C} is only 1 instead of 3, because the time intervals
+between the triggering event A and the consequential event
+B in Customer 1 and Customer 3 exceed the time window
+limit. Therefore, rule {A} ~ {C} is only valid for Customer
+
+
+
+
+578
+
+.CID
+Transactions
+1
+I:A 4:A,B 9:C,D
+,, 2
+2:B 10:H
+16:G
+3
+I:A
+3:F
+12:CID
+4
+6:B 9:D,E
+,, 5
+2:A
+4:C
+5:BrO II:D
+
+
+
+
+-
+lsl,I-i, sr2fc
+
+DOCD0
+AODA0
+BIOID B 0
+rain suppffi25%
+C 1 D C 0[
+Wi~owSizeffi5
+D2DD01
+
+
+
+
+Figure 4: An illustrative example of the main func-
+tion in algorithm LM with time window constraints
+
+
+
+5 with the time interval [2 - 41 < 5. As shown in Figure 4,
+by adopting the window constraint, a set of more precise
+rules can be generated.
+The following code segment is employed to deal with the
+time window constraints.
+
+Function countCandidate
+for algorithm LM
+
+//Input:
+a searching data structure: ds, an array of the
+transactions made by a customer: tranx, and the given win-
+dow size: wsize.
+//Output: no output (only update the state of the searching
+data structure ds)
+1. set length as size of array tranx;
+2. set uid as a unique number
+//may
+set to be the id of the customer
+3. for i = 1 to length- 1 do
+4.
+set sid as a unique number;
+//may
+set to the id tranx[i]
+5.
+set bound = tranx[i].time + win_size;
+6.
+for all j s.t. j > i and tranx[j].time <= bound do
+7.
+add each element of tranx[j].itemset
+to the ordered set results
+8.
+end for
+9.
+for each item t in tranx[i].itemset do
+10.
+update(uid, sid, t, result);
+//different for the two algorithms
+11.
+end for
+12. end for
+
+In this function, at the beginning of each iteration of the
+outer for loop, we move the start of the window to the
+next transaction, i.e., tranx[i]. Then, we construct an or-
+dered set, results, to contain all the events occurring in the
+current window.
+Since results is an ordered set, each el-
+ement within it is unique and stored with a lexicographic
+order.
+In the function update
+at Step 10 of this algo-
+rithm, it searches the candidates stored in the searching
+data structure ds and updates the count of each candi-
+date rule which is a subset of results.
+The function up-
+date, in fact, calls a recursive function rec_update,
+i.e.,
+update (uid, sid, t, result) = rec_update (uid, root[t], results, 1).
+The pseudo-code of function rec_update
+is listed below.
+
+Function rec_update
+of algorithm LM
+
+//Input: a triggered event: t, a results event set: results,
+a unique id used to identify customer: uid, and an integer,
+start, indicated the recognition position
+//Output: no output (only state update)
+1. set length as the size of array of items;
+2. for i = start to length
+3.
+set next = node.subnode[hash(results.event[iD];
+4.
+update(next, items, i + 1);
+5. end for
+6. for each candidate c in node.patterns do
+7.
+if (c C results) then
+8.
+e.count = c.count + 1;
+9. end for
+
+This function works as follows. Given a triggering event t
+and consequential set results, for any candidate rule c =
+{t} ~-~ {rl,r2 ..... ra}, where {rl,r2,...,ra}
+C results =
+{st, s2, ..., s~}, we want to find such a candidate rule in the
+hash tree and then update its count. Note that, if c is stored
+in a node f at level l, l < k, then the indices of the l nodes
+along the path from root to .f are {hash (rl), hash (r2), ...,
+hash(rt)}.
+According to {rl,r~ .... ,ra}
+C results, we as-
+sume ri = Sd~. In addition, since both the consequential set
+in rule c and results are in a lexicography order, we have
+dl < d2 < .... < dl. Thus, in function recupdate, when
+i =di, we can go down to subsequent nodes along the path
+mentioned above.
+Finally, we can reach the node f and
+update the count of candidate rule c.
+
+3.2
+Level Matching with selective scan (LMS)
+We next utilize the selective scan technique [4] to en-
+hance the performance of algorithm LM. In algorithm LM,
+each candidate set is generated by previous frequent set, i.e.,
+Ca = La-l*La-1. In selective scan, however, if Ca is smaller
+then its source, i.e., Lk-1, we continue to generate Ck+l di-
+rectly from Ca. This process continues until Ci+l is empty
+or ICi+ll < ICil.
+According to the technique of selective
+scan, the database might be scanned only once for several
+Cas. As a result, the I/O cost needed can be significantly
+reduced.
+In addition, the occurrence of each candidate in
+scanned_list is counted by each scan of database.
+Thus,
+the frequent itemset La can be obtained by removing those
+candidates whose counts are less than the specified support.
+This algorithm ceases when there are no more candidates
+needed to be counted.
+With the addition of the selective
+scan technique to Algorithm LM, we have algorithm LMS
+(i.e., level matching with selective scan). We can derive algo-
+rithm LMS directly by inserting the following code segment
+after Step 17 in algorithm LM.
+
+Code segment for algorithm LMS
+
+17.a.
+set last
+size = ILk-ll, size = [Ck[;
+17.b.
+while(si-ze < lastsize and size > 0) do
+17.c.
+set Ck+l = Ck * Ck;
+17.d.
+set scanned
+list = scanned list U Ck+l;
+17.e.
+set last
+size = size;
+17.f.
+set size = [Ck+l[;
+17.g.
+set k = k + 1;
+17.h.
+end while
+
+
+3.3
+Distributed Level Matching
+As described before, the nature of a chain store database
+is distributed and horizontally partitioned.
+Such a retail
+chain store naturally has several regional data centers, each
+of which manages the transaction records in its own region.
+
+
+
+
+579
+
+Especially, for security issues, those distributed data sets
+are usually not allowed to be transmitted or joined together
+(e.g., discovering unexpected information from your com-
+petitors' Web sites is prohibited as mentioned in [12]). In
+essence, one would like to explore the relationship among
+the local data sets, e.g., the customers' purchasing behavior
+in New York, and the global purchasing behavior of people
+at the same time.
+Let D be a partitioned database located at n sites S 2,
+S2, ...,S'~. The database partitions at these sites are {D1,
+D2, ..., D'~}. In the following, we will adopt the conven-
+tion of attaching a superscript i on a symbol to denote the
+corresponding distributed symbol for site S i. In addition,
+I:D[ and IDi[ represent the size of 7) and that of the par-
+tition D/, respectively. For a given itemset X, let X.sup
+and X.sup ~be the respective support counts of X in ~Dand
+D/. Hence, X.sup represents the global support count of X
+and X.supp i represents the local support count of X at site
+Si. For a given minimum support s, we have the following
+definitions of global and local large itemsets.
+Definition 2: X is globally large if X.supp _>s x ]D[.
+Definition 3: X is locally large at site Si, if X.supp i >
+s x lOll .
+In the following, we will use Lk to denote all global large
+k-itemsets in D. Respectively, Lk(S i) is represented the lo-
+cal large k-itemsets in D i. The problem of mining causality
+rules in a distributed database D can be reduced to the one
+of finding of all local and globally large itemsets. The algo-
+rithm Distributed LM for distributed causality rule mining
+is shown below.
+
+Algorithm Distributed Level Matching (Distributed LM)
+
+1. By utilizing algorithm LMS, each store conducts the
+mining of local causality rules in each store to get L(S ~) for
+i e [1, k].
+2. Each store sends its causality rules, L(Si), to the center.
+3. The center obtains the global rule candidates C = U~=aL(Si).
+4. The center sends the complement local candidate C' (S~) =
+C - L (Si) to each store.
+5. Each store re-scans the database once to count C' (S~)
+and sends the result back to center.
+6.The center obtains global rules L by pruning in C those
+candidates whose counts are less than rain_supp.
+
+Note that, this algorithm of distributed mining not only
+obtains the global rules but also the local rules for each store.
+As wilt be evaluated in our experimental studies, this algo-
+rithm is very efficient with low communication cost between
+center and stores.
+
+
+4.
+EXPERIMENTAL
+STUDIES
+
+We generated several transaction databases from a set of
+potentially frequent itemsets to evaluate the performance of
+the proposed algorithms. However, we show the experimen-
+tal results from synthetic transaction data so as to obtain
+results of different workload parameters. To assess the rela-
+tive performance of the algorithms and study their scale-up
+properties, we perform several experiments on a computer
+with a CPU clock rate of 650 MHz and 512 MB of main
+memory. The simulation program was coded in Java and
+developed by J2SDK.
+For obtaining reliable experimental results, the method to
+generate synthetic transactions we employed in this study is
+1200
+12000
+r
+10o0 I --X-- o.70'/,
+....b
+"
+1 loom [ --~-o.70~
+....2"
+·~ ~oo ~ ..-,...0.20.~,.
+.~"
+.-*
+~
+L -~--o.5o,/,
+...."/
+
+
+
+
+25
+75
+125
+175
+225
+250
+750
+1250 1750 2250
+Number of cmtomevs
+Ntmt~ ofcustomels
+
+
+
+
+Figure 5: Scale-up experiments as the number of
+customers varies for algorithm LMS
+
+
+12oor
+~
+120~ [ -.~.-0.,0,
+...-5
+IOOO
+-.X-- 0.70%
+-"
+t
+.........
+, 0.5o
+....../
+02 ,.
+- ' 7
+i'
+t,
+"~ 600
+....'""
+" 6000
+..."""
+.o'~'',
+
+
+~1~
+,.,-"
+
+o "
+'
+~
+i
+i
+i
+25
+75
+125
+175
+225
+250
+750
+1250 1750 2250
+Nmber afctmorfe~
+Nember o f ~
+
+
+
+
+Figure 6: Scale-up experiments as the number of
+customers varies for algorithm APS
+
+
+
+similar to the ones used in prior works [2, 14, 16]. However,
+we show the experimental results from synthetic transaction
+data so as to obtain results of different workload parameters.
+
+4.1
+Scale-Up
+Experiments:
+
+We first present the scale-up results as the number of cus-
+tomers varies. Figure 5 shows how algorithm LMS scales
+up as the increase of the number of clusterms from 25,000
+to 2.5 million. We evaluate the execution results with three
+levels of min
+supp. The size of the dataset with 2.5 mil-
+lion customers was 445 MB in binary format. It can be seen
+from Figure 5 that the line with min
+supp = 0.5% is not as
+smooth as the other two. Note that for minsupp
+= 0.7%,
+the mining of each dataset requires three database scans,
+and the mining for rninsupp = 0.2% requires four database
+scans. However, for min_supp = 0.5%, some datasets re-
+quire three scans and other datasets require four scans, thus
+explaining the shape of the curve with min_supp = 0.5%.
+Overall, the execution time of algorithms LMS scales well
+as depicted in Figure 5.
+
+4.2
+Distributed
+Mining
+Experiments
+
+In this section, we conduct a series of experiments on dis-
+tributed mining of different values of min
+supp and vari-
+ous numbers of stores. Without loss of generality, our ex-
+perimental results are evaluated in accordance with the as-
+sumption of the same computing power and database size
+in each site Si. The results are summarized in Figure 7 and
+Figure 8. As shown in Figure 7, as the number of stores
+increases, both the communication cost and the computing
+cost grow. As compared to the experiment in Figure 5, it
+can be observed that more computing power is needed to do
+the same mining in a distributed system. With the growth
+of the number of sites, CPU and I/O overhead increase sig-
+nificantly.
+Note, however, that with the flexibility for the mining
+
+
+
+
+580
+
+/
+"'5"0:50%
+~
+~1600 I
+"'E1"0.50%
+·
+I.E+05 [-
+A
+0 20%
+1800
+·
+0.200/0
+
+
+
+
+I.E+O2 b
+.... ~'"""
+~. t00o
+..............
+
+
+
+
+3
+5
+10
+20
+3
+5
+10
+20
+Number of stores
+Number of stores
+
+(a) Communicationcost
+Co)Total CPU time
+
+
+
+
+Figure 7: Totoal communication cost and computing
+cost of distributed causality rule mining
+
+
+600 [
+@ 0.20%
+600 F
+$
+0.20%
+~ 5oo~.
+--o--o.5o% /
+~5oo~
+--o--o.5o%
+.~ 400 * ~
+_ "A'"0.70% /
+~ 400 ~.
+~
+-.dr..0.70o/0
+
+
+
+
+3
+5
+10
+20
+3
+5
+10
+20
+Numberofstores
+Numberofstores
+
+(a) Bandwith- 512k bps
+CO)Bandwidth- 1.5 Mbps
+
+
+
+
+Figure 8: The time needed to obtain the global rules
+in different network speeds
+
+
+process of each store to be performed simultaneously, the
+execution time in the distributed mining can be less than
+that in a centralized system. Two simulation results of this
+experiment are shown in Figure 8 with a specific communica-
+tion speed, 512k bps and 1.5M bps. It is noted that except
+the experiment of 20 store sites with min_supp :
+0.2~0,
+the execution time decreases as the number of sites is in-
+creases. This unusual phenomenon for the execution time
+of the 20 stores with min
+supp = 0.2% is incurred due to
+the huge communication cost for the center to collect infor-
+mation from all branch sites.
+
+
+5.
+CONCLUSIONS
+We broadened in this paper the horizon of traditional
+rule mining by introducing a new framework of causality
+rule mining in a distributed chain store database of short
+transactions.
+We have devised a series of level matching
+algorithms to minimize the computing cost needed for the
+distributed data mining of causality rules. In addition, the
+phenomena of time window constraints were also taken into
+consideration for the development of our algorithms. As a
+result of properly employing technologies of level matching
+and selective scan, the proposed algorithms presented good
+efficiency and scalability in the mining of local and global
+causality rules. Scale-up experiments showed that the pro-
+posed algorithms scaled well with the number of sites and
+the number of customer transactions.
+
+
+Acknowledgments
+
+The authors are supported in part by the National Science
+Council, Project No. NSC 90-2213-E-002-086 and NSC 90-
+2213-E-002-116, Taiwan, Republic of China.
+
+
+6.
+REFERENCES
+[1] R. Agrawal, T. Imielinski, and A. Swami. Mining
+Association Rules between Sets of Items in Large
+Databases. Proc. of ACM SIGMOD, pages 207-216,
+May 1993.
+[2] R. Agrawal and R. Srikant. Mining Sequential
+Patterns. Proc. of ICDE95, pages 3-14, March 1995.
+[3] M.-S. Chen, 3. Han, and P. S.Yu. Data Mining: An
+Overview from Database Perspective. IEEE TKDE,
+8(6):866-883, December 1996.
+[4] M.-S. Chen, J.-S. Park, and P. S.Yu. Efficient Data
+Mining for Path Traversal Patterns. IEEE TKDE,
+10(2):209-221, April 1998.
+[5] J. Han, J. Pei, and Y. Yin. Mining Frequent Patterns
+without Candidate Generation. Proc. off
+ACM-SIGMODO0, pages 486-493, May 2000.
+[6] L. V. S. Lakshmanan, R. Ng, J. Han, and A. Pang.
+Optimization of Constrained Frequent Set Queries
+with 2-Variable Constraints. Proc. off
+ACM-SIGMOD99, pages 157-168, June 1999.
+[7] C.-H. Lee, C.-R. Lin, and M.-S. Chen. On Mining
+General Temporal Association Rules in a Publication
+Database. Proc. of ICDM01, November 2001.
+[8] C.-H. Lee, C.-R. Lin, and M.-S. Chen. Sliding-Window
+Filtering: An Efficient Algorithm for Incremental
+Mining. Proc. off ACM CIKM01, November 2001.
+[9] C.-H. Lee, P. S. Yu, and M.-S. Chen. Causality Rules:
+Exploring the Relationship between Triggering and
+Consequential Events in a Database of Short
+Transactions Proc. off SIAM-SDM02, April 2002.
+[10] C.-R. Lin and M.-S. Chen. On the Optimal Clustering
+of Sequential Data. Proc. off SIAM-SDM02, April
+2002.
+[11] B. Liu, W. Hsu, and Y. Ma. Mining Association Rules
+with Multiple Minimum Supports. Proc. off KDD99,
+August 1999.
+[12] B. Liu, Y. Ma, and P.S. Yu. Discovering unexpected
+information from your competitors' web sites. Proc. off
+ACM SIGKDD01, 2001.
+[13] H. Mannila and D. Rusakov. Decomposition of event
+sequences into independent components. Proc. off
+SIAM-SDM01, 2001.
+[14] J.-S. Park, M.-S. Chen, and P. S. Yu. Using a
+Hash-Based Method with Transaction Trimming for
+Mining Association Rules. IEEE TKDE, 9(5):813-825,
+October 1997.
+[15] J. Pei, J. Han, B. Mortazavi-Asl, H. Pinto, Q. Chen,
+U. Dayal, and M.-C. Hsu. PrefixSpan: Mining
+Sequential Patterns Efficiently by Prefix-Projected
+Pattern Growth. Proc. off ICDE01, 2001.
+[16] R. Srikant and R. Agrawal. Mining Generalized
+Association Rules. Proc. off VLDB95, pages 407-419,
+September 1995.
+[17] K. Wang, S.Q. Zhou, and S.C. Liew. Building
+Hierarchical Classifiers Using Class Proximity. Proc.
+off VLDB99, pages 363-374, 1999.
+[18] C. Yang, U. Fayyad, and P. Bradley. Efficient
+discovery of error-tolerant frequent itemsets in high
+dimensions. Proc. off ACM SIGKDD01, 2001.
+
+
+
+
+581
+

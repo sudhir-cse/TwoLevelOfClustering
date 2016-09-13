@@ -1,0 +1,1173 @@
+Data Mining Criteria for Tree-Based Regression and
+Classification
+
+
+Andreas Buja
+AT&TLabs
+180 ParkAvenue
+FlorhamPark,NJ 07932-0971
+andreas @research.att.com
+Yung-Seop Leet
+DonggukUniversity
+Korea
+yung@dongguk.edu
+
+
+
+ABSTRACT
+This paper is concerned with the construction of regression
+and classification trees that are more adapted to data mining
+applications than conventional trees. To this end, we pro-
+pose new splitting criteria for growing trees. Conventional
+splitting criteria attempt to perform well on both sides of a
+split by attempting a compromise in the quality of fit be-
+tween the left and the right side. By contrast, we adopt a
+data mining point of view by proposing criteria that search
+for interesting subsets of the data, as opposed to model-
+hag all of the data equally well. The new criteria do not
+split based on a compromise between the left and the right
+bucket; they effectively pick the more interesting bucket and
+ignore the other.
+As expected, the result is often a simpler characterization
+of interesting subsets of the data.
+Less expected is that
+the new criteria often yield whole trees that provide more
+interpretable data descriptions. Surprisingly, it is a "flaw"
+that works to their advantage: The new criteria have an
+increased tendency to accept splits near the boundaries of
+the predictor ranges. This so-called "end-cut problem" leads
+to the repeated peeling of small layers of data and results
+in very unbalanced but highly expressive and interpretable
+trees.
+
+
+Keywords
+CART, splitting criteria, Boston Housing data, Pima Indi-
+ans Diabetes data
+
+
+1.
+INTRODUCTION
+We assume familiarity with the basics of classification and
+regression trees. A standard reference is Breiman et aL [3],
+hereafter referred to as CART; a concise introduction can be
+
+*Technology Consultant
+
+tInstructor
+
+
+
+Permissionto make digital or hard copies of all or part of this work for
+personalor classroom use is granted without feepro~,idedthat copies
+arenot made or distributed forprofit or commercialadvantageand that
+copiesbear this notice and the lull citation on the first page. To copy
+otherwise,to republish, to post on serversor to redistributeto lists,
+requiresprior specificpermissionand/or a fee.
+KDD 01 San FranciscoCA USA
+CopyrightACM 2001 1-58113-391-x/01/08...$5.00
+found in Venables and Ripley [10], and a more theoretical
+one in Ripley [8].
+Readers should know that tree construction consists of a
+greedy growing phase driven by a binary splitting criterion,
+followed by a prnnlng phase based on cost-complexity mea-
+sures and/or estimates of generalization error. The growing
+phase yields the discoveries, the pruning phase the statisti-
+cal protection against random structure. With the pruning
+phase in mind, the growing phase is free to overgrow the
+tree.
+We are here concerned only with the growing phase, and
+hence with the splitting criteria that drive it.
+A typical
+criterion measures the quality of a proposed split in terms of
+a size-weighted sum of losses or impurities of the left and the
+right side of the split: crit(splitt.,R) = WL IOSSL+ WRIOSSR.
+Such weighted sums constitute a compromise between the
+two sides. By contrast, the new splitting criteria proposed
+here combine the impurities of the left and right buckets of
+a split in such a way that low impurity of just one bucket
+results in a low value of the splitting criterion. These criteria
+need to be developed for regression and classification trees
+separately. Section 3 deals with regression, and Section 4
+with classification.
+This work originated in the course of a marketing study
+at AT&T in which the first author was involved. Due to
+the proprietary nature of the original marketing data, we
+demonstrate our proposals instead on public datasets from
+the UC Irvine Machine Learning Repository [fi]. Because
+interpretability is the focus of this paper, we present these
+datasets in greater detail than usual. For the same reason
+we also include a larger number of tree displays than usual.
+
+2.
+SIMPLICITY AND INTERPRETABILITY
+OF TREES
+We state the intent and some of the main points of the
+present work:
+
+· Data mining, in contrast to traditional statistics, is not
+concerned with modeling all of the data. Data mining
+involves the search for interesting parts of the data.
+Therefore:
+
+· The goal is not to achieve superior performance in
+terms of global performance measures such as resid-
+ual sums of squares, misclassification rates, and their
+out-of-sample versions. (The R 2 values and misclassi-
+fication rates reported in the examples are only given
+for general interest.)
+
+
+
+
+27
+
+The aspects of trees with which we experimented --
+simplicity and interpretability -- are not easily quan-
+tifiable. We leave it as an open problem to find quan-
+tifications of these intuitive notions. Note that sim-
+plicity is not identical with size of a tree. This is a
+corollary of the example discussed next:
+
+The splitting criteria proposed here often generate highly
+unbalanced trees. Again.qt a perception that more bal-
+anced trees are more interpretable, we argue that bal-
+ance and interpretability are largely independent. In
+fact, there exists a type of maximally unbalanced tree
+that is highly interpretable, namely, those with cascad-
+ing splits on the same variable, as illustrated in Fig-
+ure 1. The simplicity of these trees stems from the fact
+that all nodes can be described by one or two clauses,
+regardless of tree depth. In Figure 1, it is apparent
+from the mean values in the nodes that the response
+shows a monotone increasing dependence on the pre-
+dictor x. In the examples below we will show that tree
+fragments similar to the one shown in Figure 1 occur
+quite convincingly in real data.
+
+The original intent that started the present work was
+to develop a datamlnlng version of trees that produces
+in effect simple rules for interesting subsets. In so far,
+the intent was not much different from that of the rule-
+induction literature (see for example [4]). We found,
+however, that our proposals produced not only locally
+interesting nuggets but globally more interpretable trees
+than conventional tree-growing methods.
+Therefore,
+the present proposals compete with trees more than
+with rules.
+
+
+
+
+4 < x<7
+x_>7
+
+
+Figure 1: An artificial example of a simple and in-
+terpretable yet unbalanced tree
+
+
+
+
+3.
+REGRESSION TREES
+In regression, the impurity measure for buckets is the vari-
+ance of the response values, and the splitting criterion is a
+comproml.qe between left and right side bucket in terms of a
+weighted average of the variances:
+
+1
+(NL &2 + NR 6"2)
+(1)
+critLa = NL +--------~R
+where we used the following notations for size, mean and
+variance of buckets:
+
+NL = #{nix,, < e} ,
+Nn = #{nix,, > c} ,
+1
+
+6.2L
+"~L Erie L(~ln --/~L)2
+6.~ =
+1
+-
+z
+,
+~ E.ER(Y-
+-
+u~) ,
+
+z being the splitting variable and
+c
+the splitting value.
+The new splitting criteria will do away with the compro-
+mise and respond to the presence of just one interesting
+bucket.
+"Interesting" could mean high purity in terms of
+small variance of the response, or it could mean a high or
+a low mean value of the response. Thus we wish to iden-
+tify pure buckets (6.2 small) or extreme buckets (/1 extreme)
+as quickly as possible. This leads us to the following two
+criteria:
+
+* Criterion RI: One-sided purity
+
+In order to find a single pure bucket, we replace the
+weighted average of left and right variances by their
+minimllrn:
+
+~itLR
+=
+"~i"(6.~L, 6.~)
+
+By mlnimiT.ing this criterion over all possible splits,
+we find a split whose left or right side is the sin-
+gle bucket with smallest variance (purity). Note that
+for subsequent splits, both the high-purity bucket and
+the ignored bucket are candidates for further splitting.
+Thus, ignored buckets get a chance to have further
+high-purity buckets split offlater on. Typically, a high-
+purity bucket is less likely to be split again.
+
+· Criterion R2: One-sided extremes
+
+In order to find one single bucket with a high mean,
+use the mean as the criterion value and pick the larger
+of the two:
+
+critLR
+=
+max(~L, ~R)
+
+Implicitly one of the bucket with the lower mean is
+ignored. By maximizing this criterion over all possible
+splits, we find a split whose left or right side is the
+single bucket with the highest mean. -- An obvious
+dual for finding buckets with low means is:
+
+eritLR =
+min(/2L, /2R)
+
+These criteria are a more radical departure from con-
+ventional approaches because they dispense with the
+notion of purity altogether. The notion of purity seems
+to have been large unquestioned in the tree literature.
+Mean values have not been thought of as splitting cri-
+teria although they are often of more immediate in-
+terest than variances. From the present point of view,
+minimiT.ing a,variance-based criterion is a circuitous
+route to take when searching for extreme means.
+
+At this point, a natural criticism of the new criteria may
+arise: their potentially excessive greediness. The suspicion
+is that they capture spurious groups on the periphery of the
+variable ranges, thus exacerbating the so-called "end cut
+problem" (CART, p. 313).
+not in the conclusion.
+First,
+the end cut problem exists but it can be controlled with
+a minimum bucket size requirement or a penalty for small
+bucket size. Second, there is an argument that the criteria
+for one-sided extremes may have a chance of succeeding in
+
+
+
+
+28
+
+l
+One-sided purity
+One-sided extreme
+I Regression Trees I Classification Trees l
+] min(~r~, £r~)
+[min(puLp~,p~p~)
+I
+max(/2L, fiR)
+max(p~, Ph)
+
+
+Table 1: Synopsis of the new regression and classification criteria.
+
+
+many situations: in real data the dependence of the mean
+response on the predictor variables is often monotone; hence
+extreme response values are often found on the periphery of
+variable ranges, just the kind of situations to which the cri-
+teria for one-sided extremes would respond. Finally, recall
+that the present goal is not to achieve superior fit but en-
+hanced interpretability.
+
+4.
+TWO-CLASS CLASSIFICATION TREES
+We consider only the two-class situation and leave more
+than two classes as an open problem. The class labels are
+denoted 0 and 1. Given a split into left and right buckets,
+let pO + p~ = 1, pO + ph = 1 be the probabilities of 0 and 1
+on the left and on the right, respectively. Here are some of
+the conventional measures of loss or impurity, expressed for
+the left bucket:
+
+* Misclassification rate: mln(pO, pl).. Implicitly one as-
+signs the bucket to a class by majority vote and esti-
+mates the misclassification rate by the proportion of
+the other class.
+
+e Entropy: -p~ logp° - p~ logpL
+This can also be
+interpreted as the expected value of the minimiT.ed
+negative log-likelihood of the Bernoulli model for Y
+{0, 1}, nEL.
+· The Gini index:
+o 1
+pr. PL. It Can be interpreted as the
+Mean Squared Error (MSE) when fitting the mean,
+p~, to the Bernoulli variable Y E {0,1}, n E L: MSEL =
+EL(Y
+-
+p~)2 = po p~.
+
+These impurity criteria for buckets are conventionally blended
+into compromise criteria for splits by forming weighted sum~
+of the left and right buckets. Denoting with PL +PR ----1 the
+marginal probabilities of the left and the fight bucket given
+the mother bucket, the compromise takes this form:
+
+misclassification rate :
+PL min(pO, pl) + PR min(p~, p~)
+
+entropy :
+pr. (_pO logpO _ p~ logp~)
++PR (_pO logpO _ p~ logp~)
+
+Gini index :
+0 1
+PL PLPL
+"b
+PR PORPlR
+
+These impurity functions are the smaller the stronger the
+majority of either label is. Misclassification rate is problem-
+atic because it may lead to many indistinguishable splits,
+some of which may be intuitively more desirable than oth-
+ers.
+The problem is illustrated, for example, in (CART,
+p.96). One therefore uses entropy or the Gini index instead,
+both of which avoid the problem. CART uses the Gini index,
+while C4.5 Quinlan [7] and S-Plus (Statsci [9], or Venables
+and Ripley [10]) use entropy. For two classes there does not
+seem to exist a clear difference in performance between en-
+tropy and the Gini index. In the multi-class case, however,
+Breiman [2] has brought to light significant differences.
+We now approach two-class classification the same way as
+regression by attempting to identify pure or extreme buck-
+ets as quickly as possible. While the criteria for regression
+trees are based on variances or means, the criteria for clas-
+sification trees are only based on the probabilities of class 0
+and 1. For one-sided purity, the goal can be restated as
+finding splits with just one bucket that has a clear majority
+label. Another approach is to select a class of interest, 1,
+say, and look for buckets that are very purely class 1. For ex-
+ample, in a medical context, one might want to quickly find
+buckets that show high rates of mortality, or high rates of
+treatment effect. As in Section 3, we introduce two criteria
+for splitting, corresponding to the two approaches:
+
+· Criterion CI: One-sided purity
+
+In order to find a single pure bucket, regardless of its
+class, we replace the weighted average with the mini-
+mum:
+
+CrStLR ~--~mln(pO, 91 , p~, PR) ,
+
+which is equivalent to
+
+=
+PL poph)
+
+because min(p°, Pt) and pOp]~ are monotone transfor-
+mations of each other. The criteria are also equivalent
+to
+
+G'WStLR -~ max(p~, PL pO, Ph)
+
+because if one ofp °, p~ is maximum, the other is mln-
+imum. This latter criterion expresses the idea of pure
+buckets more directly.
+· Criterion C2: One-sidexl e~remes
+
+Having chosen class 1, say, as the class of interest, the
+criterion that searches for a pure class i bucket among
+L and R is
+
+critLR = min(p~, pO) ,
+
+which is equivalent to the more intuitive form
+
+critLR = max~lL, pl) .
+
+Table 3 shows a synopsis of the new criteria for regression
+and two-class classification.
+
+
+5.
+AN EXAMPLE OF REGRESSION TREES:
+THE BOSTON HOUSING DATA
+Following CART, we demonstrate the application of the
+new splitting criteria on the Boston Housing data. These
+well-known data were originally created by Harrison and
+Rubinfeld [5], and they were popularized by Belsley, Kuh
+and Welsch [1]. Data files are available from the UC Irvine
+Machine Learning Repository [6].
+Harrison and Rubinfeld's main interest in the data was to
+investigate how air pollution concentration (NOX) affects
+
+
+
+29
+
+the value of single family homes in the suburbs of Boston.
+Although NOX turned out to be a minor factor ff any, the
+data have been frequently used to demonstrate new regres-
+sion methods. These data are such well-treaded ground that
+ff anything new is found in them, it should be remarkable.
+The data contain the median housing values as a response,
+and 13 predictor variables for 506 census tracts in the Boston
+area; see Table 2 for details.
+We constructed several trees based on both CART and
+the new criteria.
+To facilitate comparisons, all trees were
+generated with equal size, namely, 16 terminal nodes.
+A
+minimum bucket size of 23 was chosen, which is about 5%
+of the overall sample size (506).
+The resulting trees are
+displayed in Figures 3 through 6. For each node, the mean
+response (m) and the size (sz) is given. Here is a Sllmm~kl'y
+of the main features of these trees:
+
+1. CART, Figure 3
+Somewhat balanced tree of depth 6. The major vari-
+ables are RM (3x, = 3 times) and above all LSTAT (6x).
+Minor variables appearing once each are NOX, CRIM,
+B, PTRATIO, DIS, INDUS, with splits mostly in the
+expected directions. Two of the top splits act on the
+size of the homes (RM), and below it, especially for
+areas with smaller homes, an monotone decreasing de-
+pendence on the fraction of lower status population
+(LSTAT) is apparent. Except for the peeling on RM
+at the top and the subsequent peeling on LSTAT, the
+tree is not simple.
+
+2. One-sided puri~y, Figure 4
+Unbalanced tree of depth 9. The minor variable PTRA~
+TIO (lx) is allowed the first split with a small bucket
+of size 9%; apparently a cluster of school districts has
+significantly worse pupil-to-teacher ratios than the ma-
+jority.
+Crime-infested neighborhoods are peeled off
+next in a small bucket of size 5% (CRIM, lx) with ex-
+tremely low mean. NOX makes surprisingly 3 appear-
+ances, which would have made Harrison and Rubinfeld
+happy. In the third split from the top, NOX breaks off
+12% of highly polluted areas with a low bucket mean
+of 16, as compared to 25 for the rest. LSTAT (3x) cre-
+ates next a powerful split into buckets of size 41% and
+34%, with means of 30 and 19, respectively. RM (2x)
+plays a role only in "high-status" neighborhoods.
+
+3. One-sided extremes: high mean, Figure 5
+An extremely unbalanced tree.
+There are no single
+powerful splits, only peeling splits with small .buckets
+on one side. The repeated appearance of just two vari-
+ables, RM (2x, levels 1 and 3) and LSTAT (8x), how-
+ever, tells a powerful story: For highest housing prices
+(bucket mean 45), the size of homes (RM > 7.59)
+is the only variable that matters. For RM < 7.08, a
+persistent monotone decreasing dependence on LSTAT
+takes over, down to a median housing value of about
+17. This simple interplay between RM and LSTAT
+lends striking interpretability to the tree and tells a
+simple but convincing story.
+At the bottom, crime
+(CRIM, 2x) and pollution (NOX, lx) show some re-
+maining smaller effects in the expected directions.
+
+4. One-sided extremes: low mean, Figure 6
+Again an extremely unbalanced tree. It tells a simi-
+lar story as the previous one, but greater precision is
+achieved for low housing values, because this is where
+the criterion looks First.
+The first peeling split sets
+aside a 5% bucket of crime-infested neighborhoods with
+lowest housing values around 10. The second lowest
+mean bucket (B < 100) consists of 5% census tracts
+with high African-American population (63%4-32%;
+due to an arcane transformation). Thereafter, mono-
+tone decreasing dependence on LSTAT takes over in
+the form of six peeling splits, followed by monotone in-
+creasing dependence on RM in the form of five peeling
+splits. These two successive monotone dependencies
+are essentially.the same as in the previous tree, which
+found them in reverse order due to peeling from high
+to low housing values.
+
+After perusing the last two trees and their crisp stories,
+it is worthwhile to return to the CART tree of Figure 3 and
+apply the lessons learnt. We see in retrospect that the CART
+tree tries to tell the same story of monotone dependence on
+LSTAT and RM, but because of its favoring of balanced
+splits, it is incapable of clearly layering the data: The split
+on LSTAT at the second level divides into buckets of size
+51% and 34%, of which only the left bucket further divides
+on LSTAT. By comparison, the high means criterion creates
+at level 3 a split on LSTAT with buckets of sizes 9% and
+77%, clearly indicating that the left bucket is only the first
+of a half dozen "tree rings" in ascending order of LSTAT
+and descending order of housing price.
+In summary, it appears that, in spite of the highest R2
+value, the CART tree is considerably harder to interpret
+compared to the extreme means trees. Even the one-sided
+purity criterion has certain advantages for "data mining" in
+that it is better able to find interesting small buckets. Iron-
+ically the greater end-cut problem of the new criteria works
+in their favor. Conversely, CART's end-cut problem is not
+sufficiently strong to allow it to clearly detect monotone de-
+pendencies and express them in terms of highly unbalanced
+layering trees.
+After a tree-based analysis that resulted in an interpretable
+tree, it is plausible to re-express the tree in terms of linear
+models by describing monotone dependencies with linear or
+additive terms and localizing them with suitable dummy
+variables.
+For example, the tree generated with the low
+means criterion might suggest a linear model of the follow-
+ing form:
+
+MED VAL
+=
+~CI~IM * lICRIM>lS.79]
+
++
+/~B * I[B<100.0S] * l[CRIM_<15:79]
+
++
+~LSTAT * LSTAT * l[LSTAT>lO.14]
+
+· I[B>100.0S]* l[CaZM<lS.TS]
+
+"at" ~RM * RM * I[LSTAT<IO.14] * I[S>10O.08]
+
+· l[CRIM<_lS.79 ]
+
++
+ERROR
+
+This type of exercise shows the power of adaptive model
+building that is implicit in interpretable trees.
+
+
+6.
+AN EXAMPLE OF CLASSIFICATION
+TREES: PIMA INDIANS DIABETES
+We demonstrate the application of the new criteria for
+classification trees with the Phna Indians Diabetes data
+(Pima data, for short). These data were originally owned
+
+
+
+
+30
+
+Variable
+description
+
+CRIM
+
+ZN
+INDUS
+CHAS
+NOX
+RM
+AGE
+DIS
+RAD
+TAX
+PTRATIO
+
+B
+
+LSTAT
+response
+crime rate
+proportion of residential land zoned for lots over 25,000 sq. ft
+proportion of non-retail business acres
+Charles River dummy variable (--1 if tract bounds river; 0 otherwise)
+nitric oxides concentration, pphm
+average number of rooms per dwelling
+proportion of owner-occupied units built prior to 1940
+weighted distances to five Boston employment centers
+index of accessibility to radial highways
+full-vahie property tax rate per $10,000
+pupil teacher ratio
+1000 * (Bk - 0.63)2 where Bk is the proportion of blacks
+
+percent lower status population
+
+median value of owner occupied homes in $1000's
+
+
+Table 2: Predictor Variables for the Boston Housing Data.
+
+
+by the "National Institute of Diabetes and Digestive and
+Kidney Diseases," but they are now available from the UC
+Irvine Machine Learning Repository [6].
+The class labels of the Pima data are 1 for diabetes and 0
+otherwise. There are 8 predictor variables for 768 patients,
+all females, at least 21 years of age, and of Pima Indian
+heritage near Phoenix, AZ. Among the 768 patients, 268
+tested positive for diabetes (class 1). For details see Table 3
+and the documentation at the UC Irvine Repository.
+We constructed four trees based on entropy and the new
+criteria. A rnlnlmlJ~t bucket size of 35 was imposed, amount-
+ing to about 5% of the overall sample size (768). The re-
+suiting trees are shown in Figures 7 through 10. For each
+node, the proportion (p) of each class and the size (sz) are
+given. Here is a summary of the trees:
+
+1. Entropy, Figure ?
+Typical balanced tree of depth 6. The strongest vari-
+able is PLASMA (5x), which creates a very successful
+split at the top. BODY (3x) is the next important
+variable, but much less so, followed by PEDIGREE
+(3x) and AGE (2x). The class ratios in the terminal
+buckets range from 1.00:0.00 on the left to 0.16:0.84
+on the right. All splits are in the expected direction.
+Overall, the tree is plausible but does not have a simple
+interpretation.
+
+2. One-sided purity, Figure 8
+Extremely unbalanced tree of depth 12. In spite of
+the depth of the tree, its overall structure is simple:
+As the tree moves to the right, layers high in class 0
+(no diabetes) are being shaved off, and, conversely, as
+the tree steps left, layers high in class 1 (diabetes) are
+shaved off (with the exception of the BP split near the
+bottom). The top of the tree is dominated by BODY
+and PLASMA, while AGE and PEDIGREE play a role
+in the lower parts of the tree, where the large rest
+bucket gets harder and harder to classify.
+
+3. One-sided extremes: high class 0, Figure 9
+Extremely unbM~nced tree with simple structure: Be-
+cause the criterion searches for layers high in class 0
+(no diabetes), the tree keeps stepping to the right.
+In order to describe conditions under which class 0 is
+prevalent, it appears that only BODY and PLASMA
+matter. The tree shows a sequence of interleaved splits
+on these two variables, indicating a combined mono-
+tone dependence on them. See below for an investiga-
+tion of this behavior. For interpretability, this tree is
+the most successful one.
+
+4. One-sided eztremes: high class 1, Figure 10
+Another extremely unbM~nced tree with simple struc-
+ture: The criterion searches for layers high in class 1
+(diabetes), which causes the tree to step to the left.
+The top split on PLASMA identifies a 0.86 diabetic
+bucket of size 9.9%. BODY refines it to 90%. This
+is the major story because the rem~inlng cascade to
+the left works off a bucket with a fraction 0.71 non-
+diabetics, obviously with only mild success.
+
+From the trees and the Snmmm~y, it becomes clear that
+PLASMA is the most powerful predictor, followed by BODY.
+In particular the third tree is Mmost completely dominated
+by these two variables. Their interleaved appearance down
+this tree suggests a combined monotone dependence which
+should be studied more carefully. Figure 2 shows how the
+third tree in Figure 9 tries to approximate the class probabil-
+ity surface with a step function on axes-aligned rectangular
+tiles.
+
+
+
+
+31
+
+Variable
+description
+
+PRGN
+
+PLASMA
+
+
+BP
+THICK
+INSULIN
+BODY
+PEDIGREE
+AGE
+RESPONSE
+number of times pregnant
+plasma glucose concentration at two hours in an oral
+glucose tolerance test
+diastolic blood pressure (ram Hg)
+Triceps skin fold thickness (ram)
+two hour serum insulin (/~ U/ml)
+body mass index (weight in kg/(height in m)2)
+diabetes pedigree function
+age (years)
+class variable (=1 if diabetes; 0 otherwise)
+
+
+Table
+3:
+Predictor Variables for the Pima Indians Diabetes Data.
+
+
+
+
+NO
+j
+Orn
+
+O0 o O°
+
+
+o
+'
+i,
+°
+a
+~'o ="
+'g4"o'*~aL*
+,D
+.
+;
+oa
+a °
+_,. ~c=~%'e
+·
+..o
+·
+
+- ~
+IO wa
+8 ·
+.e
+·
+m
+~,~ a15 · · ~ ,,
+| _~;%,"
+0°°
+
+°a $0°
+~
+~.;~a¢,,o-_.
+--
+; :,
+
+~;~on8
+,n
+"
+°
+*
+*
+
+
+-o
+o'--a
+
+
+
+I
+|
+I
+I
+50
+100
+150
+200
+
+PLASMA
+
+
+
+Figure
+2: The
+Pima
+Diabetes
+Data,
+BODY
+against
+PLASMA. The plain is tiled according to the buck-
+ets of the tree in Figure 9. Open squares: no dia-
+betes (class 0), filled circles: diabetes (class 1).
+
+
+7.
+SUMMARY
+The following are a few conclusions from our experiments:
+
+· Hyper-greedy data mining criteria can produce highly
+interpretable trees.
+
+· Highly unbalanced trees can reveal monotone depen-
+dence.
+
+· The end-cut "problem" can turn into a virtue.
+
+· If trees are grown for interpretation, global measures
+for quality of fit are not very informative.
+
+The following are a few topics that merit further research:
+
+· Develop quality measures for interpretability and sim-
+plicity of trees.
+· Extend the new 2-class criteria to more than two classes.
+
+· Develop more sophisticated methods to control bucket
+size.
+
+8.
+REFERENCES
+[1] Belsley, D. A., Kuh, E., and Welsch, R. E. (1980),
+Regression Diagnostics, New York, NY: John Wiley &
+Sons, Inc..
+[2] Breiman, L. (1996), "Technical Note: Some Properties
+of Splitting Criteria," Machine Learning, 24, 41-47.
+[3] Breiman, L., Friedman, J. H., Olshen, R. A., and
+Stone, C. J. (1984), Classification and Regression
+Trees (CART), Pacific Grove, CA: Wadsworth.
+[4] Cohen, W. W., and Singer, Y. (1999) "Simple, Fast,
+and Effective Rule Learner," in: AAAI-99.
+[5] Harrison, R. J., and Rubinfeld, D. L. (1978), "Hedonic
+Prices and the Demand for Clean Air," Journal of
+Environmental Economics and Management, 5,
+81-102.
+
+[6] Merz, C. J., and Murphy, P. M. (1998), UCI
+repository of machine learning data
+bases (htt p://www.ics.uci.edu/-mlearn/MLRepository.html).
+[7] Qninl~n, J. It. (1993), C~.5: Programsfor Machine
+Learning, San Mateo, CA: Morgan Kaufmann.
+[8] ttipley, B. D. (1996), Pattern Recognition and Neural
+Networks, Cambridge: Cambridge University Press.
+[9] StatSci (1995), S-PLUS Guide to Statistical and
+Mathematical Analysis, Version 3.3, Seattle:
+MathSoft, Inc.
+[10] Venables, W. N., and Ripley, B. D. (1997), Modern
+Applied Statistics with"S-Plus, New York, NY:
+Springer-Verlag.
+
+
+
+
+32
+
+Boston Houslng Datm: pealed vudzmce model
+R2 = 0.8
+
+
+
+
+.
+.
+.
+.
+2-" ...~"~.,.
+
+
+
+
+~,mt~m
+t~
+mdLi ummm*mtl'rJ
+
+
+
+Figure 3: The Boston Housing Data, Regression Tree 1, CART Criterion.
+
+
+
+
+BostonHousingData:
+raw onHIded
+purity
+~
+= 0.75
+
+mlo~o~
+
+
+
+
+el.
+tr.m
+
+
+
+
+mt~m
+~
+
+
+
+N.~
+m
+
+
+
+
+4a,m
+1
+ID~
+film
+
+
+
+-~,
+=~,
+.
+"% ~-
+
+2 2
+·
+Ls%
+
+
+
+
+-II
+II
+~°
+
+Figure 4: The Boston Housing Data, Regression Tree 2, One-Sided Purity Criterion.
+
+
+
+
+33
+
+BostonHousing Data: one-sided extremes (highmeans)
+
+
+
+
+!.
+I
+.~.,~
+
+
+
+
+llLIlll
+t1,~7
+R2 = 0.78
+
+
+I
+m.4s.u. Lt~,
+
+I
+zz~
+~
+w
+
+
+
+
+Figure 5: The Boston Housing Data, Regression Tree 3, High Means Criterion.
+
+
+
+
+~41~
+t2
+
+
+
+
+I
+1L~4
+
+
+
+--
+!
+L
+8eston Housing Data: anHIded extremes (low means)
+R2 = 0.78
+
+
+.~o-
+J,.
+*
+w.m
+01
+
+
+
+
+~,
+I
+~"
+~P
+I
+~.Jl
+
+al.m
+
+
+
+
+Figure 6: The Boston Housing Data, Regression 1~ee 4, Low Means Criterion.
+
+
+
+
+34
+
+Plma Data: entropy
+
+
+
+
+.2
+mlsclass, error = 0.21 (162/768)
+
+
+
+
+2
+A
+.,Jo,,.
+i
+!
+
+
+p~Z~*L ~
+u* 4~t
+
+
+
+
+Figure 7: The Pima Indian Diabetes Data, Tree 1, Entropy.
+
+
+
+
+Pima Data: one-slded purity
+
+
+
+
+o
+~
+-A:
+
+
+
+p,~aL-o.1I.~
+&l',~
+
+
+
+
+o
+.
+!
+mlsclass, error = 0.21 (163/768)
+
+
+
+
+-~-
+!h
+
+
+
+
+Figure 8: The Pima Indian Diabetes Data, Tree 2, One-Sided Purity.
+
+
+
+
+35
+
+Ptma Data: one-sided extremes (class O) misclass,error = 0.24 (183/768)
+
+
+
+
+0
+
+
+
+
+o
+o
+.
+I
+oj
+~,,o.m~.tt.m. L1%
+
+
+o
+F.OJ~I*, m
+T.r~
+
+
+
+
+0
+0
+0
+
+o°°1 i
+o
+
+
+
+
+t
+t
+
+
+
+
+Figure 9: The Pima Indian Diabetes Data, Tree 3, One-Sided Extremes, Class 0.
+
+
+
+
+PIma Data: one-sided extremes (class 1)
+mlsc~ss, error = 0.26 (198/768)
+
+
+
+
+°
+
+
+
+
+o
+*
+
+
+
+
+Figure 10: The Pima Indian Diabetes Data, Tree 4, One-Sided Extremes, Class 1.
+
+
+
+
+36
+

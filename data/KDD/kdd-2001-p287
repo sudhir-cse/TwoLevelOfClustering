@@ -1,0 +1,1071 @@
+Solving Regression Problemswith Rule-based
+Ensemble Classifiers
+
+Nitin Indurkhyaand Sholom M. Weiss
+IBM T.J. Watson ResearchCenter
+P.O. Box 218, Yorktown Heights, NY 10598, USA
+nitin@data-miner.com, sholom@us.ibm.com
+
+
+ABSTRACT
+
+We describe a lightweight learning method that induces an
+ensemble of decision-rule solutions for regression problems.
+Instead of direct prediction of a continuous output variable,
+the method discretizes the variable by k-means clustering
+and solves the resultant classification problem. Predictions
+on new examples are made by averaging the mean values
+of classes with votes that are close in number to the most
+likely class. We provide experimental evidence that this in-
+direct approach can often yield strong results for many ap-
+plications, generally outperforming direct approaches such
+as regression trees and rivaling bagged regression trees.
+
+
+1.
+INTRODUCTION
+Prediction methods fall into two categories of statistical
+problems: classification and regression. For classification,
+the predicted output is a discrete number, a class, and per-
+formance is typically measured in terms of error rates. For
+regression, the predicted output is a continuous variable,
+and performance is typically measured in terms of distance,
+for example mean squared error or absolute distance.
+In the statistics literature, regression papers predominate,
+whereas in the machine-learningliterature, classification plays
+the dominant role. For classification, it is not unusual to ap-
+ply a regression method, such as neural nets trained by min-
+imizing squared error distance for zero or one outputs. In
+that restricted sense, classification problems might be con-
+sidered a subset of regression methods.
+A relatively unusual approach to regression is to discretize
+the continuous output variable (for example [7] or [6] and
+solve the resultant classification problem[12]. In [13], a meth-
+od of rule induction was described that used k-means clus-
+tering to discretize the output variable into classes. The
+classification problem was then solved in a standard way,
+and each induced rule had as its output value the mean of
+the values of the cases it covered in the training set.
+A
+hybrid method was also described that augmented the rule
+representation with stored examples of each rule, resulting
+
+Permissionto makedigitalor hardcopiesofall orpartofthis workfor
+personalor classroomuse is grantedwithoutfeeprovidedthatcopies
+arenot madeor distributedforprofitorcommercialadvantageand that
+copiesbearthisnoticeand the fullcitationon the firstpage.To copy
+otherwise,to republish,to poston serversor to redistributeto lists,
+requirespriorspecificpermissionand/ora fee.
+KDD01 San FranciscoCA USA
+CopyrightACM2001 1-58113-391-x/01/08...$5.00
+in reduced error for a series of experiments.
+Since that earlier work, very strong classification meth-
+ods have been developed that use ensembles of solutions
+and voting [2, 1, 5, 14]. In light of the newer methods, we
+reconsider solving a regression problem by discretizing the
+continuous output variable using k-means and solving the
+resultant classification problem. The mean or median value
+for each class is the sole value to be stored as a possible
+answer when that class is selected as an answer for a new
+example.
+To test this approach, we use a recently developed, light-
+weight rule induction method [14]. It was developed strictly
+for classification, and like other ensemble methods performs
+exceptionally well on classification applications. However,
+classification error can diverge from distance measures used
+for regression. Hence, we adapt the concept of margins in
+voting for classification [11] to regression where, analogous
+to nearest neighbor methods for regression, class means for
+close votes are included in the computation of the final pre-
+diction.
+Why not use a direct regression method instead of the in-
+direct classification approach? Of course, that is the main-
+stream approach to boosted and bagged regression [9]. Some
+methods, however, are not readily adaptable to regression in
+such a direct manner. Some rule induction methods, such
+as our lightweight method, generate rules sequentially class
+by class and cannot be applied to a continuous output with-
+out major revisions to the induction method. Why not try
+a trivial preprocessing step to discretize the predicted con-
+tinuous variable? Moreover, if good results can be obtained
+with a small set of discrete values, then the resultant solu-
+tion can be far more elegant and possibly more interesting
+to human observers. Lastly, just as experiments have shown
+that discretizing the input variables may be beneficial, it
+may be interesting to gauge experimentally the effects of
+discretizing the output variable.
+In this paper, we review a recently developed rule induc-
+tion method for classification. Its use for regression requires
+an additional data preparation step to discretize the con-
+tinuous output.
+The final prediction involves the use of
+marginal votes. We compare its performance on large pub-
+lic domain data sets to those of other logic-based methods:
+single and bagged regression trees.
+We show that strong
+predictive performance, in these example better than single
+regression trees and sometimes better than bagged regres-
+sion trees, may be achieved with simple rule-based solutions
+having relatively few unique output values.
+
+
+
+
+287
+
+2.
+METHODS AND PROCEDURES
+
+2.1
+Regression via Classification
+Although the predicted variable in regression may vary
+continuously, for a specific application, it's not unusual for
+the output to take values from a finite set, where the connec-
+tion between regression and classification is stronger. The
+main difference is that regression values have a natural or-
+dering, whereas for classification the class values are un-
+ordered. This affects the measurement of error. For clas-
+sification, predicting the wrong class is an error no matter
+which class is predicted (setting aside the issue of variable
+misclassification costs). For regression, the error in predic-
+tion varies depending on the distance from the correct value.
+A central question in doing regression via classification is the
+following: Is it reasonable to ignore the natural ordering and
+treat the regression task as a classification task?
+The general idea of discretizing a continuous input vari-
+able is well studied [6]; the same rationale holds for dis-
+cretizing a continuous output variable. K-means (medians)
+clustering [10] is simple and effective approach for cluster-
+ing the output values into pseudo-classes. The values of the
+single output variable can be assigned to clusters in sorted
+order, and then reassigned by k-means to adjacent clusters.
+To represent each cluster by a single value, the cluster's
+mean value minimizes the squared error, while the median
+minimizes the absolute deviation.
+How many classes/clusters should be generated? Depend-
+ing on the application, the trend of the error of the class
+mean or median for a variable number of classes can be ob-
+served, and a decision made as to how many clusters are
+appropriate. Too few clusters would imply an easier clas-
+sification problem, but put an unacceptable limit on the
+potential performance; too many clusters might make the
+classification problem too difficult. For example, Table 1
+shows the. global mean absolute deviation (MAD) for a typ-
+ical application as the number of classes is varied. The MAD
+will continue to decrease with increasing number of classes
+and reach zero when each cluster contains homogeneous val-
+ues. So one possible strategy might be to decide if the extra
+classes are worth the gain in terms of a lower MAD. For in-
+stance, one might decide that the extra complexity in going
+from 8 classes to 16 classes is not worth the small drop in
+MAD.
+
+
+Table 1: Variation in Error with Number of Classes
+
+Classes
+MAD
+SE
+1
+4.0538
+.0172
+2
+2.3532
+.0105
+4
+1.2873
+.0061
+8
+0.6795
+.0035
+16
+0.3505
+.0019
+32
+0.1784
+.0011
+64
+0.0903
+.0006
+128
+0.0462
+.0004
+
+
+Figure 1 shows a simple procedure to analyze the trend us-
+ing Table 1 and determine the appropriate number of classes.
+The basic idea is to double the number of classes, run k-
+means on the output variable, and stop when the reduction
+in the MAD from the class medians was less than a certain
+Figure 1: Determining the Number of Classes
+
+Input: t, a user-specified threshold (0 < t < 1)
+Y = {Yi,i = 1... n}, the set of n predicted
+values in the training set
+Output: C, the number of classes
+Mt :----mean absolute deviation (MAD) of yi
+from Median(Y)
+min-gain := t. M1
+i:----1
+repeat
+C:=i
+i:--2.i
+run k-means clustering on Y for i clusters
+M~ := MAD of yi from Median(Cluster(yi))
+until Mi/2 - Mi <_rain-gain
+output C
+
+
+
+
+percentage of the MAD from using the median of all val-
+ues. This percentage is adjusted by the threshold, t. In our
+experiments, for example, we fixed this to be 0.1 (thereby
+requiring can that the reduction in MAD be at least 10%).
+Besides the predicted variable, no other information about
+the data is used. If the number of unique values is very low,
+it is worthwhile to also try the maximum number of po-
+tential classes. In our experiments, we found that this was
+beneficial when there were not more than 30 unique values.
+Besides helping decide the number of classes, Table 1 also
+provides an upper bound on performance.
+For example,
+with 16 classes, even if the classification procedure were to
+produce 100% accurate rules that always predicted the cor-
+rect class, the use of the class median as the predicted value
+would imply that the regression performance could at best
+be 0.3505 on the training cases. This bound can be also be
+a factor in deciding how many classes to use.
+
+2.2
+Lightweight Rule Induction
+Once the regression problem is transformed into a classi-
+fication task, standard classification techniques can be used.
+Of particular interest is a recently developed new ensem-
+ble method for learning compact disjunctive normal form
+(DNF) rules [14] that has proven to give excellent results on
+a wide variety of classification problems and has a time com-
+plexity that is almost linear in time relative to the number
+of rules and cases. This Lightweight Rule Induction (LRI)
+procedure is particularly interesting because it can rival the
+performance of very strong classification methods, such as
+boosted trees.
+Figure 2 shows an example of a typical DNF rule gener-
+ated by LR/. The complexity of a DNF rule is described with
+two measurements: (a) the length of a conjunctive term and
+(b) the number of terms (disjuncts). In this example, the
+rule has a length of three with two disjuncts. Complexity
+of rule sets generated is controlled within LRI by providing
+upper bounds on these two measurements.
+The LRI algorithm for generating a rule for a binary clas-
+sification problem is summarized in Figure 3. FN is the
+number of false negatives, FP is the number of false pos-
+itives, and TP, the number of true positives,
+e(i) is the
+
+
+
+288
+
+Figure 2: Typical DNF Rule Generated by LRI
+
+{fl 45.2 AND f., -43.1 AND f7 -4.45} Ok
+{fl -42.6 AND f8 -43.9 AND fs -45.0} =:~ Classl
+
+
+
+
+Figure 3: Lightweight Rule Induction Algorithm
+
+1. Grow conjunctive term T until the maximum length
+(or until FN = 0) by greedily adding conditions that
+minimize errl.
+
+2. Record T as the next disjunct for rule R. If less than
+the maximum number of disjuncts (and FN > 0), re-
+move cases covered by T, and continue with step 1.
+
+3. Evaluate the induced rule R on all training cases i and
+update e(i), the cumulative number of errors for case
+i.
+
+
+
+
+cumulative number of errors for case i taken over all rules.
+The weighting given to a case during induction is an integer
+value representing the virtual frequency of that case in the
+new sample. Equation 1 describes that frequency in terms
+of the number of cumulative errors, e(i).
+
+
+Frq(i) = 1 + e(i)~
+(1)
+
+E~I is computed when TP is greater than zero. The cost
+of a false negative is doubled if no added condition adds
+a true positive. The false positives and false negatives are
+weighted by the relative frequency of the cases as shown in
+Equation 3.
+
+
+Errl = FP + k. FN {k = 1, 2, 4...and TP > 0}
+(2)
+
+
+
+FP ----E
+FP(i). ]rq(i); FN ----E
+FN(i). ]rq(i)
+(3)
+i
+i
+
+A detailed description of LRI and the rationale for the
+method are described in [14]. Among the key features of
+LKI are the following:
+
+· The procedure induces covering rules iteratively, eval-
+uating each rule on the training cases before the next
+iteration, and like boosting gives more weight to erro-
+neously classified cases in successive iterations.
+
+* The rules are learned class by class. All the rules of
+a class are induced before moving to the next class.
+Note that each rule is actually a complete solution and
+contains disjunctive terms as well.
+
+· Equal number of rules are learned for each class. All
+rules are of approximately the same size.
+
+· All the satisfied rules are weighted equally, a vote is
+taken and the class with the most votes wins.
+Table 2: Voting with Margins
+
+Class
+Votes
+Class-Mean
+1
+10
+1.2
+2
+40
+2.5
+3
+35
+3.4
+4
+15
+5.7
+
+
+
+During the rule generation process, LRI has no knowledge
+about the underlying regression problem.
+The process is
+identical to that of classification. The differences come in
+how the case is processed after it has been classified.
+
+2.3
+Using Margins for Regression
+Within the context of regression, once a case is classified,
+the a priori mean or median value associated with the class
+can be used as the predicted value. Table 2 gives a hypo-
+thetical example of how 100 votes are distributed among 4
+classes. Class 2 has the most votes; the output prediction
+would be 2.5.
+An alternative prediction can be made by averaging the
+votes for the most likely class with votes of classes close
+to the best class. In the example above, if one allows for
+classes with votes within 80% of the best vote to also be
+included, then besides the top class (class 2), class 3 need
+also be considered in the computation.
+A simple average
+would result in the output prediction being 2.95, and the
+weighted average, which we use in the experiments, gives an
+output prediction of 2.92.
+The use of margins here is analogous to nearest neighbor
+methods where a group of neighbors will give better results
+than a single neighbor. Also, this has an interpolation effect
+and compensates somewhat for the limits imposed by the
+approximation of the classes by means.
+The overall regression procedure is summarized in Figure
+4 for k classes, n training cases, median (or mean) value of
+class j, mj, and a margin of M. The key steps are the gen-
+eration of the classes, generation of rules, and using margins
+for predicting output values for new cases.
+
+3. RESULTS
+To evaluate formally the performance of lightweight rule
+regression, several public-domain datasets were processed.
+The performance of our indirect approach to regression is
+compared to the more direct approach used in regression
+trees. Since our approach involves ensembles, we also com-
+pared the performance to that of bagged trees, a popular
+ensemble method. Because the objective is data mining, we
+selected datasets having relatively large numbers of cases.
+These were then split into train and test sets.
+We chose
+datasets from a variety of real-world applications where the
+regression task occurs naturally. The following datasets were
+chosen for the empirical evaluation:
+
+
+
+
+2.
+additive: This is an artificial dataset involving a simple
+additive function with a random noise component [8].
+It was included because these types of functions are
+generally difficult for logic methods (such as trees and
+rules).
+
+ailerons: This dataset addresses a control problem:
+flying a F16 aircraft. The attributes describe the sta-
+
+
+
+
+289
+
+Figure 4: Regression Using Ensemble Classifiers
+
+1. run k-means clustering for k clusters on the set of val--
+ues {yi,i = 1...n}
+
+2. record the mean value mj of the cluster cj for j =:
+1...k
+
+3. transform the regression data into classification data
+with the class label for the i-th case being the cluster
+number of Yi
+
+4. apply ensemble classifier and obtain a set of rules R
+
+5. to make a prediction for new case u, using a margin of
+M (where 0 _< M < 1):
+
+(a) apply all the rules R on the new case u
+
+(b) for each class i, count the number of satisfied rules
+(votes) vi
+
+(c) class t has the most votes, v,
+
+(d) consider the set of classes P -- {p} such that vp
+M ·v~
+~.EP mjvj
+(e) the predicted output for case u, y~ =
+~JeV v.i
+
+
+
+
+tus of the aeroplane, while the goal is to predict the
+control action on the ailerons of the aircraft. The data
+is obtained from trial runs in a flight simulator [4].
+
+3. ailerons2: A different model and a different set of at--
+tributes for the same application as ailerons.
+
+4. census16: This dataset uses data from the official 1990
+US Census. The objective is to predict the median
+price of a house in a region based on demographic
+composition and the state of the housing market in
+the region.
+
+5. compact: This dataset is derived from data collected
+for computer systems operations. The data was col-
+lected from a Sun Sparcstation 20/712 with 128 Mbytes
+of memory running in a multi-user university depart-
+ment. Users would typically be doing a large variety of
+tasks ranging from accessing the internet, editing filets
+or running very cpu-bound programs. The attributes
+refer to various measures of computer system activity
+(reads, writes, page faults, etc). The goal is the predict
+the percentage of time the cpu's run in user mode.
+
+6. elevator: This dataset is also derived from the prob-
+lem of flying a F16 aircraft. The attributes describe
+the status of the aeroplane, the goal is to predict the
+control action on the elevators of the aircraft.
+
+7. kinematics: This dataset is concerned with the forward
+kinematics of an 8 link robot arm. It is known to be
+highly non-linear and has medium levels of noise.
+
+8. pole: This dataset is derived from a telecommunication
+problem for determining the placement of antennas.
+Naxne
+additive
+ailerons
+ailerons2
+census16
+compact
+elevator
+kinematics
+pole
+Table 3: Data
+
+Train
+Test
+28537
+12231
+5007
+2147
+5133
+4384
+15948
+6836
+5734
+2458
+6126
+2626
+5734
+2458
+5000
+10000
+Characteristics
+
+Features
+Uniques
+10
+14932
+40
+30
+6
+24
+16
+1819
+21
+54
+18
+60
+8
+5720
+48
+11
+MAD
+4.05
+3.01
+1.95
+28654
+9.54
+.0041
+.217
+29.31
+
+
+
+Table 3 summarizes the data characteristics. The num-
+ber of features describes numerical features and categorical
+variables decomposed into binary features. For each dataset,
+the number of unique target values in the training data is
+listed. Also shown is the mean absolute distance (MAD)
+from the median of all values. For classification, predictions
+must have fewer errors than simply predicting the largest
+class. To have meaningful results for regression, predictions
+must do better than the average distance from the median.
+This MAD is a baseline on a priori performance.
+For each application, the number of classes was deter-
+mined by the algorithm in Figure 1 with the user-threshold
+t set to 0.1. When the number of unique values was not
+more than 30, solutions were induced with the maximum
+possible classes as well.
+LPd has several design parameters that affect results: (a)
+the number of rules per class (b) the maximum length of a
+rule and (c) the maximum number of disjunctions. For all of
+our experiments, we set the length of rules to 5 conditions.
+For almost all applications, increasing the number of rules
+increases predictive performance until a plateau is reached.
+In our applications, only minor changes in performance oc-
+curred after 100 rules. The critical parameter is the number
+of disjuncts, which depends on the complexity of the un-
+derlying concept to be learned. We varied the number of
+disjuncts in each rule from 1, 2, 4, 8, 16, where 1 is a rule
+with a single conjunctive term. The optimal number of dis-
+juncts is obtained by validating on a portion of the training
+data set aside at the start.
+An additional issue with maximizing performance is the
+use of margins. In all our experiments we included classes
+having vote counts within 80% of the class having the most
+votes.
+Performance is measured in terms of error distance. The
+error-rates shown throughout this section are the mean ab-
+solute deviation (MAD) on test data. Equation 4 shows how
+this is done, where yi and y~ are the true and predicted val-
+ues respectively for the i-th test case, and n is the number
+of cases in the test set.
+
+
+1
+n
+!
+MAD = n Z
+lYi - Y,I
+(4)
+
+
+Table 4 summarizes the results for solutions with only
+10 rules. The solutions are obtained for variable numbers
+of disjuncts, and the best rule solution is indicated with
+an asterisk. Also listed is the optimal tree solution (rain-
+tree), which is the pruned tree with the minimum test error
+found by cost-complexity pruning. The tree size shown is
+the number of terminal nodes in the tree.
+Also shown is
+the tree solution where the tree is pruned by significance
+
+
+
+
+290
+
+Table 6: Number
+of Classes vs. Performance
+
+Name
+4 classes
+8 classes
+16 classes
+additive
+1.40
+1.27
+1.29
+ailerons
+1.57
+1.51
+1.46
+ailerons2
+1.10
+1.10
+censusl6
+1.10
+15449
+15041
+compact
+2.90
+2.00
+1.80
+elevator
+.0031
+.0030
+.0031
+kinematics
+.119
+.119
+.123
+pole
+2.26
+1.96
+1.99
+
+
+
+testing (2 sd) (sig-tree). The standard error is listed for the
+tree solution. With large numbers of test cases, almost any
+difference between solutions is significant. As can be seen,
+the simple rule-based solutions hold up quite well against
+the far more complex regression trees.
+With greater number of rules, performance can be im-
+proved. Table 5 summarizes the results for inducing vary-
+ing number of rules. All other parameters were fixed, and
+the number of disjuncts was determined by resampling the
+training cases. These results are contrasted with the solu-
+tions obtained from bagging regression trees [2]. 500 trees
+were used in the bagged solutions. Note that the complexity
+of the bagged solutions is very high - the individual trees
+are unpruned trees which, for regression problems, are ex-
+tremely large.
+The number of classes is specified prior to rule induc-
+tion, and it affects the complexity of solutions. Varying this
+parameter gives the typical performance versus complexity
+trend - improved performance with increasing complexity
+until the right complexity fit is reached, and then decreased
+performance with further increases in complexity. Table 6
+illustrates this trend.
+Note that pole has only 11 unique
+values for the output variable, so the result for 16 classes is
+actually for 11 classes.
+When the number of unique values is not too high, it is
+worthwhile to check the performance of the solution with
+the maximum possible classes. In our suite of applications,
+ailerons gave the best solution for 30 classes. However, for
+pole and ailerons2 a smaller number of classes give similar
+results.
+
+
+4.
+DISCUSSION
+Lightweight Rule Induction has an elementary represen-
+tation for classification.
+Scoring is trivial to understand:
+the class with the most satisfied rules wins.
+To perform
+regression, the output variable is discretized, and all rules
+for a single class are associated with a single discrete value.
+Clearly, this is a highly restrictive representation, reducing
+the space of continuous outputs to a small number of dis-
+crete values, and the space of values of rules and disjuncts
+to a single value per class.
+The key question is whether a simple transformation from
+regression to classification can retain high quality results. In
+Section 3, we presented results from public domain datasets
+that demonstrate that our approach can indeed produce
+high quality results.
+For best predictive performance, a
+number of parameters must be selected prior to running.
+We have concentrated on data mining applications where
+it can be expected that sufficient test sets are available for
+Figure 5: Relative errors for LRI, Single ~¥ee, and
+Bagged Trees
+
+
+
+1
+
+0.9
+
+0.8
+o.7
+· LRI[]
+Single Troe
+[] BaggedTrees
+
+
+
+
+o,
+iiii
+,,a,
+
+
+>mo.5 ~
+l
+Y o.4
+0.3
+0.2
+
+0
+I'
+IddlliVl ItlllronlIIlllr¢nl2¢onIuII3SCOltX~IICl
+Dataset
+H
+_.
+
+
+~evator
+klrmrmtlcB
+
+
+
+
+parameter estimation. Thus, we have included results that
+describe the minimum test error. With big data, it is easy
+to obtain more than one test sample, and for estimating a
+single variable, a large single test set is adequate in practice
+[3]. For purposes of experimentation, we fixed almost all
+parameters, except for maximum number of disjnncts and
+the number of rules. The number of disjuncts is clearly on
+the critical path to higher performance. Its best value can
+readily be determined by resampling on the large number of
+training cases.
+The use of k-means clustering to discretize the output
+variable, producing pseudo-classes, creates another task for
+estimation. What is the proper number of classes? The ex-
+perimental results suggest that when the number of unique
+values is modest, perhaps 30 or less, then using that number
+of classes is feasible and can be effective. For true continuous
+output, we used a simple procedure for analyzing the trend
+as the number of classes is doubled. This type of estimate
+is generally quite reasonable and trivially obtainable, but
+occasionally, slightly more accurate estimates can be found
+by trying different numbers of classes, inducing rules, and
+testing on independent test data.
+A class representation is an approximation that has poten-
+tial sources of error beyond those found for other regression
+models. For a given number of classes less than the number
+of unique values, the segmentation error, measured by the
+MAD of the median values of the classes, is a lower bound
+on predictive performance. For pure classification, where the
+most likely class is selected, the best that the method can
+do is the MAD for the class medians. In the experimental
+results, we see this limit for the artificial additive data gen-
+erated from an exact function (with additive random noise).
+With a moderate number of classes, the method is limited
+by this approximation error. To reduce the minimum error
+implied by the class medians, more classes are needed. That
+in turn leads to a much more difficult classification problem,
+also limiting predictive performance.
+Minimizing classification error is not the same as minimiz-
+ing deviation from the true value. This difference introduces
+another type of approximation error in our regression pro-
+cess. This error is most obvious when we predict using the
+
+
+
+
+291
+
+Table 4"-
+
+
+Name
+1
+additive
+1.85
+ailerons
+1.59
+ailerons2
+1.13"
+census16
+18714
+compact
+2.19
+elevator
+.0032*
+kinematics
+.162
+pole
+6.13
+Comparative Error for Rule sets with 10 Rules
+
+Number of di~uncts per rule
+2
+4
+8
+[
+16
+m
+1.81
+1.72"
+1.68
+1.75
+1.55"
+1.63
+1.66
+1.75
+1.14
+1.16
+1.14
+1.14
+17913
+17316 17457 17278*
+2.11
+2.10"
+2.10
+2.14
+.0034
+.0034
+.0038
+.0036
+.154
+.146"
+.147
+.151
+4.49
+3.14
+2.51
+2.48*
+min-tree
+error
+size
+1.50
+2620
+1.46
+135
+1.15
+51
+19422
+456
+2.25
+225
+.0025
+797
+.154
+425
+2.41
+578
+sig-tree
+error
+size
+1.52
+1797
+1.54
+514
+1.23
+310
+19604
+780
+2.28
+514
+.0026
+332
+.154
+425
+3.57
+107
+SE
+.01
+.03
+.02
+412
+.05
+.0001
+.003
+.07
+
+
+Table 5: Comparative Error for Different Number of Rules
+
+
+Name
+additive
+ailerons
+ailerons2
+census16
+compact
+elevator
+kinematics
+pole
+Number of rules in LRI-solution
+25
+50
+100
+250
+500
+1.40
+1.32
+1.30
+1.28
+1.27
+1.44
+1.43
+1.41
+1.38
+1.39
+i.i0
+I.I0
+I.I0
+I.Ii
+I.i0
+15552
+15093 14865 14537 14583
+1.91
+1.84
+1.82
+1.80
+1.80
+.0030
+.0030 .0030 .0030 .0030
+.128
+.124
+.121
+.119
+.120
+2.09
+1.97
+1.96
+1.96
+1.96
+Bagged Trees
+SE
+1.00
+.01
+1.19
+.02
+1.10
+.01
+16008
+258
+1.68
+.02
+.0036
+.0001
+.112
+.001
+2.32
+.05
+
+
+
+median value of the single most likely class. We have pze-.
+sented an alternative that capitalizes on a voting method's
+capability to identify close votes.
+Thus by averaging the
+values of the most likely class and its close competitors, as
+determined by the number of votes, more accurate results
+are achieved. The analogy is to nearest-neighbor methods,
+where with large samples, a group of neighbors will per-
+form better than the single best neighbor.
+Averaging the
+neighbors also has an interpolation effect, somewhat coun-
+terbalancing the implicit loss of accuracy of using the median
+approximation to a class value.
+Overall, the lightweight rule regression methods presented
+here are straightforward to implement. As illustrated in Fig-.
+ure 5, where error is measured relative to the median value
+of all examples, LRI often widely surpassed tree regression
+and often rivaled and sometimes surpassed the bagged tree
+results. Depending on the number of rules induced, the rule
+based solution can be remarkably simple in presentation.
+Although there are a number of parameters that must be
+estimated, effective solutions can be achieved by judicious
+use of test data or by a priori knowledge of user preferences.
+
+
+5.
+REFERENCES
+[1] E. Bauer and R. Kohavi. An empirical comparison of
+voting classification algorithms: Bagging, boosting
+and variants. Machine Learning, 36(1):105-139, 1999.
+[2] L. Breiman. Bagging predictors. Machine Learning,
+24:123-140, 1996.
+[3] L. Breiman, J. Friedman, R. Olshen, and C. Stone.
+Classification and Regression Trees. Wadsworth,
+Monterrey, CA., 1984.
+[4] R. Camacho. Inducing Models of Human Control
+Skills using Machine Learning Algorithms. Ph.d.
+thesis, University of Porto, 2000.
+[5] W. Cohen and Y. Singer. A simple, fast, and effective
+rule learner. In Proceedings of Annual Conference of
+American Association for Artificial Intelligence, pages
+335-342, 1999.
+[6] J. Dougherty, R. Kohavi, and M. Sahami. Supervised
+and unsupervised discretization of continuous features.
+In Proceedings of the 12th Int'l Conference on
+Machine Learning, pages 194-202, 1995.
+[7] U. Fayyad and K. Irani. Multi-interval discretization
+of continuous-valued attributes for classification
+learning. In Proceedings of the 13th Int'l Joint
+Conference on Artificial Intelligence, pages 1022-1027,
+1993.
+[8] J. Friedman. Multivariate adaptive regression splines.
+Annals of Statistics, 19(1):1-141, 1991.
+[9] J. Friedman, T. Hastie, and R. Tibshirani. Additive
+logistic regression: A statistical view of boosting.
+Technical report, Stanford University Statistics
+Department, 1998. www.stat-stanford.edu/~tibs.
+[10] J. Hartigan and M. Wong. A k-means clustering
+algorithm, ALGORITHM AS 136. Applied Statistics,
+28(1), 1979.
+[11] R. Schapire, Y. Freund, P. Bartlett, and W. Lee.
+Boosting the margin: A new explanation for the
+effectiveness of voting methods. In Proceedings of the
+Fourteenth Int'l Conference on Machine Learning,
+pages 322-330. Morgan Kanhnann, 1998.
+[12] L. Torgo and J. Gama. Regression using classification
+algorithms. Intelligent Data Analysis, 1(4), 1997.
+[13] S. Weiss and N. Indurkhya. Rule-based machine
+learning methods for functional prediction. Journal of
+Artificial Intelligence Research, 3:383-403, 1995.
+[14] S. Weiss and N. Indurkhya. Lightweight rule
+induction. In Proceedings of the Seventeenth
+International Conference on Machine Learning, pages
+1135-1142, 2000.
+
+
+
+
+292
+

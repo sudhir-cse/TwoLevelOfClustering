@@ -1,0 +1,1589 @@
+Mining
+Lesion-Deficit
+Associations
+in a Brain
+Image
+Database
+
+
+Vasileios Megalooikonomou
+Christos Davatzikos
+Johns Hopkins
+University
+Johns Hopkins University
+vasilis@braid.rad.jhu.edu
+hristos@parthenon.rad.jhu.edu
+Edward H. Herskovits
+Johns Hopkins
+University
+ehh@welchlink.welch.jhu.edu
+
+
+
+
+Abstract
+
+We present
+a data
+mining
+process
+for discovering
+associa-
+tions between
+structures
+and functions
+of the human
+brain.
+Our
+approach
+is through
+the study
+of lesioned
+(abnormal)
+structures
+and associated
+functional
+deficits
+(disorders).
+For
+this purpose
+we have
+developed
+a BRAinImage
+Database
+(BRAID)
+that
+integrates
+image processing
+and visualization
+capabilities
+with
+statistical
+analysis
+of spatial
+and clinical
+data,
+providing
+access via extended
+SQL through
+a web in-
+terface.
+We present
+visualization
+and statistical
+methods
+for mining
+lesion-deficit
+associations.
+We consider
+issues of
+scalability
+and morphological
+variability.
+We demonstrate
+the use of the proposed
+mining
+methods
+by applying
+them
+to epidemiological
+data finding
+clinically
+meaningful
+associ-
+ations.
+
+
+1
+Introduction
+
+The discovery
+of associations
+between
+structures
+and
+functions of the human brain (i.e., human brain
+mapping),
+is the
+main
+goal
+of the
+Human
+Brain
+Project [HKL93].
+For this purpose,
+large brain
+image
+databases
+have been developed
+[ACF+%,
+LWP+98].
+These
+databases
+consist
+of 3-D images
+from
+different
+medical
+imaging
+modalities
+and capture
+structural
+(e.g.,
+MRIi)
+and/or
+functional/physiological
+(e.g.,
+PET,'
+fMR13) information
+about the human
+brain.
+Tradition-
+ally, two approaches
+have been employed
+for functional
+brain
+mapping.
+The first
+approach
+seeks associations
+between
+lesioned structures
+and concomitant
+neurologi-
+cal 04: neuropsychological
+deficits.
+The second approach
+
+`Magnetic
+Resonance
+Imaging:
+shows soft-tissue
+structural
+information.
+2Positron
+Emission Tomography:
+shows physiological
+activity.
+3functional-Magnetic
+Resonance Imaging:
+shows physiological
+activity.
+
+P,a-mission to m&e digital or hard copies of all OFpart of this work for
+pcrso,,a~ or c,assroom llSe is granted without fee provided that c*pies
+are not made or distributed for profit or commercial advantageandthat
+copiesbear this notice and the full citation on the first Page. To copy
+other,vise, to republish, 10post on servers or
+to
+redistrWte to list%
+requires pior specificpermission and/or a fee.
+KDD-9')
+San Diego CA USA
+Copyright A(-.$ 1999 I-58113-143-7/99/08...$5.00
+utilizes
+specifically
+designed
+activation
+experiments.
+The BRAin Image Database (BRAID) [LWP+98], was
+developed
+at the Johns Hopkins
+Hospital
+for the pur-
+pose of functional
+brain
+mapping
+through
+the study
+of
+lesioned
+structures
+and associated
+deficits.
+Here,
+we
+present a data mining
+process that we follow in BRAID
+to discover brain lesion-deficit
+relationships.
+The meth-
+ods that we propose
+deal with
+the morphological
+vari-
+ability
+that exists between
+subjects
+and are scalable
+so
+that large longitudinal
+studies
+can be performed.
+
+
+2
+Background
+
+In lesion-deficit
+studies,
+the goal is to find associations
+among
+locations
+in the brain
+and functional
+deficits.
+The
+first
+step in this
+process
+is to make
+behavioral
+and image
+data
+comparable
+across subjects.
+In par-
+ticular,
+for the image
+data,
+after
+lesions
+are identi-
+fied (usually
+manually),
+image
+registration
+has to be
+performed
+to deal with
+the problem
+of morphological
+variability
+among subjects.
+This process maps homol-
+ogous
+anatomical
+regions
+to the same location
+in a
+stereotaxic
+space, such as the Talairach
+anatomical
+at-
+las [TT88].
+Several
+linear
+and nonlinear
+spatial
+trans-
+formations
+which bring
+the 3-D atlas and the subject's
+3-D image into register,
+i.e., spatial
+coincidence,
+have
+been developed
+[Boo89, MCAG93].
+In
+addition
+to
+patient
+3-D
+image
+data,
+BRAID
+contains
+a set of anatomical
+atlases of the human
+brain
+that model the exact shapes and positions
+of anatomical
+structures.
+An
+MR
+image
+does
+not
+identify
+the
+structure
+to which each voxel (volume
+element)
+belongs,
+but
+an anatomical
+atlas
+can supply
+this
+information,
+with
+the accuracy
+of the registration
+methods,
+when
+overlaid
+on the image (see Figure
+1). Although
+BRAID
+uses several atlases, here, for clarity
+of presentation,
+we
+concentrate
+on the Talairach
+atlas.
+After segmentation
+and registration
+the clinical
+infor-
+mation
+and image data are integrated
+into the database.
+The main objective
+in the implementation
+of our brain
+image
+database
+is to be able to manage
+image
+data
+from different
+modalities
+efficiently
+and transparently.
+
+
+
+
+347
+
+This is a difficult task because of the different image-file
+formats, the spatial and contrast resolutions,
+and the
+large amount of space that image data need. BRAID is
+implemented in Illustra,
+a commercial object-relational
+database management system (ORDBMS),
+mainly be-
+cause it provides an efficient query language based on
+extensions to SQL, the ability
+to create new abstract
+data types, and operators for them, and supports encap-
+sulation, inheritance
+and polymorphism
+that make ap-
+plications easier to develop and maintain.
+This is done
+through the development of datablades.
+We developed
+an image datablade that manages images extending the
+SQL language with an image datatype and operators
+like summation,
+intersection,
+type casting (e.g., con-
+version of images from the internal
+format to GIF),
+thresholding,
+scaling, volume calculation,
+etc. Statis-
+tical operators that operate on images were also im-
+plemented. To perform structure-function
+analysis, for
+example, one can submit an SQL query that will dis-
+play the distribution
+of lesions for all subjects that have
+a certain deficit (see Figure 2 for the sum of lesions for
+subjects that did and did not develop Attention
+Deficit
+Hyperactivity
+Disorder (ADHD)).'
+Most of the capa-
+bilities of BRAID
+are available through a web interface
+(see http://braid.rad.jhu.edu/interface.html).
+BRAID
+currently
+includes images and clinical infor-
+mation from over 700 subjects from two different stud-
+ies: the Cardiovascular
+Health Study (CHS) and the
+Frontal Lobe Injury
+in Children
+(FLIC) study. It also
+includes 5000 artificial
+subjects that were generated us-
+ing our lesion-deficit
+simulator [MHD99] which is based
+on the bayesian network model. The artificial
+subjects
+were used to test not only the scalability
+of our meth-
+ods but also to evaluate different lesion-deficit
+analysis
+methods as a function of the number of samples needed,
+the strength
+and complexity
+of lesion-deficit
+associa-
+tions, the spatial distribution
+of brain lesions, and the
+registration
+method used [MHD99].
+BRAID
+uses several statistical
+methods to determine
+structure-function
+associations, such as chi-square anal-
+ysis, log-linear analysis, logistic regression, and others,
+presented next. The chi-square test [And971 returns a
+p-value for each pair of structure and deficit; the lower
+the pvalue
+the stronger the evidence against the hy-
+pothesis of independence.
+Alternatively,
+one may use
+the Fisher exact test.
+
+3
+The
+methods
+3.1
+The preprocessing
+phase
+After the 3-D MR image is collected for each subject,
+each lesion is delineated
+by a neuroradiologist,
+as a
+
+4The
+datablades
+are object
+extensions
+that
+plug
+intelligence
+into
+the ORDBMS
+for specific
+kinds
+of data
+such
+as images.
+5Not
+all cases of ADHD
+are the result
+of brain
+lesions.
+ADHD
+also arises
+due to imbalances
+in the neurotransmitters.
+Figure 1: The (a) original MR image, (b) atlas, and (c)
+atlas image overlaid on the deformed MR image.
+
+
+region of interest (ROI) on each slice using thresholding
+and segmentation.
+Each ROI is reconstructed
+in three
+dimensions.
+The ROIs are then registered
+to the
+Talairach anatomical atlas. We use a nonlinear method
+based on a three-dimensional
+elastically
+deformable
+model [Dav97].
+The effect of registration
+of an MR
+image to the Talairach atlas is presented in Figure 1.
+
+3.2
+The mining
+methods
+After the segmentation of lesions and registration
+of the
+binary images to a common standard, the binary images
+consist of voxels that are either normal or abnormal
+(i.e., part of a lesion). These binary images are stored
+in the database as line segments mainly
+to reduce
+the space requirements.
+This structural
+image data
+combined with the functional
+variables form the data
+for each patient.
+Mining
+methods can operate on a
+resolution range from the spatially distinct structures of
+an anatomical atlas (atlas-based analysis) to the voxel
+level (voxel-based analysis).
+
+3.2.1
+Atlas-based
+analysis
+In the case where anatomical structures represent func-
+tional units, the atlas-based analysis is more sensitive
+than voxel-based analysis since the atlas provides sig-
+nificant prior knowledge.
+The first
+step in the atlas-based
+analysis
+is to
+calculate for each patient,
+pi, and structure,
+sj, the
+fraction of lesioned volume, fP,,sj. We present methods
+for continuous and categorical structural
+variables.
+In
+the second case we define a structure
+as lesioned or
+not based on the fraction
+of it that is lesioned.
+The
+conditional
+probability
+of abnormality
+of a structure
+sj
+given
+fPz,Sj,
+P(Sj Ifp,,sj),
+is expected to be a sigmoid
+function.
+For simplicity,
+in the case of categorical
+structural
+variables, a patient
+is treated as having a
+lesion in a structure if the intersection
+of all his lesions
+with the structure
+is at least one voxel.
+To remove
+the effect of thresholding
+we also analyze the atlas
+structures as continuous variables, considering for each
+one, the fraction that is abnormal (lesioned).
+In the case where the search of the model that ex-
+plains the data observed can be directed through spe-
+cific hypotheses or prior knowledge, the situation
+is eas-
+
+
+
+
+348
+
+ier.
+The hypotheses can be formed after using explo-
+rative visualization
+or other methods, and can be tested
+using statistical
+tests. An example where visualization
+helps to reduce the search space for a model is shown
+in Figure 2. If there is little preconception
+about the
+relationships
+between the variables, all the possibilities
+have to be explored. This exploratory,
+or data mining,
+analysis is presented below. There are two approaches
+one can follow: the bivariate
+(pairwise) and the multi-
+variate analysis.
+
+Bivariate
+analysis
+Let F be the number of functional
+and 5' be the num-
+ber of structural
+variables respectively.
+In the case of
+categorical structural
+variables we construct F x S two-
+way contingency
+tables and we compute for each one
+the Fisher exact test. The associations between struc-
+tures and deficits are sorted in increasing order of the
+p-values returned from the exact tests and the ones with
+the lowest p-values are reported. For continuous struc-
+tural variables we use the Mann-Whitney
+test and lo-
+gistic regression analysis.
+The Mann-Whitney
+statis-
+tic is used because the distributions
+of the fractions
+of lesioned volumes are not Gaussian.
+In exploratory
+analysis of either categorical or continuous structural
+variables, computing a statistic for many pairwise tests
+creates the multiple
+comparison problem, i.e., certain
+portion
+of the tests to be positive by chance.
+Since
+a standard Bonferroni correction [And971 overestimates
+the number of independent tests performed in this case,
+we use a heuristic modification,
+the sequential Bonfer-
+roni correction [And971 to get more reasonable results.
+
+Multivariate
+analysis
+Complex multivariate
+associations may not be found
+by multiple use of bivariate statistics.
+For example con-
+sider a deficit that is associated with two structures and
+appears only when both of them are lesioned.
+Also,
+multivariate
+analysis is free of the multiple
+compari-
+son problem since it evaluates an entire model with one
+statistic.
+A multivariate
+extension of the chi-square test
+for categorical variables is the log-linear analysis. Logis-
+tic regression is another multivariate
+method that can
+be used to relate the log-odds of having a particular
+deficit to the fra.ction of lesioned structures. We use the
+stepwise logistic regression, where the algorithm that is
+used for discovering the model that explains the interac-
+tions, starts with no associations and a greedy approach
+is applied to add (or delete) associations based on their
+relative strength.
+
+
+3.2.2
+Voxel-based
+analysis
+
+The atlas-based analysis results are as good as the atlas
+that is being used. Instead of imposing a model on the
+image data, one can analyze them on a voxel-by-voxel
+basis. A voxel can be either normal'or
+abnormal so, in
+this case, the structural
+variables are categorical.
+Given
+that the number of voxels that we consider are on the
+order of lo7 we have to perform so many (i.e., 107)
+Fisher exact tests for each of the functional
+variables
+that we examine.
+For each deficit,
+d, we create two
+image files. Each voxel of the first (second) file is the
+sum of the corresponding
+voxels in the binary images
+for patients who have (do not have) the deficit.
+The
+calculation
+of the contingency
+table and of the Fisher
+exact test is computationally
+tractable
+if these two
+image files can be efficiently constructed.
+The multiple-
+comparison problem is even more intense here due to
+the large number of tests we perform. However, in this
+case, it can be attacked with clustering
+analysis since
+random false positives will not tend to cluster.
+We also use voxel-based regression analysis to deter-
+mine whether voxels in a certain region are associated
+with a functional
+variable.
+We construct
+a regression
+equation that relates lesions in a sphere of a given ra-
+dius and center to a deficit.
+Let 1 be a lesion, o be
+a sphere, v(r) denote the volume of a region T, and
+i(rr ,~2) denote the intersection
+of two regions ~1 and
+73. The identification
+of the causal region is done by
+calculating
+the optimal center and radius for the logis-
+tic regression equation:
+
+logit
+= log(oddsd)
+= afs + b
+
+where oddsd = a,
+pd(.) is the probability
+of having
+a certain deficit d (e.g., ADHD),
+fs = w
+is the
+fraction of the sphere that is lesioned, a =(log odds of
+d)/(lesioned
+fraction of sphere volume), and b the prior
+log odds of deficit d. Given the center (2, y, .z) and the
+radius T of the sphere, solving this equation,
+we can
+find values for the parameters a and b such that the
+sum of squares of residuals is minimized.
+The goal is
+to optimize the sphere parameters (x:, y, Z, r) to obtain
+the best fit of the data to the regression line. We use
+simulated annealing for the optimization.
+The solution
+is the sphere that best discriminates
+between lesions
+that are and are not associated with deficit d.
+This
+nonlinear
+optimization
+procedure
+is computationally
+intensive.
+
+4
+Results
+Visualization
+applied prior to the analysis procedure
+can help direct the analysis by choosing certain struc-
+tures of the anatomical
+atlas to examine further
+us-
+ing the statistical
+tests.
+In Figure 2 we present the
+sum of images of all lesions over subjects that did and
+did not develop ADHD (ADHD+
+and ADHD-,
+respec-
+tively) . Based on these images and on previous research
+implicating
+a frontal lobe-basal ganglia-thalamic
+path-
+way, we choose the right putamen and the left thalamus
+
+
+
+
+349
+
+Tal-113
+Tal-
+16
+Tal-119
+
+Figure
+2:
+Sum
+of lesions
+for the ADHD+
+and the
+ADHD-
+group of patients
+(3 slices of the Talairach
+atlas
+are shown for each group).
+The right
+putamen
+and left
+thalamus
+are also presented.
+
+Fisher's
+exact
+Mann-Whitney
+p-value
+0.033
+0.093
+
+Table
+1: Statistical
+analysis
+of selected
+Talairach
+atlas
+structures
+for association
+with ADHD
+(FLIC
+data set).
+
+
+
+(highlighted
+in Figure
+2)6 for further
+analysis
+using the
+Fisher exact test for categorical
+and the Mann-Whitney
+test for continuous
+structural
+variables
+(see Section
+3).
+The p-values
+in Table
+1 confirm
+that
+there is a strong
+association
+between
+lesions
+in the two structures
+and
+development
+of ADHD.
+Testing
+the mining
+capabilities,
+we ran an exploratory
+analysis
+on the CHS data set (300 subjects)
+in which
+BRAID
+used
+the
+chi-square
+test
+to
+evaluate
+two-
+way contingency
+tables
+for all pairwise
+combinations
+of atlas
+structures
+(90) and functional
+variables
+(14)
+returning
+a sorted list (by p-value)
+of structure-function
+associations.
+The
+five
+most
+significant
+associations
+are presented
+in Table
+2.
+Highly
+significant
+lesion-
+deficit
+associations
+detected
+by BRAID,
+such as visual
+field
+deficit
+and
+lesions
+in
+contralateral
+orbital
+or
+cuneate
+gyrus,
+are also consistent
+with
+current
+clinical
+knowledge.
+The incorrect
+association
+between
+the left
+hippocampus
+and a right
+visual
+field deficit
+is due to
+registration
+error
+since
+the
+hippocampus
+is next
+to
+the optic
+radiations
+that
+are very
+well known
+to be
+correlated
+with
+a visual
+field deficit.
+Preliminary
+stepwise
+logistic
+regression
+analysis
+using
+continuous
+structural
+variables
+from the FLIC
+data set
+
+`Due
+to the compromised
+connections
+between
+the frontal
+lobe
+and these
+two structures,
+it is believed
+that
+the frontal
+lobe is not
+able
+to exert
+its normal
+oversight
+function
+to supress
+impulsive
+urges
+and
+behaviors.
+A common
+behavioral
+pattern
+in patients
+with
+ADHD
+is extreme
+impulsivity
+and
+lack of self-control.
+Function
+x2
+'
+p-val.
+
+
+R hemiparesis
+0.00001
+R visual
+defect
+0.00001
+L pronat.
+drift
+0.00002
+L visual
+defect
+0.00003
+L visual
+defect
+0.00003
+S-Bonf.
+correct.
+p-val.
+0.0039
+
+
+
+
+i
+0.0095
+0.0195
+0.0225
+0.0224
+
+
+Table
+2: The five most
+significant
+structure-function
+associations
+given by the chi-square
+analysis
+on the CHS
+data set.
+
+
+
+
+Figure
+3:
+Voxel
+based
+analysis
+for
+development
+of
+ADHD.
+
+
+show similar
+results
+for the development
+of ADHD.
+This method
+identified
+the left SupCerebellarA
+(which
+is lateral
+to the left putamen
+area) as a strong predictor.
+Results
+from
+a preliminary
+voxel-based
+analysis
+for
+the ADHD
+variable
+of the FLIC
+data set are presented
+in Figure
+3.
+Each
+voxel
+represents
+the
+p-value
+for
+the association
+between
+the voxel
+being
+lesioned
+and
+the development
+of ADHD.
+Six slices of the Talairach
+atlas
+along
+with
+a grayscale
+bar
+that
+shows
+the
+correspondence
+between
+pvalues
+and greyscale
+values
+are shown.
+A 3-D reconstruction
+is shown in Figure
+4.
+The
+higher
+the
+intensity
+the
+lower
+the
+pvalue,
+or
+the higher
+our confidence
+is that
+a certain
+location
+is
+associated
+with
+development
+of ADHD.
+These
+results
+are consistent
+with
+those of the atlas-based
+analysis.
+Figure
+5 shows the results
+of the voxel-based
+regres-
+sion analysis for ADHD.
+We display
+just one representa-
+tive slice (119) of the Talairach
+atlas.
+Figures
+5(a) and
+(b) show the sum of all lesions for patients
+that did and
+did not develop
+ADHD
+respectively.
+Figure
+5(c) shows
+the optimal
+regression
+sphere
+that
+best discriminates
+between
+lesions
+that
+are and are not
+associated
+with
+t,he development
+of ADHD.
+These results
+are consistent
+with
+all the previous
+ones for ADHD.
+
+
+5
+Discussion
+
+We consider
+the problem
+of mining
+lesion-deficit
+asso-
+ciations
+in a Brain
+Image
+Database
+and we propose
+
+
+
+
+350
+
+Figure
+4: Visualization
+of the voxel-based
+analysis
+p-
+value volume
+for development
+of ADHD.
+
+
+
+
+Figure
+5: The optimal
+regression
+sphere
+(c) that
+best
+discriminates
+the (a) ADHD+
+and (b) ADHD-
+groups.
+
+
+
+several
+mining
+methods.
+Visualization
+can reduce the
+search
+space by directing
+the analysis.
+Exploratory
+pairwise
+analysis
+produces
+reasonable
+results
+although
+one has to deal with
+the multiple-comparison
+problem.
+Our preliminary
+voxel-based
+analysis
+presents
+encour-
+aging
+results.
+We plan
+to investigate
+more
+complex
+spatial
+analysis
+models
+and include
+clustering
+analysis
+in the voxel-based
+approach.
+Our voxel-based
+regres-
+sion analysis
+performs
+considerably
+well in cases other
+than multifocal
+functional
+associations.
+However,
+both
+of our voxel-based
+approaches
+are computationally
+in-
+tensive.
+Our statistical
+simulations
+[MHD99]
+show that
+more advanced
+mining
+methods
+and large sample sizes
+are required
+to determine
+lesion-deficit
+associations
+ac-
+curately,
+reducing
+the number
+of false positives.
+Mul-
+tivariate
+analysis
+methods
+like log-linear
+regression
+and
+logistic
+regression
+provide
+relatively
+simple methods
+for
+generating
+candidate
+models,
+usually
+relying
+on modi-
+fications
+of greedy search and make assumptions
+about
+cell frequencies
+or total
+number
+of samples
+that
+may
+not hold for rare lesions or deficits.
+A more promis-
+ing approach
+generates
+models that consist of graphical
+structures
+along with
+statistical
+independence
+models,
+called bayesian
+networks
+[Pea86], scores each model and
+returns
+the most probable
+model
+that
+could have gen-
+erated the data at hand [CH92].
+
+
+Acknowledgments
+
+We thank
+Meiyappan
+Soleiyappan
+for developing
+the
+volume
+rendering
+part
+of the
+visualization
+system.
+We also thank
+the
+reviewers
+for
+their
+constructive
+comments.
+This
+work
+was supported
+by
+National
+Institutes
+of Health
+grant
+ROl AG13743-03,
+and by an
+Engines
+for Innovation
+grant from Illustra.
+References
+
+[ACF+96]
+
+
+
+
+[And971
+
+
+
+
+[Boo891
+
+
+
+
+[CH92]
+
+
+
+
+[Dav97]
+
+
+
+
+[HKL93]
+
+
+
+
+[LwP+98]
+.
+
+
+
+
+[MCAG93]
+
+
+
+
+[MHDSS]
+
+
+
+
+[Pea861
+
+
+
+
+[TT88]
+Manish
+Arya,
+William
+Cody,
+Christos
+Faloutsos,
+Joel
+Richardson,
+and
+Arthur
+Toga. A 3D Medical
+Image Database
+Man-
+agement
+System.
+Int.
+Journal
+of Com-
+puterized
+Medical
+Imaging
+and
+Graphics,
+Special
+issue on Medical
+Image
+Databases,
+20(4):269-284,
+Apr.
+1996.
+
+E.B. Andersen.
+Introduction
+to the Statis-
+tical Analysis
+of Categorical
+Data.
+Springer
+Verlag,
+Berlin,
+1997.
+
+F.L.
+Bookstein.
+Principal
+Warps:
+Thin-
+Plate Splines and the Decomposition
+of De-
+formations.
+IEEE
+Trans. on Patt.
+Analysis
+and Machine
+Intellig.,
+11(6):567-585,
+1989.
+
+G. F. Cooper
+and E. H. Herskovits.
+A
+bayesian
+method
+for the induction
+of proba-
+bilistic
+networks
+from data. Machine
+Learn-
+ing, 9:309-347,
+1992.
+
+C. Davatzikos.
+Spatial
+transformation
+and
+registration
+of brain images using elastically
+deformable
+models.
+Comp.
+Vision
+and
+Image
+Understand.,
+66(2):207-222,
+1997.
+
+M. Huerta,
+S. Koslow,
+and
+A.
+Leshner.
+The human
+brain project:
+An international
+resource.
+Trends
+Neurosci.,
+16:436-438,
+1993.
+
+S.I. Letovsky,
+S.H.J. Whitehead,
+C.H. Paik,
+G.A.
+Miller,
+J. Gerber,
+E.H.
+Herskovits,
+T.K.
+Fulton,
+and R.N.
+Bryan.
+A brain-
+image database
+for structure-function
+anal-
+ysis.
+American
+Journal
+of Neuroradiology,
+19(10):1869-1877,
+1998.
+
+M.I. Miller,
+G.E. Christensen,
+Y. Amit,
+and
+U. Grenander.
+Mathematical
+Textbook
+of
+Deformable
+Neuroanatomies.
+Proc.
+of the
+National
+Academy
+of Sciences,
+90:11944-
+11948, 1993.
+
+V. Megalooikonomou,
+E.H. Herskovits,
+and
+C. Davatzikos.
+Evaluation
+of a Statisti-
+cal Analysis
+Model for Detection
+of Lesion-
+Deficit
+Associations.
+Human
+Brain
+Map-
+ping, 1999. In review.
+
+J. Pearl.
+Fusion,
+propagation
+and struc-
+turing
+in belief
+networks.
+Artificial
+Intel-
+ligence, 29:241-288,
+1986.
+
+J. Talairach
+and P. Tournoux.
+Co-planar
+Stereotaxic
+Atlas
+of
+the
+Human
+Brain.
+Thieme,
+Stuttgart,
+1988.
+
+
+
+
+351
+

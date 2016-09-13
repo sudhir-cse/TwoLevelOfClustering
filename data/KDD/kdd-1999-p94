@@ -1,0 +1,1327 @@
+Statistics and Data Mining Techniques for Lifetime Value
+Modeling
+D. R. Mani
+James Drew
+.Andrew Betz
+GTE Laboratories Incorporated
+40 Sylvan Road
+Waltham, MA 02451
+{mani, jdrew, abetz, pdatta}@gte.com
+Piew Datta
+
+
+
+
+ABSTRACT
+Customerlifetime value (LTV)-which
+is a measureof the profit
+generating potential, or value, of a customer-is increasingly
+being considered a touchstone for customer relationship
+management.The central challenge in predicting LTV is the
+production of estimatedcustomer tenures with a given service
+supplier, basedon information contained in companydatabases.
+Classical survival analysis techniques like proportional hazards
+regressionfocus on covariate effects frequently presumedto be
+linear, and examination of age-wise effects can be difficult.
+Further, segmentsof customers,whose lifetimes and covariate
+effectscanvary widely, arenot necessarilyeasyto detect. A new
+neural network model for hazard prediction is used to free
+proportional hazards-like models from their linearity and
+proportionality constraints, and clustering tools are applied to
+identify segments of customer hazard patterns.
+Using the
+proportional hazardsand neural network models in tandem,we
+demonstratehow datamining tools canbeaptcomplementsof the
+classical statistical models, and show that their combined usage
+overcomesmany of the shortcomingsof eachseparatetool set-
+resulting in a LTV tenure prediction model that is both accurate
+andunderstandable.
+Keywords
+Survival Analysis, Neural Networks, Lifetime Value, Tenure
+Prediction, Proportional HazardsRegression
+
+1. INTRODUCTION
+In the global competitive marketplace,businessesregardlessof
+size are beginning to realize that one of the keys to profitable
+growth is establishing and nurturing a one-on-one relationship
+with the customer. Businessesnow realize that retaining and
+growing existing customersis much more cost effective than
+focusing primarily on adding new customers. To this end,
+techniques for customer relationship management (CRM) are
+being designed, developed and implemented. These techniques
+should help businessesunderstandcustomerneedsand spending
+
+
+Prmission
+to make digital or hard copies ofall or part ol' this work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies hear this notice and the full citation on the lirst page. TO COPY
+otherwise, to republish, to post on servers or to rcdistrihute 10 lists.
+requires prior specific permission and?`ora fee.
+KDD-99 SanDiego CA USA
+Copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+patterns,andhelp developtargetedpromotionswhich arenot only
+better tailored for eachcustomer,but are also more profitable to
+thebusinessesin thelong run.
+Customer lifetime value (LTV)-which
+measures the profit
+generating potential, or value, of a customer-is increasingly
+being consideredatouchstonefor administering the CRM process
+in order to provide attractive benefits to, and retain, high-value
+customers,while maximizing profits from a businessstandpoint.
+Robustandaccuratetechniquesfor modeling LTV areessentialin
+order to facilitate CRM via LTV. As we note in the following
+sections,managementvia LTV is not well served by the mere
+computationof anLTV score.A customerLTV modelneedsto be
+explicated andunderstoodto a degreebeforeit can be adoptedto
+facilitate CRM.
+LTV is usually consideredto be composedof two independent
+components-tenure and value. Though modeling the value (or
+equivalently, profit) component of LTV-which
+takes into
+accountrevenue,fixed andvariable costs-is achallengein itself,
+our experience has been that finance departments,to a large
+degree, dictate this aspect. In this paper, we therefore focus
+exclusively on modeling tenure. There are a variety of standard
+statistical techniques arising from survival analysis (e.g., [6])
+which can be applied to tenure modeling. We look at tenure
+prediction using classical survival analysis and compareit with
+"hybrid" data mining techniques that use neural networks in
+conjunction with statisticaltechniques.We demonstratehow data
+mining tools can be apt complementsof the classical statistical
+models,and show that their combined usageovercomesmany of
+the shortcomings of each separatetool set-resulting in LTV
+modelsthatareboth accurateandunderstandable.
+
+1.1 Overview
+Section 2 elaborateson the definition of LTV and discusses
+possible applications of LTV. Section 3 summarizes the key
+challenges in tenure modeling for LTV. The data used in
+exploring and comparingvarious techniquesfor tenure modeling
+is described in Section 4. Classical survival analysis for LTV
+tenure modeling is discussed in Section 5, while the neural
+network model is the subject of Section 6. Comparison of
+experimentalresultsin Sections5 and6 show that neural network
+modelsare significantly more accurate.In Section 7, we discuss
+techniquesto explicate andinterpret the neural network. We adapt
+statistical methodsin both developing and understanding neural
+network models.The final sectionsummarizesthe paper.
+
+2. LIFETIME VALUE (LTV)
+LTV is a compositeof tenureand value. The central challenge of
+the prediction of LTV
+is the production of estimated,
+
+
+
+
+94
+
+differentiated (disaggregated)tenures for every customerwith a
+given service supplier, basedon the usage,revenue, and sales
+profiles contained in company databases.Tenure prediction
+models we develop generate,for a given customeri, a hazard
+curve or hazard function that indicates the probability hi(t) of
+cancellation at a given time t in the future. Figure 5.1 shows an
+exampleof ahazardfunction. A hazardcurve canbeconvertedto
+a survival curve or survival function, which plots the probability
+Si(t) of "survival" (non-cancellation) at any time t, given that
+customer i
+was "alive"
+(active) at time (t-l),
+i.e.,
+Si(t) = Si(t -l)X[l-hi(t)]
+with Si (l)=l.
+Section 5 formally
+defines hazard and survival functions. Armed with a survival
+curve for a customer, LTV for that specific customer i is
+
+computed as:
+LTV
+= ~~=I Si (t)xvi(t)
+where vi(t) is the
+
+expectedvalueof customeri attime t, and T is the maximumtime
+period under consideration. This approachto LTV computation
+provides customer specific estimates (as opposed to average
+estimates)of total expected future (as opposed to past) profit
+basedon customerbehavior andusagepatterns.
+
+2.1 Applications of LTV
+In the realmof CRM, modeling customerLTV hasa wide range
+of applicationsincluding:
+.
+Special services (e.g., premium call centers and elite
+service) and offers (concessions,upgrades,etc.) basedon
+customerLTV-the
+more valuable a customer,the more
+irresistible services and offers could be, subject to
+satisfactoryprofit marginsfor the business.
+.
+Targetingandmanagingunprofitable customers.
+.
+Segmentingcustomers,marketing,pricing and promotional
+analysisbasedon LTV.
+.
+Sizing and planning for future marketopportunity basedon
+cumulative customerLTV.
+Some of these applications would use a single LTV score
+computed for every customer. Other applications require a
+separation of the tenure and value component for effective
+implementation,while evenotherswould useeither the tenureor
+valueandignore theothercomponent.
+In almost all cases,business analysts who use LTV are most
+comfortablewhen the predictedLTV scoreand/or hazardcan be
+explained
+in intuitive terms. For successful use of LTV in
+business applications, we posit that mere computation of an
+accurateLTV score or hazard is insufficient. The underlying
+predictive
+model
+should
+be
+transparent and
+easily
+understandable-either by design, or explicated explicitly.
+Transparentmodels (e.g., proportional hazardsregression)may
+not be very accurate, while accurate models (e.g., neural
+networks) may be inscrutable. In this work we demonstratethe
+use of hybrid statistical and data mining techniques to build
+accurateand understandablemodelsfor LTV prediction.
+
+2.2 Assumptions
+Whendefining LTV asameasureof customervalue, therearetwo
+possibleinterpretations:(i) LTV to a given serviceprovider (e.g.,
+cellular telephoneservice with GTE Wireless); and (ii) potential
+LTV of a customerfor that service,irrespectiveof provider (e.g.,
+customer'sneed or willingness to use cellular telephones).The
+latter interpretation is more difficult to define and compute, and
+lessuseful from aCRM perspective.We thereforeexclusively use
+the "LTV to agiven serviceprovider" interpretation.
+When modeling LTV using tenure and value, we use current
+revenue,behavior, usageand billing data for a given customer.
+The resulting model is assumedto be valid for a reasonabletime
+span into the future. This may not always be true for all
+customers,either due to customerlife changes,or due to targeted
+marketing efforts by the service provider. Such change is
+extremely difficult to model directly. We assumethat the LTV
+modelswill beperiodically recalibratedto capturesuchchange.
+
+3. CHALLENGES
+Given that LTV is defined in terms of a survival function, a
+distinguishing and challenging feature of tenure prediction is
+computing the disaggregatedor differentiated hazardfunction for
+every customer.Classical statistical techniques (Section 5) like
+proportional hazards regression provide estimates of hazard
+functions that are dependenton often questionable assumptions
+andcanyield implausible tenureestimates.
+If each customer can be observed from subscription to
+cancellation, predictive modeling techniques can be directly
+applied. In reality, where a large majority of customersare still
+currently subscribers,the dataareright censored. While classical
+survival analysis can handle right censoring, data mining
+techniqueslike neural netsareill adaptedto directly dealing with
+censoreddata.The situation is further complicatedby the fact that
+companydatabasesoften do not retain information on customers
+who have cancelled in the past. Thus, observed(and censored)
+lifetimes are biased by the exclusion of (relatively short-lived)
+customers canceling before the database's observation start
+period. This is leji truncation, recognizedby [3] and [9], which
+needsto be systematicallyaddressedin order to build reliable and
+unbiasedtenuremodels.
+Evaluating tenure models by comparing against actual
+cancellationsis anotherchallenge due to the prevalenceof right
+censoring.Furthermore,the small fraction of cancellationsthat are
+observedcould beabiasedsample.
+Lastly, real world customerdatabaseshave large amountsof data
+(Section 4), and relatively frequent recomputation of LTV is
+neededto accommodatefor changesin customer behavior and
+market dynamics. We therefore need a reasonably automated
+techniquethatcanhandlelargeamountsof data.
+
+4. CUSTOMER DATA FOR LTV TENURE
+PREDICTION
+In this paper,we apply statistics and data mining techniques to
+modelLTV for GTE Wireless' cellular telephonecustomers.GTE
+Wirelesshasa customerdatawarehousecontaining billing, usage
+and demographic information. The warehouse is updated at
+monthly intervals with summary information by adding a new
+recordfor every active customer,and noting customerswho have
+cancelledservice. GTE Wirelessofferscellular servicesin a large
+numberof areasaivided into markets-scattered throughout the
+United States.Becauseof differences arising from variations in
+thegeography,composition andmarketdynamicsof the customer
+base,webuild individual LTV tenuremodelsfor eachmarket.
+
+
+
+
+95
+
+For the purposesof LTV tenure modeling reportedin this paper,
+we obtain a dataextract from the warehousewhereeachcustomer
+recordhasabout30-40 fields including:
+.
+Ident@ution:
+cellular phonenumber,accountnumber;
+.
+Billing: previous balance;chargesfor access,minutesused,
+toll, roamingandoptional features;
+.
+Usage:total numberof calls, minutes of usefor local, toll,
+peakandoff-peakcalls;
+.
+Subscription:
+number of months in service, rate plan,
+contracttype,date andduration;
+.
+Churn: a flag indicating if the customer has cancelled
+service;
+.
+Other: age, current and historical profitability, optional
+features.
+We use data from a single, relatively small, market containing
+approximately 21,500 subscribers. The datarepresentscustomer
+behavior summaryfor the monthof April 1998.The chum flag in
+this data would indicate those customerswho cancelled service
+during the month of April 1998. Approximately 2.5% of
+customerschurned in that period, resulting in 97.5% of censored
+observations.This datasetis usedin both the statistical and data
+mining approaches,and facilitates comparison of the various
+techniques.
+
+5. CLASSICAL STATISTICAL
+APPROACHES TO SURVIVAL ANALYSIS
+There are three classic statistical approachesfor the analysis of
+survival data,largely distinguished by the assumptionsthey make
+aboutthe parametersof thedistribution(s) generatingthe observed
+survival times. All deal with censoredobservationsby estimating
+hazardfunctions {hi(t)} where
+
+
+hi(t) =
+I
+Probability of subjecti's deathattimet,
+given subjecti's lifetime is t orgreater
+
+or the survival function {Si(t)} where
+
+Si(t) = Probability that subjecti's lifetime is no lessthan t
+
+Parametricsurvival models(see,e.g., [131)estimatethe effectsof
+covariates(subjectvariableswhosevaluesinfluence lifetimes, i.e.,
+independentvariables)
+by presuming a lifetime distribution of a
+known form, such as an exponential or Weibull. While popular
+for someapplications (especially acceleratedfailure models),the
+smoothness of these postulated distributions makes them
+inappropriate for our data with its contract expiration date and
+consequentbuilt-in hazard"spikes"(for example,seeFigure 5.1.)
+In contrast, Kaplan-Meier methods [1l] are non-parametric,
+providing hazardand survival functions with no assumptionof a
+parametriclifetime distribution function. Supposedeathsoccur at
+times tl < t2 < ...< tK , with dk deathsattime tk . Let rk bethe
+number of subjectsat risk at time tk . (In our data situation,
+where we observeall subscribersactive within a one-monthtime
+period, rk is the number of subjectsof agek at the start of the
+month, and dk is the number of these age k customersdying
+during that month. Different data sampling methods-including
+all customersactive within a larger rangeof time, for instance-
+require morecomplicatedaccounting for thoseat risk.) Then the
+(aggregate)hazardestimatefor time tk is
+
+dk
+h(t)=-,t,
+<t<tk+l
+`k
+Equation 5.1
+
+andthe survival function is estimatedby
+
+W>= n(l -h(O)
+k:t, <t
+Equation 5.2
+
+
+Note that this estimator cannot easily estimate the effects of
+covatiates on the hazard and survival functions.
+Subsets of
+customers can generate separateKaplan-Meier estimates, but
+sample size considerations generally require substantial
+aggregationin the data,so that many customersare assignedthe
+samehazardand survival functions, regardlessof their variation
+on manypotential covariates.
+This latter problem hasa classic solution in proportional hazards
+(PH) regression[5]. This model is semi-parametricin the sense
+that all subjects have a common, arbitrary baseline hazard
+function h(t)
+which is relatedto an individual's hazardfunction
+by a multiple which is a parametric function of covariates
+{.&-Iii =
+42,...)n;c = 42,...,c:
+
+
+Equation 5.3
+
+
+wherei=l 2
+, ,...,n indexesthe n subjects,c=1,2,...,C indexesthe C
+covariates,and@,}
+p
+re resentparametersestimatedduring the PH
+regression. In our situation covariates include data such as
+variouschargesper month,aswell asdummyvariablesto indicate
+presenceof adiscreteattribute:
+
+&=
+1
+1, if Attribute A is presentin theith subject
+0, otherwise
+
+This model has two conceptual and one operational sets
+c
+shortcomings. First, the form of the multiplier exp
+c
+PC+
+
+Cd
+of
+I
+is
+
+usually chosenfor convenience,exceptin the rareinstancewhere
+substantive knowledge is available. The form is, of course,
+reasonableasa first step,to uncover influential covariates,but its
+essentially linear form tendsto assignextremevalues to subjects
+with extremecovariatevalues. Thereis no mechanismto stopany
+componentof the estimatedhazardfunction from exceeding 1.0.
+Second,the presumptionof proportional hazardsis restrictive in
+that there may not be a single baseline hazard for each subject,
+andthe form of that baseline'svariation may not be well modeled
+by the time-dependentcovariates or stratification that are the
+traditional statisticalextensionsof theoriginal PH model.
+An operational difficulty of PH regressionlies in its de-emphasis
+of explicit calculation of baseline hazards. This problem is
+particularly acutein our situation of observing subjectsover one
+month only of their lifetimes instead of following a cohort from
+birth until death/censoring. The standardpackages(e.g., [11)do
+not allow the direct estimationof abaselinehazardfunction when
+time-dependent covariates are used, and our data situation
+
+
+
+
+96
+
+describedabove(in which subjectsaretakento be available only
+during the one month observation period) is construed as
+introducing a time-dependence.Some of these issues with PH
+regressionare addressedby [121,where a parametric solution
+attemptsto overcomesomeof the limitations.
+Fortunately, in our case,deathsare only recordedas occurring
+during a particular month, sothere aretypically manydeathsthat
+effectively occur simultaneously.In [171,it is shown that the PH
+coefficients can be estimatedvia a form of logistic regression.
+The complementary-log-log(CLL) model
+
+C
+
+lO&
+log{1 - hi(t)}]
+=
+a, + c BcXic
+Equation5.4
+
+C=l
+
+yields theoretically the samecoefficients @,} asthe PH model,
+and furthermore gives baseline age effects (a,} which can be
+translatedinto baselinehazardcomponentsvia
+ii,(t) = 1-exp(-exp(a,))
+Equation 5.5
+
+Direct estimation of the baseline hazard function values is very
+useful, both in itself, and facilitates the hazard function
+estimationsfor eachindividual subject. Oncethe hazardfunction
+hi(t) is estimated for each subject i, the individual survival
+function is estimatedas
+
+
+Si(l/f )=fi(l-hi(?))
+I=0
+Equation5.6
+
+
+andthe medianlifetime is estimatedasthe interpolatedvalue of t
+for which $(t) = 0.5 . It is important to note that the later
+estimateis very sensitive to the choice of the baseline hazard
+function.
+
+5.1 Results
+The CLL model was fit to the datadescribedabove(Section 4).
+The covariateswerechosenby acombination of classicalvariable
+selection techniques like backward elimination and forward
+selection,subjectmatterexpert opinion and intuitive examination
+of coefficients. The resulting baselinehazardfunction is shownin
+Figure 5.1,
+
+
+I .
+. "
+
+
+
+
+0.14
+
+0.12
+
+e
+0.1
+
+g0JX
+
+=0C6
+
+0.M
+
+o.a?
+
+0
+14
+710131619~25aB313437404346852555861646770
+TBueilrmrzS
+
+
+
+Figure 5.1: The baselinehazard function.
+
+By many statistical standards,the CLL model producing this
+hazardfunction fits the data well. The covariates,including the
+baselinehazardcoefftcients, arehighly significant (X*=10059.75
+with 71 df, pcO.OOOl),andSomer'sD=O.502.
+However, the graphin Figure 6.lb showsthe "relation" of tenure
+predictedby this model, and actual tenuresobservedfrom those
+who died during the observation period. For these data, the
+predictedlifetimes arequite poor.
+These classical statistical techniques are subject to three major
+problemsin estimating lifetimes. First, the functional forms for
+the effect of the covariatesmust be assumed,and are typically
+chosen to be linear or some mild extension thereof. More
+sophisticated choices tend to be cumbersome and major
+exploration of better-fitting forms is generally manual, ad-hoc,
+and destructive of the significance tests which motivate the
+statistical approaches.Second,many of theseforms work poorly
+with outlying valuesof the covariates,so it is possiblethat some
+customerswith extreme covariate values may be assigned an
+unlikely or impossiblehazardfunction, e.g.onein which someof
+its componentsexceed1.0. Both of thesesituations arepossible
+in the usual proportional hazards model, where for covariates
+{Q),c = 1,2,...,Cthe traditional functional form for the multiple
+
+of the baseline hazard is exp(ipcxci)
+for the ith customer.
+CA
+Third, the baseline hazard function is not easily made to vary
+acrosssubsetsof the customerpopulation. This is a particularly
+seriousdefectwhen the object is to estimateindividual customer
+lifetimes, rather than covariate effects as is traditional in PH
+analysis. Incorrect specification of a customer'shazardfunction
+can seriously misestimate tenure, frequently through the
+misestimateof anyisolated"spikes."
+
+6. NEURAL NETWORKS FOR SURVIVAL
+ANALYSIS
+Whenapplied to survival analysis,multilayer feed-forwardneural
+networks (NN)
+[8]-being
+non-linear, universal function
+approximators [lO]-can
+overcome the proportionality and
+linearity constraints imposed by classical survival analysis
+techniques(Section5). with the potential for moreaccuratetenure
+models. But the large fraction of censoredobservationsin real
+world data (Section 4) for LTV modeling precludes using the
+neural network to directly predict tenure. The actual tenure to
+cancellation is unknown for censoredcustomerssince they are
+currently active-all we know is their tenure to date, and using
+this instead of tenure to cancellation would be inaccurate and
+unsatisfactory.Ignoring censoredcustomers,on the other hand,
+not only results in discarding a lot of data,but also results in a
+small and biased training dataset.Before describing our neural
+network methodology, we discuss related work to establish the
+context for our approach.
+
+6.1 Related Work
+Severalresearchershave explored the possibility of using neural
+networks (NN) for survival analysis in the context of medical
+prognosis. Some of this work, for example [4], formulates
+survival analysisasa classification (yes-no) problem by building
+neural networksto modeldecisionsof the form "Will the eventof
+interest happen at time t?' From our perspective, such a
+formulation is unsatisfactory,since LTV is defined in termsof a
+survival (or equivalently, hazard) function
+(Section 2).
+Furthermore,asbrought out in Section7, investigation of baseline
+hazard functions is crucial to explicating the neural network
+modelto abusinessanalyst.We thereforeonly review work where
+someform of asurvival curve is predicted.
+
+
+
+
+97
+
+Table 1: Computation of hi(t) witb T=6.
+Kaplan-Meier hazardfor t=3,4,5 and6 areassumedto be0.06,0.04,0.03 and0.1 respectively.
+Ravdin and Clark [18] use a multilayer feed-forward neural
+network with a single output unit to predict survival probabilities
+for breastcancerpatients.Their formulation encodestime asone
+of the input (independent) variables and results in replicating
+input recordsfor every time interval under consideration. If the
+survival probabilities were computedover the time period [1,7J,
+an uncensoredinput would be replicated T times with the time
+variable ranging from 1 to T; a censoredinput is replicated t
+times,wheret is the time of the last observation.This encodingof
+input data resultsin biasesthat needto be correctedby selective
+sampling. When predicting the survival probability for a new
+observation, the independent variables are fed into the neural
+network, and the time variable setto successivevalues in [l,Z'J.
+The T outputs from the network (one for eachsetting of the time
+variable) provides estimates of
+the respective
+SUNiVal
+probabilities'.
+De Laurentiis and Ravdin [7] use similar
+techniques on a synthetic dataset and explore ways to gain
+insights into how thegeneratedneural networksinterpret data.
+Hierarchical and modular neural networks for survival analysis
+aredescribedin [151and [161respectively.Oneneural network is
+usedto model survival for eachtime period of interest. Thus, T
+neural networks would be neededin order to predict survival in
+the period [l,TJ. Ohno-Machado and Musen [16] also describe
+how these independent neural networks can be combined in a
+systematicway to enforcethe constraint that the survival function
+bemonotonically decreasing.
+Street [21] uses a neural network architecture that predicts
+survival curves
+using a vector of output units, and makes
+appropriateuseof censoredobservationswithout introducing any
+biasesin the input data.The training vector for the output units is
+derivedusing Kaplan-Meier survival curves.
+
+6.1.I Applicability to TenureModeling for LTV
+For LTV tenuremodeling, the time interval is dictatedby the data
+warehouse update frequency, which, for the case of GTE
+Wireless, is 1 month. A reasonablemaximum time period T of
+36-60 months is usually necessary.Given that some of GTE
+Wireless' larger marketshaveover half a million customers(with
+30-40 attributes per customer),Ravdin and Clark's [18] record
+replication approach will result in unnecessarily large datasets
+with severeperformanceand resourcepenalties. Ohno-Machado
+and colleagues' [15,161approach will force us to train 36-60
+neural networks on large amountsof data, for every marketthat
+we need to model. These approachesdo not scale very well to
+
+
+' Note that the survival probability computedhereis equivalent to
+l-h(t) in Section 2; this is distinct from S(t), which is the
+cumulative survival probability.
+large datasetsover a large number of time intervals, where the
+models need to be refreshed frequently with reasonable turn
+aroundtimesin a corporatesetting.Street's[21] approach,on the
+other hand, while scalable, suffers from the drawback that the
+predicted(cumulative) survival function canbenon-monotonic.
+
+6.2 Neural Network Architecture
+for Hazard
+Curve Prediction
+Our approach to harnessing multilayer feedforward neural
+networks for survival analysis (for LTV tenure prediction)
+involves predicting the hazard function for every customer.We
+begin with data from the data warehouseand run it through a
+preprocessingstepwhere the data is readied for neural network
+training. The secondstepinvolves setting up and training one or
+moreneural networks for hazardprediction. The final data post-
+processing is used to evaluate the performance of the neural
+network and compareit with classical statistical approaches.We
+describethis processin detail in the following sections.
+
+6.2.1 Data Preprocessing
+Customerdata for LTV modeling should have, in addition to a
+variety of independentinput attributes (Section 4), two important
+attributes: (i) tenure, and (ii) a censoring flag. In our data, the
+TENMON attribute has the customer tenure in months, and a
+CHURN flag indicates if the customer is still active or has
+cancelled. If CHURN=O, the customer is still active and
+TENMON indicates the number of months the customerhas had
+service;if CHURN=l, the customerhascancelledand TENMON
+is his agein monthsat the time of cancellation. In order to model
+customer hazard for the period [1,7J, for every record or
+observationi, we adda vector of T new attributes,h,(I), ..., h;(T)
+with the following values(for 15 t I T):
+
+
+
+
+I
+0
+1ltlTENMON
+
+hi(t)=
+1
+CHURN=l&TENMON<t<T
+
+$
+CHURN=O&TENMON<tIT
+
+Here,d, is the numberof cancellationsin time interval t; n, is the
+numberof customersat risk, i.e., total number of customerswith
+TENMON = t. The ratio d, /PZ,is the Kaplan-Meier [1l] hazard
+estimatefor time interval t. Intuitively, we set hazard h,(t) to 0
+when a customeris active, 1 when a customerhascancelled,and
+to the Kaplan-Meier hazard if censored. Table 1 shows an
+example.This approachis similar to 1211,except that we use the
+hazardfunction insteadof the survival function. Hazardfunctions
+do not have any monotonicity constraints, and support customer
+segmentation(Section 7.1) which has important ramifications
+from amarketingperspective.
+
+
+
+
+98
+
+Neural Network Tenum Prediction
+
+
+
+
+0
+10
+20
+30
+40
+so
+w
+NNPRED
+
+
+(a)
+Complementary Log-Log Tenure Pmdiction
+
+so
+
+
+
+
+20
+
+10
+
+0
+0
+10
+20
+30
+40
+so
+60
+
+CLOGPRED
+
+
+
+(b)
+
+
+Figure 6.1: Comparison of (a) neural network and (b) complementary
+log-log model for LTV tenure prediction.
+
+6.2.2 Training theNeural Network
+The hazard vector h,(l), .... hi(T) servesas the output target or
+training vector for the respectiveneural network input casei. The
+remainderof the attributes,except TENMON andCHURN, serve
+asinputs to theneuralnetwork2.
+Most modem neural network packagesor data mining toolsets
+with neural networksprovide the following automatedprocessing:
+.
+Ignore identification attributes like cellular phone number
+and accountnumber;
+.
+Standardize(or normalize)continuous attributes;
+.
+Prune the number of classesfor categorical attributes and
+createthe required number of binary dummy attributes to
+representtheremainingclasses.
+Theseoperationsmustbemanually executedif theneural network
+softwaredoesnot provide automatedsupport.
+Finally, the dataset is split into train, test and holdout (or
+validation) datasets.The train and test datasetsare usedto train
+theneural network andavoid overfitting. The holdout datais used
+to evaluate performanceof the neural network and compareit
+with classicalstatisticaltechniques.
+We use a standardfeedforward neural network with one or two
+hidden layers andexperimentwith the numberof hidden units to
+obtain the best network (seeSection 6.3). The number of input
+units is dictated by the number of independentinput attributes.
+The network is setup with T output units, whereeachoutput unit
+o, learnsto estimatehazardrateh(t).The parametersof the neural
+network aresetup to learnprobability distributions [2,8]:
+
+
+2We haveexperimentedwith including TENMON. The resulting
+neural networks perform similarly with or without TENMON.
+Including both CHURN and THNMON is tantamount to
+indirectly providing the output targetsasinputs, and the neural
+network trivially detects this correlation. Furthermore, when
+predicting hazardsfor existing customers,CHURN will always
+be0. HenceCHURN should alwaysbeexcluded.
+.
+The standard linear input combination function is usedfor
+the hidden andoutput units. The internal activation of these
+units is thereforethe weightedsumof its inputs.
+1
+.
+The logistic activation function q(v) = -
+l+e+
+is used (in
+
+both the hidden andoutput layers) to transformthe internal
+activation of a unit to its output activation. The logistic
+activation function for output units also ensuresthat the
+predictedhazardratesarebetween0 and 1.
+m
+The relative entropy or cross entropy error function is used.
+The total error function is given by:
+
+yik ln(?+(l-
+y,)ln+j$
+I
+I
+
+where pik is the predicted output value (or posterior
+probability) for the k-th unit of the i-th input case, yik is the
+targetvalue for the k-th unit of the i-th case,and fi is the
+frequency of the i-th case.With this error function, the
+objective function [20] which the neural network minimizes
+
+fi.
+/
+i
+k
+
+6.2.3 Post-Processing
+Oncethe neural network hasbeentrained, we use the network to
+scorethe holdout dataset. For every observation i in the holdout
+dataset,the neural network outputs a predicted hazard function
+(hi(t)), 1 5 t I T. In the post-processingstep, we convert this
+hazard
+function
+into
+a
+survival
+function
+si(t) = Si(t-l)x[l-hi(t)]
+for 1It I Tat~dSi(l)=l. Wecompute
+predicted median tenure for the neural network (NNPRED) as
+that value of t for which Si(t) = 0.5. We scorethe sameholdout
+datasetwith a complementarylog-log model (Section 5) built
+using the sametraining set as the neural network. We also
+computepredicatedmediantenurefor the complementarylog-log
+predictions(CLOGPRED)in anidentical manner.
+
+
+
+
+99
+
+6.3 Experimental Results
+The datadescribedin Section4 wasusedin our experimentswith
+the neural network and classical statistical techniques. For the
+neural network, 40% of the data (8,600 records) was used for
+training, and 30% (6,450 records)each for the test and holdout
+datasets. Weuseatime periodof T = 60 months3.
+We built severalneural networks: single hidden layer networks
+with 2550 and 100hidden units, andatwo hidden layer network
+with 25 units in the first hidden layer and 10 units in the second
+hidden layer. After training, all four networks had very similar
+mean squareerror rates on the holdout data. We report results
+from thetwo hidden layer neuralnetwork.
+Figure 6.1 showspredictedmediantenure (basedon the survival
+curve) for theneural network (NNPRED) andcomplementarylog-
+log model (CLOGPRED) plotted against actual tenure
+(TENMON) for customers in the holdout dataset who have
+alreadycancelled.Of the 6,450customersincluded in the holdout
+dataset,161havealreadycancelledservice(i.e., churned).Figure
+6.1 plots predictedvs. actual tenurefor these161customers.It is
+clear from the graphsthat the neural network is much better at
+predicting tenure than the complementary log-log model. The
+complementarylog-log tenurepredictions areclusteredaround20
+months, and rarely exceed 30 months, resulting in grossly
+underestimating LTV for long-lived customers. The neural
+network predictions, on the other hand, have a more reasonable
+distribution, even for long-lived customers. Section 7 further
+compares neural network and complementary log-log tenure
+predictions.
+Given that neural networks do not enforce proportionality and
+linearity constraints,one would expect thesemodelsto be better
+thanproportional hazards-likemodels.In comparisonsreportedin
+the literature [14,19], neural networks have performed
+comparablyto proportional hazardsmodelsfor medicalprognosis.
+Tenuremodeling for LTV is oneof thosechallenging applications
+where the power of the neural network manifests itself in
+significantly better models in comparison with proportional
+hazards-likemethods.
+
+7. UNDERSTANDING AND
+INTERPRETING THE NEURAL
+NETWORK
+The neural network generally performsbetterthan the CLL model
+in termsof predicting tenure. But in order to better understand
+the characteristicsof these models, we compute residuals-i.e.,
+differencesbetweenactual tenure and the NNKLL prediction for
+those subjects dying during the observation period-from
+predictions on the holdout set. We observe how close these
+residuals-NNRES and CURES-are
+to zero, respectively, and
+how that distancevaries for different agesof subjects. (This is
+important since examining only subjects who died during a one-
+month period necessarily produces an overabundanceof short-
+lived observations.) Figure 7.1 showsthe residualsfrom the two
+types of models. Both residuals show a systematic bias with
+respectto age. The CLL residualshavean averagevalue near0.0,
+
+
+3 We have also experimentedwith T=36 months (3 years).The
+neural network performssomewhatbetter with the shortertime
+period, sincethis is aninherently easierproblem.
+but the extremeagesare either overestimated(for low ages)or
+underestimated(for high ages).The NN residualsshow much less
+variation thando the CLL residuals,andaresubstantially closerto
+zerofor the high agegroups.
+
+
+
+
+IO
+
+
+%
+0
+
+-10
+
+--a
+l NNP2.s
+ACURES
+-30
+
+
+
+
+Figure 7.1: Residual errors for the neural network and
+complementary log-log model.
+
+
+
+
+02
+
+
+
+0.15
+
+
+
+0.1
+
+--a&u1
+0.05
+-czr(az
+
+
+I=
+-cww3
+~---c*r(a4
+0
+1
+3
+5
+7
+9
+11 13 IS 17 10 21 23 25 27 29 31 33 35
+nmehmmlhe
+
+
+Figure 73: Hazard functions derived from clusters basedon
+the neural network, representing the 9P percentile along the
+first principal component.
+
+
+Comparisonof MeanSquareError
+
+
+
+250-
+200.
+g 150.
+z
+100.
+
+50-
+
+01
+CLLTotaI
+Cu.
+NN
+Cluster
+
+
+Figure 7.3: Mean square error for CLL (with and without
+clustering) and NN.
+
+
+
+
+100
+
+Figure 7.4: PH and NN hazards for extreme subjects.
+(a)
+
+
+
+
+CU. Ftedcted Lifetires
+
+
+Figure 7.5: PH and NN predicted tenures for extreme subjects.
+
+
+Wheredoesthis advantagecomefrom? The NN modelis freedof
+therestrictedform in which thecovariatesinfluence the individual
+hazardfunctions. More important,though, is the fact that this NN
+model generatesidiosyncratic hazard functions for each subject
+instead of presuming a single baseline hazard functions as the
+PWCLL model must. It happens that the structure of these
+functions is easily described,and leadsto a quantification of the
+relative benefit of lifting thetwo precedingrestrictions.
+
+7.1 Clustering Hazard Functions
+The neural network producesa T-month hazardfunction, i.e., a 7'-
+componentvector hi(l), .... hi(T), for each customeri. For our
+experiments, T=60. In order to cluster these individual hazard
+functions, we parameterizethe shape of the hazard curve by
+defining a setof functions that collectively capturethe geometric
+aspects of the curves, and were judged as likely to yield
+behavioralinformation:
+
+l
+Averagehazardrate= Mean [hi(l), ..., hi(T)].
+
+'
+Average hazard rate for the pre-contractexpiration period
+(with 1Zmonth contracts)= Mean [hi(l), ..., hi(ZO)].
+
+.
+Overall slopeof the hazardcurve= `(`)i
+"(l).
+
+.
+Initial slopeof thehazardcurve =
+h,(9)-4(U
+9
+.
+
+
+
+
+101
+
+1 Cluster
+Cluster Description
+I
+Characterization
+of Cluster
+I
+Implications
+for Retention Effort
+1
+
+
+
+2
+
+
+
+
+3
+
+
+
+
+4
+No effectof contractexpiration.
+
+
+Small increasein churn propensity
+atexpiration.
+Post-expirationchum remains
+elevated.
+Largespikein chum atexpiration.
+Low chum thereafter.
+
+
+
+Largeincreasein chum at
+expiration.
+Post-expirationchum high and
+increasing.
+DetailedBill.
+Fewcalls/month.
+The average,prototypical customers.
+
+
+
+
+Two types:
+.
+No chargefor MOU, many
+calls/month.
+.
+No detailedbill, low total charge.
+High total charge.
+No pre-expiration contactrequired.
+Contactmaytrigger chum.
+Moderatepre-expiration effort needed.
+New contractor continued contactsneeded.
+
+
+
+Concentrateeffort on pre-expiration.
+Contractrenewalmaynot berequired.
+
+
+
+High intensity effort pm-expiration.
+Continued competitive offers to designated
+customers.
+
+
+Table 2: Characterizing
+hazard clusters for targeted marketing and retention.
+
+
+
+.
+Terminal slopeof the hazardcurve = `(T)-:(*-9).
+
+.
+Relative size of the contract expiration (12-month) "spike"
+
+
+
+The derived attributes defined by thesefunctions were computed
+for eachcustomer,andthen standardizedto havea meanof 0 and
+a standarddeviation of 1.
+Augmented by these additional attributes, the hazard functions
+were then segmentedinto ten clusters using k-meansclustering.
+We chose ten clusters since we judged that to be more than
+necessary,and in fact, the ten output clustersincluded four small
+clusters,with lessthan 50 customers(out of the total of 6,450) in
+each.Theseclustersweremergedwith their nearestneighbors.
+To display eachof the resulting six clustersof hazardcurves,the
+vectorsh,(l), ..., hi(T) were subjectedto a principal components
+analysis. This analysis revealed that at least 88% of the total
+variance was associated with the first principal component.
+Regularly spacedpercentiles (5,25,50,75,95)were computedfor
+the principal component scoresfor each of the six clusters, and
+thecurvescorrespondingto eachwereplotted together.
+Finally, visual inspection of the six clustersrevealedtwo clusters,
+both relatively small, which were similar in shape to larger
+clusters.Thesetwo clusterswere appropriately mergedwith their
+respectivenearestneighbors. Principal componentanalysis was
+repeatedon the remaining four (modified) clusters,andthe hazard
+curvescorrespondingto the 95th percentile componentscoresare
+displayedin Figure 7.2.
+We observethat within eachof thesefour clusters,the constituent
+hazardfunctions areall very nearly multiples of eachother. This
+conclusion derives from the results of the principal components
+analysis, where the first component-the averagehazard rate-
+accounts for nearly all (88-99%) of the functions' variation.
+Thus, the NN hazard functions are effectively four groups of
+proportional hazardmodels.
+The efficacy of this partitioning into four hazardfunction can be
+quantified by generatingtenurepredictions from thesedatabased
+on three different models: (i) the original CLL model; (ii) a
+modified CLL model with separatebaseline hazardfunctions for
+the four clusters (but still with the linear form of the covariate
+inputs); and (iii) the NN model. For each model, calculate the
+arithmetic mean of the squared differences between actual
+lifetimes andpredictedlifetimes under the threemodels,for those
+who have died. This is the meansquarederror (MSE) for each
+model. The threesumsof squaresaredisplayed in Figure 7.3. It
+is apparent that the generation of the four different baseline
+hazardsis responsiblefor the majority of reduction in MSE.
+A final point of comparisonof the CLL and NN modelsis their
+treatmentof extremesubjects,i.e. those subjectswho have large
+values for some or all of their covariates so that the hazard
+function multiplier of the PH modelyield implausibly high hazard
+componentsandcorrespondingly short estimatedlifetimes. Figure
+7.4a shows the PH-estimatedhazard functions (displayed as the
+25th, 5Oth,75th percentilesof hazard functions as arrayedalong
+their first principal component)for a subsetof subjectsfrom this
+geographic region with lifetimes judged to be implausibly low.
+Note that the hazardfunctions necessarilyhavethe sameshapeas
+the overall baseline hazard function, with uniformly high death
+probabilities. In particular, the high "spike" at 12 months is the
+causeof low estimatedlifetimes. In contrast, Figure 7.4b shows
+hazardfunctions estimatedby the NN model,andexhibiting much
+lower hazard rates and also a more plausible hazard shape.
+Histograms of the predicted lifetimes for the two models are
+displayed in Figure 7.5. It is apparent that the NN model
+generallyresultsin lifetimes that arelessextreme,presumablyasa
+result of its useof alessrigidly definedhazardfunction shape.
+
+7.1.I Characterizing Clusters for Targeted
+Marketing
+Clustering neural network generatedhazardfunctions hasresulted
+in segmenting customers into four groups. What are the
+characteristics of customers in each group? And
+what
+ramifications doesthis clustering have on targetedmarketing and
+
+
+
+
+102
+
+retention programs from a business standpoint? We briefly
+addresstheseissues.
+In order to characterizecustomersin each segment,we build a
+decision tree with the explanatory covariates as independent
+attributes and the cluster number as target.Table 2 summarizes
+splitting rules to the mostdiscriminatory leaf in the tree for each
+cluster. The table also indicates potential implications for
+marketingandretention efforts.
+
+8. Conclusion
+This paper has describedclassical statistical approachesto the
+estimationof customerlifetimes for acommonbusinessdatatype,
+and a neural network alternative.
+The classical approaches
+provide baseline solutions for the estimation problem, provided
+that the issuesof right censoringandleft truncation areaddressed.
+Neural network models, while inscrutable, are very accurate
+predictors. The neural network provides individual estimatesof
+the hazardfunctions discoveredto be vital in tenure estimation,
+and their analysis reveals a segmentedproportional hazards
+composition that is attractiveboth to the statistician searchingfor
+structure in data and to the marketer searching for business
+meaning.In comparing and understandingthesetechniques,our
+analysis leads to tenure models basedon hybrid statistical and
+data mining approachesthat are richer in meaning and more
+predictive thaneither approachby itself.
+At the outset, the neural network model appearsto be more
+accuratethan the classical statistical approaches.Though this is
+true, we believe that the value of this work lies in the
+amalgamationof statistical and data mining techniqueswith the
+goal of data modeling and understanding from a business
+perspective.To a large degree,the successof the neural network
+model derives from the use of hazard functions-a construct
+introduced by classical statistics-as
+the target vector.
+Furthermore, the neural network model is inscrutable when it
+comesto deriving businessinsight. The information encapsulated
+in the neural network model is made actionable by using a
+combination of statistical and data mining techniques. In
+modeling tenure for LTV, we believe that we have instituted a
+hybrid statistical and data mining basedanalysis processwhere
+the weaknessesof one class of techniquesare addressedby the
+strengthsof theother.
+
+9. References
+[l]
+Allison, P. D. (1995), Survival Analysis Using the SAS@
+Sysrem,Cary,NC: SASInstitute.
+[2] Baum, E. B. and Wilczek, F. (1988), "Supervised Learning
+of Probability Distributions by Neural Networks," Anderson,
+D. Z., Editor, Neural Information ProcessingSystems,52-
+61, NY: AmericanInstitute of Physics.
+[3] Bolton, R. (1998),"A Dynamic Model of the Duration of the
+Customer's Relationship with
+a Continuous Service
+Provider: The Role of Satisfaction," Marketing Science,
+17,1,45-65.
+[4] Burke, H. B. (1994), "Artificial Neural Networks for Cancer
+Research: Outcome Prediction," Seminars in Surgical
+Oncology, 10,73-79.
+[S] Cox, D. R. (1972), "Regression Models and Life Tables,"
+Journal of theRoyal Statistical Society,B34, 187-220.
+[6] Cox, D. R. andOakes,D. (1984),Analysis of Survival Data,
+London: ChapmanandHall.
+[7] De Laurentiis, M. and Ravdin, P. M. (1994), "A Technique
+for Using Neural Network Analysis to Perform Survival
+Analysis of CensoredData," CancerLetters,77, 127-138.
+[8] Haykin, S. (1994), Neural Networks: A Comprehensive
+Foundation, UpperSaddleRiver, NJ: PrenticeHall.
+[9] Helson, K. and Schmittlein, D. C. (1993), "Analyzing
+Duration Timesin Marketing: Evidencefor the Effectiveness
+of HazardRateModels," Marketing Science.11,4, 395414.
+[lo]
+Homick, K., Stinchcombe, M. and White, H. (1989),
+"Multilayer
+Feedforward
+Networks
+are
+Universal
+Approximators", Neural Networks,2.359-366.
+111Kaplan, E. L. and Meier, R. (1958), "Nonparametric
+Estimation from Incomplete Observations," Journal of the
+AmericanStatisticalAssociation, 53,457-g 1.
+[121Kooperberg,C.,
+Stone, C. and Truong, Y. (1995) "Hazard
+Regression,"Journal of theAmerican Statistical Association,
+90,78-94.
+131Lawless, J. E. (1982), Statistical Models and Methodsfor
+Lifetime Data, New York: JohnWiley andSons.
+141Ohno-Machado, L. (1997), "A
+Comparison of Cox
+Propostional Hazardsand Artificial Neural Network Models
+for Medical Prognosis,"Comput.Biol. Med.,27, 1,55-65.
+1151Ohno-Machado,
+L., Walker, M. G. and Musen, M. A.
+(1995),
+"Hierarchical
+Neural Networks for Survival
+Analysis," Medinfo 95Proceedings,828-832.
+[16] Ohno-Machano, L. and Musen, M. A. (1997), "Modular
+Neural Networks for Medical Prognosis: Quantifying the
+Benefits of Combining Neural Networks for Survival
+Prediction," ConnectionScience,9, 1,71-86.
+[171Prentice, R. L. and Gloeckler, L. A. (1978). "Regression
+Analysis of Grouped Survival Data with Application to
+BreastCancerData,"Biometrics,34, 57-67.
+[181Ravdin, P. M. and Clark, G. M. (1992) "A Practical
+Application of Neural Network Analysis for Predicting
+Outcome of Individual Breast Cancer Patients," Breast
+CancerResearchand Treatment,22,285-293.
+[19] Ravdin, P. M., Clark, G. M., Hilsenbeck, S. G., Owens, M.
+A., Vendely, P.,Pandian,M. R. and McGuire, W. L. (1992),
+"A Demonstration that Breast Cancer Recurrence can be
+Predicted by Neural Network Analysis," Breast Cancer
+Researchand Treatment,21,47-53.
+[20] SAS Institute (1998), "Neural Network Node: Reference,"
+SASEnterpriseMiner Documentation.
+[21] Street, W. N. (1998) "A Neural Network Model for
+Prognostic Prediction", Proceedings of the Fifteenth
+International
+Conference on Machine Learning, San
+Francisco,CA: Morgan Kaufmann.,540-546.
+
+
+
+
+103
+

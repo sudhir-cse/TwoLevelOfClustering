@@ -1,0 +1,529 @@
+Text Mining:
+Finding
+Nuggets
+in Mountains
+of Textual
+Data
+Jochen Dijrre, Peter Gerstl, Roland Seiffert
+SWSD, IBM Germany
+P.O. Box 1380, D-71003 Btjblingen
+{doerre,gerstl,seiffert}@de.ibm.com
+
+
+ABSTRACT
+
+Text mining appliesthe sameanalytical functions of datamining
+to the domainof textual information, relying on sophisticatedtext
+analysis techniques that distill
+information from free-text
+documents. IBM's Intelligent Miner for Text provides the
+necessary tools to unlock the business information that is
+"trapped" in email, insurance claims, news feeds, or other
+document repositories. It has been successfully applied in
+analyzing patentportfolios, customercomplaint letters,and even
+competitors' Web pages. After defining our notion of "text
+mining", we focus on the differences between text and data
+mining anddescribein somemore detail the unique technologies
+that arekey to successfultext mining.
+
+Keywords
+Text mining, feature extraction, text categorization, clustering,
+customerrelationship management
+
+1. MINING
+TEXT
+"There is gold hidden in your companiesdata" - and datamining
+promisesto help you finding it. And in fact, many successful
+applicationsof datamining prove that this is true indeed.But data
+mining addressesonly a very limited part of a company'stotal
+data assets:the structured information available in databases.
+Probably more than 90% of a companiesdata are never being
+looked at: letters from customers, email correspondence,
+recordings of phone calls with customers,contracts, technical
+documentation, patents, ... With ever dropping prices of mass
+storage,companiescollect more and more of such data online.
+But what canwe get from all this data?More often than not, the
+only way the data is made usable - outside of very specific
+applications for subsetsof that data - is by making it accessible
+and searchablein a companiesintranet. But today there is more
+you can do: text mining helps to dig out the hidden gold from
+textual information. Text mining leaps from old-fashioned
+information retrieval to information andknowledgediscovery.
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the first page. To copy
+otherwise, to republish, to post on servers or to redistribute to lists.
+rcquircs prior specific permission and/or a fee.
+KDD-99 SanDiego CA USA
+Copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+The first challenge in text mining is that information in
+unstructuredtextual form is not readily accessibleto be usedby
+computers.It has been written for human readersand requires
+natural language (NL) interpretation. The information really is
+buried inside the text. Although a full-blown interpretation of
+even just factual knowledge stated in unrestricted natural
+languageis still out of reach with current technology, there are
+tools using pattern recognition techniques and heuristics that are
+capableof extracting valuable bits of information from arbitrary
+free-text. Extractedinformation rangesherefrom identifying what
+companiesor datesarementionedin a documentto summariesof
+adocument.
+But there is moreto text mining than just extracting information
+piecesfrom single documents.Wherethe mining taskin the sense
+of data mining comes in is when one has to deal with huge
+collections of documents.Tools performing that task generally
+support classification - either in a supervised or in an
+unsupervisedfashion - on the documentsseenasobjectsthat are
+characterizedby featuresextractedfrom their contents.
+We use the "mining" metaphor for both knowledge discovery
+processesdescribedabove:the extraction of codified information
+(features) from single documentsas well as the analysis of the
+feature distribution over whole collections to detect interesting
+phenomena,patterns, or trends. Any non-trivial application of
+"text mining" necessarilyinvolves both of thosemining phases.
+
+2. HOW TEXT MINING
+DIFFERS FROM
+DATA MINING
+Datamining generally involves the steps.
+1.
+Identification of acollection
+2.
+Preparationandfeatureselection
+3.
+Distribution analysis.
+As describedin the lastsection,text mining essentiallyaddsto the
+preparatory phasethe very complex feature extraction function.
+Moreover, the cardinality of the feature setthat can be extracted
+from a documentcollection usually is very high, easily running
+into several thousands. There are two consequencesof this
+affecting the overall text mining process.
+1. The feature selection task is quite different, since it is no
+longer feasible to have a human examine each feature to
+decide whether to use it or not. Different approachesto
+accomplishthis taskrangefrom using simple functions, e.g.,
+to filter out features that can be considered as noise, to
+complex analytical processes possibly involving human
+intervention.
+
+
+
+
+398
+
+2.
+The distribution analysis stepmust be able to handle highly
+dimensional, but sparsely populated feature vectors. This
+often requires special versions and implementations of the
+analytical algorithmsusedin datamining.
+
+2.1 IBM Intelligent
+Miner for Text
+In 1998,IBM for the first time introduced a product in the areaof
+text mining: the Intelligent Miner for Text*. It is a software
+developmenttoolkit - not aready-to-run application - for building
+text mining applications.It addressessystemintegrators,solution
+providers, and application developers.The toolkit contains the
+necessarycomponentsfor "real text mining": feature extraction,
+clustering, categorization, and more. But there are also more
+traditional components,e.g., the IBM Text SearchEngine, the
+IBM WebCrawler, anddrop-in Intranet searchsolutions. We will
+not describethe latter part of the product here,butjust mention it.
+Thesecomponentsareessentialto build applications that usethe
+information generatedin a mining process,e.g., in an Intranet
+portal for the company.
+
+3. MINING
+WITHIN
+A DOCUMENT:
+FEATURE
+EXTRACTION
+The task of feature extraction is to recognize and classify
+significant vocabulary items in unrestricted natural language
+texts. Examplesof vocabulary found are shown in Figure 1. The
+processis fully automatic - the vocabulary is not predefined.
+Nevertheless,asthe figure shows,the namesandother multiword
+terms that are found are of high quality and in fact correspond
+closely to the characteristicvocabulary usedin the domain of the
+documentsbeing analyzed. In fact, what is found is to a large
+degree the vocabulary in which concepts occurring in the
+collection areexpressed.
+
+Certificateof deposit
+Chronar
+CMOS
+Commercial
+bank
+Commercial
+paper
+Commercial
+Union Assurance
+Commodity
+Futures Trading Commission
+Consul Restaurant
+Convertible
+bond
+Credit facility
+Credit line
+Credit Lyonnais
+Credit Suisse
+Credit Suisse First Boston
+Dana
+debt security
+debtor country
+Detroit Edison
+Digital Equipment
+dollars of debt
+end-March
+Enserch
+equity warrant
+Eurodollar
+
+
+
+
+Figure 1 Some of the vocabulary
+found by feature extraction
+in a collection of financial news stories. The canonical forms
+are shown
+
+
+In general, our implementation of feature extraction relies on
+linguistically motivated heuristics (cf. [2]) and pattern matching
+together with a limited amountsof lexical information, such as
+part-of-speech information. We neither use huge amounts of
+lexicalized information, nor do we perform in-depth syntactic and
+semanticanalysesof texts. This decision allows usto achievetwo
+majorgoals:
+1. Very fastprocessingto beableto dealwith massdata
+2.
+Domain-independencefor generalapplicability
+
+The extracted information will beautomatically classified into the
+following categories:
+.
+Namesof persons,organizationsandplaces
+like Mrs. M. Albright, National Organization of Women
+BusinessOwners,or Dheli, India
+.
+Multiword terms
+like joint venture,online document,or centralprocessing
+unit
+.
+Abbreviations
+like EEPROM for Electrical erasableprogrammableread-
+only memory
+.
+Relations
+like JackSmith-age-42,JohnMiller-own-Knowledge Corp.,
+JanetPema-GeneralManager-DatabaseManagement
+.
+Otheruseful stuff numerical or textual formsof numbers,
+percentages,dates,currencyamounts,etc.
+We always assigna so-calledcanonical form to eachfeature we
+find. Simple, but very useful examplesinclude normalized forms
+of dates,numbersetc.This allows applicationsto usethat kind of
+information very easily, eventhough, e.g., a numberwas written
+in words in a text. A canonical form also abstractsfrom different
+morphological variants of a single term, e.g., singular and plural
+forms of the sameexpressionaremappedto the samecanonical
+form.
+More complex processingis done in the caseof names.All the
+namesthat refer to the sameentity, for examplePresidentClinton,
+Mr. Clinton and Bill Clinton, are recognized as referring to the
+sameperson. Each such group of variant namesis assigneda
+canonical name,(e.g., "Bill Clinton") to distinguish it from other
+groups referring to other entities ("Clinton, New Jersey"). The
+canonical name is the most explicit, least ambiguous name
+constructed from the different variants found in the document.
+Associating a particular occurrenceof a variant with a canonical
+name reducesthe ambiguity of variants. For example, in one
+document, "IRA" is associatedwith the Irish Republican Army,
+while in another it may be associated with an Individual
+RetirementAccount.
+Optionally, the tool computesstatisticaldataon the distribution of
+features in documents and document collections. This allows,
+e.g.,the clustering tool to judge the significance of a featurein a
+documentwith respectto the statistical backgroundpropertiesof
+the whole documentcollection.
+
+4. MINING
+IN COLLECTIONS
+OF
+DOCUMENTS:
+CLUSTERING
+AND
+CATEGORIZATION
+With the mappingof documentsto featurevectorsthat describe
+themin place,we canperformdocumentclassification in either of
+two ways.
+Clustering is afully automaticprocess,which partitions agiven
+collection into groupsof documentssimilar in contents,i.e., in
+1For moreinformation alsoon other components,pleaserefer to
+httn:Nwww.software.ibm.comldata/iminer/fortext
+
+
+
+
+399
+
+In clustering, document collections are processed
+I
+In categorization, document collections are
+and grouped into clusters that are dynamically
+processed
+and grouped
+into categories
+that are
+gen&&ed
+by the algorithm
+
+Document Collection
+
+
+
+
+aaa
+666
+Cluster1
+Cluster2
+Cluster3
+Cluster4
+predetermined
+based on a user-provided
+taxonomy.
+Cdl samples
+ca2 sams,+:;:;,,
+slrmla
+Document Collection
+
+
+
+
+fxJ-03
+6666
+1
+Categorization
+schema
+Cat1 Cat2 Cat3 Cat4
+
+
+
+
+Figure 2 Clustering versusCategorization
+
+their feature vectors. Intelligent Miner for Text includes two
+clustering engines employing algorithms that are useful in
+different kinds of applications. The Hierarchical Clustering tool
+orders the clusters into a tree reflecting various levels of
+similarity. The Binary Relational Clustering tool uses"Relational
+Analysis" (cf. [l]) to produce a flat clustering together with
+relationships of different strengthbetweenthe clusters reflecting
+inter-cluster similarities. Both tools help to identify the topic of a
+group by listing terms or words that are common in the
+documentsin the group. Thus, clustering is a great meansto get
+anoverview of the contentsof acollection.
+The secondkind of classification is called (text) categorization.
+The Topic Categorization tool assignsdocumentsto preexisting
+categories,sometimescalled "topics" or "themes". The categories
+are chosen to match the intended use of the collection. In the
+Intelligent Miner for Text thosecategoriesare simply defined by
+providing a set of sampledocumentsfor each category. All the
+analysis of the categories, feature extraction and choice of
+features, i.e., key words and phrases, to characterize each
+category,is doneautomatically. This "training" phaseproducesa
+special index, called the categorization schema, which is
+subsequently used to
+categorize new documents. The
+categorizationtool returnsa list of categorynamesandconfidence
+levels for each document being categorized.Documents can be
+assignedto morethan onecategory.If the confidencelevel is low,
+then typically the documentwould be put asideso that a human
+categorizercanmakethe final decision.
+Testshaveshownthat, provided the setof defined categoriesdoes
+match the subject matter of incoming documents, the Topic
+Categorization tool agreeswith human categorizersto the same
+degreeashumancategorizersagreewith oneanother.
+
+5. TEXT MINING
+APPLICATIONS
+As is the casewith data mining technology, one of the primary
+application areasof text mining is collecting andcondensingfacts
+as a basis for decision support. The main advantagesof mining
+technology over atraditional `information broker' businessare:
+.
+The ability to quickly processlarge amountsof textual data
+which could not beperformedeffectively by humanreaders.
+.
+`Objectivity' and customizability of the process- i.e. the
+results solely depend on the outcome of the linguistic
+processing algorithms and statistical calculations provided
+by thetext mining technology
+.
+Possibility to automate labor-intensive routine tasks and
+leavethe moredemandingtasksto humanreaders.
+
+Taking advantageof theseproperties,text mining applications are
+typically usedto:
+.
+Extract
+relevant
+information
+from
+a
+document
+(summarization,featureextraction, ...)
+.
+Gain
+insights
+about
+trends,
+relations
+between
+people/places/organizations,
+etc.
+by
+automatically
+aggregating and comparing information extracted from
+documentsof a certain type (e.g. incoming mail, customer
+letters,news-wires,...).
+.
+Classify and organize documentsaccording to their content;
+i.e. automatically pre-select groups of documents with a
+specific topic andassignthemto the appropriateperson.
+.
+Organize repositories of document-relatedmeta-information
+for searchandretrieval
+
+
+
+
+400
+
+.
+Retrieve documents based on various sorts of information
+about the document content
+This list of activities shows that the main application areas of text
+mining
+technology
+cover the two aspects
+(1) knowledge
+discovery
+(mining
+proper) and (2) information
+`distillation'
+(mining on the basis of some pre-established structure). Due to
+the lack of space we will concentrate on a single application that
+uses IBM's Intelligent Miner for Text to support both aspects,
+discovery and distillation: customer relationship management.
+
+5.1 Customer Relationship
+Management
+Based on the Intelligent Miner for Text product IBM offers an
+application called CR1 (Customer Relationship Intelligence) that
+is designed to specifically help companies better understand what
+their customers want and what they think about the company
+itself.
+After selecting the appropriate set of input documents (e.g.
+customer complaint
+letters, phone call transcriptions,
+e-mail
+conversation) and converting them to a common standard format,
+the CR1 application uses the feature extraction and clustering
+tools to derive a database of documents which are grouped
+according to the similarity of their content.
+Depending on the purpose of the data analysis, the user might
+select different parameters for the preprocessing (e.g. concentrate
+on names and dates) and for the clustering step (e.g. use a more or
+less restrictive similarity measure).
+When clustering
+customer feedback information,
+the result
+exposes groups of feedback that share important
+linguistic
+elements, e.g. descriptions of a difficulty
+customers have with a
+certain product or support organization. Information of this type
+can be used to identify
+problematic
+areas that need to be
+addressed. Sometimes the cluster itself may provide clues about
+how the problem could be solved, e.g. do the documents have
+something in common which is independent from the problem
+description such as the location, background, ... of the customers
+that raised the issue?
+As a separate step after a set of useful clusters has been identified
+and, probably manually enhanced, the categorization tool can be
+used to assign new incoming customer feedback to the identified
+categories.
+The CRI application
+incorporates
+both, the distillation
+and
+discovery aspects of text mining.
+A typical usage scenario starts
+with an unstructured collection of documents (transcripts, mails,
+and scanned letters), creating some interpretable
+structure by
+means of clustering which corresponds to the aspect of discovery.
+The refinement and extension of the clustering results by means
+of interpreting the results, tuning of the clustering process, and
+selecting meaningful clusters emphasizes the aspect of distillation.
+
+
+6. CONCLUSION
+In this paper we have described our notion of "text mining" and
+relevant core technology components. IBM's
+product for text
+mining
+applications,
+the Intelligent
+Miner
+for Text, enables
+customers to use these new technologies in practical text mining
+applications.
+We have shown this by describing a customer
+relationship management application that is based on IBM's text
+mining components. As this application shows, text mining to-
+date can be used as an effective business tool that supports the
+creation of knowledge by preparing and organizing unstructured
+textual data (discovery)
+and by supporting the extraction of
+relevant information from large amounts of unstructured textual
+data through
+automatic pre-selection
+based on user-defined
+criteria
+(distillation).
+Using
+automatic
+mining
+processes to
+organize
+and scan huge repositories
+of textual
+data can
+significantly enhance both the efficiency and quality of a routine
+task while still leaving the more challenging and critical part of it
+to the one who can do it best, the human reader.
+
+7. REFERENCES
+[l]
+F. Marcotorchino,
+"Block
+seriation problems: A unified
+approach", Applied Stochastic Models and Data Analysis, 3,
+73-91 (1987).
+[2] N. Wacholder and Y. Ravin, Disambiguation
+of Proper
+Names in Text, Proc. of the 5th Conference on Applied
+Natural Language Processing, April 1997, Washington, D.C.
+
+
+
+
+401
+

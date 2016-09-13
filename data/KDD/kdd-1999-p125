@@ -1,0 +1,2058 @@
+Pruning and Summarizing the Discovered Associations
+
+Bing Liu, Wynne Hsu and Yiming Ma
+
+School of Computing
+National University of Singapore
+Lower Kent Ridge Road, Singapore 119260
+{liub, whsu, maym}@comp.nus.edu.sg
+
+Abstract
+Association rules are a fundamental class of patterns that exist in
+data. The key strength of association rule mining
+is its
+completeness. It finds all associations in the data that satisfy the
+user specified
+minimum
+support
+and minimum
+confidence
+constraints.
+This
+strength,
+however,
+comes with
+a major
+drawback. It often produces a huge number of associations. This ~
+is particularly
+true for data sets whose attributes are highly
+correlated. The huge number of associations makes it very
+difficult, if not impossible, for a human user to analyze in order to
+identify those interesting/useful ones. In this paper, we propose a
+novel technique to overcome this problem. The technique first
+prunes the discovered associations to remove those insignificant
+associations, and then finds a special subset of the unpruned
+associations to form a summary of the discovered associations.
+We call this subset of associations the direction setting (DS) rules
+as they set the directions that are followed by the rest of the
+associations. Using this summary, the user can focus on the
+essential aspects (or relationships) of the domain and selectively
+view the relevant details. The approach is effective because
+experiment results show that the set of DS rules is typically very
+small. They can be analyzed manually by a human user. The
+proposed technique has also been applied successfully to a
+number of real-life applications.
+
+1. Introduction
+Association
+rules are a class of important
+regularities
+in
+data. Association
+rule mining is commonly
+stated as follows
+[2]: Let I=
+{i,, .... i,) be a set of items, and D be a set of
+data cases. Each data case consists of a subset of items in I.
+An association rule is an implication of the form X + Y,
+whereXcI,YcI,andXnY=O.TheruleX+Yholds
+in D with confidence c if c% of data cases in D that support
+X also support Y. The rule has support s in D if s% of the
+data case in D contains X v Y. The problem of mining
+association rules is to generate all association rules that
+have support and confidence greater than the user-specified
+minimum support and minimum
+confidence.
+
+
+PermissionLomakedigital or hard copies of all or part ofthis work fol
+pCrSOna1
+or
+classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copieshear this notice and the full citation on the first page. To c~pp
+otherwise, to republish, to post on servers or to redistribute to lists.
+rcquircs prior specific permission and/or a fee.
+KDD-99 San Diego CA USA
+CopyrightACM 1999I-58113-143-7/99/08...$5.00
+A typical association rule mining algorithm works in two
+steps. The first step finds all large itemsets (a set of items)
+that meet the minimum support constraint. The second step
+generates rules from all large itemsets that satisfy the
+minimum confidence constraint.
+The key strength of association rule mining is that it can
+efficiently
+discover the complete set of associations that
+exist in data. These associations provide a complete picture
+of the underlying regularities in the domain. However, this
+strength comes with a major drawback. The number of
+discovered associations can be huge, easily in the thousands
+or tens of thousands (see Section 8). Clearly, such a large
+number of associations are very difficult, if not impossible,
+to be analyzed by a human user. This problem is
+particularly bad with those data sets whose items are highly
+correlated.
+However, it will not be satisfactory to simply give an
+arbitrary small subset of the rules to the user if there are
+indeed a large number of them that exist in the data because
+this small subset can only give a partial picture of the
+domain. The question then is: "Can we preserve the full
+power of association rule mining (i.e., its completeness)
+without overwhelming the user?" This paper shows that it is
+possible. A novel technique is proposed to prune those
+insignificant rules and to find a special subset of association
+rules that represent the essential underlying relationships in
+the data. We call this subset of associations the direction
+setting (DS) rules. The DS rules give a summary of the
+behavior of the discovered associations. They represent the
+essential relationships or structure (or skeleton) of the
+domain. The non-DS rules simply give additional details.
+Using the DS rules as a summary, the user can interactively
+focus on the key aspects of the domain and selectively view
+the relevant details (non-DS rules).
+In this work, we focus on association rule mining from a
+relational table, which consists of a set of records described
+by a number of attributes. An item is an attribute value pair,
+i.e., (attribute = value) (numeric attributes are discretized).
+Association rule mining in such data is typically targeted at
+a specific attribute because the user normally wants to know
+how other attributes are related to this target attribute
+(which can have many values) [13, 41. With a target
+attribute, we can express an itemset as follows (instead of a
+set of items as in [2]):
+x+Y
+where y is an item (or a value) of the target attribute, and X
+is a set of items from the rest of the attributes. For
+
+
+
+
+125
+
+simplicity, we call this itemset a rule hereafter, regardless
+of whether it is significant or not. We also say a rule is
+large if it meets the minimum support.
+Note that we do not use minimum confidence in our
+framework, although we can also use it (see Section 6).
+Minimum
+confidence
+does not reflect the underlying
+relationship of the domain represented by the data [4].
+Instead we use statistical correlation as the basis for finding
+rules that represent the fundamental relations of the domain.
+Figure 1 shows the conceptual flow of the proposed
+technique',
+which consists of two steps, pruning
+and
+summarization. Below, we introduce them briefly.
+
+
+
+
+Figure 1. The proposed technique
+
+1.1
+Pruning the discovered associations
+It is well known that many discovered associations are
+redundant or minor variations of others. Their existence
+may simply be due to chance rather than true correlation.
+Thus, those spurious and insignificant
+rules should be
+removed. This is similar to pruning of overfitting rules in
+classification [21]. Rules that are very specific (with many
+conditions) tend to overfit the data and have little predictive
+power. Although association rules are not normally used for
+prediction, rules that only capture the irregularities
+and
+idiosyncrasies of the data have no value and should be
+removed. An example of such a rule is shown below.
+Example 1: We have the following two rules,
+Rl : Job = yes + Loan = approved
+[sup = 60%, conf = 90%]
+R2: Job=yes, Credit-history=good
++ Loan= approved
+[sup = 40%, conf = 91%]
+If we know Rl, then R2 is insignificant
+because it gives
+little extra information.
+Its slightly higher confidence is
+more likely due to chance than to true correlation. It thus
+should be pruned. Rl is more general and simple. General
+and simple rules are preferred.
+In this work, we measure the significance of a rule using
+chi-square test (x2) for correlation from statistics [171.
+
+1.2
+Summarizing the unpruned rules
+Pruning can reduce the number of rules substantially.
+However, the number of rules left can still be very large.
+This step finds a subset of the rules, called direction setting
+rules (or DS rules), to summarize the unpruned rules.
+Essentially, DS rules are significant association rules that
+set the directions for non-DS rules to follow. The direction
+of a rule is the type of correlation it has, i.e., positive
+correlation
+or negative correlation
+or independence,
+which
+is also computed using x2 test. Let us seean example.
+
+
+' Here, it is presented as a post-processing method. In implementation, it
+is combined with rule mining.
+Example 2: We have the following discovered rules:
+Rl:
+Job = yes + Loan = approved
+[sup = 40%, conf = 70%]
+R2: Own-house = yes + Loan = approved
+[sup = 30%, conf = 75%]
+x2 analysis shows that having a job is positively correlated
+to the grant of a loan, and owning a house is also positively
+correlated
+to obtaining
+a loan. Then, the following
+association is not so surprising to us:
+R3: Job = yes, Own-house = yes + Loan = approved
+[sup = 20%, conf =90%]
+because it intuitively
+follows Rl and R2. We can use Rl
+and R2 to provide a summary of the three rules. Rl and R2
+are DS rules as they set the direction (positive correlation)
+that is followed by R3. In real-life data sets, a large number
+of associations are like R3.
+From the example, we see that the DS rules give the
+essential relationships of the domain. The non-DS rule is
+not surprising if we already know the DS rules. However,
+this, by no means, says that non-DS rules are not
+interesting. Non-DS rules can provide further details about
+the domain. For example, the non-DS rule above (R3) gives
+a higher confidence, which may be of interest to the user.
+Using DS rules to form a summary is analogous to
+summarization of a text article. From the summary, we
+know the essence of the article. If we are interested in the
+details of a particular aspect, the summary can point us to
+them in the article. In the same way, the DS rules give the
+essence of the domain and points the user to those related
+non-DS rules. Non-DS rules are basically combinations of
+DS rules. In the above Example 2, R3 is a combination of
+Rl and R2.
+Experiment
+results, including
+real-life
+applications,
+show that although the number of discovered rules can be
+huge, the number of DS rules is very small (see Section 8).
+They can be analyzed manually by the human user to obtain
+the essential relationships in the data. He/she can then focus
+his/her attention
+on those interesting
+aspects of the
+relationships, and to see the relevant non-DS rules. This
+process can be easily facilitated
+by an interactive user
+interface (Section 7). The proposed technique makes
+association rule mining effective and practical for data sets
+whose items are highly correlated. The user can now obtain
+a complete
+picture
+of
+the
+domain
+without
+being
+overwhelmed by a huge number of rules.
+
+2. Related Work
+The problem of too many rules has been studied by many
+researchers. [8] proposed an approach to allow the user to
+specify what he/she wants to see using templates. The
+system then retrieves those match rules from the set of
+discovered rules. This method, however, does not prune
+those insignificant rules and does not provide a summary of
+the discovered rules.
+In subjective interestingness research in data mining,
+[22, 11, 12, 191proposed a number of methods for finding
+unexpected rules. Instead of asking the user to specify what
+he/she wants to see as in [8], these approaches ask the user
+
+
+
+
+126
+
+to specify his/her existing knowledge about the domain.
+The system then finds those unexpected rules by comparing
+the user's knowledge with the discovered rules. Again,
+these methods do not prune and do not attempt to
+summarize the association rules.
+[25] and [181 investigated
+using item constraints
+specified by the user in rule mining to generate only the
+relevant rules. Essentially, the constraints restrict the items
+or combination of items allowed to participate in mined
+rules. This approach also does not prune those insignificant
+rules and does not summarize the unpruned rules,
+[26] introduces the concept of association rule cover for
+pruning association rules. A cover is basically a subset of
+the discovered associations that can cover the database.The
+number of rules in a cover can be quite small. A greedy
+algorithm is proposed to find a good cover and the
+remaining rules are pruned. The problem with this method
+is that the advantage of association rules, its completeness,
+is lost. Clearly, a better approach is to summarize the
+discovered rules. From this summary, the user can obtain an
+overall picture of the domain.
+[4] proposed a rule pruning technique using minimum
+improvement,
+which
+is the difference
+between
+the
+confidence of a rule and the confidence of any proper sub-
+rule with the sameconsequent. Those rules that do not meet
+this minimum improvement in confidence are pruned. [24]
+also proposed a related technique. Our pruning method is
+similar. However, we use chi-square test as the basis for
+pruning (minimum improvement can be easily incorporated
+in our framework). We will see in Section 8 that even after
+pruning the number of rules left can still be very large.
+Summarization is thus important. The methods in [4, 241do
+not perform summarization.
+There are also a number of other methods in
+classification research for rule pruning such as pessimistic
+error rate [21] and minimum description length based
+pruning [151.In our work, we choose the widely used chi-
+square test statistics for rule pruning.
+[l]
+introduces a technique to remove two types of
+redundant
+rules,
+i.e., simple
+and strict
+redundancy.
+Essentially, a rule is redundant with respect to another rule
+if the support and confidence of the redundant rule are
+always at least as large as the support and confidence of the
+latter. Simple redundancy tries to remove those rules that
+are derived from the same itemset. For example, AB => C
+is redundant with respect to the rule A => BC. This,
+however, does not happen in our situation because in our
+caseone itemset represents only one rule. Strict redundancy
+applies to two itemsets and one is a subset of the other, e.g.,
+X => Y is redundant with respect to X => YZ. This
+situation also does not apply in our situation because we
+focus on association rules that use only one fixed attribute
+on the right hand side. Also our proposed technique does
+not use minimum confidence for rule generation (see the
+problems with minimum confidence in [4]), but statistical
+correlation (or significance).
+Other related work includes correlation rule mining in
+[S]. It uses chi-square test to measure the correlation. A
+correlation rule is a set of correlated items. It does not
+perform pruning
+or summarization.
+[IO]
+introduces a
+technique for clustering association rules. It mainly deals
+with generation of numeric associations, i.e., how to join
+the adjacent intervals to produce more general rules and
+fewer rules. Clearly, both works are different from ours.
+
+3. Chi-Square Test for Independence and
+Correlation
+Chi-square test statistics &)
+is a widely used method for
+testing independence and/or correlation
+[171. In our
+proposed technique, it is used in pruning as well as in
+finding
+direction
+setting rules.
+Below,
+we give
+an
+introduction to chi-square test.
+Essentially, 2
+test is based on the comparison of
+observed frequencies with the corresponding expected
+frequencies. The closer the observed frequencies are to the
+expected frequencies, the greater is the weight of evidence
+in favor of independence.
+Example 3: In a loan application domain, we have 500
+people who applied for loan in a bank. Out of the 500
+people, 300 had a job and 200 did not have a job. 280
+people were granted loan and 220 were not. We also
+know that 200 people who had a job were granted loan,
+which can also be expressed as an association rule:
+Job = yes + Loan = approved
+[sup = 200/500, conf = 200/300]
+This information
+gives us a 2x2 contingency table
+containing four cells (Figure 2). Note that the table has
+only 1 degree of freedom, which is sufficient for our
+work. See [17] or any standard statistics text for more
+details about degrees of freedom.
+Loan = approved Loan = not-approved Row Total:
+
+:::I:
+pgqq
+;::
+
+ColumnTotal:
+280
+220
+500
+
+Figure 2. Contingency table for Job and Loan
+Our question is "Is loan approval dependent on whether one
+has a job or not?' In dealing with this problem we set up
+the hypothesis that the two attributes are independent. We
+then compute the expected frequency for each cell as
+follows: Of the 500 people included in the sample, 300
+(60% of the total) had a job, while 200 (40% of the total)
+had no job. If the two attributes are truly independent, we
+would expect the 280 approved casesto be divided between
+job = yes and job = no in the same ratio (60% and 40%);
+similarly, we would expect the 220 not-approved cases to
+be divided in the samefashion.
+2 is used to test the significance of the deviation from
+the expected values. Let f. be an observed frequency, andf
+be an expected frequency. The 2 value is defined as:
+
+x24fo-f)2
+f
+
+
+
+
+127
+
+Y
+-Y
+
+SatisfiesX
+Doesnot satisfyX
+ColumnTotal:
+Supportcount of X -9 y
+Supportcount of X -3 7y
+Supportcount of 7X + y
+Supportcount of-X 4 -7y
+
+Supportcount of y in data
+Supportcount of 7y in data
+
+Figure 3. A generic 2x2 contingency table
+
+A 2
+value of 0 implies the attributes are statistically
+independent. If it is higher than a certain threshold value
+(e.g. 3.84 at the 95% significance level [17]), we reject the
+independence assumption. For our example, we obtain 2 =
+34.63. This
+value
+is much
+larger
+than 3.84. The
+independence assumption is rejected. Thus, we say that the
+loan approval is correlated to (or dependent on ) whether
+one has ajob.
+observed frequency is 200 (i.e., the support count of the
+rule) and its expected frequency is only 168 (= 300 * 280 /
+500).
+
+
+
+
+However, we still do not know how they are correlated,
+e.g., whether having a job is positively
+or negatively
+correlated to the approval of a loan. Below, we give the
+definitions in the context of association rule mining.
+Definition
+1 (correlated): Let s be a minimum support and
+c be a significance level. X and y of a rule, X + y, are
+said to be (s, c) correlated (hereafter, merely correlated)
+if the following two conditions are met:
+1. The rule's support exceeds s.
+2. The 2 value for the rule with respect to the whole
+data exceeds the 2 value at the significance level c.
+Definition
+2 (uncorrelated
+or independent):
+Let s be a
+minimum support and c be a significance level. X and y
+of a rule, X 4 y, are said to be (s, c) uncorrelated
+(hereafter,
+merely
+uncorrelated
+or independent)
+if the
+following two conditions are met:
+1. The rule's support exceeds s.
+2. The x2 value for the rule with respect to the whole
+data does not exceed the x2 value at the significance
+level c.
+In general, computing the type of correlation (or the
+direction) of an association rule r, X + y, is to compare the
+rule with the whole population or the whole data set. Or
+more specifically, it is to compare with the rule that has the
+same conclusion as r but no condition,
+i.e., + y. The
+generic contingency table used is shown in Figure 3.
+Note that in the table, we use the term support count
+rather than frequency to conform to association rule mining.
+All support counts are available from the two rules (i.e., X
+-+ y and + y), after running a mining algorithm. For
+example, to test the rule in Example 3 (RI), we compare it
+with R2:
+Rl:
+Job = yes + Loan = ap roved
+[sup = &O/500, conf = 200/300]
+R2:
++ Loan = approved
+[sup = 280/500, conf = 280/500]
+Clearly, these two rules specify completely the contingency
+table in Figure 2 (or Figure 3). R2, which has no condition,
+gives the column total for approved (280) and the total
+number of cases(500) in the data. Rl, which represents the
+first cell in the table, also has the number 300 for the row
+total (which is simply the support count of Job = yes). With
+all this information, the rest of the cells can be computed.
+
+4. Direction
+Setting Rules
+
+Similar to those in [5], we define three types of correlation
+of a rule. For this work, we also call them the directions of
+a rule.
+Definition 3 (type of correlation
+or direction):
+Positive
+correlation:
+if X and y of a rule r, X -+ y, are
+correlated and f0 I f > 1, we say that r is a positive
+correlation
+(or we say r is significant).
+We use 1 to
+denote a positive correlation. We also say that the
+direction
+of r is 1.
+Direction setting (DS) rules are the positively correlated
+association rules that set the directions for non-direction
+setting (non-DS) rules to follow. We give some definitions.
+Definition
+4 (direction
+setting
+rule):
+A rule r is a
+direction
+setting
+(DS) rule, if it satisfies the following
+conditions:
+1. It has the direction of 1 (positive correlation).
+2. Its direction is not an element of the set of expected
+directions.
+Negative
+correlation:
+if X and y of a rule r, X + y, are
+Definition
+5 (expected directions):
+The set of expected
+correlated but f. I f < 1, we say that r is a negative
+directions
+of a rule r is defined as follows:
+correlation.
+We
+use -1 to denote a negative
+1. If r is a l-condition
+rule, the set of expected
+correlation. We also say that the direction
+of r is -1.
+direction
+is
+{O}
+(i.e.
+the condition
+and the
+Independence:
+if X and y of a rule r, X +
+y, are
+consequent are expected to be independent in the
+independent, we say that r shows independence.
+We
+absence of prior knowledge).
+use 0 to denote independence. The direction
+of r is 0.
+2. If r is a k-condition rule r (k > 1) of the form:
+In this paper, we are only interested in the positively
+r:
+al,
+a2,
+. . . . ak
++
+Y
+correlated rules (see "Additional
+features" in Section 6 if
+the set of expected directions
+is computed
+as
+the other two types of rules are also of interest). The rule in
+follows: We view r as a combination
+of 2 rules, a
+Example 3 represents a positive correlation because its
+l-condition
+rule rl and a (k-l)-condition
+rule r,,,f,
+Row Total
+
+Supportcount of X in data
+Supportcount of 1x in data
+Total no. of casesin data
+
+
+
+
+128
+
+with the same consequent y:'
+rl :
+ai +Y
+'
+rrest.
+al,
+a2,
+.... aj --)
+y
+where (~1, a2, .... aj) = { ~1, ~2, ..., ok} - {ai). The
+expected direction
+for this combination,
+denoted
+by Ei, is defined below (x.dir denotes the direction
+of rule x):
+(a). if rl.dir
+= rres,.dir=
+1 thenEi=
+1.
+(b). if (r,.dir
+= 1 and rresr.dir = 0) or
+(r,.dir
+= 0 and rypSI.dir = 1) then Ei = 1.
+(c). if rl.dir
+= rres,.dir = 0 then Et = 0.
+(d). otherwise, Ei = unknown.
+Since there are k such combinations,
+the set of
+expected directions
+of r is (Ei}, i = 1, ,.., k.
+Lemma: All positively
+correlated l-condition
+rules are
+direction setting rules.
+Proof:
+It follows directly from Definition
+4 and 5.
+Notes about the above two definitions:
+l
+In Definition
+5, the assumptions
+(a) to (d) are
+reasonable because they follow our human intuitions:
+(a) Two
+positive
+correlations
+generally
+lead to
+another positive correlation (Example 2).
+(b) A positive
+correlation
+and an independence
+generally suggest a positive correlation.
+(c) Two
+independence
+relations
+lead to another
+independence relation.
+(d) For the rest of the situations, we either cannot
+decide what is the expected direction (e.g., 1 and
+-1 combination),
+or we simply do not care (e.g., -
+1 and -1 combination).
+l
+The second condition
+(2) of Definition
+4 basically
+says that if a rule's direction is expected with respect
+to any one combination,
+it is not a DS rule. This is
+reasonable because as long as there is one possible
+justification
+for r's direction,
+we cannot say that r
+sets a new direction. Thus, r is not a DS rule.
+To further explain the definitions,
+we list all possible
+direction combinations of rl, rres,and r (Figure 4) using the
+notation:
+rl.dir,
+rresr.dir := r-dir
+or
+rresr.dir, rl.dir
+:= r.dir
+
+A (1)
+1,l
+:= 1
+B (1) 1,O := 1
+c
+(1) 0,o := 0
+(2)
+1, 1 := -1
+(2)
+l,o := -1
+(3)
+1, 1 := 0
+(3) l,o
+:= 0
+(3)
+0, 0 := -1
+D (1)-1,-l
+z-1
+E (l)-I,0
+z-1
+F
+(1) -1, 1:= 0
+(2)
+(2) ;
+(3) -l,o
+:= 0
+(3) :1, 1:= -1
+Figure 4. All possible direction combinations of
+rl, rresrand r
+A(l), B(1) and C(1) conform to our expectations (a), (b)
+and (c) in Definition 5. That is, given the directions of rl
+and rresr
+on the left-hand-side of ":=", if r has the direction
+
+We canalsoviewtheruler asacombinationof morethan two shorter
+rules. The numbersof conditionsin the shorter rules do not have to be
+1 and k-l, but any possible partition.
+However,
+these alternatives
+require much more computation. Conceptually,
+they do not seem to
+have any advantage over our 1 and k-l combination.
+on the right-hand-side
+of ":=", we say r's direction is
+expected. In fact, D(l), E( 1) and F(1) can also be seen as
+expected. However, they are not interesting because we are
+only interested in the positively
+correlated rules. The
+interesting situations occur in C(2), D(2), E(2) and F(2)
+(shaded in Figure 4) because the direction of r is 1, but the
+expected direction of the rl and r,,,, combination is 0 or
+unknown, which are our cases (c) and (d) in Definition 5.
+When such situations occur, we say that r sets a new
+direction. We call r a potential
+DS rule. r will be called a
+DS rule if for all possible combinations of rl and r,.,,,, the
+direction of r is different from the expected directions.
+Since we are only interested in positive correlations, the
+remaining situations in Figure 4 are not relevant (see also
+Section 6).
+Definition
+6 (non-direction
+setting
+rules):
+A non-
+direction
+setting (non-DS) rule is a positively correlated
+rule that is not a DS rule.
+
+5. Pruning the Discovered Association Rules
+and Finding Direction Setting Rules
+This section presents the basic ideas of pruning and finding
+direction setting rules. The next section gives the detailed
+algorithm, which performs both tasks.
+
+5.1.
+Pruning
+of association
+rules
+
+Section 3 shows that to test for correlation between the
+condition and the consequent of a rule r, X -+ y, we
+compare it with the rule R, + y, to see whether r is
+significant with respect to R. Those rules that are not
+positively correlated are removed. However, we can do
+much better than that. Consider
+again Example
+1 (which is
+reproduced here asExample 4).
+Example 4: We have the following two rules,
+R:
+Job = yes -+ Loan = approved
+[sup = 60%, conf = 90%]
+r:
+Job = yes, Credit-history
+= good +
+Loan= approved
+[sup = 40%, conf = 91%]
+If we know R, then r is of limited use because it gives
+little extra information. Its slightly higher confidence is
+more likely due to chance than to true correlation.
+We say r can be pruned with respect to R because within
+the subset of data cases covered by R, r is not significant.
+(A rule covers a set of data cases, if the data cases satisfy
+the conditions of the rule.) The pruning proceeds as that in
+Section 3. However, instead of using the whole data set,
+here we test the correlation of r with respect to R as r only
+covers a subset of the data cases that are covered by R. If r
+does not show a positive correlation with respect to R, it
+should be pruned. In general, pruning is done as follows:
+
+l
+Given a rule r, we try to prune r using each ancestor
+rule R (which has the same consequent as r but fewer or
+0 conditions) of r. That is, we perform a x2 test on r
+with respect to R. If the test shows a positive
+correlation, it is kept. Otherwise, r is pruned. The
+reason for the pruning is because within
+the data
+covered by R, r is not significant.
+
+
+
+
+129
+
+5.2
+Finding DS rules
+The process for finding DS rules is as follows: x2 test is
+first used to evaluate each l-condition
+rule to determine
+its direction
+status, i.e., 1 (positive
+correlation),
+-1
+(negative correlation),
+or 0 (independence).
+Then, it
+proceeds level-by-level
+to analyze each rule and decide
+whether it follows the direction that has already been set
+by rules at previous levels, or whether it sets a new
+direction. That is, at level 2 we analyze only 2-condition
+rules, at level 3, we only analyze 3-condition
+rules and
+so on. (For easy discussion, from now on we will use the
+level number and the number of conditions
+of a rule
+interchangeably).
+The analysis proceeds as follows:
+At
+level k (k >l),
+for each k-condition
+rule r, we first
+determine
+its
+direction.
+We
+then
+examine
+each
+combination
+of l-condition
+rule ri and (k-1)-condition
+rule r,,,,
+of r to determine
+whether
+r follows
+the
+expected direction
+set by rI and rres,. If r follows
+the
+direction set by at least one such combination,
+we say r
+is not a DS rule. If r does not follow the direction set by
+any combination, we say r sets a new direction, and it is
+a DS rule.
+The computation
+with
+each combination
+can be
+illustrated
+using the following
+if-statement
+(Figure 5)
+(the corresponding
+situations
+in Figure
+4 are also
+indicated):
+1 A
+if q.dir = r,,,.dir = 1 then
+2
+41)
+if r.dir = 1 then
+r is not a DS rule
+3
+A(2)(3)
+else r.dir = undefined 3 I* seefootnote*I
+4
+B
+elseif
+(r,.dir = 1 and rrrs,.dir = 0) or
+(q.dir
+= 0 and r,,,.dir
+= 1) then
+5
+B(1)
+if r.dir = 1 then
+r is not aDS rule
+6
+B(2)(3)
+else r.dir = undefined
+I* seefootnote*I
+7
+c
+elseif r,.dir = r,,,,.dir = 0 then
+8
+C(1)
+if r.dir = 0 then
+nothing
+9
+C(2)
+elseif r.dir=l then r is apotential DS rule
+10
+C(3)
+else r.dir = undefined
+I* seefootnote*/
+11 D, E, F
+else
+12
+D(2), E(2), F(2)
+if r.dir = 1 then r is a potential DS rule
+13
+W)(3),
+E(1)(3),
+F(1 X3)
+else r.dir = undefined
+I* seefootnote*I
+14
+endif
+Figure 5. Identifying
+a potential DS rule
+We now state the key theorem of our technique.
+Theorem:
+Using the above procedure to identify
+DS
+rules, every non-DS rule, X + y, is a combination of
+one or more DS rules and zero or more 0 direction l-
+condition rules with the same consequent y. That is,
+with a suitable re-arrangement of its conditions
+(as
+the ordering of the conditions are not important) any
+non-DS rule can be expressed as:
+dsr+ zr*
+where dsr is any DS rule, and zr is any 0 direction l-
+condition rule.
+Proof: See [ 141for the full proof.
+
+
+3 We need to assign undefined here to prevent some undesirable
+situations,see[141for details.
+Note that the above theorem does not say that any
+possible
+combination
+of
+some
+DS
+rules
+and/or
+independence rules (0 direction)
+is a non-DS rule. The
+reason is that such a combination
+may not meet the
+minimum support, or may not show positive correlation.
+From the definition
+of DS rules and the theorem, we
+can derive three important points:
+l
+Every DS rule r is unexpected
+with respect to all r,
+and rrpst combinations because r does not follow their
+directions.
+l
+After seeing the DS rules, the directions of non-DS
+rules are no longer surprising as they are just some
+combinations
+of DS rules and independence rules
+(the direction
+of 0). That is, the non-DS rules are
+somewhat expected if the DS rules are known.
+l
+DS rules can guide the user to see the related non-DS
+rules, if he/she is interested. The non-DS rules can
+provide further details with regard to the DS rules.
+These points enable us to build a simple user interface
+that allows the user to focus on the essential aspects (DS
+rules) of the domain and selectively
+view the relevant
+details (non-DS rules). See Section 7.
+
+6. The Algorithm
+Figure 6 gives the algorithm (called P-DS) for both pruning
+and finding DS rules. The input parameters are F and T. F
+is the set of discovered large rules. T is the 2 value at a
+particular significance level. Two points to be noted:
+In the definitions of DS and non-DS rules, we did not
+mention how pruning is related. Clearly, those pruned
+rules will not be included in the set of DS rules or the set
+of non-DS rules.
+For easy understanding, the algorithm is presented as a
+post-processing
+method
+of
+the
+discovered
+rules.
+However, it can be easily incorporated into a rule miner
+itself. In fact, we implemented our system that way.
+The algorithm processes the discovered rules level-by-
+level (line 1) from level-l to level-n (where n is the highest
+level). For each rule r, X+
+y, at a particular level the
+algorithm
+works as follows:
+The procedure compDir
+computes the type of correlation (or direction) of r (in line
+2), which is given to r.dir. "3
+y" is a rule without any
+condition. In line 3 and 4, if r is a level-l
+rule and its
+direction is 1, then r is a DS rule (DSR contains the set of
+all DS rules). If r's direction is not 1, we record that r is
+pruned by "+ y" by assigning "+
+y" to r.prune
+(line 5).
+This saved information is important for subsequent pruning
+(see procedure evalPrune
+in Figure
+8). (r.prune
+is
+initialized
+to 0, indicating that r is not pruned.) Line 6
+processes r using all pairs of its ancestors rl and r,,,,. In line
+7, if r is pruned and r cannot be a DS rule, we can exit the
+for-loop. Anyone of the two conditions
+would not be
+sufficient for the exit. Evaluation of pruning is done in line
+8 using the procedure evaZPrune. Line 9 checks to see
+whether it has been determined that r cannot be a DS rule.
+If so, there is no need to proceed. From line 10-21, the
+algorithm analyzes r by considering the four cases. This
+part has been discussed in Section 5.2. r.justify
+is used to
+
+
+
+
+130
+
+Procedure P-DS(F, 2")
+1
+for each r (X -+ y) E F from level-l
+to level-n do
+2
+r.dir = compDir(r,
+"-+ y", T);
+3
+if r is a level-l
+rule then
+4
+if r.dir = 1 then DSR = DSR
+u
+(r);
+/* r is a DS rule */
+5
+else r.prune = "-+ y";
+/* recordthat r is prunedby "+ y" */
+6
+else for each pair, r, (Xl + y) and r,,, (XrCsr-+y) of r, where Xi E X, and X,,, = X - {X;) do
+7
+if r is pruned and r cannot be a DS rule then exit-for;
+8
+if r is not pruned then evalPrune(r,
+rresr);
+I* no needto prune against rt *I
+9
+if r is still a potential DS rule then
+10
+if r,.dir = r,,,.dir = 1 then
+11
+if r.dir = 1 then r.justifr
+= 0
+I* r is not a DS rule *I
+12
+else r.dir = undefined
+13
+elseif (r,.dir = 1 and r,,,,.dir = 0) or (q.dir = 0 and r,,,,.dir = 1) then
+14
+if r.dir = 1 then r.justify = 0
+/* r is not a DS rule *I
+15
+else r.dir = undefined
+16
+elseif r,.dir = r,,,*.dir = 0 then
+17
+if r.dir = 0 then r.justifr = 0
+I* r is not aDS rule */
+18
+elseif r.dir = 1 then r.justifr = r.just$y u {(q, rr,,,)}
+I* r is apotential DS rule */
+19
+else r.dir = undefined
+20
+else if r.dir = 1 then r.justify = r.justify u { (rI,rres,))
+/* r is a potential DS rule */
+21
+else r.dir = undefined
+22
+endfor
+23
+if r.justify # 0 then
+/* r sets a new direction *I
+24
+if r is pruned then r.dir = undefined
+I* Although r sets a new direction, it is pruned */
+25
+else DSR = DSR u (r)
+I* r is a DS rule */
+26
+endif
+27
+endfor;
+28
+unprnRules = {r E F I r.dir = 1, r is not pruned};
+I* all the unpruned rules */
+29
+non-DSR = unprnRules - DSR
+/* all the non-DS rules */
+
+Figure 6. Algorithm P-DS
+
+record all rl and r,,,, combinations that justify r to be a
+potential DS rule (line 18 and 20). This information is
+helpful to the user in understanding the DS rules (see
+Section 7). When we know that r is not a DS rule (line 11,
+14 and 17), no recording is needed (we set r.justify = 0).
+After completing the inner for-loop, if r.justify # 0, r is
+justified to be a DS rule. However, if r can be pruned
+(r.prune # 0, seealso Figure 8), then it will not be a DS rule
+(line 23). r.dir is set to undefined (line 24) so that r can be
+used in the future to justify a rule for being a DS rule. If r
+cannot be pruned (r.prune
+= 0), then it is a true DS rule
+(line 25), and it is included in DSR. All unpruned rules are
+in unprnRules
+(line 28), and all non-DS rules are in non-
+DSR (line 29).
+Below, we describe the two procedures compDir
+and
+evalPrune.
+Procedure compDir (Figure 7) usesthe 2 test to
+compute the correlation or direction of r. R is an ancestor
+rule of r and both have the sameconsequent.
+Procedure compDir(r,
+R, T)
+1
+if&r,
+R) > T then
+2
+if r.sup > r.cover * (R.sup I R.cover) then
+3
+return( 1)
+4
+else return(- 1)
+5
+else return(O)
+Figure 7. Computing the direction or correlation of a rule r
+against a more general rule R
+In line 1, if &r,
+R) > T, we reject the independence
+assumption, i.e., the conditions and the consequent are
+correlated. Line 2-5 determine the type of correlation or
+direction (Definition
+3). "r. cover*(R.suplR.
+cover)"
+is the
+expected frequency. xcover is the number of data casesthat
+satisfy the conditions of rule x.
+The evalPrune procedure is shown in Figure 8. It tries to
+prune r using rres,.In line 1, if r,,,, itself has been pruned
+previously (i.e., r,,,,.prune # 0). Then, the algorithm needs
+to find the rule that prunes rrest This is shown in line 2. In
+line 3 and 4, if r does not represent a positive correlation, it
+is pruned. We set r.prune
+= rrpst to provide a link for
+pruning of higher level rules than r. In line 5, if r is a
+positive correlation, then we try to compare it with r,,,Y,
+using chi-square test. If r does not show a positive
+correlation within the subset of the data covered by rresr,it is
+pruned by r,,,, (line 6).
+Procedure evalPrune(r, rres,)
+1
+if r,,,Ypprune# 0 then
+/* If r,e,lhasbeenpruned*/
+2
+rrcsl=
+r,,,,.prune;
+3
+if r.dir # 1 then
+4
+r.prune = r,,,
+5
+elseif compDir(r, r,,J # 1 then
+I* r is not significant
+comparedto rresr*/
+6
+r-prune = r,,,
+/* r canbepruned*I
+Figure 8. Evaluating pruning of a rule r with respect to its
+ancestor rule r,,,,
+Complexity
+of the algorithm:
+Let M be the number of
+discovered large rules, and N be the maximum number
+of conditions of a rule. The time complexity of the
+algorithm is thus O(MN) Q test is very efficient and
+can be seen as constant). Since N is normally small, less
+
+
+
+
+131
+
+than 10, then the algorithm is linear in the number of
+large rules.
+Additional
+features: The above algorithm can be enhanced
+with many interesting features to make it more powerful.
+Below we give two suggestions:
+1. The proposed technique does not use minimum
+confidence. However, it can be incorporated easily
+into
+the algorithm
+as an additional
+pruning
+mechanism.
+2. The algorithm does not report rules with negative
+correla&on (or the direction
+of -1). Sometime
+negative correlations
+can also be useful.
+For
+example, it may be interesting to know the situations
+A(2) and B(2) in Figure 4 (i.e., 1, 1 := -1 and 1,O :=
+-1). Such rules can be easily reported by adding
+additional "elseif' statements in the algorithm.
+
+7. Interactive
+Exploration
+of DS Rules and
+non-DS Rules
+,
+As mentioned earlier, DS rules form the summary of the
+regularities in the data and non-DS rules can provide further
+details. A user interface has been built to allow the user to
+interactively focus on the essential aspects (DS rules) of the
+domain and selectively view the relevant details (non-DS
+rules). The interface has many functions for interactive
+exploration
+of DS and non-DS rules. Due to space
+limitations, we only give three main functions here.
+The user can vl'ew the DS rules according to their levels
+(or the number of conditions). This allows the user to
+gradually see the essential regularities that exist in the
+data. In some applications, the DS rules themselves are
+already sufficient.
+For each DS rule, the user can view the reasons for
+classifying it as a DS rule. A DS rule r is essentially
+unexpected with respect to its ancestor rules r-1 and
+r,,,t because r does not follow
+their directions.
+For
+example, we have the following
+rules at level 1 (the
+number after Ri is the rule's direction;
+the DS rules
+are also labeled)
+Rl: -1
+Age = young + Loan = approved
+R2: 1 (DS) Age = young + Loan = not-approved
+R3: 1 (DS) Own-house = yes + Loan = approved
+R4: -1
+Own-house = yes +
+Loan = not-approved
+and, we have the following DS rule at level 2
+R5
+1 (DS) Age = young, Own-house = yes +
+Loan = approved
+If the user is interested in seeing why R5 is a DS rule,
+the system will display Rl and R3 together with their
+directions.
+This allows the user to gain a better
+understanding of the domain.
+The user can view the relevant non-DS rules. When the
+user is looking at a particular DS rule, he/she may wish
+to see more details, i.e., the non-DS rules that follow its
+direction. For example, we have the following DS rules
+at level 1,
+Rl:
+1 (DS) Job = yes + Loan = approved
+R2: 1 (DS) Own-house = yes + Loan = approved
+and the following non-DS rule at level 2, which follows
+the direction of Rl and R2:
+R3: 1 (non-DS)
+Job = yes, Own-house = yes +
+Loan = approved
+When the user clicks to view the relevant non-DS
+rules that follows the direction of Rl or R2, R3 will
+be displayed (if there are more rules, all of them will
+be given to the user in some sorted order, e.g.,
+according to their supports or confidences).
+
+8. Empirical
+Evaluation
+We study the effectiveness of the algorithm for pruning and
+finding DS rules. We used 30 data sets in our experiments.
+25 of them are obtained from the UC1 Machine Learning
+Repository [161, and 5 are our real-life application data
+sets. All
+these data sets contain
+huge numbers of
+associations, which present a major problem for using
+association rule mining to give a complete picture of the
+underlying domains. Currently, the 25 public domain data
+sets are mainly used for classification research. However,
+classification can only give the user a partial picture of the
+data, i.e., many interesting/useful rules are not discovered
+[20, 131. With our proposed technique, we show that
+association rule mining
+can now be effectively
+and
+practically applied to these data sets to give a complete
+picture of the underlying relationships in the data.
+Below, we report the experiment results with the 30 data
+sets. In all the experiments, we use a fixed attribute (target
+attribute) on the right hand side of association rules. The
+target attribute is a categorical attribute and can have a
+number of values (called rut-get items). For the 25 UC1 data
+sets,the target attribute in each data set is the class attribute
+used for classification. For our 5 real-life data sets, the
+target attributes are suggested by our users. For all these
+data sets, even with a target attribute, the numbers of
+associations discovered are huge (note that our modified
+association rule miner is able to use the target attribute
+[ 131). Many data sets cause combinatorial explosion. Due
+to this reason, we set a hard limit of 80,000 on the total
+number of large rules processed in memory. Even with such
+a large limit, mining cannot be completed for many data
+sets. Using a hard limit is justified
+because proceeding
+further only generates rules with many conditions that are
+hard to understand and difficult to use.
+Many data sets we use contain numeric attributes. We
+discretize these attributes into intervals using the target
+attribute. There are a number of discretization algorithms in
+machine learning literature for the purpose. We use the
+entropy-based method given in [6]. The code is taken from
+MLC++ [9].
+The
+experiments
+were
+repeated
+using
+different
+significance levels for the 2
+test (95% and 90%) and
+different minimum support (minsup) values (2% and 1%).
+The 95% significance level for the x2 test is commonly used
+[171.A lower level of 90% is used to show the effect of this
+on the results. We used the minimum supports of 2% and
+1% because it is shown in [131that for these data sets, rules
+with these support thresholds are sufficiently predictive.
+
+
+
+
+132
+
+Table
+1. Experiment
+results (minimum
+support = 1%; significance
+level = 95%)
+
+1
+Data
+No.
+sets
+1
+Anneal
+2
+Austra
+3.
+Auto
+4
+Breast-w
+5
+Chess
+6
+Cleve
+7
+Crx
+8
+Diabetes
+9
+German
+10
+Glass
+11
+Heart
+12
+Hepati
+13
+Horse
+14
+Hypo
+15
+lono
+16
+Led7all
+17
+Lymph
+18
+Pima
+19
+Sick
+20
+Sonar
+21
+Tic-tat
+22
+Vehicle
+23
+Waveform
+24
+Wine
+25
+zoo
+------
+------.
+26
+Disease
+27
+Profile
+28
+Quality
+29
+Results
+30
+Traffic
+Average
+2
+3
+no. of
+Target
+[terns
+items
+121
+6
+51
+2
+98
+7
+31
+2
+74
+2
+30
+2
+55
+2
+18
+2
+66
+2
+21
+7
+23
+2
+36
+2
+66
+2
+50
+2
+314
+2
+15
+10
+51
+4
+18
+2
+109
+2
+82
+2
+28
+2
+68
+4
+211
+3
+37
+3
+37
+7
+------
+------
+19
+2
+373
+5
+45
+2
+278
+2
+79
+3
+84
+3
+4
+Large
+rules
+42893
+80000
+80000
+2757
+80000
+30435
+80000
+1196
+80000
+1820
+10044
+80000
+79965
+80000
+34463
+1692
+80000
+1196
+80000
+80000
+8315
+80000
+35888
+27143
+80000
+-------
+1622
+80000
+67841
+5448 1
+74610
+50545
+5
+6
+7
+8
+PC.
+`C rules
+1-cond
+Total no.
+rules
+Ift. pru
+DS rules
+DS rules
+18843
+347
+66
+99
+40668
+379
+29
+94
+43781
+2175
+110
+559
+2362
+97
+26
+27
+31939
+2314
+50
+253
+11707
+181
+21
+22
+40269
+465
+31
+97
+565
+44
+14
+14
+21386
+496
+32
+138
+1036
+153
+35
+42
+3055
+131
+18
+18
+23097
+201
+22
+41
+24368
+314
+41
+81
+32543
+299
+23
+49
+13710
+682
+238
+405
+1389
+691
+70
+72
+18324
+511
+40
+89
+565
+44
+14
+14
+23538
+456
+35
+73
+24005
+1299
+42
+54
+2712
+290
+14
+90
+49538
+3259
+90
+474
+30971
+1835
+174
+293
+15013
+551
+40
+68
+59270
+1159
+59
+204
+------
+__-----
+__-----_
+--------
+462
+35
+13
+13
+29362
+1229
+77
+217
+29776
+295
+40
+89
+16426
+995
+116
+151
+5916
+231
+17
+94
+20553
+705
+53
+131
+9
+No. of condr
+in DS rules
+1.53
+2.05
+2.45
+1.07
+2.60
+1.22
+2.92
+1.oo
+2.44
+1.18
+1.oo
+2.44
+2.26
+1.96
+1.49
+1.08
+1.89
+1.00
+1.65
+1.65
+2.71
+2.55
+1.67
+1.54
+2.05
+----------
+1.oo
+2.28
+2.88
+1.40
+2.70
+1.91
+10
+Exe.
+time
+6.17
+3.98
+2.91
+0.14
+2.40
+1.75
+3.96
+0.05
+3.44
+0.07
+0.50
+3.81
+2.23
+3.92
+1.04
+0.06
+3.26
+0.04
+2.69
+3.09
+0.31
+3.03
+0.58
+1.53
+4.56
+-----
+0.07
+4.97
+2.34
+1.43
+4.10
+2.14
+
+minimum support = 2%; significance level = 95%:
+Average
+84
+3
+44280
+23885
+612
+50
+93
+1.75
+2.12
+minimum support = 1%; significance level = 90%:
+Average
+84
+3
+50545
+23297
+957
+57
+162
+2.08
+2.18
+minimum support = 2%; significance level = 90%:
+Average
+84
+3
+44280
+25978
+810
+53
+109
+1.86
+2.08
+
+Table 1 gave the results obtained using the significance
+level of 95% for the x2 test and minsup = 1%. The other
+results can be found in [143,but they are summarized here.
+Below, we explain each column in Table 1. The final row
+gives the average value for each column.
+Column 1: It gives the name of the data set (the last 5 are
+our real-life data sets). The number of records (or cases)
+in these data sets range from a few hundreds to tens of
+thousands.
+Column 2: It shows the number of items in each data set.
+Recall, an item is an attribute and a value (or an interval)
+pair, i.e., (CUttributei>
+= <valuej>).
+Column 3: It shows the number of items (or values) in the
+target attribute of each data set.
+Column 4: It gives the number of large rules generated
+from each data set. We can see that the number of large
+rules generated from an association rule miner is huge for
+each data set. Almost half of the data sets cannot be
+completed even under the hard limit of 80,000.
+Column 5: It gives the number of positively correlated
+(PC) rules found in each data set. The number is much
+smaller. However, on average, there are still more than
+20,000 of them.
+Column 6: It gives the number of positively correlated
+(PC) rules after pruning.
+The number is reduced
+drastically. More than 96% of the PC rules are pruned.
+However, on average, the number of unpruned rules is
+still large, e.g., 705. Such a large number of rules are still
+
+
+
+
+133
+
+hard to be analyzed by a human user.
+Column 7: It gives the number of 1-condition DS rules,
+Column 8: It gives the total number of DS rules found in
+each data set. The number of DS rules is manageable and
+can be analyzed manually. On average, only 131 rules are
+DS rules. Many of them are l-condition DS rules.
+Column 9: It gives the average number of conditions in the
+DS rules. We can see that the DS rules are mostly short
+rules.
+Column 10: It gives the running time in second (running on
+512MB Spare 2) for each data set. This time includes
+rule generation (data reside on disk), pruning and finding
+direction setting rules. We can see that the proposed
+technique is very efficient. We could not log any time for
+pruning and finding DS rules alone due to the efficiency.
+From the summary of the other results (below Table l), we
+make the following observation:
+.
+
+
+
+
+9.
+When the minimum support increases, fewer DS rules
+are produced. When the significance level is lowered to
+90% for the x2 test, slightly more DS rules are produced.
+This is because pruning is less stringent. However, the
+numbers of DS rules are still manageable. The running
+times are similar because we have the hard limit.
+
+Conclusion
+Data mining is to find patterns or regularities to summarize
+the data. If it also produces a huge number of patterns, it
+will be of limited use because a human user does not have
+the ability to analyze these patterns. However, if such a
+huge number of patterns do exist in the data, it will not be
+appropriate to arbitrarily discard any of them or to generate
+only a small subset of them. It is much more desirable if we
+can summarize them. This paper proposes such a technique.
+This technique first prunes off those rules that contain little
+extra information as compared to their ancestors, and then
+identifies the direction setting rules to give a global picture
+of the underlying relationships in the domain. Although the
+number of discovered associations can be very large,
+experimental results and real-life applications have shown
+that the number of direction setting rules is typically very
+small and with very few conditions. They can be manually
+inspected by a human user without too much effort.
+Finally, we believe that in general any data mining
+technique that may potentially produce a large number of
+patterns should provide a technique to summarize the
+findings or the generated patterns. In this way, the user will
+be able to obtain an overall picture of the domain without
+being overwhelmed by a large number of detailed patterns.
+From this summarized information, he/she can then find
+some interesting
+aspects to focus on. The proposed
+technique represents a major step towards this direction.
+
+References
+[l]
+Aggarwal, C., and Yu, P. "Online generation of
+association rules." ICDE-98, 402-411.
+[2]
+Agrawal,
+R., Imielinski,
+T., Swami, A. "Mining
+association rules between sets of items in large
+[31
+
+[41
+
+
+[51
+
+
+[61
+
+
+[71
+
+@I
+
+
+PI
+
+
+[lOI
+
+1111
+
+u21
+
+
+[I31
+
+1141
+
+
+[151
+
+V61
+
+
+H71
+[181
+
+
+[I91
+
+ml
+
+
+P11
+
+Pa
+
+WI
+
+
+[241
+
+WI
+
+P61
+databases."SIGMOD-1993, 1993, 207-216.
+Agrawal, R. and Srikant, R. "Fast algorithms for mining
+association rules." VLDB 94
+- .
+Bayardo,
+R.,
+Agrawal,
+R,
+and Gunopulos,
+D.
+"Constraint-based rule mining in large, densedatabases."
+To appearin ICDE-99, 1999.
+Brin, S. Motwani, R. and Silverstein, R. "Beyond market
+basket: generalizing association rules to correlations."
+SIGMOD-97, 1997,265-276.
+Fayyad, U. M. and Irani,
+K. B. "Multi-interval
+discretization
+of
+continuous-valued
+attributes
+for
+classification learning." ZJCAI-93, 1022-1027.
+Han, J. and Fu, Y. "Discovery
+of multiple-level
+association rules from large databases."VLDB-95.
+Klemetinen, M., Mannila, H., Ronkainen, P., Toivonen,
+H., and Verkamo, A.I. "Finding interesting rules from
+large setsof discovered association rules." CIKM-1994.
+Kohavi, R., John, G., Long, R., Manley, D., and Pfleger,
+K. "MLC++: a machine learning library in C-t+." Tools
+with artificial intelligence, 740-743, 1994.
+Lent, B, Swami, A., and Widom, J. "Clustering
+association rules." ICDE-97, 1997.
+Liu, B., and Hsu, W. "Post-analysis of learned rules."
+AAAI-96, 1996,pp. 828-834.
+Liu, B., Hsu, W., and Chen, S. "Using general
+impressions to analyze discovered classification rules."
+KDD-97, 1997.
+Liu, B., Hsu, W. and Ma, Y. "Integrating classification
+and association rule mining." KDD-98.
+Liu, B., Hsu, W. and Ma, Y. "Summarizing the
+discovered associations using direction setting rules."
+Technical Report, SoC, 1999.
+Mahta, M., Agrawal, R. and Rissanen, J. "SLIQ: A fast
+scalableclassifier for datamining." EDBT-96.
+Merz, C. J, and Murphy, P. UC1 repository of machine
+learning databases,1996.
+[http:Nwww.cs.uci.edu/-mlearn/MLRepository.html]
+Mills, F. Statistical Methods, Pitman, 195.5.
+Ng. R. T. Lakshmanan, L. Han, J. " Exploratory mining
+and pruning optimizations of constrained association
+rules." SIGMOD-98 1998.
+Padmanabhan, B., `and Tuzhilin, A. "A belief-driven
+method for discovering unexpected patterns." KDD-98.
+Pazzani, M., Mani, S. and Shankle, W. R. "Beyond
+concise and colorful: learning intelligible rules. KDD-
+97, 1997.
+Quinlan, R. C4.5: program for
+machine learning.
+Morgan Kaufmann, 1992.
+Silberschatz, A., and Tuzhilin, A. "What makespatterns
+interesting in knowledge discovery systems." IEEE
+Trans. on Know. and Data Eng. 8(6), 1996,970-974.
+Silverstein, C., Brin, S., Motiwani, R., and Ullman, J.
+"Scalable techniques for mining causal structures."
+VLDB-98, 1998.
+Srikant, R. and Agrawal, R. "Mining
+quantitative
+association rules in large relational tables." SIGMOD-96.
+Srikant, R., Vu, Q. and Agrawal, R. "Mining association
+rules with item constraints." KDD-97, 1997, 67-73.
+Toivonen, H. Klemetinen, M., Ronkainen, P., Hatonen,
+K., and Mannila, H. "Pruning and grouping discovered
+association rules." Mlnet
+Workshop on Statistics,
+Machine Learning, and Discovery in Databases, 1995,
+47-52.
+
+
+
+
+134
+

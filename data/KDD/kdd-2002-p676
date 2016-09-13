@@ -1,0 +1,1017 @@
+A Unifying Framework for Detecting Outliers and Change
+Points from Non-Stationary Time Series Data
+
+
+Kenji Yamanishi
+NEC Corporation
+4-1-1,Miyazaki,Miyamae,
+Kawasaki,Kanagawa216-8555,JAPAN
+Jun-ichi Takeuchi
+NEC Corporation
+4-1-1,Miyazaki,Miyamae,
+Kawasaki,Kanagawa216-8555,JAPAN
+
+
+
+ABSTRACT
+We are concerned with the issues of outlier detection and
+change point detection from a data stream. In the area of
+data mining, there have been increased interest in these is-
+sues since the former is related to fraud detection, rare event
+discovery, etc., while the latter is related to event/trend
+change detection, activity monitoring, etc.
+Specifically, it
+is important to consider the situation where the data source
+is non-stationary, since the nature of data source may change
+over time in real applications.
+Although in most previous
+work outlier detection and change point detection have not
+been related explicitly, this paper presents a unifying frame-
+work for dealing with both of them on the basis of the the-
+ory of on-line learning of non-stationary time series. In this
+framework a probabilistic model of the data source is in-
+crementally learned using an on-line discounting learning
+algorithm, which can track the changing data source adap-
+tively by forgetting the effect of past data gradually. Then
+the score for any given data is calculated to measure its
+deviation from the learned model, with a higher score indi-
+cating a high possibility of being an outlier. Further change
+points in a data stream are detected by applying this scor-
+ing method into a time series of moving averaged losses for
+prediction using the learned model. Specifically we develop
+an efficient algorithms for on-line discounting learning of
+auto-regression models from time series data, and demon-
+strate the validity of our framework through simulation and
+experimental applications to stock market data analysis.
+
+
+1. INTRODUCTION
+
+1.1
+Contribution of This Paper
+Identification of outliers in a data stream has been one of
+the most exciting topics in data mining (e.g., [10],[3],[15])
+and in statistics (e.g., [2]) since it can lead to discovery of
+unexpected and interesting knowledge. On the other hand,
+the issue of detecting change points in time series data has
+extensively been addressed in statistics (e.g., [7]) and has
+
+
+Permission to ma.k~ digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on serversor to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD02 Edmonton,Alberta,Canda
+Copyright 2002 ACM 1-58113-567-X/02/0007 ...$5.00.
+become one of the issues receiving scant attention in data
+mining, which is recognized as event change detection [5]
+and closely related to activity monitoring [4].
+Let us illustrate these issues by using network access log
+analysis as an example.
+Suppose that you have a data
+stream of network access logs, each of which is specified
+by numerical variables including access time, duration, etc.
+We may first [earn a statistical regularity from the data,
+then detect outliers by investigating how much each data is
+deviated from the regularity. Identifying such outliers may
+lead to network intrusion detection since criminal or sus-
+picious activities may often induce statistical outliers (see
+e.g., [3],[15]). The problem of change point detection is here
+to identify the time when a significant change of statistical
+behavior of the access pattern has occurred.
+Specifically we make the following requirements on the
+outlier/change point detection algorithm:
+A) The detection process should be on-line. That is, an out-
+lier or a change point should be detected immediately after
+it appeared, mad B) The detection should be adaptive to non-
+stationary data sources. That is, an outlier or a change point
+should be detected even if the nature of the data source may
+change over time. The major contribution of this paper is
+to propose a lmifying framework for detecting outliers and
+change points under the above requirements A) and B).
+In [15],[16], we proposed a general framework for sta-
+tistical outlier detection, under the assumption that the
+data source is non-stationary and each data is independently
+drawn according to it. In this framework, we employed a
+Ganssian mixture model as a statistical model for continu-
+ous variables while a histogram density as that for discrete
+variables. We developed an algorithm for on-line discounting
+learning of the model, where it can track the changing data
+source adaptively by gradually forgetting the effect of past
+data. Outliers are detected relative to the learned statisti-
+cal model. Then for a new input data, its score is calculated
+as its deviation from the learned model, with a high score
+indicating a high possibility of being a statistical outlier.
+In this paper we extend the framework in [15],[16] toward
+the following two directions: 1) dealing with time series data,
+and 2) detecting change points in a data stream.
+As for 1), we replace a finite mixture model employed in
+the previous framework in [15] with the AR (autoregression)
+model (see e.g., [1]) in order to represent the underlying
+mechanism of generating time series data, and propose a
+new algorithm for on-line discounting learning of the AR
+model.
+We then employ this algorithm to detect outliers
+
+
+
+
+676
+
+from time series data.
+As for 2), we present a new framework for change point
+detection by connecting it to outlier detection from time se-
+ries. In this framework we reduce the problem of change
+point detection into that of outlier detection from time se-
+ries of moving-averaged scores. We demonstrate the validity
+of our framework through simulation and experimental ap-
+plications to real stock market data analysis.
+
+1.2 Related Work
+Outlier detection for non-stationary sources has been con-
+sidered in [3], [15], [11], in which adaptive outlier detection
+algorithms have been proposed. However, they did not make
+any explicit statistical modeling so that time series data can
+be dealt with.
+We employ the AR model to represent a statistical behav-
+ior of time series data for the purpose of detecting outliers
+and change points. The AR model is one of the most typi-
+cal statistical models for time series, which has extensively
+been explored (see e.g.,[1],[9],[13]) in statistics. Most exist-
+ing algorithms of estimating parameters for the AR model
+are designed under the assumption that the data source is
+stationary. One approach to dealing with non-stationary
+sources is to introduce an AR model whose coefficients are
+time varying (see e.g., [9],[13]). In contrast, we deal with
+non-stationary sources by modifying the AR model estima-
+tion algorithm so that the effect of past examples can grad-
+ually be discounted as time goes on.
+The standard approach to change point detection in statis-
+tics has been to apriori determine the number of change
+points and decide the stationary model to be used for fit-
+ting between successive change points (see e.g., [1],[6],[7],[8]).
+However, the locally stationary assumption should be elim-
+inated since the statistical regularity may be changing over
+time in real applications.
+In [5] the issue of change point detection was addressed
+without making any assumption that the data source is lo-
+cally stationary. Instead, a piecewise segmented function
+was used in [5] to fit the time-dependent data where the
+change points are defined as the points between successive
+segments. In their approach a change point may be detected
+by finding the point such that the total errors of local model
+fittings of segments to the data before and after that point
+is minimized. However, it is basically computationally ex-
+pensive to find such a point since the local model fitting task
+is required as many times as the number of points between
+the successive points every time data is input. Further it
+is not guaranteed that it works well when the data source
+cannot be well represented by a simple piecewise segmented
+function.
+In contrast, we take a more general approach: We don't
+fit a piecewise segmented function to the data but rather
+fit the AR model and update its parameter estimates in-
+crementally so that the effect of past examples is gradually
+discounted. Then we give a score to each data/each time
+point, with a higher score indicating a high possibility of
+being an outlier/a change point. This makes the process
+more efficient than the approach in [5] and adaptive to the
+source that cannot be represented by a simple piecewise seg-
+mented model.
+Further our approach is distinguished from previous work
+in the following regards:
+1) Although in most previous work outlier detection and
+change point detection have not been related explicitly, this
+paper gives a clear connection between them and presents a
+unifying framework for deafing with both of them from the
+viewpoint of on-line discounting leaning of non-stationary
+time series. In our framework, we can detect outliers and
+change points simultaneously on the basis of an identical
+learning algorithm.
+2) The proposed change-detection algorithm itseff is compu-
+rationally efficient and achieves high detection accuracy.
+
+1.3
+Organization of This Paper
+In our framework, each of outlier detection and change-
+point detection consists of two parts: data modeling and
+scoring. In the data modeling part, we incrementally learn
+a probability density function from a data sequence. In scor-
+ing part, we give a score to each data or each time point on
+the basis of the learned model.
+We consider the two types of data modeling; independent
+model and time series model. Section 2.1 overviews, accord-
+ing to [15], the finite mixture model as an independent model
+and the SDEM (sequentially discounting EM) algorithm for
+learning of it. Section 2.2 introduces the AR model as a
+time series model and the SDAR (sequentially discounting
+AR model estimation) algorithm for learning of it. Section
+3.1 gives a method of scoring each data for the purpose of
+outlier detection. Section 3.2 gives a method of scoring each
+time point for the purpose of change point detection. This is
+basically reduced to detecting outliers from time series data
+modeled by the AR model. Section 4 shows experimental
+results for change-point detection using both the AR model
+and the independent model. Section 4.1 gives simulation re-
+sults. Section 4.2 gives experimental results using real data.
+Section 5 gives concluding remarks.
+
+2. DATAMODELING AND ON-LINE LEARN-
+ING ALGORITHMS
+We denote a data sequence as {xt : t = 1, 2,... } where t
+is a time variable. We construct a sequence of probability
+density functions denoted as {lot : t = 1, 2,... }, which de-
+scribes the underlying mechanism of generating data. This
+sequence should be incrementally learned from {xt} every
+time a data xt is input. We may also construct a sequence
+of prediced values {~t : t = 1, 2,-.. }. Here ~t should be
+calculated on the basis of {Pt} and {xt} every time a data
+xt is input. Below we describe the models and their learning
+algorithms for constructing (pt} and {~t}.
+
+2.1
+Independent Model
+We first consider the situation where data is indepen-
+dently drawn at each time. Suppose that the multi-dimensional
+domain X C R n is continuous and we represent a random
+variable on X as x. We may represent a probability den-
+sity function of non-stationary independent data generation
+using a Gaussian mixture model of the following form:
+
+k
+p(~10)= ~ e,v(~l~,, h,),
+i=l
+
+k
+where k is a positive integer, cl _>O, ~i=1 ci = 1 and each
+p(x]pi,Ai) is a d-dimensional Gaussian distribution with
+density specified by mean pi and covariance matrix Ai:
+
+1
+exp (_ 1
+i.Li)TA~_l(x_lui))
+v(=lui,ai) = (2~r)al21Adl/2
+~(x-
+
+
+
+677
+
+where i = 1,..- , k and d is the dimension of each datum.
+We set 0 = (c,,pl,A1,...
+,Ck,pk,Ak).
+An on-line discounting learning algorithm for Ganssian
+mixtures, which we call SDEM (sequentially discounting EM
+algorithm) was proposed in [15]. It is described as follows:
+
+SDEM Algorithm (r,c~,k: given)
+
+Step 1. /* Initialization */
+Set/u!O),c!O), ~,!0))A!O)x!o)(i = 1..... k).
+t:=l
+Step 2. /* Parameter Updating */
+while t < T (T:sample size)
+Read xt
+for/= 1,2, ...,k
+(,-I)
+,
+, (t-*)
+,(t-U,
+(t)
+,,
+,
+c,
+p~xtll.t,
+,hi
+)
+err
+"3',
+:= [1 -- otr)
+"t
+~...O¢
+c ( --1)_[ z
+I. (t-l)
+,(t-l)(
++
+· ,
+Z-,i=I
+i
+lF~ tlbti
+~zt i
+]
+k
+c tt) "--
+r c (t-l)
+- .(t)
+,. .-- (1-)
+,
++..,
+.
+~,!t) := (1 -r)h! t-l) "4-r3'!t)'xt
+(t)
+=(t),c(t)
+#i
+:= /'~i
+/
+i
+~(t) .-- t.
+r ~%(t-l) "t-(t)
+x acT
+i
+,-- %* --
+]zt i
+-r-
+I,
+"
+t
+t
+.(t)
+.-- i(t) re(t)
+(t)
+(t)T
+lXi
+"-- 1~i
+/
+i
+-- gi
+Iz`
+t:=t+l
+
+The SDEM algorithm was introduced by extending Neal
+and Hinton's incremental EM algorithm [12] so that the ef-
+fect of past examples can be gradually discounted as time
+goes on.
+The SDEM algorithm updates the estimates of
+parameters with a weighted average depending on the dis-
+counting parameter r(> 0) where a smaller value of r in-
+dicates that the SDEM algorithm has a larger influence of
+past examples.
+In the SDEM algorithm, a parameter a is introduced in
+order to improve the stability of the estimates of c,, which
+is set to 1.0 .., 2.0. Usually c!°) = 1/k and p!°)s are set so
+that they are uniformly distributed over the data space.
+The computation time for the SDEM algorithm at each
+round is O(dak) where d is the dimension of the data and k
+is the number of Gaussian distributions.
+
+
+2.2
+Time Series Model
+Next we consider the situation where a data sequence
+forms a time series. We employ here an AR(auto-regression)
+model to represent a statistical behavior of time series data.
+The AR model is one of the most typical models for repre-
+senting time series, which has extensively been explored (see
+e.g., [1],[9],[13]) in statistics.
+A time series supposing that its mean of an initial value
+is zero, is denoted as {zt : t = 1, 2,-.. }. An AR mode of the
+k-th order is denoted by
+
+
+t--I
+Zt ~
+tttZt_ k "~- ~
+
+
+
+where t-* = (zt-l,zt-2,
+' ,zt--k),~ = (Wl,
+" ,Wk) 6 R/¢,
+Zt_ k
+.
+.
+.
+.
+is a normal random variable generated according to the
+Gaussian distribution with mean 0 and covariance matrix
+~: Af(0, E). Let a time series which we actually observe be
+{xt : t = 1,2,...} where
+
+
+xt = zt +p
+
+
+Then letting xt_kt-1 = (xt-1 ".. x,-k), the probability density
+function of xt represented by the AR model is given by
+
+p(xtlxt,_-l, : a)
+(1)
+(1
+)
+_
+_7(~,
+_ ~)r~-l(~,
+_ w)
+(2,)~/~1~11/~ exp
+
+where w = w(xtt:~ - ,) + ,. We set 0 = (Wl,..., wk, p, ~).
+We first review a standard batch algorithm for estimating
+parameters of AR model according to [13]. Define:
+
+t
+1
+=
+t- k Z
+~'
+(2)
+i= k..I-1
+
+t
+1
+Cj
+-~-
+t-~---k
+~
+(xi
+-
+O)(Xi--j
+-- ~)T
+(3)
+i=k+l
+
+Eq.(2) denotes an estimate of p and Eq.(3) denotes an es-
+timate of a covariance function of the Xl,.'. ,xt. Further
+the coefficients wl," ·tak of the AR model are calculated by
+solving the following linear equation:
+
+k
+cj = ~
+~,cj_,
+(j = 1,..., k).
+(4)
+'----1
+
+Let the solution to Eq.(4) be &l,'-" &k, an estimate of ~ is
+calculated as
+
+k
+fi = c0 - ~
+~,c,
+(5)
+/=1
+
+Note that in the above algorithm of learning AR models
+it is assumed that the data source is stationary and the
+parameters are estimated after we see the entire data.
+We introduce here the SDAR(sequentially discounting AR
+model learning.) algorithmby modifying the above algorithm
+in the following two regards:
+1) On-line estimation; that is, the parameters are updated
+every time a data is observed, and
+2) Discounting property; introducing a discounting parame-
+ter r makes the statistics exponentially decay with a multi-
+plicative factor (1 - r) as the time goes on. This enables us
+to deal with the non-stationary source.
+SDAR algorithm is described as follows:
+
+SDAR Algorithm
+(0 < r < h given)
+Step 1. Initialization
+Set ~0,Cj,&j (j = 1,... ,k),~.
+Step 2. Parameter Updating
+For each time t(= 1,2-.. ,),
+read xt, proceed:
+
+
+cj
+:=
+(x - r)Cj + r(~, - ~)(=~_j - ~)T
+
+Solve the following equation:
+
+k
+c~ = ~,ci-~
+(j = 1,... ,k).
+(6)
+'=1
+
+Letting the solution to Eq.(6) be &l,"" tbk, then calculate
+
+
+
+:=
+(, -
+r)£
++ ,-(~, - ~,)(~, - ~,)r
+
+
+
+For each time t, the SDAR algorithm updates the esti-
+mates of parameters with a weighted average depending on
+
+
+
+
+678
+
+the discounting parameter r(> 0) where a smaller value of
+r indicates that the SDAR algorithm has a larger influence
+of past examples.
+We denote as pt the probability density function of Eq.(1)
+specified by the parameters updated by the SDAR algorithm
+at time t. Then we can obtain a sequenc e of probability
+densities: {pt : t = 1, 2,... }.
+
+
+3. SCORING
+
+3.1
+Outlier Detection
+For each input xt, we calculate the score of xt by the
+following formula:
+
+Score(x,) = - logv,-l(x,)
+(z)
+
+where the lefthand side of Eq.(7) denotes a prediction loss
+for xt relative to a probability density function pt-1, which
+we call the logarithmic loss. From the viewpoint of infor-
+mation theory, the logarithmic loss can be thought of as the
+codelength required to encode xt into a binary sequence un-
+der the assumption that a data is generated according to
+the probability density pt-l.
+We may also define the score as a statistical deviation
+between before and after learning from xt.
+
+Score(z,) = d(v,-,,p,)
+(8)
+
+where d(,, .) are defined as, for example,
+
+
+/
+Ip(x) - q(x)ldx (variation distance)
+d(p, q)
+
+d(p,q)
+_- f
+dx
+(Helfinger distance)
+
+
+/ [p(x) - q(x)12dx (quadratic distance)
+d(p,q)
+
+
+where p(,),q(,)
+are probability density functions.
+Intu-
+itively, this score measures how large the probability den-
+sity function pt has moved from pt-1 after learning from xt.
+Note that a higher Score(xt) indicates that xt is an outlier
+with higher possibility.
+
+3.2 Change-Point Detection
+Letting T be a positive constant and {xt} be a data se-
+quence, we define yt as the T-averaged score over {Score(xi ) :
+i=t-T+l,...
+,t} as:
+
+t
+1
+~=~
+~
+Score(x,)
+(9)
+i=t--T+l
+
+where Score(z,) is calculated according to (7) or (8). Then
+we obtain a time series {yt : t = 1, 2,... }.
+We then use the AR model for representing the time series
+{yt} and employ the SDAR algorithm again to construct a
+sequence of probability density functions determined by the
+AR models, which we denote as {qt : t = 1, 2,... }. Then
+letting T' be given, we define the T'-averaged score at time
+t as with Eq.(7) (logarithmic loss) as follows:
+
+t
+1
+Score(t) = ~7
+E
+(-- hiqi-l(yi)).
+(10)
+i~t--Tl + l
+Or we may use the following score as with Eq.(8) as follows:
+
+t
+1
+Score(t) = ~7
+E
+d(qi-l,q,),
+(11)
+i=t--Tl~l
+
+where d is the function measuring the difference between
+two probability density functions as in the previous section.
+The key of this approach is to reduce the problem of
+change point detection into the outlier detection from time
+series of the T-averaged scores. Thereby we can deal with
+outlier detection and change point detection on the basis of
+an identical learning algorithm in the same paradigm. This
+gives a strong connection between the two problems. Note
+that a higher Score(t) indicates that the time point t is a
+change point with higher possibility.
+In Eq.(9), in the case where T is small, outliers and change
+points can be detected immediately after they appear, how-
+ever, they may be difficult to be discriminated from one
+another. In the case where T is large, it leads to time de-
+lay for detecting change points, however, outliers are filtered
+and only change points are detected accurately.
+
+
+4. EXPERIMENTAL RESULTS
+
+4.1
+Simulation
+We evaluated our methods by numerical simulation using
+two types of datasets. The first dataset is a data sequence
+
+
+
+
+.Amwml
+. . . .
+
+
+
+
+Figure 1: 1st Dataset for Simulation
+
+
+s.t. each data between change points was drawn according
+to the following AR model:
+
+xt = 0.6xt-1 - 0.5xt_2 + et,
+(12)
+
+where et is the Gaussian random variable with mean 0 and
+variance 1. This dataset consists of 10,000 records.
+The
+change points occur at time x x 1,000 (x = 1, 2,... ,9). Let
+the difference between the value of the x - 1-th change point
+and that of the x-th change point be A(x), which we call
+change size at x. In this case we set A(x) = x. It is easier
+to detect change points of larger x.
+We tested two combinations of data modeling and scoring.
+In the first combination, which we denote as SDEM1, we
+employed the independent model (with finite mixture with
+2 components) for data modeling, while the AR model of
+the order k = 2 for scoring.
+In the second combination,
+which we denote as SDAR1, we employed the AR model of
+the order k = 2 for data modeling, while the AR model of
+
+
+
+
+679
+
+the order k = 2 for scoring. Here we used the logarithmic
+loss as a score and the discounting parameter used in the
+SDAR algorithm and SDEM algorithm is r = 0.005. We set
+T = 5 and T' = 5 for scoring as in Eq.(9) and Eq.(10).
+
+2.50E4'01
+
+
+2 00E+01
+
+
+1.50E+01
+
+
+1.00E+01
+
+
+5.0(~E+OC
+
+
+O00E+OC
+
+
+-500E+O£
+
+
+
+Figure 2: Change Point Detection by SDEM1
+
+
+
+2.50E+01
+
+
+2.00E+01
+
+
+1.50E+OI
+
+
+1.(X)E'+O!
+
+
+5.00E+O0
+
+
+
+
+-500E+O0
+) 1000 2000 3000 4000 5000 5(DO 7000 8C00 9000
+
+
+
+Figure 3: Change Point Detection by SDAR1
+
+
+Figs. 2 and 3 show the scores calculated by SDEM1 and
+SDAR1, respectively.
+In both figures, the horizontal axis
+shows time while the vertical axis shows score.
+We ob-
+serve that SDAR1 detects change points almost as well as
+SDEM1 while the scores given by SDAR1 reflect the degree
+of changes more accurately than those of SDEM1.
+
+
+
+
+20
+
+15
+
+10
+
+5
+
+0
+
+-S
+
+-10
+
+-15
+
+-20
+3.00E+01
+
+2.50E+01
+
+
+
+I.S0E+01 l
+
+I,O0E+OI I
+I
+
+
+
+
+Figure 5: Change Point Detection by SDAR1
+
+
+(12) in which variance as well as mean change over time.
+As shown in Fig. 4, the change points occur at time x x
+1,000 (x = 1,2,... ,9) and the standard deviation is de-
+fined as 0.1/(0.01 + tirne/lO, O00). We denote the ratio of
+the change size at the xth change point to the standard de-
+viation as R(x), which we call the change-noise ratio.
+In
+this dataset, we set R(x) ,~ x (x = 1, 2,... ,9).
+Fig. 5 shows Lhe scores calculated by SDAR1. We observe
+that SDAR1 was able to detect change points accurately
+even if the variance changes over time.
+Next, we examined the relation between the false alarm
+rate and the recall for SDAR1, where the false alarm rate
+is defined as the percentage of non-change points classified
+as a change point while the recall is defined as the ratio
+of change points correctly detected to the total number of
+change points that should have been detected. We prepared
+three datasets with various change-noise ratios.
+For each
+dataset 100,000 records are generated according to the AR
+model (12). For each dataset, change points occur at time
+x × 1,000 (x = 1, 2,..- , 9). The change-noise ratios for three
+dataset are respectively R(x) = 20, I0, 5 for every change
+point x. The detection is considered to be correct if a de-
+tected change point is located within 50 records after the
+true change point. Fig. 6 shows the false alarm-recall curves
+(what we call ROC curve) for the two datasets. Fig. 6 shows
+
+
+
+
+l
+100
+90
+80
+70
+60
+50
+40
+30
+
+
+10
+0
+S
+g
+
+t"M
+/.2- ........ "-
+
+i
+i
+i
+i
+i
+
+20
+40
+60
+80
+100
+
+Falee Alerm
+Rate0O
+
+
+Figure 4: 2nd Dataset for Simulation
+
+
+The second dataset is a data sequence s.t. each data be-
+tween change points was drawn according to the AR model
+Figure 6: False Alarm Rate vs Recall Curves
+
+
+that SDAR1 works well when the value of R is not less than
+
+
+
+
+680
+
+10, although it suffers from identifying change points with
+random noise when R is small.
+
+4.2
+Experiments with Real Data
+We used TOPIX(Tokyo stock price index) data to see how
+well our method for change-point detection works for real
+problems.
+Fig.7 shows TOPIX, where the horizontal axis
+shows time (year: 1985-1995) while the vertical axis shows
+the index of total asset size of economy of Japan.
+
+
+
+
+, °
+.
+_
+-
+
+
+
+
+70 - ~
+6O
+
+
+3O J
+~
+
+SGOIrCL
+,o 1. _[~m
+,.
+J ,.rE.,,
+ii
+o
+4000
+350O
+3OOO
+25OO
+2000~
+
+1111111
+
+
+o
+
+
+
+
+Figure 7: Change Point Detection using
+SDAR2
+
+We employed the AR model of the order k = 4 for data
+modeling, while the AR model of the order k = 4 for scoring.
+Letting xt be the original time series data and yt = xt-xt-1,
+we dealt with 2-dimensional data (xt, yt). We denote this
+strategy as SDAR2. Here we used the logarithmic loss as
+a score, and the discounting parameter used in the SDAR
+algorithm is r = 0.005, and T = 5, T' = 5 for scoring as in
+(9) and (10).
+In Fig. 7, the horizontal axis shows time while the vertical
+axis shows score. The time points of high scores show the
+points where significant changes of the index have occurred.
+We observe that SDAR2 was able to detect real significant
+changes of the index.For example, Fig.7 shows that among
+the time points of high scores that SDAR2 gave, there are
+time points corresponding to the beginning of bubble econ-
+omy, black Monday, decay of bubble economy, and the great
+Hanshin-Awaji earthquake, all of which are detected accu-
+rately. This demonstrates that our method was able to dis-
+cover meaningful change points in the index.
+
+
+5.
+CONCLUDING REMARKS
+We have proposed a framework for detecting outliers and
+change-points from non-stationary time series. It consists of
+two parts: data modeling and scoring. In the data modeling
+part, we incrementally learn a probability density function
+from a data sequence.
+Specifically, in this paper we em-
+ployed the AR model and introduced the SDAR algorithm
+for on-line discounting learning of the AR modds.
+The
+SDAR algorithm is characterized in its discounting property
+that the effect of past data is gradually discounted. This en-
+abled us to deal with non-stationary sources. In scoring part,
+we give a score to each data or each time point on the basis
+of the learned model. Specifically we reduced the problem
+of change point detection into that of outlier detection from
+time series of moving-averaged scores. Thereby we were able
+to deal with both problems using an identical learning algo-
+rithm within the same paradigm. This gave a unifying view
+of outlier detection and change point detection.
+The following issues remain for future study:
+1) Dealing with ARMA models. The ARMA (autoregression
+moving average) model is a promising model for represent-
+ing time series data. It would be challenging to extend our
+framework so that it can deal with the ARMA model in or-
+der to improve the outlier/change point detection accuracy
+for the current framework.
+2) Combining Markov models with AR models. In this pa-
+per we have dealt with only continuous variables. In order to
+deal with time series of categorical variables as well as con-
+tinuous ones, a time series model over the discrete domain
+such as a Markov model should be combined with the AR
+model and a design of new algorithm for on-line discounting
+learning of them would be required.
+
+
+6.
+REFERENCES
+[1] H. Akalke and G. Kitagawa, Practices in Time Series
+Analysis I,II, Asakura Shoten (in Japanese), 1994,1995.
+[2] V. Barnett and T. Lewis, Outliers in Statistical Data, John
+Wiley & Sons, 1994.
+[3] P. Burge and J. Shaw-Taylor, Detecting cellular fraud
+using adaptive prototypes, in Proc. of AI Approaches to
+Fraud Detection and Risk Management, pp:9-13, 1997.
+[4] T. Fawcett and F. Provost, Activity monitoring: noticing
+interesting changes in behavior, in Proc. of KDD-99,
+pp:53-62, 1999.
+[5] V. Guralnik and J. Srivastava, Event detection from time
+series data, in Proc. KDD-99, pp:33-42, 1999.
+[6] 2S. B. Guthery, Partition regression, Jr. Amer. Statist.
+Ass., 69:945-947, 1974.
+[7] D. M. Hawkins, Point estimation of parameters of
+piecewise regression models, Jr. of the Royal Statistical
+Society Series C, 25(1):51-57, 1976.
+[8] M.Huskova, Nonparametric procedures for detecting a
+change in simple linear regression models, in Applied
+Change Point Problems in Statistics (1993).
+[9] G.Kitagawa and W.Gersch, Smoothness Priors Analysis o]
+Time Series, Lecture Notes in Statistics, 116,
+Springer-Verlag (1996).
+[10] E. M. Knott and R. T. Ng, Algorithms for mining
+distance-based outliers in large datasets, in Proc. of the
+g4th VLDB Conference,pp:392-403, 1998.
+[11] U. Murad and G. Pinkas, Unsupervised profiling for
+identifying superimposed fraud, in Proc. off PKDD'99,
+pp:251-261 (1999).
+[12] R. M. Neal and G. E. Hinton, A view of the EM algorithm
+thatjustifies
+incremental, sparse, and other variants,
+ftp://ftp.cs.toronto.edu/pub/radford/www/publications.html
+1993.
+[13] T.Ozaki and G.Kitagawa, A Method.for Time Series
+Analysis, (in Japanese), Asakura Shoten, (1995).
+[14] J. Rissanen, Fisher information and stochastic complexity,
+IEEE Trans. Inf. Theory, IT-42, 1, pp. 40--47"(1996).
+[15] K. Yamanishi, J.Takeuchi, G.Williams, and P.Milne,
+On-line unsupervised outlier detection using finite mixtures
+with discounting learning algorithms, in Proe. of
+KDD2000, ACM Press, pp:250-254, (2000).
+[16] K.Yamanishi and J. Takeuchi, Discovering outlier filtering
+rules from unlabeled data, in Proc. o] KDDgO01,
+pp:389-394 (2001).
+
+
+
+
+681
+

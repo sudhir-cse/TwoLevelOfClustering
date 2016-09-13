@@ -1,0 +1,927 @@
+Mining Asynchronous Periodic Patterns in Time Series
+Data
+
+
+Jiong Yang
+IBM Watson Research Center
+jiyang@us.ibm.com
+Wei Wang
+IBM Watson Research Center
+ww1@us.ibm.com
+Philip S. Yu
+IBM Watson Research Center
+psyu@us.ibm.com
+
+
+
+ABSTRACT
+Most previous work on periodicy detection has focused on
+mining synchronous periodic patterns and does not recog-
+nize misaligned presence of a pattern due to the interven-
+tion of random noise. In this paper, we propose a more
+exible model of asynchronous periodic patterns that may
+bepresent only within asubsequence and whoseoccurrences
+maybeshiftedduetodisturbance. Twoparametersmin rep
+and max dis are employed to specify the minimum num-
+ber of repetitions that is required within each segment of
+non-disrupted pattern occurrences and the maximum al-
+lowed disturbance between any two successive valid seg-
+ments. Upon satisfying these two requirements, the longest
+valid subsequence of a pattern is returned. A two-phase
+algorithm is devised to rst generate potential periods by
+distance-based pruning, followed by an iterative procedure
+to derive and validate candidate patterns and locate the
+longest valid subsequence.
+
+Categories and Subject Descriptors
+H.2.8 Information Systems : Database Management|
+database applications
+
+General Terms
+Asynchronous periodic pattern, Segment-based approach
+
+1. INTRODUCTION
+Periodicy detection oftime series data is a challenging prob-
+lem of great importance in many real applications. Most
+previous research in this area has assumed that the distur-
+bancewithin aseries ofrepetitions ofapattern, ifany,would
+not result in theloss ofsynchronization ofsubsequent occur-
+rences of the pattern with previous occurrences 1 . Distur-
+bance is allowed only in terms of missing occurrences" but
+not as general as any insertion of random noise events".
+However, this assumption is often too restrictive since we
+may fail todetect an interesting pattern if some of its occur-
+rences is misaligned due to inserted noise events. Consider
+the application of inventory replenishment. The history of
+inventory re ll orders canbe regarded asa symbol sequence.
+Assume that the time between two replenishments of cold
+medicine is normally a month. The re ll order is led at the
+beginning of each month. But suppose a major outbreak of
+u causes an early re ll at the 3rd week. Afterwards, even
+though the replenishment frequency is back to once each
+month, the re ll time shifts to the 3rd week of a month.
+Therefore, it would be desirable if the pattern can still be
+recognized when the disturbance is within some reasonable
+threshold.
+In addition, the system behavior may change over time.
+Some patterns may not be present all the time but rather
+within some time interval. Therefore, in this paper we
+aim at mining periodic patterns that are signi cant within
+a subsequence of symbols which may contain disturbance of
+length up to a certain threshold. Two parameters, namely
+min repand max dis,are employed to qualify valid patterns
+and the symbol subsequence containing it, where this sub-
+sequence in turn can be viewed as a list of validsegments
+of perfect repetitions interleaved by disturbance. Each valid
+segmentis required tobe ofatleast min repcontiguous rep-
+etitions of the pattern and the length of each piece of dis-
+turbance is allowed only as large as max dis. The intuition
+behind this is that a pattern needs to repeat itself at least
+a certain number of times to demonstrate its signi cance
+and periodicy. On the other hand, the disturbance between
+twovalid segments has to be within some reasonable bound.
+Otherwise, it would be more appropriate to treat such dis-
+turbance as a signal of change of system behavior" instead
+of random noise injected into some persistent behavior. The
+parameter max dis acts as the boundary to separate these
+two phenomena. For patterns satisfying these two require-
+ments, our model will return the subsequence with the max-
+imum overall repetitions. Note that, due to the presence of
+disturbances, some subsequent valid segments may not be
+wellsynchronized withthepreviousones. Thisinturnwould
+impose a great challenge in the mining process.
+Similar to 1 , we allow a pattern to be partially lled to
+enable a more exible model. For instance, cold medi, *,
+*, * is a partial monthly pattern showing that the cold
+medicine is reordered on the rst week of each month while
+nostrongregularity presents fortherestofthemonth. How-
+ever, since we also allow the shifted occurrence of a valid
+segment, this exible model poses a di cult problem to be
+solved. For a given pattern P, its associated valid segments
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+275
+
+may overlap. In order to nd the valid subsequence with
+the most repetitions for P, we have to decide which valid
+segment and more speci cally which portion of a valid seg-
+ment should be selected. While it is relatively easy to nd
+the set of valid segments for a given pattern, substantial dif-
+culties lie on how to assemble these valid segments to form
+the longest valid subsequence. As shown in Figure 1b,
+with min rep = 3, S1, S2, S3, and S4 are four valid seg-
+ments of the pattern P = d1;;. If max dis = 6, then
+X in Figure 1d is the longest subsequence before S4 is
+considered, which in turn makes Y the longest one. If we
+only look at the symbol sequence up to position 10 without
+looking ahead in the sequence, it is very di cult to deter-
+mine whether we should switch to S2 or continue on S1.
+This indicates that we may need to track multiple ongoing
+subsequences simultaneously. Since the number of di erent
+assemblages ofvalid segments growsexponentially within-
+creasing period length, the process to mine the longest sub-
+sequence becomes a daunting task, even for a very simple
+pattern such as d1;;. To solve this problem for a given
+pattern, a segment-based algorithm is developed to identify
+subsequences that may be extended to become the longest
+one and maintain them in such a way that the longest valid
+subsequence can be identi ed by a single scan of the input
+sequence.
+Another innovation of our mining algorithm is that it can
+discover all periodic patterns regardless oftheperiod length.
+Most previous research in this area focused on patterns for
+some pre-speci ed period length 1 2 or some pre-de ned
+calendar 3 . Unfortunately, in practice, the period is not
+always available a priori it is also part of what we want to
+mine out from the data. A period may span thousands of
+symbols in a long time series data or just a few symbols.
+We rst introduce a distance-based pruning mechanism to
+discover all possible periods and the set of symbols that are
+likely to appear in some pattern of each possible period.
+In order to nd the longest valid subsequence for all possi-
+ble patterns, we employ a level-wise approach. The Apriori
+property also holds on patterns of the same period. A valid
+segment of a pattern is also a valid segment of any pattern
+with fewer symbols speci ed in the pattern. For example,
+a valid segment for d1;d2; will also be one for d1;;.
+Then, for each likely period, all valid patterns with their
+longest supporting subsequences can be mined via an itera-
+tive process.
+In summary, we claim the following contributions.
+
+A pattern can be partially speci ed, e.g., d;;.
+A more exible model of asynchronous periodic pat-
+terns is proposed to allow mining of all patterns 1
+whose periods can cover a wide range and are not
+known a priori; 2 that present within only a subse-
+quence; and 3 whose occurrences may be misaligned
+due to the insertion of some random disturbance.
+A two phase algorithm is devised to rst generate po-
+tential periods by distance-based pruning followed by
+an iterative procedure to derive and validate candi-
+date patterns and locate the longest valid subsequence
+containing each pattern.
+Theremainderofthispaperisorganized asfollows. Thegen-
+eral model and the algorithm outline are presented in Sec-
+tion 2. The algorithms of distance-based pruning, the sin-
+gular pattern veri cation, and the complex pattern veri ca-
+tion are elaborated in Sections 3, 4, 5, respectively. Section
+6 presents experimental results. The conclusion is drawn in
+Section 7.
+
+2. GENERAL MODEL
+Let = = fd1;d2;g be a set of literals and D be a sequence
+of literals in =. A pattern with period l is a sequence of
+l symbols p1;p2;:::;pl, where p1 2 = and the others are
+either a symbol in = or *, i.e., pj 2=  2 j l. Since
+a pattern can start anywhere in a sequence, we only need to
+consider patterns that start with a non *" symbol. Here,
+ is introduced to allow partial periodicy. In particular, we
+use  to denote the don't care" positions in a pattern 1 .
+A pattern P is called a i-pattern if exactly i positions in P
+are symbols from =. The rest of the positions are lled by
+*. For example, d1;d2; is a 2-pattern of period 3.
+FortwopatternsP =p1;p2;:::;plandP0 =p01;p02;:::;p0l
+with the same period l, P0 is a specialization of P or
+P is a generalization of P0 i , for each position j1 
+j  l, either pj = p0j or pj =  is true. For exam-
+ple, pattern d1;d2; is considered as a specialization of
+d1;; and a generalization of d1;d2;d3. Given a pat-
+tern P = p1;p2;:::;pl with period l and a sequence of l
+literals D0 = d1;d2;:::;dl, we say that P matches D0 or
+D0 supports P i , for each position j1  j  l, either
+pj =  or pj = dj is true. D0 is also called a match of P.
+In general, given a sequence of symbols and a pattern P,
+multiple matches of P may exist. In Figure 1a, D1, D2,
+:::, D19 are 19 matches of d1;;.
+Given a pattern P with period l and a sequence of symbols
+D, a list of k k 0 disjoint matches of P in D is called a
+segmentwithrespecttoP i theyformacontiguoussubse-
+quence ofD. k isreferred toasthenumberofrepetitions
+of this segment. D1, D2, D4, D6, and D8 form a contigu-
+ous portion as shown in Figure 1b. Therefore, the subse-
+quence d1;d2;d4, d1;d3;d1, d1;d3;d1, d1;d2;d1, d1;d3;d1 is
+a segment with respect to the pattern d1;;. By de ni-
+tion, each match of a pattern P itself is also a segment with
+respect to P. A segment S with respect to a pattern P is
+a valid segment i the number of repetitions of S with
+respect to P is at least the required minimum repetitions
+i.e., min rep. If min rep = 5, then segments S1;S3 and
+S4 qualify as valid segments in Figure 1b. S2 is not a
+valid segment since it only contains 4 matches of d1;;.
+In general, given a pattern P, any sequence of symbol can
+be viewed as a list of disjoint valid segments with respect
+to P interleaved by disturbances.
+Given a sequence D and apattern P,a validsubsequence
+in D is a set of non-overlapping valid segments, where the
+distance betweenany twosuccessive valid segments does not
+exceed the parameter max dis. The overall number of
+repetitions of a valid subsequence is equal to the sum of
+the repetitions of its valid segments. A valid subsequence
+with the most overall repetitions of P is called its longest
+valid subsequence. Fora sequence of symbols D,if there
+existssomevalid subsequence withrespecttoapattern,then
+
+
+
+276
+
+this pattern is called a valid pattern. It follows from the
+de nition that any valid segment itself is also a valid subse-
+quence. If we set max dis = 6, even though S1 and S4 in
+Figure 1b are individually valid subsequences, there does
+notexist avalid subsequence containing both ofthemdueto
+the violation of the maximum allowed disturbance between
+them. In contrast, S2 and S4 can be included in one valid
+subsequence Figure 1c whose overall number of repeti-
+tions is 10.
+For a given sequence of literals D, the parameters min rep
+and max dis, and the maximum period length Lmax, we
+want to nd the valid subsequence that has the most overall
+repetitions for each valid pattern whose period length does
+not exceed Lmax. A threefold algorithm is devised.
+
+1. Distance-based Pruning. For each symbol d, we ex-
+amine the distance between any two occurrences of d.
+Let Cd;l be the number of times when such distance is
+exactly l. For each period l, the set of symbols whose
+Cd;l counters are at least min rep are retained.
+2. Single Pattern Veri cation. For each potential period
+l and each symbol d that passed the previous step, a
+candidate 1-pattern d1;:::;dl is formed by assigning
+d1 = d and d2 =  = dl = . A segment-based
+approach is used to validate all candidate patterns
+d;;:::; via a single scan of the sequence. Any
+single pattern of format ;:::;d;:::; is essentially
+equivalent to the pattern d;;:::; of the same pe-
+riod with a shifted starting position in the sequence.
+3. Complex Pattern Veri cation. An iterative process is
+carried out where at the ith iteration, the candidate i-
+patternsare rstgenerated fromthesetofvalid i,1-
+patterns, and are then validated via a scan of the data
+sequence.
+
+3. DISTANCE-BASED PRUNING OF CAN-
+DIDATE PATTERNS
+Sincethereareahugenumberofpotential patterns,Oj=jLmax,
+a pruning method is needed to reduce the number of can-
+didates. The pruning method is motivated by our observa-
+tion that if a symbol d participates in some valid pattern
+of period l, there should be at least min rep times that the
+distance between two occurrences of d is exactly l in order
+to form a valid segment. So the proposed distance-based
+pruning method makes one pass over the data sequence to
+discover all possible periods and the set of symbols that are
+likely to appear in some pattern ofeach possible period. For
+each symbol d and period l, the number of times when the
+distance between two occurrences of d in the sequence is l is
+collected.
+Our model not only allows partially speci ed patterns such
+as d;; where d can also occur in the *" position, but
+also recognizes patterns with repetition of the same sym-
+bol such as d;;d. Hence it is not su cient to just track
+the distance of a symbol to its last occurrence. To perform
+the distance-based pruning when scanning through the se-
+quence, we need to maintain a moving window of the last
+Lmax symbols scanned. Forthenextsymbol, sayd,wecom-
+pare it with each of the symbol in the moving window. If
+a match occurs at the jth position, the count for period
+Lmax , j + 1 of symbol d denoted as Cd;Lmax,j+1 is
+incremented by 1. For example, in Figure 1a, the third
+d1 in the sixth position will contribute to both Cd1;2 and
+Cd1;5. Due to the generality of our model, for each occur-
+rence of a symbol d we need to track its distance to all of
+its previous occurrences within the moving window. Given
+a symbol d and a period l, if Cd;l is larger than or equal
+to the min rep threshold, then it is possible that d might
+participate in some valid pattern of period l. We can use
+this property to reduce the candidate patterns signi cantly.
+
+4. LONGESTSUBSEQUENCEIDENTIFICA-
+TION FOR A SINGLE PATTERN
+If a symbol d and period l pair has passed the distance-
+based pruning, then the segment-based approach SB is
+usedtodiscover thesubsequence withthemostrepetitions of
+d;;:::; with period l. Before presenting the algorithm
+we introduce the concept of extendibility and subsequence
+dominance. At a given position i, a subsequence X with
+ending position j j i is extendibleif j  i,max dis,1.
+When scanning through the symbol sequence, at any po-
+sition, the set of extendible subsequences consists of those
+subsequences that still have potential to grow". For ex-
+ample, at position 20 in Figure 1c, both X and Y are
+extendible if max dis = 6 For any two valid subsequences
+X and Y,wesaythat X dominatesY i the number ofrep-
+etitions of X is greater than or equal to that of Y. Clearly,
+X dominates Y in Figure 1c at position 20.
+This subsequence dominance de nes a total ordering among
+the set of valid subsequences that are considered to be ex-
+tendible at any given position. If X dominates Y at some
+position i Figure 1c, then the subsequence X0 generated
+byappending Z toX starting atposition icannot beshorter
+than the extension Y0 of Y generated by appending Z to Y.
+Therefore, we do not need to extend Y at position i. Note
+that we still have to keep Y since we may need to extend Y
+to include V in Figure 1c at some later position jj i.
+This scenario may happen when X ends at an earlier posi-
+tion than Y does and X is known to be not extendible at
+position j. This provides the motivation and justi cation of
+the pruning technique employed in our algorithm.
+When scanning through asequence todetermine the longest
+subsequence containing a pattern d;;:::;, the discovery
+process may experience the following phases repeatedly:
+
+Phase A: Segment validation. At least one instance of
+d;;:::; is found in the latest segment of a subse-
+quence, but the number of repetitions of the pattern
+is still less than min rep.
+Phase B: Valid segment growth. The segment is now
+considered to be valid and the repetition count may
+continue to grow.
+Phase C: Extensionor disturbance. A valid segment
+may have ended. It is now going through some dis-
+turbance or noise region to see whether it can get
+extended to another segment of the pattern within
+max dis, referred to as the extensionwindow. If so, it
+
+
+
+277
+
+returns to Phase A. Otherwise the subsequence termi-
+nates.
+
+There are several challenges here. First of all, the transition
+point from Phase B to C is not obvious. Although missing
+the next consecutive match clearly signals the transition to
+Phase C,thepresence ofthenextmatchdoes notnecessarily
+mean the continuation of Phase B. This is illustrated by Y
+in Figure 1d at position 10. Secondly, the transition point
+fromPhaseCtoAisnotstraightforward,either. Infact,any
+not just the rst d occurring within the extension window
+can potentially be a candidate leading to a new extension
+of the subsequence. For Y in Figure 1d, it is the second
+d1 at position 25 in the extension window that leads to a
+longer valid segment. We thus need to develop an e cient
+tracking mechanism for managing the phase transitions.
+Furthermore, there is also the pruning issue. There can
+be many overlapping subsequences of a pattern. An e -
+cient pruning criterion needs to be developed to prune the
+subsequences that cannot become the longest valid subse-
+quence. This will reduce the number of concurrent subse-
+quences that need to be tracked. The problem here is that
+the longest subsequence at aparticular instant may be over-
+taken by a shorter overlapping subsequence. This is clearly
+demonstrated in Figure 1d by X and Y. Assume that
+min rep = 3 and max dis = 6. At position 29, after rec-
+ognizing S3 as a valid segment before S4 is recognized, X
+overtakes Y even though Y grows to be the longest valid
+subsequence later. However, we also observe that for any
+two valid subsequences X0 and Y0 that end at the same po-
+sition k in the sequence and X0 dominates Y0, any further
+extension of Y0 will always be dominated by some extension
+of X0 Figure 1e. We can thus prune Y0 after position k.
+A good point to check for dominance relationship is when a
+segment Z rst becomes valid. This is the point where X0
+that encompasses Z becomes valid and the two overlapping
+subsequences converge to a common tail segment.
+The SB algorithm scans through the input data sequence.
+Each time a match of pattern d;;:::; is identi ed say,
+at position i, the set of currently extendible subsequences
+are extended according to the following principles.
+
+Mark the subsequences that end prior to position i,1
+as in Phase C.
+Only the dominating subsequence in Phase B is ex-
+tended to include the newly discovered match.
+For each subsequence in Phase A, simply extend it by
+one repetition and check whether the transition point
+to Phase B is reached. If so, mark this subsequence as
+in Phase B. If multiple subsequences are in Phase B,
+then only the dominating one is retained.
+Thesubsequence with mostrepetitions in Phase Band
+C is identi ed and used to update the longest valid
+subsequencefor pattern d;;:::;.
+The dominating subsequence in Phase C is also ex-
+tended. The newly discovered match serves as the be-
+ginning of anewsegment and the subsequence transits
+to Phase A.
+4 shows that with carefully designed data structures, asin-
+gle scan of the sequence is su cient to locate the longest
+subsequence with approximately linear storage requirement.
+
+5. COMPLEX PATTERNS
+After discovering the single patterns, valid subsequences of
+di erent symbols may be combined to form a valid subse-
+quence of multiple symbols of the same period. We employ
+a level-wise search algorithm, which generates the subse-
+quences of i-patterns based on valid subsequences of i,1-
+patterns with the same period length. To e ciently prune
+the search space, we use two properties:
+
+Symbolproperty. IfapatternP isvalid, thenallof
+its generalizations are valid.
+Segment property. If D0 = dj;dj+1;dj+2;:::;dk is
+a valid segment for pattern P, then D0 is also a valid
+segment of all generalizations of P.
+
+Since these two properties are straightforward, we omit the
+proof. Based on these properties, we can prune the candi-
+dates of a valid pattern e ciently. For example, if two pat-
+terns d1;;; and d2;;; are valid, then three candi-
+date 2-patterns can be generated: d1;d2;;, d1;;d2;
+and d1;;;d2. Similarly, d1;d2;d3; can become a can-
+didate3-patternonlyifd1;d2;;,d1;;d3;,andd2;d3;
+;areall valid. Afterthecandidate setofvalid i-patterns
+is generated, then a similar algorithm tothe SB algorithm is
+executed toverify whether these candidates are indeed valid
+patterns. TheSB algorithm also nds the valid subsequence
+with the most repetitions for each valid pattern.
+
+6. EXPERIMENTAL RESULTS
+We implement the prototype in C and execute on an IBM
+RS-6000 300 MHz CPU with 128MB running an AIX op-
+erating system. In the following experiments, we always set
+Lmax = 1000 and for each period l, max dis =
+min repl
+4
+.
+Forthepurpose ofperformanceevaluation, weuseasynthet-
+ically generated sequence consisting of1024distinct symbols
+and 20M occurrences of symbols. The synthetic sequence is
+generated asfollows. Theperiod length l ofthenextpattern
+is selected based on a geometric distribution with mean 50.
+The number of symbols involved in a pattern is randomly
+chosen between 1 and theperiod l. Thenumber ofvalid seg-
+ments is chosen according toa geometrical distribution with
+mean 50. The number of repetitions of each valid segment
+follows a geometrical distribution with mean 1000. After
+each valid segment, the length of the disturbance is deter-
+mined based on a geometrical distribution with mean 1000.
+This process repeats until 20M symbols are generated.
+We rst investigate the e ects of distance-based pruning.
+Without thedistance-based pruning, therecould beasmany
+as j = j Lmax di erent single patterns d;;:::; 8d 2
+=. Figure 2a shows the fraction of patterns eliminated
+by distance-based pruning. It is evident that the number of
+prunedpatternsisamonotonically increasing functionofthe
+min rep threshold. With a reasonable min rep threshold,
+only a small portion of potential single patterns need to be
+validated and used to generate candidate complex patterns.
+
+
+
+
+278
+
+D13
+D15
+D17
+D18
+D19
+D1
+D2
+D4
+D6
+D8
+
+D3
+D5
+D7
+D9
+D10
+D11
+D12
+D14
+D16
+S1
+
+S2
+S3
+
+S4
+
+
+
+
+D1
+D2
+D4
+D6
+D8
+
+D11
+D12
+D14
+D16
+
+
+
+
+D1
+D2
+D4
+D6
+D8
+
+D3
+D5
+D7
+D9
+D10
+D13
+D15
+D17
+D18
+D19
+
+D13
+D15
+D17
+D18
+D19
+X
+
+
+
+
+D13
+D15
+D17
+D18
+D19
+
+
+
+
+segment Z
+D1
+D2
+D4
+D6
+D8
+D11
+D12
+D14
+D16
+
+
+d3d3
+d1
+d2
+d1
+d3
+d2
+d1
+d3
+d1d1
+d2
+d1
+d2d3
+d2
+d1
+d2
+d1
+d2
+d1
+d3
+d1
+d2
+d1
+d1
+d1
+d1 d2
+d2
+1
+2
+3
+4
+5
+
+
+
+
+(position 25)
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+20
+21
+22
+23
+24
+25
+26
+2719
+28
+29
+30
+31
+32
+33
+34
+35
+36
+d1
+d2d4
+d1
+d1
+d1
+d1 d3
+d3
+
+D3
+D5
+D7
+D9
+D10
+D13
+D15
+D17
+D18
+D19
+(a) symbol sequence
+
+
+
+
+D3
+D5
+D7
+D9
+D11
+D12
+D14
+D16
+subsequence X (dominating)
+
+
+
+subsequence Y
+segment Z
+X'
+
+Y'
+i
+
+
+
+
+j
+
+
+
+
+segment V
+j - max_dis
+
+
+
+
+position 29position 10
+
+
+
+D1
+D2
+D4
+D7
+D10D9
+D11
+D12
+D14
+D16
+D1
+D2
+D4
+D6
+D8
+(position 20)
+
+
+
+
+X'
+
+Y'
+D3
+D5
+D7
+D9
+D10
+D1
+D2
+D4
+D7
+D10D9
+k
+(b) segments of (d1, *, *)
+
+
+
+
+(c) extendibility and dominance (min_rep = 4, max_dis = 6)
+
+
+
+
+(d) ambiguity in phase transition (min_rep = 3, max_dis = 6)
+
+
+
+
+(e) valid subsequences with a common tail segment
+X
+
+Y
+position 23 position 25
+
+
+
+
+Figure 1: Valid subsequences of d1;;
+
+
+
+
+0
+50
+100
+150
+200
+0.94
+0.95
+0.96
+0.97
+0.98
+0.99
+1
+
+
+
+
+min_rep
+Fraction
+of
+Pruned
+Patterns
+
+
+
+
+(a)
+0
+50
+100
+150
+200
+10
+-1
+10
+0
+10
+1
+10
+2
+
+
+
+
+min_rep
+Response
+Time
+(sec.)
+SB
+TS
+
+
+
+
+(b)
+
+
+
+
+0
+50
+100
+150
+200
+26
+26.5
+27
+27.5
+28
+28.5
+29
+
+
+
+
+min_rep
+Space
+Utilization
+(MB)
+
+
+
+
+(c)
+0
+50
+100
+150
+200
+90
+100
+110
+120
+130
+140
+150
+160
+170
+
+
+
+
+min_rep
+Overall
+Response
+Time
+(sec)
+
+
+
+
+(d)
+
+
+Figure 2: E ects of SB algorithm
+
+After the distance-based pruning, each remaining potential
+single pattern is validated through the SB algorithm. Since
+thevalidation process evenforagiven patternisnotatriv-
+ial task, we demonstrate the e ciency of our SB algorithm
+by comparing it witha reasonable twostage TSalgorithm.
+In the TS algorithm, for a given pattern, all valid segments
+are rst discovered, then all possible combinations of valid
+segments are tested and the one with the most repetition is
+chosen. Figure 2b shows the average elapse time of vali-
+dating a pattern. Note that the Y-axis is in log scale. It is
+evident that SB algorithm can outperform the TSalgorithm
+by at least one order of magnitude regardless the min rep
+threshold. Figure 2c and d show the space utilization
+in the SB algorithm and the overall response time to nd
+all patterns, respectively. Clearly, the higher the min rep
+threshold, the shorter the overall response time.
+
+7. CONCLUSION
+In this paper, we propose a exible model of asynchronous
+periodic patternstominepatternsthatareofanylengthand
+mayonly bepresent within asubsequence, and whoseoccur-
+rences may be shifted due to disturbance. Two parameters
+min repandmax disareemployedtoqualify valid patterns
+and the longest valid subsequence is returned for each valid
+pattern. A two-phase algorithm is devised to rst generate
+potential periods by distance-based pruning, followed by an
+iterative proceduretoderiveandvalidate candidate patterns
+and locate the longest valid subsequence.
+
+8. REFERENCES
+1 J. Han, G. Dong, and Y. Yin. E cient mining partial
+periodic patterns in time series database. Proc. 15th
+ICDE, 106-115, 1999.
+2 B. Ozden, S. Ramaswamy, and A. Silberschatz. Cyclic
+association rules. Proc. 14th ICDE, 412-421, 1998.
+3 S. Ramaswamy, S. Mahajan, and A. Silberschatz. On
+the discovery of interesting patterns in association rules.
+Proc. 24th VLDB, 368-379, 1998.
+4 J. Yang, W. Wang, and P. S. Yu. Mining asynchronous
+periodic patterns in time series data. IBM Research
+Report, 2000.
+
+
+
+279
+

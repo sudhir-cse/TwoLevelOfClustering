@@ -1,0 +1,1138 @@
+A Theoretical Framework for Learning from a Pool of
+Disparate Data Sources
+
+
+Shai Ben-David
+ComputerScience
+Technion, Haifa 32000, Israel
+andCorneUUniversity
+Ithaca, NY 14853
+shai @cs.cornell.edu
+Johannes Gehrke
+ComputerScience
+Cornell University
+Ithaca,NY 14853
+johannes@ cs.cornell.edu
+Reba Schuller
+Departmentof Mathematics
+Cornell University
+Ithaca, NY 14853
+ras51 @cornell.edu
+
+
+
+ABSTRACT
+
+Many enterprises incorporate information gathered from a
+variety of data sources into an integrated input for some
+learning task. For example, aiming towards the design of an
+automated diagnostic tool for some disease, one may wish to
+integrate data gathered in many different hospitals. A major
+obstacle to such endeavors is that different data sources may
+vary considerably in the way they choose to represent related
+data. In practice, the problem is usually solved by a manual
+construction of semantic mappings and translations between
+the different sources. Recently there have been attempts to
+introduce automated algorithms based on machine learning
+tools for the construction of such translations.
+In this work we propose a theoretical framework for mak-
+ing classification predictions from a collection of different
+data sources, without creating explicit translations between
+them. Our framework allows a precise mathematical analy-
+sis of the complexity of such tasks, and it provides a tool for
+the development and comparison of different learning algo-
+rithms. Our main objective, at this stage, is to demonstrate
+the usefulness of computational learning theory to this prac-
+tically important area and to stimulate further theoretical
+and experimental research of questions related to this frame-
+work.
+
+
+1.
+INTRODUCTION
+While the world has accumulated an astronomical amount
+of data, use of this data is significantly inhibited by our in-
+ability to efficiently integrate data from multiple sources.
+The strength of the XML standardization movement1 is a
+good indicator of the significance of this problem. In ad-
+dition to motivating standardization for future data collec-
+tion, this problem has inspired investigation into methods
+
+The goal of the XML standardization movement is for ev-
+ery industry to have a set of standard data structures for
+exchange of information.
+
+
+
+
+Permissionto makedigitalor hard copiesof all or part of this workfor
+personal or classroomuse is grantedwithoutfee providedthat copiesare
+not madeor distributedforprofitor commercialadvantageand thatcopies
+bearthisnoticeand the fullcitationon the firstpage. Tocopyotherwise,to
+republish, toposton serversortoredistributeto lists,requirespriorspecific
+permission and~ora fee.
+Copyright2002ACM1-58113-567-X/02/0007 ...$5.00.
+for integrating non-standardized data.
+Much of this work
+has focused on data integration systems, which allow access
+to multiple data sources through a single mediated schema.
+However, the problem of creating semantic mappings (i.e.,
+mappings which preserve the meaning of the data) between
+the original schemas and the mediated schema remains a
+serious bottleneck.
+We address the problem of data integration for the pur-
+pose of classification prediction. In this setting, the data has
+the form of a set of attributes and a classification ('yes' or
+'no'), and one desires the ability to predict the classifications
+of new attribute combinations based on several small sets of
+training examples. We show that there are quite natural
+scenarios in which this can be done without the creation of
+explicit semantic mappings. That is, the information gath-
+ered from multiple data sources (without knowledge of the
+semantic mappings between them) can be utilized to guar-
+antee better predictions than any algorithm could have ob-
+tained by considering any one of these sources on its own
+(with explicit know|edge of its semantics).
+As an example, consider a hospital hoping to improve
+its methods for determining which patients diagnosed with
+pneumonia are at high enough risk to warrant hospitaliz~
+tion.
+While standard machine learning tools allow them
+to use relevant data (patient histories for patients previ-
+ously diagnosed with pneumonia) collected by the hospital
+to make these predictions, it is known that larger sets of
+data guarantee a greater likelihood of more accurate pre-
+diction.
+Similar data sets from many other hospitals are
+available, and it would be ideal to augment the data set
+with data from them; however, use of these data sets is hin-
+dered by the use of different database schemas by different
+hospitals. Previously, one would have to first determine the
+different schemas and translate all the data into one uni-
+fied database; however, we offer a new alternative: in the
+sequel, we describe a technique for using the raw databases
+(without modification) to improve prediction.
+
+
+1.1
+Our Model
+We model a situation in which some fixed probability dis-
+tribution generates database entries (examples) and their
+labels (classifications). A learner has access to a collection
+of databases with labeled entries, sampled i.i.d, from this
+distribution. However, each database presents these entries
+using its own representation schema. The task of the learner
+is to predict, based on these labeled examples, the labels of
+
+
+
+
+443
+
+new entries in one of the databases.
+While the identities
+of the data sources and the set of potential representation
+schemas used by the database are known to the learner, the
+learner does not know which schema corresponds to which
+database.
+
+1.2
+Results
+
+We demonstrate the utility of computational learning the-
+ory to the problem of learning from disparate data sources.
+We present a meta.algorithm for incorporating information
+from data sources that are encoded in ways unknown to
+the learner, in a way that achieves classification prediction
+that is provably better than what can be achieved by algo-
+rithms that base their predications on any one of the data
+sources alone. Our main results show that, having access to
+sufficiently many disparate sources, classification prediction
+becomes significantly more effective than learning from any
+one of the sources alone, without determining the explicit se-
+mantic mappings between them, and in particular, without
+the need to apply semantic knowledge about the different
+schemas used by these data sets. In this work, we focus on
+the information complexity of the prediction task, setting
+aside the computational complexity aspects of this problem.
+More specifically, fix a set of potential hypothesis (classi-
+fication) functions ~
+and assume that the semantic trans-
+lation functions, used to encode the data in each of the data
+sets, come from some family of functions .~. For example, a
+typical such family ~ might include permutations (to allow
+for different orderings of attributes), as well as linear func-
+tions acting on individual attributes (to allow for disparity in
+the units in which attributes are measured.) Let D1,... , Da
+be a sequence of sample sets, each consisting of entries from
+one database and the corresponding classifications of those
+entries. We propose the following meta-algorithm:
+
+On input of D1,... , D=, search for some h E H
+and functions fl,.-- , f= E .~, that minimize the
+average of the empirical errors of h o fl on Di.
+To predict the label on a new entry, represented
+using the scheme of some data set Di, apply the
+resulting h o ffi to this new entry.
+
+We provide formal tools to analyze the prediction success
+of such an algorithm. Our results provide guaranteed error
+bounds in terms of combinatorial parameters that depend
+on the richness of the hypothesis class and of the family of
+data transformations, and on the relationship between these
+two classes of functions.
+Since we do not restrict the label-generating distribution
+in any way, the results we get are relative to the best predic-
+tor within our class of hypothesis. This is in line with the
+common agnostic learning (or statistical regression) frame-
+work.
+The rest of the paper is organized as follows. We begin, in
+Section 2, by discussing our learning approach for a concrete
+example, namely the task of learning Euclidean rectangles
+for data sets that are distorted by unknown linear shifts.
+We prove that in this case, our algorithmic approach al-
+lows the use of the disparate data sources almost as if they
+were all undistorted and merged into a large unified data
+set. Preparing the ground for a more general analysis, we
+provide in Section 3 a brief overview of some fundamental
+concepts from computational learning theory which will be
+used throughout the paper. We then go on to outline , in
+3.3, a relevant result from [1] bounding the generalization
+error of learning in the framework of multiple related tasks.
+In section 4 we prove error bounds for a general case. These
+bounds are formulated in terms of combinatorial parame-
+ters that measure the information complexity of our learn-
+ing task. Section 5 discusses related work and, finally, we
+offer concluding remarks in section 6.
+
+
+2.
+LEARNING RECTANGLES FROM SHIFTED
+DATA SETS
+Let us begin by considering a concrete example. Let the
+database entries consist of points in the Euclidean space Rd
+(for some fixed d), and assume that the the classification of a
+point is determined by some axis aligned rectangle (unknown
+to the learner). That is, a point is labeled 1 if it lies within
+this rectangle, and 0 otherwise.
+Assume that the different database schemas are obtained
+by shifts (of the points) of Rd. I.e., for each database i there
+is some vector vi, and a point x = (Xl,... , xd) is repre.sented
+in the i'th database as x + v~ = (xl + v~,... , Xd + v~).
+We will show" that the use of such extra databases helps in
+learning the side lengths of the rectangle used by the labeling
+algorithm (although the algorithm is not provided with the
+shifting vectors v~)..
+Informally, the learning algorithm is as follows: For each
+database, D~, find smallest rectangle, Ri, containing all points
+in that database labeled 1. Output (rl,... , rd), where rj is
+the maximal length of the j'th side over all the/~'s.
+We show that with this algorithm, the learner's predic-
+tions based on n disparate data sets of size m are as good
+as could be guaranteed based on a single data set of size
+n(m - c), where c is a constant depending on the Euclidean
+dimension and the desired prediction accuracy.
+We now state formally the algorithm described above and
+analyze its performance.
+
+Algorithm: For each data set Di, and each coordinate j,
+1 < j _< d, take
+
+m~,~ = max{Ixj-y~l : ((xl,... Xd), 1), ((Yl .... Yd), 1) e D~},
+and take
+
+
+
+
+Theorem
+2.1. Let P be any probability distribution over
+R d, let R be an axis aligned rectangle in R d, and let V 1,... , v~
+be d dimensional vectors. Let D1,... , Dn, be sets of labeled
+points, so that Di is generated by sampling i.i.d, via P points
+x E R a, and putting in Di the labeled point (x + v ~, R(x))
+(where R(x) =: 1 in x e R and 0 otherwise).
+For any e > 0 , if the algorithm, A, described above is
+applied to D1 ...... ,Dn, and if the size of each data set Di
+exceeds m,
+
+with probability exceeding d (2 (1
+,
+m ,~
+) ,.a out-
+puts a vector of side lengths ~ that has error less
+than e.
+
+(Where the error of a rectangle r relative to P and R is the
+probability that a P-random point will be classified differently
+by r and R).
+
+Note that this generalization guarantee is as good as the
+one that is obtained by the standard considerations [8] from
+a single training data set of size n(m - c), where c is a
+
+
+
+
+AAA
+I
+l
+l
+
+constant dependent on e and the Euclidean dimension d.
+That is, for the purpose of learning the side lengths of a
+target rectangle, the distortion by unknown shifts can be
+overcome by the learning algorithm; beyond a certain "ori-
+entation constant" per database, each example contains as
+much information as if it had not been shifted at all!
+
+
+PROOF. Definition: Given rectangle r = [vx,vl + sl] x
+... x [vd,Vd + Sd], distribution P on R~, and 0 < e < 1, we
+define rj(e) =
+
+[Vl, ~/l "4-81]
+X...
+X
+[~)j,Vj "q-6]
+X...
+X
+[~d, ~d + Sd],
+
+where 6 is such that P(x E rj(e)) = e, and r~(e) =
+
+[Vl, Vl -~ Sl] X ... X ['0] + 8ff4-- 6 r, Vj "Jr"8j] X ... X [Ud, 'Ud "~ 8d],
+
+where 6' is such that P
+e 6(e)) = e.
+Informally, rj (e) and r~ (e) are simply slices of thickness
+6, 6' (in coordinate j) off of opposite sides of r such that for
+a point (x, b) chosen according to P, x has probability e of
+lying within each of the resulting slices.
+Consider the target rectangle, r. If for some j, 1 < j < d,
+some D~ contains (the appropriate shift of) a point from
+both rj(~)
+' a
+and rj (g), then the error contributed by coordi-
+nate j is less than c~. Thus, the total probability of getting
+more than error c~ from an inaccuracy in coordinate j is at
+most (2 (1 - -~)m)n. In order for the total error to exceed
+e, there must exist al, ...ad, with ~ia=l o~j > e, such that
+the error contributed by coordinate j is at least aj. In this
+case, some o~j is such that aj > e/d, so there must be some
+coordinate which contributes an error of at least e/d. The
+probability of this occurring is at most d (2 (1 - ~a)m) n.
+[]
+
+Our main objective in this work is to investigate the ex-
+tent to which such performance can be obtained in more
+general situations. In particular when the labeling is nonde-
+terministic, and for arbitrary prediction functions and other
+families of data transformations (in place of the rectangles
+and shifts).
+
+
+3.
+BACKGROUND
+In this section we introduce some standard concepts and
+tools of Computational Learning Theory. For all this and
+more, see [2].
+The standard approach to classification prediction prob-
+lems is to begin with some set H (called a hypothesis space)
+of possible classification functions, i.e. subsets of the do-
+main 2¢ (or equivalently, their characteristic functions, for
+h e ~Xh :
+X
+--~ {0,1}
+
+
+Xh(X)={
+0ifx~h
+}
+1 ifxEh
+")
+
+Then one goes about selecting a good hypothesis from H
+based on available data.
+
+3.1
+VC-Dim and Information Complexity
+For hypothesis space H over domain X, we have the fol-
+lowing definitions:
+
+Definition 3.1. For any A C X, define
+
+Ha(A)=I{hNA
+: hEH}I.
+Definition 3.2. For natural number m, define
+
+Ha(m) = max{Ha(A) : [AI = m}.
+
+In words, Ha(m) /s the maximal number of subsets of S
+that can be obtained by H on any set S of size m.
+
+
+Definition 3.3.
+
+VC-dim(H) = max{m: Ha(m) = 2~}.
+
+
+The VC-dimension is a measure of the complexity of a
+hypothesis space. The following, known as Sauer's lemma,
+demonstrates how the VC-dimension of a hypothesis space
+controls the number of dichotomies induced by H on a set
+of any size, m.
+
+
+Theorem 3.4. Forallm E N, II~(m) < (era~d) d , where
+d = VC-dim(H).
+
+
+Furthermore, the VC-dimension gives a bound on the in-
+formation complexity of ordinary classification prediction,
+i.e. how large a sample is needed to ensure that a hypothe-
+sis that performs well on the sample data is likely to perform
+nearly as well on new data.
+We measure the empirical error of a hypothesis h on a
+sample (or training) set T by
+
+~rT(h) = ]{(x,b) E T : h(x) ~ b}[
+ITI
+
+The true error of h on distribution P is
+
+ErP(h) = P{(x,b) E X x {O, 1} : h(x) ¢b}.
+
+
+Theorem
+3.5. IfT is a random sample from distribution
+P on X x {0,1} with
+
+ITI _> (64/e2)[log(4/5) + 2 VC-dim(H) log(12/e)]
+
+then for any h E ~
+with probability at least 1 - 6,
+
+ErP (h) - l~rT (h) _<e.
+
+
+3.2
+Standard Learning Frameworks
+Before one can state formal generalization results, a dis-
+tinction is usually made between two cases; The realizable
+case, often called the PACframework, and the general (non-
+realizable) case, the Agnostic framework. In the PAC frame-
+work, it is assumed that that some hypothesis h E H is a
+perfect classifier, i.e., ErP(h) = O. (Such an h is called
+a target function.) In this framework, it is reasonable to
+ask that a learner find a hypothesis h such that Er P(h) is
+small. While this assumption allows for nice clean analysis
+of learning problems, it is rarely true in real-world problems.
+In contrast, the agnostic framework allows the distribution
+to be arbitrary. In this framework, it is standard to judge
+the success of the learner relative to the best hypothesis,
+ho in the given hypothesis space; thus, ff a learning algo-
+rithm produces hypothesis h, we are satisfied with a result
+regarding the probability that [ErP (h) - ErP (ho)[ < e.
+With the exception of section 2, we work in the agnostic
+framework.
+
+
+
+
+445
+
+2(
+Domain of database entries (excluding the classi-
+fications)
+3.3
+A Related Problem
+Our general results rely on work of Baxter [1] on multitask
+learning, which we introduce in this section.
+Section 3.4 of [1] considers the following problem: Sup-
+pose we have n probability distributions, P1,... ,P,~, on
+X × {0, 1}, and for each i, we have sample set D6 generated
+by sampling m times from X × {0, 1} according to P6. Given
+a boolean hypothesis space family H over )d, if we choose
+hypothesis h~ to approximate D~, such that hi,... , h,~ are
+all from some single H · H how well does this sequence of
+hypotheses generalize to P1,... , Pn?
+In order to address this problem, [1] introduces the analog
+to the VC-dimension that appears as our definition 3.7.
+
+Notation. For function g : Y ~ Z and ~ = (yl,.-. ,y,~) ·
+yn, ~(~) will denote (g(y,),..., g(Yn)) E Z n.
+
+Definition 3.6. IIH(n,m)=
+
+
+
+max
+"
+: 3H E H with hl,... ,hn · H
+~, .....~,ex~
+~(_~)
+
+
+Definition 3.7. dH(n)= max{m : IIH(n,m)----2n'n}
+
+The following, which appears as corollary 13 in [1],2 is a
+bound on the generalization error in terms of dH.
+
+Theorem
+3.8. [1] Let H be any permissible boolean hy-
+pothesis space family. 3 If the number of examples m of each
+task satisfies
+
+
+m>_ ~
+2d~
+log--· +-nl°g
+,
+
+then with probability at least 1-6 (over the choice olD1,... , D,~),
+for any H · H, and hi,... ,h~ · H,
+
+- ~/~rD'(hl)
+< ·.
+
+6=1
+6=1
+
+
+4.
+GENERALIZATION BOUNDS FOR THE
+AGNOSTIC SETTING
+Let X be our domain set, let I-~C_2x denote the hypothe-
+sis class that we work with, and let .~ be the set of potential
+semantic transformations. Formally, we assume that .~ is
+a set of functions f : X ~
+X such that ~ is a group un-
+der function composition and such that ~ is closed under
+the action of ~, i.e., for all h · ~ and f · .~, there exists
+h' e ~ such that x · h ¢:~ f(x) · h'.
+We define equivalence relation ,~y on I~ by
+
+h,~:rh ~ iffBff·~
+such that h~=hof
+
+Let P be a distribution on 2( × {0, 1}, and suppose we are
+given data sets D1 ,... , Dn, each containing at least m train-
+ing examples, where examples (y, b) · D6 are generated by
+
+2Note that although [1] only states that ~ ~6~1 Err°i(h~) -<
+
+1
+n
+gg~=~ l~rD' (h6) + ·, it is clear from the proofs in [1] that
+this stronger form holds.
+3permissibility [1, 2] is a "weak measure-theoretic condition
+satisfied by almost all 'real-world' hypothesis space fami-
+lies". Throughout this paper we shall assume that all our
+classes are permissible.
+P
+D/
+
+
+n
+
+m
+
+E
+
+
+
+
+N
+
+
+
+
+all(n)
+Family of possible transformations from X to X,
+mapping between the different database schemas
+A distribution on X × {0, 1}
+ith database, consisting of classified database en-
+tries, (x, b) · X x {0, 1}
+The number of databases
+The number of entries per database
+Desired prediction accuracy
+Tolerated probability of desired accuracy not be-
+ing achieved
+Hypothesis space of possible classification func-
+tions from 2( to {0, 1}
+Equivalence relation defined on ~
+h ~"
+h' iff
+there is some f · .~ mapping h to h'
+Set of equivalence classes of H under ~,~-
+Generalized VC-dimension for collection H of hy-
+pothesis spaces
+
+Table 1: Table of Symbols
+
+
+drawing (x, b) according to P, and applying transformation
+f6 E .~ to x to obtain y = f6(x).
+Our problem fits into the multitask learning setting as
+follows: The hypothesis space family, H, is the family of all
+equivalence classes of ~y, i.e. H -- H/ ~y, and P6 is the
+distribution obtained by first generating (x, b) according to
+P, and outputting (f6(x), b).
+
+Notation. Let; ~-I...x denote H/~y.
+Explicitly, Hn~~(m, n) =
+
+
+
+max
+"
+: fl... f,~ · .T, h · H
+~gl ,... ~Xr~EX ~'~
+h o A(~)
+
+and dn~~ (n) is the maximal value of m for which this
+quantity is 2~n.
+Theorem 3.8 indicates that the generalization that may
+be guaranteed for such a learning setting is controlled by
+the value of this last parameter. In the following section we
+analyze dn ~~ (n) as a function of the maximal VC-dimension
+of any equivalence class of N and the relationship between
+this hypothesis space and family ..~'.
+
+4.1
+Computation of dn~~(n)
+We begin a simple upper bound on dn~~ (n).
+
+Lemma
+4.1. For any n, dn~~(n) _< VC-dim(~I).
+
+PROOF. If there exist ~'i', · .., ~n · X such that
+
+
+:
+: hi "-'.~h2 .... :r h,
+= 2m~,
+W.(~)
+
+then N shatters ~ for any 1 < i < n.
+[]
+
+We will now prove severn more interesting bounds on
+du~~(n). We first consider the case where I.~1 is finite.
+
+Theorem
+4.2. If .~" is finite and i~
+>- VC-dim(N),
+then
+
+dn~,(n) < 21og(I.~l)
+
+
+
+
+446
+
+PROOF. For fixed ~i,...~
+E X m, we have to bound the
+number of distinct matrices of the form
+
+
+
+
+for/l,...
+,/,
+~.f , hell.
+Such a matrix is obtained by applying h to the vector
+
+(T(~'i).... ,~n(~)).
+Obviously, there are at most [jrr~ many ways of choosing
+ft,... , fr~- Once this sequence of transformations is set, the
+matrix is determined by the dichotomy induced by the h on
+the above vector.
+Let D denote VC-dim(~. Applying Sauer's Lemma, the
+number of dichotomies that may be induced by h G H on a
+vector of m X n many points is at most (.~_~)D.
+It follows that the number of possible matrices is upper
+bounded by (.~)D × IJr]"' The proof is now concluded by
+
+noting that for m _>21og(Ijrl), it is the case that (_~)D ×
+
+ijrl- < 2'~"
+[]
+
+We now consider jr such that [~/~" I is finite.
+
+Theorem 4.3. lf ,,~ is of finite index k, and n >
+to~~
+--
+4d logd'
+then
+
+d~~~(n) < logk + 4dlogd,
+n
+
+for d = max {3, maxne./~~ VC-dirn(H)}.
+
+PROOF. Fix h G ~ and let H = [h]~~. Since, by Saner's
+lemma, IIH(ra) < (.~)d LSrod, H contributes at most m a
+distinct rows for n×m matrices to be counted in II~~~(n, m).
+So, H contributes at most rnr'a to this quantity, and thus
+lrI~~z(n, m) _<km"a.
+Now, if II~~x(n,m) _>2ran, then kmna >_ 2ran. Equiva-
+
+lently, 1.~ + d log rn > m.
+So, suppose n > _.!ea.k.. and consider mo = L~+4dlogd.
+--
+4dlog d'
+Observe that
+
+log k + d log rao
+n
+
+
+
+= l°gk+dl°g(l°ng k ÷ d l ° g d ) n
+
+
+<_ log k + d log(4d log d & 4d log d)
+n
+
+
+
+= logk + dlog(Sdlogd) < too.
+n
+
+By monotonicity, for n > ~
+and d > 3, da~~(n) <
+--
+4d log d
+--
+--
+
+~Tt0.
+[]
+
+
+Finally, we proceed to generalize this last theorem to
+such that ~y is of infinite index.
+
+Definition 4.4. For h ~ l~, and ~i',... ,~
+G ,.ym define
+splitsh (~7,
+. . . ,
+~)
+
+
+=
+"
+: h~..... h, ~ [h]
+Definition 4.5. For fixed ~,...
+, x"-ffE X m, define
+
+h -<(~r,...,~) h'
+
+ify
+splitsh(~ ..... ~) C splitsn,(~,... , ~n)
+
+Definition 4.6. Let
+
+Hmaz(n) = {h : h is <(~,...,~)-maximal).
+
+For h, h' G H~(n),
+define
+
+h "~C~r,...,~) h'
+
+iff
+
+splitsh (xi',... ,~n) = splitsh, (~ ..... ~n).
+
+Definition 4.7. Define index(y,m,n)(H) =
+
+sup
+(index of ~(~y,... ,~)
+on Hma~(n)).
+z'-y,... ,~ff 6 ~rn
+
+Finally, let D = VC-dim(H), and define
+
+index(~,n)(~ =
+sup index(~,m,n)(~
+l<m<D
+
+
+Theorem 4.8. Ifindex(j:,n)(H) = ¢(n), and
+
+logS(n)
+n> 4~ogd'
+
+then
+log ¢(n) + 4dlogd,
+drl~~(n) <
+
+where d = max {3, max/./eH/~~ YC-dim(H)}.
+PROOF. Recall that in the proof of theorem 4.3, we counted
+a contribution from each H = [h]~~ of (.~),d towards
+Hx~~(n, m). Observe in the first paragraph of the proof
+
+_
+h'
+that if splits(~,~,...,~)(h)
+C splits(y,~,...,~))(
+), then
+any contribution counted from H in this argument would
+also be contributed by H' = [h']~x. Thus, we only need
+count these contributions from index(y,m,r,)(H) many ,,iF-
+equivalence classes. The theorem follows.
+[]
+
+4.2
+Main Results
+We are now ready to state our main results. As before,
+we have distribution P over ,~' x {0, 1}, family ~ of trans-
+formations on X, closed under inverse and composition, hy-
+pothesis space H closed under the action of Jr, and data sets
+Di~... , Dr,, such that each Di consists of at least m exam-
+pies (fi(x),b), for some fixed fi E Jr, where each (x,b) is
+drawn independently according to P.
+
+Theorem 4.9. For any 0 < e, 5 < 1, and any Ny-equivalent
+hi,... , hn G H, if any of the following conditions hold, and
+Di are generated randomly as described above, then with
+probability at least 1 - 5,
+
+Erm(hi) -
+rOi(h~
+< e.
+i=l
+i=l
+
+1. jr is finite,
+
+n
+VC-dira(H))
+He./~x
+(
+log(n) ~
+max
+
+and
+
+m > ~
+4 log
+log(I.rl) + ~ log
+
+
+
+
+447
+
+2. ~
+has finite index k on E n > ~
+and
+--
+4d log d'
+
+[(
+)
+88
+1 k
+1 log
+m> ~
+2 log
++4dlogd
++~
+,
+
+
+where d = max {3, maxHe./~x( VC-dim(H))}
+
+3. index(7,n)(K) = ~(n), n > ~
+and
+--
+4dlog
+d '
+
+
+
+m>~88 [2(log~)
+(l°g~ (n) -t-4dlogd) +~log-~],l
+
+
+where d = max {3, maxHerl/~~( VC-dim(H))}.
+
+This theorem gives sufficient conditions on the size of
+the data sets to guarantee that (with high probability) the
+equivalence class with optimal average empirical error on
+the data sets contains a hypothesis which is which is near-
+optimal on average over the data sets for the underlying
+distribution. This is a first step4 in justifying the following
+meta-algorithm:
+1. Find an equivalence class [h]~x of hypotheses that
+minimizes
+r~
+
+inf
+-1
+Z
+t~rD' (hi).
+n
+hl,... ,hnE[h]~
+i=l
+
+
+2. Use standard learning techniques on Dj to select h~E
+[h]~y which performs well on Dj.
+
+Part 1 of theorem 4.9 says that for finite sets of transfor-
+mations, once the number of data sets is sufficiently large,
+the logarithm of the size of the set of potential transforma-
+tions may replace the VC-dimension of the hypothesis class
+H for the purpose of deriving sample complexity guarantees.
+Parts 2 and 3 say that this VC-dimension may be replaced
+by a function of the maximal VC-dimension of any of the
+equivalence classes of the hypothesis class and a measure of
+the complexity of the interaction between H and .T.
+Finally, we present part 3 of theorem 4.9 as a bound on
+the generalization error in terms of the other parameters.
+(We omit the analogous statements for parts 1 and 2.)
+
+Corollary 4.10. Let 0 < e, ~ _<1, let
+
+
+d= max ( H~x~ ~( VC-dim(H)),3) ,
+
+
+and let index(:~,,)(~) = ¢(n), where D = VC-dim(H).
+If
+n> ~-~--(-~ rn > 3, and
+--
+8dlog
+d ~
+
+e>-~i2(l°g~(n)+8dl°gd)l°gm÷ll°g~
+-n
+
+
+with probability at least 1 - 5,
+
+
+Era(hi)-
+rDi(hl
+< e.
+
+i=l
+i=l
+
+
+One drawback of the above results is that ,they all bound
+the average, over all n data sets, discrapency between our
+empirical estimates and the true error of hypotheses. In a
+subsequent paper, [12], we have been able to improve these
+
+4The second step is to prove that the average true error is
+close to the true error on any one of the data sets. We have
+recently succeeded in proving a result [12] along these lines.
+results to bounds that apply to any selected single data set.
+Namely, the current bounds that guarantee
+
+
+Era(hi) -
+rD~(hl) < e
+
+i=:1
+i=l
+
+can be shown, with no extra cost in sample size, to guar-
+antee for every j _<n,
+
+
+inf
+n
+I
+h,e[hl~
+ErPJ(hl) --
+inf
+--1Z t~rDi(hi ) _<e.
+hl,... ,hnE[h]~3: n
+i=1
+
+
+
+5.
+RELATED WORK
+Previous work on database integration has focused on
+schema matching, the problem of producing semantic map-
+pings which transform data instances from one schema to
+instances of another. ([11] provides a comprehensive survey
+of schema matching.) This has been approached primar-
+ily by considering the schemas involved and using linguis-
+tic information (e.g. attribute labels which are synonyms
+or homonyms) and/or constraint information, such as data
+types, value raaages, and cardinalities, which is usually in-
+cluded in schemas [10, 4, 9]. However, some recent work has
+made use of both schema information and machine learning
+on actual data [5, 6, 17].
+Our approach differs from this previous work in two sig-
+nificant ways. First, it focuses on the particular task of data
+integration for classification prediction, as opposed to com-
+plete unificationof multiple databases into a single database.
+Our work suggests that it may be advantageous to focus on
+data integration with a particular use of the data in mind,
+as the available data may be sufficient for this use but in-
+sufficient for determining the semantic mappings.
+The other important difference between our work and
+prior database integration work is that our methods make
+no use of the database schemas, which is advantageous as
+the schema information may be incomplete or inaccurate.
+We should point out the distinction between our notion
+of "data integration" and the concept of "data fusion," on
+which there is an abundance of literature [7, 15, 16]. Data
+fusion seeks to integrate data from sources that are disparate
+in a much stronger sense than the one we have considered
+here. Whereas we have assumed that the different sources
+are merely transformed versions of one another, in data fu-
+sion, each of the sources actually provide different kinds off
+information about some common phenomenon. The differ-
+ent sources may differ significantlynot only in the represen-
+tation of the data, but also in the type of information and
+even the accuracy of the information. A typical example
+involves networks of different types of sensors in different
+locations. This is clearly a more difficult problem than the
+one we have considered here.
+Another relevant line of research involves learning mul-
+tiple "related" tasks (multitask learning) [1] and "learning
+to learn" [14]. The former addresses the problem of simul-
+taneously learning multiple related tasks, while the latter
+considers learners as embedded in an environment in which
+learning of prior tasks improves the ability of the learner to
+learn future tasks. While these approaches have not previ-
+ously been applied to data integration, they are well-suited
+to this problem, as the tasks of learning different schemas for
+similar databases are indeed tightly related tasks, for which
+it is natural to expect to gain useful knowledge from each
+
+
+
+
+448
+
+task. Furthermore, we feel that our work sheds some light
+on what it means for tasks to be "related," a concept whose
+formal definition has been sufficiently elusive to all but halt
+progress on the theoretical side of multitask learning (in
+spite of the plethora of promising experimental work in this
+area, e.g., [3, 13]).
+Perhaps our concrete concept of "re-
+lated" and successful analysis of multitask learning within
+this framework will inspire further formal development in
+this area.
+
+
+6.
+CONCLUSIONS
+In this work we have attempted to provide a formalism to
+support the application of the mathematical machinery of
+computational learning theory to the task of classification
+prediction utilizing disparate data sources. The results we
+obtain justify the use of an empirical risk minimization ap-
+proach in this domain. In particular they show that data sets
+consisting of transformed training samples may be utilized
+on the basis of knowing a set of potential data transforma-
+tions even when the actual semantic mappings applied to
+each data set are not known.
+The analysis shows that the information complexity of
+such an approach depends on the richness of both the hy-
+pothesis class used for prediction (or regression) and the set
+of potential data transformations. Furthermore, this sample
+complexity also depends on the relationship between these
+two families of functions. The crucial factor in determining
+this sample complexity turns out to be the equivalence rela-
+tion induced on the hypothesis class by the set of data trans-
+formations. This is formally measured by the VC-dimension
+of the resulting equivalenceclasses of hypotheses and by the
+index of this equivalence relation.
+The strongest results in this work are obtained for the
+specific case of learning rectangles, in the PAC setting, under
+the set of multidimensional data shifts. In that case we prove
+that, for the purpose of learning the shape of the rectangles,
+disparate data sets are as effective as a single training data
+set of size close to the size of their union.
+We view this work as a kind of appetizer for further ap-
+plications of COLT techniques to issues of obtaining collec-
+tive knowledge from a set of varied data sources. This work
+leaves many loose ends hanging, and we hope they will stim-
+ulate further research.
+
+
+7.
+ACKNOWLEDGMENTS
+We wish to thank Matthew Schultz for raising the ques-
+tions that initiated this research, and to Rich Caruana for
+helpful discussions concerning this work.
+
+
+8.
+REFERENCES
+[1] J. Baxter. A model of inductive bias learning. Journal of
+Artificial Intelligence Research, 12:149-198, 2000.
+[2] A. Blumer, A. Ehrenfeucht, D. Haussler, and M. K.
+Warmuth. Learnability and the vapnik-chervonenkis
+dimension. Journal of the Association for Computing
+Machinery, 36(4):929-965, 1989.
+[3] R. Caruana. Multitask learning. Machine 1)earning,
+28(1):41-75, 1997.
+[4] S. Castano and V. D. Antonellis. A schema analysis and
+reconciliation tool environment for heterogeneous
+databases. In IDEAS, pages 53-62, 1999.
+[5] A. Doan, P. Domingos, and A. Y. Halevy. Reconciling
+schemas of disparate data sources: A machine-learning
+approach. In SIGMOD Conference, 2001.
+[6] R. Goldman and J. Widom. Dataguidesl Enabling query
+formulation and optimization in semistructured databases.
+In VLDB'97, Proceedings of 23rd International Conference
+on Very Large Data Bases, August 25-29, 1997, Athens,
+Greece, pages 436-445. Morgan Kaufmann, 19977.
+[7] D. Hall and J. Llinas. An introduction to multisensor data
+fusion. In Proceedings of the IEEE, volume 85, pages 6 -23.
+[8] M. J. Kearns and U. V. Vazirani. An Introduction to
+Computational Learning Theory. MIT Press, 1994.
+[9] D. S. Luigi Palopoli and D. Ursino. Semi-automatic
+semantic discovery of properties from database schemas. In
+IDEAS, pages 244-253, 1998.
+[10] T. Milo and S. Zohar. Using schema matching to simplify
+heterogeneous data translation. In Proc. 24th Int. Conf.
+Very Large Data Bases, VLDB, pages 122-133, 24-277 1998.
+[11] E. Rahm and P. Bernstein. On matching schemas
+automatically. Dept. of Computer Science, Univ. of
+Leipzig, 2001.
+[12] S. Ben-David, J. Gehrke and R. Schuller. Technical report,
+Computer Science Department, Cornell University, May
+2002.
+[13] S. Thrun and J. O'Sullivan. Discovering structure in
+multiple learning tasks: The TC algorithm. In
+International Conference on Machine Learning, pages
+489-497, 1996.
+[14] S. Thrun and L. Pratt, editors. Learning To Learn. Kluwer
+Academic Publishers, November 1997.
+[15] H. Wache, T. Vgele, U. Visser, H. Stuckenschmidt,
+G. Schuster, H. Neumann, and S. Hbner. Ontology-based
+integration of information - a survey of existing
+approaches. In Proceedings of the Workshop Ontologies
+and Information Sharing, IJCAL 2001.
+[16] L. Wald. An overview of concepts in fusion of earth data.
+In P. Gudmandsen, editor, Future trends in Remote
+Sensing, pages 385 - 390. Balkema, 1997.
+[17] Q. Y. Wang, J. X. Yu, and K.-F. Wong. Approximate
+graph schema extraction for semi-structured data. In
+Advances in Database Technology - EDBT 2000, 7th
+International Conference on Extending Database
+Technology, Konstanz, Germany, March 27-31, PO00,
+Proceedings, volume 1777 of Lecture Notes in Computer
+Science, pages 302-316. Springer, 2000.
+
+
+
+
+449
+

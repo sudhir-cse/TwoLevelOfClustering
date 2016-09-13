@@ -1,0 +1,1283 @@
+Single-shot Detection of Multiple Categories of Text using
+Parametric Mixture Models
+
+Naonori Ueda
+NTT Communication Science Laboratories
+2-4 Hikaridai, Seika-cho, Soraku-gun,
+KyotoJapan
+ueda@cslab.kecl.ntt.co.jp
+Kazumi Saito
+NTT Communication Science Laboratories
+2-4 Hikaridai, Seika-cho, Soraku-gun,
+KyotoJapan
+saito@cslab.kecl.ntt.co.jp
+
+
+ABSTRACT
+In this paper, we address the problem of detecting multiple
+topics or categories of text where each text is not assumed
+to belong to one of a number of mutually exclusive cate-
+gories. Conventionally, the binary classification approach
+has been employed, in which whether or not text belongs to
+a category is judged by the binary classifier for every cat-
+egory. In this paper, we propose a more sophisticated ap-
+proach to simultaneously detect multiple categories of text
+using parametric mixture models (PMMs), newly presented
+in this paper.
+PMMs are probabilistic generative models
+for text that has multiple categories. Our PMMs are es-
+sentially different from the conventional mixture of multi-
+nomial distributions in the sense that in the former several
+basis multinomial parameters are mixed in the parameter
+space, while in the latter several multinomiai components
+are mixed. We derive efficient learning algorithms for PMMs
+within the framework of the maximum a posteriori estimate.
+We also empirically show that our method can outperform
+the conventional binary approach when applied to multi-
+topic detection of World Wide Web pages, focusing on those
+from the "yahoo.corn" domain.
+
+
+1.
+INTRODUCTION
+As a large quantity of text is being stored in the World
+Wide Web, electric mail, digital libraries, and so on, auto-
+matic text categorization is becoming a more important and
+fundamental task in information retrieval and text mining.
+In particular, since a document usually consists of several
+topics, detecting multi-topic or multi-category of text is of
+great practical value. Hence, this type of detection prob-
+lem has become a challenging research theme in the field of
+machine learning.
+
+This detection problem is different from the traditional pat-
+tern classification problems such as character recognition
+and speech recognition in the sense that each sample is not
+
+
+
+Permission to makedigital or hard copies of all or part of this workfor
+personal or classroomuse is granted withoutfee providedthat copiesare
+not madeor distributedforprofitor commercialadvantageand that copies
+bearthisnoticeand the fullcitationonthe firstpage. To copy otherwise,to
+republish,topostonserversor toredistributeto lists,requirespriorspecific
+permissionand/ora fee.
+SIGKDD022Edmonton,Alberta,Canada
+Copyright2002ACM1-58113-567-X/02/0007 ...$5.00.
+assumed to be classified into one of a number of prede-
+fined exclusive categories. For the multi-category detection
+problem, conventionally, a binary classification approach has
+been utilized along with state-of-the-art methods such as
+support vector machines (SVMs) [15][6] and naive Bayes
+(NB) classifiers [8][10]. In this approach, the multi-category
+detection problem is decomposed into separate binary clas-
+sification problems.
+It has been reported that SVM can
+provide good results for general problems including the text
+categorization.
+However, we think that it has an impor-
+tant limitation when applied to the multi-category detection
+problem because it does not consider an intrinstic nature,
+i.e., a generative model of multi-category text.
+
+In this paper, we present a novel single-shot approach for the
+multi-category detection problem using probabilistic genera-
+tive models, newly proposed in this paper. One might think
+that the conventional mixture models including a mixture of
+naive Bayes model [12] would be suitable for this purpose.
+Unfortunately, however, they are inappropriate for multi-
+category text modeling because in distributional mixture
+models, a sample is assumed to be probabilistically gen-
+erated from one of the component distributions. In other
+words, the conventional distributional mixture models are
+useful for hierarchical or tree-structured category representa-
+tion, but are not appropriate for multi- or network-structured
+category representaion.
+
+In contrast, in this paper, we first propose a new type of
+mixture model, called a parametric mixture model: PMM-I
+and PMM-II. (PMM-II is a more sophisticated version of
+PMM-I.) Like the naive Bayes model [8][10], PMMs also
+employ independent word-based representation, known as
+"bag-of-words (BOW)" representation, which ignores the or-
+der of the word occurrence in a document. More specifically,
+based on the BOW, the word-frequency distribution over
+the vocaburary is formulated not as a mixture of multino-
+mial distributions, but as a single multinomial model. How-
+ever, a parameter vector of a single multimomial distribution
+is formulated by a mixture of basis multinomial parameter
+vectors, and each of the basis vectors corresponds to the
+parameter vector of a multinomial distribtution for a single-
+category text.
+
+
+2.
+PARAMETRIC MIXTURE MODELS
+A document, d'~, can be represented as a word-frequency
+vector, x '~ = (x~ .... ,x~.,), where x~ denotes frequency of
+
+
+
+
+626
+
+I
+I
+I
+I ~
+~0
+I
+I
+
+
+,60L---F,|I
+,
+'
+',~".
+I
+
+l
+L ~
+~,
+/
+-L-
+".~.--'"-J.
+,
+
+
+°
+
+
+600 600
+
+(a) Single-category
+X3
+~---
+C.~ ,,,
+~,-
+
+
+
+
+/
+-~--
+"->.--''-..j
+,
+
+
+
+X2 ~"~.,f'~X1 ~
+600 6O0
+
+(b)Single&multi-category
+1 1
+(c) Parameter vectors
+
+
+Figure 1: Relationship between word-frequency distribution and multinomial parameter vectors.
+
+
+word wl occurrence in dn among the vocabulary V :<
+wl,...,wv
+>.
+Here, V is the total number of words in
+the vocabulary. Thus, in the BOW, each x is a point in V-
+dimensional Euclidean space and w is assumed to be gener-
+ated by a multinomial distribution over the words: p(w; 0)
+0i , where 0 = (0x,..., Oe) is a model parameter vec-
+tor and the ith element 0~ denotes a probability that wi
+appears and therefore 01 > 0 and ~/V=i 0i = 1. We define a
+category vector y'~ = (y~,... ,y~) for d'~, where y~ takes a
+value of 1(0) when d~ belongs (does not belong) to the/th
+category. Here, L is the total number of categories and L
+categories are assumed to be known. Note that we assume
+that at least one component in y~ takes a value of 1.
+
+
+Now, let us consider how word-frequency vectors of multi-
+category text are distributed.
+As a simple example, sup-
+pose that we have two multinomial distributions .h.,l, and
+.A/12for category C1 and C2, each of which are specified by
+~(C1)
+-~ (0.7,0.1,0.2) and ~a(C2) = (0.1,0.7,0.2), respec-
+tively. This corresponds to the case where (L, V) = (2, 3).
+Figure l(a) shows samples {x~} denoted by 'o'('+') which
+are artificially generated by ~(C1) (~(C2)). The sum of el-
+ements of each frequency vector are distributed from about
+100 to 800. Clearly, a parameter vector ~ lies on a two-
+dimensional simplex (ie., 01 + 02 + 03 = 1), shown as a large
+triangle in Figure 1(c).
+
+
+Let C~,2 denote a multi-category class which belongs to both
+C1 and C2. Then, it may be assumed that text belonging to
+CL2 has words related to C1 and C2. For example, it seems
+reasonable to assume that a document having two topics
+such as "sports" and "music" would consist of a mixture of
+characteristic words related to both topics, where the mixing
+weight values between these two categories would not always
+be equal (i.e., 0.5).
+
+
+According to the above idea, we generated C~,2 samples,
+denoted by '~' in Figure l(b), by computing the weighted
+sum of two arbitrarily selected word-frequency vectors each
+of which belongs to C1 and C2, respectively;. One can see
+that samples in C1,2 are distributed between C1 and C2 sam-
+ples. The important point to note is that these samples in
+Ci,2 can never be generated by a mixture of two multinomial
+distributions .A41 and .M2.
+
+Clearly, the maximum likelihood estimate of ~(Ck) is pro-
+portional to ~xEc~ x, for k = 1 and 2. Thus, from the
+above generative process of C1,2 samples, one can easily see
+that a multinomial parameter vector of the Cl,2 class, de-
+noted by ~p(C1,2), can be approximated by a linear combi-
+nation of ¢p(C1) and ~a(Cz):
+
+~0(C1,2) ,~ o~(C1)
+--~ (1 -- ~)~(C2),
+(1)
+
+where 0 < c~ < 1 is a mixing weight. Actually, ~(C1,2) in
+Figure 1(c) is the maximum likelihood estimate computed
+by using CL2 samples.
+
+
+Generalizing the above idea, we can say that the distribution
+of word-frequency vectors of multi-category text is a multi-
+nomial distribution with a parameter vector generated by a
+mixture of basis parameter vectors, and each basis vector
+corresponds to a multinomial distribution of a single cate-
+gory. Since in our approach, unlike in the conventional dis-
+tributional mixture models, the mixing is performed in the
+parameter space, we call this a "parametric mixture model"
+in this paper.
+
+
+2.1
+PMM-I
+As mentioned above, multi-category text may sometimes be
+more weighted to one category than to the rest of the cate-
+gories among multicategories. However, being averaged over
+all biases, they could be canceled and therefore ~ = 0.5 in
+Eq. (1) may be reasonable. This motivates us to construct a
+model called "Parametric Mixture Model Type I: PMM-I".
+
+More generally, a given multi-category text is specified by a
+single category vector y, and its multinomial parameter can
+be represented by
+
+z
+0
+(~(y) .~. El=' YI l,
+(2)
+E =i y,,
+
+where Ot = (On,...,Otv) is a multinomial parameter vee-
+tor~of the category C~.
+
+Thus, the generative model of PMM-I is represented by
+
+
+) Ll=l Y~ n I
+P(xly;O) o¢
+~,(U) =' =
+-~-----
+,
+(3)
+
+
+xIt should be written qa(Ct), but to make notation simple we use
+Ot instead of ~(Ci) hereafter.
+
+
+
+
+627
+
+where ~oi(y) denotes the ith element in ~p(y). Note that
+~v=l ~pi(y) = 1 holds. In PMM-I, a set of unknown model
+parameters is O = {0t; l = 1,...,L}.
+
+
+2.2 PMM-II
+We also present "Parametric Mixture Model Type II: PMM-
+II" as a variant, in which c~ in Eq. (1) also becomes a free
+parameter.
+This model is for use in case where the bias
+weights mentioned above cannot be ignored. In PMM-II a
+multinomial parameter vector given y is defined by
+
+L
+L
+~(u) = E~=~E..=I
+wy..o~,..,
+(4)
+L
+~1=1
+~t
+L
+~m=1 Ym
+
+where 01,,~ = az,,~Sz + e~mj0m, oq,m(> 0) is a mixing pa-
+rameter that satisfies otLm + amj = 1, Vl, m. Note that
+01.1 --=81 because a~,~ = 0.5. Moreover, 8~,,~ = 8mj holds.
+Eq. (41 is well defined so that when sum of all elements in
+y is 1 (i.e., multi-category case), ~o(Y) cannot coincide with
+a single-category basis vector ~o(C~) even if the mixing pa-
+rameter value is set to 0 or 1. According to Eq. (4), the
+generative model of PMM-II is given by
+
+
+L
+L
+(5)
+
+
+where Ot,,n,~= cq,mOu+ cz.~,~O~i. In PMM-II, a set of un-
+known model parameters is 0 = {Or, on,m; l = 1.... , L, m =
+1.... ,L}.
+
+
+3. LEARNING AND PREDICTION
+3.1 Learning algorithms
+Let 7) = {x",y'~; n = 1,..., N} denote the given traning
+data. Then, the estimate of model parameter vector O is
+derived by finding the maximum a posteriori estimate:
+
+0~
+=
+argn~axP(NOIT) )
+
+=
+arg moaX{~ log P(z"Iy", O) + logp(O)}. (6)
+
+
+This maximization can be solved within the framework of
+the penalized EM algorithm [3] as shown later.
+
+Each prior distribution over parameter Ol and txl,., is rep-
+resented by Dirichlet distributions.
+
+L
+V
+L
+L
+II II°:c' and
+.(o,,..)
+II II
+(71
+1=14=1
+/=1 m=l
+
+and ~ are hyperparameters and in this paper we set ~ = 2
+and ( = 2, which is equivalent to Laplace smoothing for 0u
+and oq.m, respectively.
+
+
+3.1.I
+Learning algorithm for PMM-I
+According to Eq. (6), the objective function for PMM-I is
+
+L
+V
+
+J(O; V) =/2(0; 7)) + (~ - 1) E
+E'l°g Oa,
+(8)
+l=l i~1
+
+where/2(0; 7)) is the log-likelihood term and is given by
+
+N
+V
+L
+
+/2(0; 7)) = E
+E
+x~ log E
+hrOu.
+(9)
+n=l 4=1
+I=I
+Here, we set h~ = y~/~=1Yi ~,. Let O(0 be a parameter
+estimate at step $. Moreover setting
+
+hr°a
+(10)
+g~(O) =
+L
+El,=~ h~Oi,4
+
+L
+. o
+and noting that ~1=1 9u( ) = 1, we rewrite Eq. (9) as:
+
+N
+V
+L
+L
+7))= E E
+log{
+E
+}
+n=l i=l
+l=l
+~kh?014 ] lt=l
+
+= y(ele
+¢°) - s(s[e(')),
+(11)
+
+where ~-(O]O(0) and S(OIO (0) are defined as follows:
+
+N
+V
+L
+
+"T'(OIO(O) = E
+E
+X? E
+9~(O(0)log h~Oll,
+n=l
+4=1
+/=1
+
+N
+V
+L
+S(OlO(')) = ~ ~ ~? ~ g?,(o(')/log g~(o).
+n=l i=l
+l=l
+
+
+Noting that S(810 (0) < S(8(018(0) holdsfrom Jensen's
+inequality, if .~(OIO(0) _> ~(O(t)[O (0) then /2(0;7)) _>
+/2(O(0;7)) from Eq. (11).
+
+Therefore, by maximizing ~(O]O (0) + (~- 1) ~/L~i ~y~llog014
+with respect to O, we can increase J(O; 7)) monotonically
+on any iteration of parameter update from O(0 to O:
+
+For I = 1,...,L, i = 1,...,V,
+N
+~x?g/l(o ")) + ~ -
+1
+
+
+(*+*)
+.=*
+(12)
+li
+-~" V
+N
+
+~x?g~(o(*))
++ v(~ - 1)
+4=1 n=l
+
+Here 9~/is given by Eq. (10). It is worth mentioning that per-
+forming this parameter update, the algorithm always con-
+verges to the global optimum of J(O; 7)) since the Hessian
+matrix of the objective function is negative definite.
+
+
+3.1.2
+Learningalgorithmfor PMM-II
+The objective function for PMM-II becomes
+
+J(O; 7)) =/2(0; 7)) + (~ - 1) E
+log 0z,,+ (¢ - 1) E
+log cq,ra.
+l,i
+l,m
+
+Here, the log-likelihood term is given by
+
+N
+V
+L
+L
+
+/22(0;7)) = E
+E
+x? log E
+E
+h'~h~O,,m,i
+(131
+n=l i=1
+1~1 m=l
+
+Using a similar method to that for PMM-I, we can obtain
+the following parameter update formulae for 0zi and ~l,.~.
+The results axe given below:
+
+For l = 1,...,L, i=1 .... ,V,
+N
+L
+2E
+x? E q~'rn'i(O(t))At'm'i(O(t)) + ~ - 1
+
+.=*
+m=1
+(.14)
+014 =
+V
+N
+L
+
+2Z E x? Z q~,,~,i(8(t))At,.~,,(8(t))+ V((- I)
+i=l n=l
+tn=l
+
+
+
+
+628
+
+Table 1: Summary of Detection Problems
+Problem Name
+V
+L
+PMC
+ANW
+Arts & Humanities
+23146
+26
+44.4%
+111.1
+Business & Economy
+21924
+30
+42.4%
+102.1
+Computers & Internet
+34096
+33
+30.2%
+128.2
+Education
+27534
+33
+33.1%
+111.8
+Entertainment
+32001
+21
+27.7%
+145.7
+Health
+30605
+32
+46.8%
+108.8
+Recreation & Sports
+30324
+22
+30.8%
+129.9
+Reference
+39679
+33
+14.5%
+163.7
+Science
+37187
+40
+32.0%
+173.3
+Social & Science
+52350
+39
+21.6%
+154.4
+Society & Culture
+31802
+27
+40.4%
+176.2
+
+
+
+For l = 1,...,L, m = 1,...,L,
+
+N
+V
+
+(')) + ¢ - 1
+
+n=l
+i=i
+(15)
+Oq,m
+~
+V
+N
+
++ v(¢ - i)
+
+i=1 n=l
+
+Here, ql~,~(O) and Al,~,i(e)are defined by
+
+n
+0
+h~h,~Ol,~,i
+At,,n,~(O) = ctz,,nOt~
+ql,m,i( ) = E~:I
+L
+~"~ 0
+'
+e,,~,"-----T"
+(16)
+Note that Al,~,i + Am,l,i = 1 and q~,m,i= qm,l,lnhold.
+
+
+3.2
+Prediction algorithm
+Let O denote the estimated parameter.
+Then, applying
+Bayes' rule, the optimum category vector y* for x* of a
+new sample is defined as: y* = argmaxy P(ylw*; (~) under
+a uniform class prior assumption. This maximization prob-
+lem belongs to the zero-one integer problem (i.e.,, NP-hard
+problem). Clearly, an exhaustive search is prohibitive for a
+large L. To solve this problem, we utilize a simple heuristic
+greedy-search algorithm. That is, first, only one Yh value
+is set to 1 so that P(ylx*; O) is maximized. Then, for the
+rest elements, only one Yz~value is set to 1 with Yh is fixed.
+This procedure is repeated until P(YlZ*; O) cannot increase.
+Namely, this algorithm successively determines an element
+in y so as to improve the posterior probability until its value
+does not improve. This algorithm is of great efficiency be-
+cause it requires the calculation of the posterior probability
+at most L(L + 1)/2 times, while the exhaustive search needs
+2L - 1 times.
+
+
+4.
+APPLICATION
+
+4.1
+Multi-topic detection of WWW pages
+We designed a series of problems for detecting multiple top-
+ics of World Wide Web pages.
+We focused on the "ya-
+hoo.corn" domain to collect Web pages because this do-
+main is a famous portal site and most related pages linked
+from this domain are registered by site recommendation and
+therefore links may be reliable. Yahoo consists of 14 top-
+level categories and each of these categories is classified into
+a number of second-level subcategories. We formalized a
+multi-category detection problem by regarding each list of
+the second-level subcategories as categories to be detected.
+Thus, we can obtain 14 independent multi-category detec-
+tion problems2.
+
+To collect a set of related Web pages for each problem, we
+ran a software robot called "GNU Wget (version 1.5.3)3"
+14 times by designating each of the pages linked from the
+14 top-level categories as an origin page, where hyperlinks
+of each page were recursively followed until depth five from
+each origin page. However, unfortunately for "News & Me-
+dia", "Government", and "Regional", we could not collect
+enough number of pages due to problems caused by our com-
+munication network security. Thus, we excluded these three
+problems and the remaining eleven problems shown in Ta-
+ble 1 were used in our experiments4. Note that these 11
+problems were solved independently.
+
+Table 1 shows the statistics of our detection problems. V
+is the total number of different words in the vocabulary,
+L is the number of categories, PMC is the percentage of
+the number of samples that belong to more than a single
+category, and ANW denotes the averaged number of words
+used in a page. Clearly, each of the collected WWW pages
+is represented as a very high dimensional word-frequency
+vector, but uses at most a few hundreds of words on average.
+
+We compared our PMMs with the convetional methods:
+naive Bayes (NB), SVM, k-nearest neighbor (kNN), and
+three-layer neural networks (NN). We used linear SVMlight
+(version 4.0) [7] with tuning the C (penalty cost) and J
+(cost-factor for negative and positive samples) parameters
+for each binary classification to improve the SVM results. J
+was set to Is~l/Is~l for every category as suggested in [11].
+When performing the SVM, each word-frequency vector x"
+was normalized to be ~i x~ = 1.
+
+We employed the cosine similarity for kNN method (see [14]
+for more details). We tried k = 1,..., 15 and selected the
+best one for test samples to evaluate its potential perfor-
+mance, although it is clearly unfair advantage. As for NN,
+an NN consists of V input units and L output units for es-
+timating a category vector from each frequency vector. We
+used 50 hidden units. An NN was trained so as to maximize
+a sum of cross-entropy functions [1] for target and estimated
+category vectors of training samples, together with a regu-
+larization term consisting of a sum of squared NN weights.
+
+
+4.2
+Performance Measures
+In the case of the multi-category detection problem, the
+standard accuracy measure is inappropriate because a high
+accuracy can be achieved by always predicting negative (0)
+values. We used the F-me~ure as the performance mea-
+sure instead [9]. The F-measure is defined as the weighted
+harmonic average of two well-known statistics, precision, P,
+and recall, R, widely used in information retrieval.
+
+
+2Of course, it may be natural to consider a 14 top-category
+detection problem. However, in this case since the number
+of categories seems small (just 14) and only one set detection
+problem can be obtained, we used second-level categories.
+3One can download from "ftp://ftp.gnu.org/pub/gnu/wget".
+4Notethat since our data collection was performed during early
+2001, the second-levelsubcategories used in our experiments are
+slightly different from the current ones.
+
+
+
+
+629
+
+Table 2: Detection performance for test samples using 2,000 training samples.
+Problem Name
+NB
+SVM
+kNN
+NN
+PMM1
+PMM2
+Arts&Humanities
+41.6 (1.9)
+47.1 (0.3)
+40.0 (1.1)
+43.3 (0.2)
+50.6 (1.0)
+48.6 (1.0)
+Business&Economy
+75.0 (0.6)
+74.5 (0.8)
+78.4 (0.4)
+77.4 (0.5)
+75.5 (0.9)
+72.1 (1.2)
+Computers&Internet
+56.5 (1.3)
+56.2 (1.1)
+51.1 (0.8)
+53.8 (1.3)
+61.0 (0.4)
+59.9 (0.6)
+Education
+39.3 (1.0)
+47.8 (0.8)
+42.9 (0.9)
+44.1 (1.0)
+51.3 (2.8)
+48.3 (0.5)
+Entertainment
+54.5 (0.8)
+56.9 (0.5)
+47.6 (1.0)
+54.9 (0.5)
+59.7 (0.4)
+58.4 (0.6)
+Health
+66.4 (0.8)
+67.1 (0.3)
+60.4 (0.5)
+66.0 (0.4)
+66.2 (0.5)
+65.1 (0.3)
+Recreation
+51.8 (0.8)
+52.1 (0.8)
+44.4 (1.1)
+49.6 (1.3)
+55.2 (0.5)
+52.4 (0.6)
+Reference
+52.6 (1.1)
+55.4 (0.6)
+53.3 (0.5)
+55.0 (1.1)
+61.1 (1.4)
+60.1 (1.2)
+Science
+42.4 (0.9)
+49.2 (0.7)
+43.9 (0.6)
+45.8 (1.3)
+51.4 (0.7)
+49.9 (0.8)
+Social&Science
+41.7 (10.7)
+65.0 (1.1)
+59.5 (0.9)
+62.2 (2.3)
+62.0 (5.1)
+56.4 (6.3)
+Society&Culture
+47.2 (0.9)
+51.4 (0.6)
+46.4 (1.2)
+50.5 (0.4)
+54.2 (0.2)
+52.5 (0.7)
+
+
+Let yn = (y~.... ,y~) and ~'~ = (~,..., ~) be an actual
+and predicted category vectors for x n. Then, in our case, P
+and R per each sample can be computed as
+
+
+p,,= E~=~ yr~r
+E~=~ y~
+(17)
+
+
+Using Eq. (17), we can obtain Fn = 2P,~R,~/(P,~ -t- Rn).
+Finally, we compute F averaged over all N test samples:
+P -lv'N
+F,
+--
+"N l..In~l
+n.
+
+
+
+
+4.3
+Results and Discussion
+We did not perform any feature transformation such as TFIDF
+(see, e.g., [14]) because we wanted to purely evaluate the
+basic performance of each detection method. For every de-
+tection problem, we evaluated all the methods mentioned
+above by using five pairs of training and test sample sets.
+
+In our first set of experiments, the number of training (test)
+samples was set to 2,000 (3,000). In our second set of exper-
+iments, we focused on detection performance for test sam-
+pies with unseen category vectors that did not appear in
+the training samples. For convenience, hereafter we call this
+test data uc-test saraples to discriminate between the two
+kinds of test data. Since ue-test samples always had mul-
+tiple topics and their frequency vectors were substantially
+different from those in the training samples, they are avail-
+able to severely evaluate the generalization ability of each of
+the detection methods. In our third set of experiments, to
+evaluate the robustness of the PMM approach, we reduced
+the number of training samples from 2,000 to 500.
+
+We compare the mean of F values over five trials on the
+test (Tables 2 and 4) or the ue-test (Tables 3 and 5) sam-
+pies. Moreover, the standard deviation of the five trials is
+also shown in each parenthesis. For the lack of space, we
+omitted the standard deviations in Tables 3 and 5. PMMs
+took about five minutes for trainig (2,000 data) and about
+just one minute for test (3,000 data) on 2.0 Ghz pentium,
+averaged over 11 problmes.
+
+By tuning parameters, SVM produced fairly better results
+than the NB method, although SVM is also binary approach.
+The detection performance by SVM, however, were lower
+than those by PMMs in almost all problems. These exper-
+imental results support our claim that since SVM does not
+consider generative models of multi-category text, it has an
+Table 3: Detection performance for uc-test samples
+using 2,000 training samples.
+Problem
+NB
+SVM
+kNN
+NN
+PMM1
+PMM2
+Arts.
+:22.4
+26.9
+26.0
+22.1
+31.1
+31.0
+Busi.
+32.5
+36.4
+39.3
+37.9
+39.5
+38.7
+Comp.
+24.7
+27.8
+30.3
+25.8
+33.3
+33.6
+Edu.
+17.9
+24.6
+24.6
+23.3
+31.0
+30.6
+Enter.
+24.6
+29.8
+28.9
+25.0
+37.7
+37.7
+Health
+37.0
+40.8
+40.1
+37.8
+40.1
+40.2
+Rec.
+27.6
+29.2
+29.1
+26.4
+35.7
+35.2
+Ref.
+20.5
+24.9
+26.9
+23.6
+32.4
+33,2
+Sci.
+22.7
+28.5
+28.3
+24.6
+34.5
+33.8
+Soc.&Sci.
+20.8
+25.9
+28.4
+22.4
+29.8
+29.3
+Soc.& Cul.
+22.5
+26.5
+28.0
+26.0
+33.2
+33.5
+
+
+
+important limitation when applied to the multi-category de-
+tection problem.
+
+When the trainig sample size was 2,000, kNN provided com-
+parable results to the NB method. On the other hand, when
+the trainig sample size was 500, it obtained comparable or
+slightly better results than SVM. However, in both cases,
+PMMs significantly outperformed kNN. This indicates that
+perhaps memory-based approach has a limitation of its gen-
+eralization ability and it is of quite importance to extract
+the smaller number of representative prototypes like in our
+approach.
+
+The results of well-regularized NN were moderate, although
+it can make curved discrimination boundaries. This means
+that such kind of flexibility would be unnecessary for dis-
+crimination of high-dimensional, sparse text samples even
+in the case of multi-category detection problem. In additon,
+the training time of NN was intolerable.
+
+In our experiments, PMM-I provided better results than
+PMM-II, although there were no significant differences in
+the case of uc-test samples. This indicates that a model
+with fixed az,m = 0.5 seems sufficient at least for the WWW
+pages used in the experiments. In the case of "Social & Sci-
+ence", since the standard deviation was also relatively large
+(5.1), we examined the result in more detail and found that
+unfortunately since ~ = 2 was inappropriate for three tri-
+Ms among five ones, the performance of PMM-I could be
+improved by tuning the hyperparameter. Incidentally, the
+best performance for this problem was obtained by SVM.
+
+
+
+
+630
+
+Table 4: Detection performance for test samples using 500 training samples.
+Problem Name
+NB
+SVM
+kNN
+NN
+PMM1
+PMM2
+Arts&Humanities
+21.2 (1.0)
+32.5 (0.5)
+34.7 (0.4)
+33.8 (0.4)
+43.9 (1.0)
+43.2 (0.8)
+Business&Economy
+73.9 (0.7)
+73.8 (1.2)
+75.6 (0.6)
+74.8 (0.9)
+75.2 (0.4)
+69.7 (8.9)
+Computers&Internet
+46.1 (2.9)
+44.9 (1.9)
+44.1 (1.2)
+45.1 (1.0)
+56.4 (0.3)
+55.4 (0.5)
+Education
+15.2 (0.9)
+33.6 (0.5)
+37.1 (1.0)
+33.8 (1.1)
+41.8 (1.2)
+41.9 (0.7)
+Entertainment
+34.1 (1.6)
+42.7 (1.3)
+43.9 (1.0)
+45.3 (0.9)
+53.0 (0.3)
+53.1 (0.6)
+Health
+50.2 (0.3)
+56.0 (1.0)
+54.4 (0.9)
+57.2 (0.7)
+58.9 (0.9)
+59.4 (1.0)
+Recreation
+22.1 (0.8)
+32.1 (0.5)
+37.4 (1.1)
+33.9 (0.8)
+46.5 (1.3)
+45.5 (0.9)
+Reference
+32.7 (4.4)
+38.8 (0.6)
+48.1 (1.3)
+43.1 (1.0)
+54.1 (1.5)
+53.5 (1.5)
+Science
+17.6 (1.6)
+32.5 (1.0)
+35.3 (0.4)
+31.6 (1.7)
+40.3 (0.7)
+41.0 (0.5)
+Social&Science
+40.6 (12.3)
+55.0 (1.1)
+53.7 (0.6)
+55.8 (4.0)
+57.8 (6.5)
+57.9 (5.9)
+Society&Culture
+34.2 (2.2)
+383 (4.7)
+40.2 (0.7)
+40.9 (1.2)
+49.7 (0.9)
+49.o (o.5)
+
+
+
+Table 5: Detection performance for uc-test samples
+using 500 training samples.
+Problem
+NB
+SVM
+kNN
+NN
+PMM1 PMM2
+Arts.
+9.7
+18.4
+24.9
+18.7
+27.8
+28.9
+Busi.
+30.3
+33.7
+35.2
+33.4
+32.6
+34.0
+Comp.
+17.8
+15.9
+24.9
+18.6
+30.3
+31.1
+Edu.
+5.7
+16.4
+20.0
+15.5
+25.5
+26.8
+Enter.
+11.9
+19.8
+25.2
+21.6
+29.6
+30.6
+Health
+22.8
+29.8
+34.9
+29.4
+32.7
+33.9
+Rec.
+10.4
+15.0
+23.7
+14.5
+28.6
+30.1
+Ref.
+7.3
+13.6
+22.9
+15.5
+27.0
+27.7
+Sci.
+5.2
+14.6
+21.8
+11.9
+25.1
+25.9
+Soc.&Sci.
+12.9
+16.8
+22.8
+17.7
+23.9
+26.6
+Soc.&Cul.
+12.4
+17.2
+24.4
+18.3
+27.2
+28.3
+
+
+5.
+CONCLUSING REMARKS
+In this paper we have presented a novel approach based on
+parametric mixture models for multi-topic detection of text,
+and efficient algorithms for both learning and prediction.
+Clearly, some work rem~ns in order to extend our approach
+and algorithms, and to ewluate them by using a wider vari-
+ety of problems. Neverthless, we have taken some important
+steps along the path, and we are encouraged by our current
+results on the important problem of detecting multiple top-
+ics of real World Wide Web pages.
+
+Recently, sophisticated distributional mixture models for
+text modeling, pLSI/aspect model [5] and Latent Dirichlet
+Allocation Model [2], have been proposed to represent sev-
+eral latent subtopics. Combine these models with our models
+might be interesting.
+
+
+6.
+REFERENCES
+[1] C. Bishop. Neural networks for pattern recognition.
+Clarendon Press, Oxfor, 1996.
+
+[2] D. M. Blei, A. Y. Ng, and M. I. Jordan. Latent
+Dirichlet allocation, to appear in Advances in Neural
+Information Processing Systems 14 (NIPSIJ}. MIT
+Press.
+
+[3] A. P. Dempster, N. M. Laird, and D. B. Rubin.
+Maximum likelihood from incomplete data via the EM
+algorithm. Journal of the Royal Statistical Society B,
+39:1-38. 1977.
+[4] S. T. Dumais, J. Platt, D. Heckerman, and M. Sahami.
+Inductive learning algorithms and representations for
+text categorization. In Proc. of ACM-CIKM'98. 1998.
+
+[5] T. Hofrnann. Probabflistic latent semantic indexing.
+In Proc. of the Twenty-Second Annual International
+SIGIR Conference (SIGIR '99). 1999.
+
+[6] T. Joachims. Text categorization with support vector
+machines: Learning with many relevant features. In
+Proc. of the European Conference on Machine
+Learning (ECML'98). 137-142, Berlin, 1998.
+
+[7] T. Joachims. SVM light (version 4).
+http://ais.gmd.de/thorsten.
+
+[8] D. Lewis and M. Ringuette. A comparison of two
+learning algorithms for text categorization. In Third
+Anual Symposium on Document Analysis and
+Information Retrieval (SDAIR '94), 81-93. 1994.
+
+[9] C. D. Manning and H. Schiitze. Foundations o/
+statistical natural language processing, MIT press,
+Cambridge, 1999.
+
+[10] A. McCallum and K. Nigam. A comparison of event
+models for naive Bayes text classification. In AAAI-98
+Workshop on Learning for Text Categorization, Tech.
+Rep. WS-98-05. 1998.
+
+[11] K. Morik, P. Brockhansen, and T. Joachims.
+Combining statistical learning with knowledge-based
+approach. A case study in intensive care monitoring.
+In Proc. of International Conference on Machine
+Learnin9 (1CML'99}, 1999.
+
+[12] K. Nigam, A. K. McCallum, S. Thrun, and T.
+Mitchell. Text classification from labeled and
+unlabeled documents using EM. Machine Learning,
+39, 103-134. 2000.
+
+[13] G. Salton. Automatic Text Processing.
+Addison-Wesley, 1988.
+
+[14] Y. Yang and J. Pederson. A comparative study on
+feature selection in text categorization. In Proc of
+International Conference on Machine Learnin9
+(ICML'97), 412-420. 1997.
+
+[15] V. N. Vapnik. Statistical learning theory. John Wiley
+& Sons, Inc., New York. 1998.
+
+
+
+
+631
+

@@ -1,0 +1,2320 @@
+Privacy Preserving Mining of Association Rules
+
+
+Alexandre Evfimievski
+Ramakrishnan Srikant
+Rakesh Agrawal
+
+IBM AlmadenResearchCenter
+650 Harry Road, San Jose,CA 95120, USA
+JohannesGehrke*
+
+
+
+
+ABSTRACT
+
+We present a framework for mining association rules from
+transactions consisting of categorical items where the data
+has been randomized to preserve privacy of individual trans-
+actions. While it is feasible to recover association rules and
+preserve privacy using a straightforward "uniform" random-
+ization, the discovered rules can unfortunately be exploited
+to find privacy breaches. We analyze the nature of privacy
+breaches "and propose a class of randomization
+operators
+that are much more effectivethan uniform randomization in
+limiting the breaches. We derive formulae for an unbiased
+support estimator and its variance, which allow us to re-
+cover itemset supports from randomized datasets, and show
+how to incorporate these formulae into mining algorithms.
+Finally, we present experimental results that validate the
+algorithm by applying it on real datasets.
+
+1.
+INTRODUCTION
+The explosive progress in networking, storage, and proces-
+sor technologies is resulting in an unprecedented amount of
+digitization of in.formation. It is estimated that the amount
+of information in the world is doubting every 20 months
+[20]. In concert with this dramatic and escalating increase
+in digital data, concerns about privacy of personal informa-
+tion have emerged globally [15] [17] [20] [24]. Privacy issues
+are further exacerbated now that the internet makes it easy
+for the new data to be automatically collected and added
+to databases [10] [13] [14] [27] [28] [29]. The concerns over
+massive collection of data are naturally extending to ana-
+lytic tools applied to data. Data mining, with itspromise to
+efficiently discover valuable, non-obvious information from
+large databases, is particularly vulnerable to misuse [11] [16]
+[20] [23].
+.An interesting new direction for data mining research is
+the development of techniques that incorporate privacy con-
+cerns [3]. The following question was raised in [7]: since the
+
+*Department of Computer Science
+Corner University, Ithaca, NY 14853, USA
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributedfor profit or commercial advantage and that copies
+bear this notice and the full citation on the firstpage. To copy otherwise, to
+republish, to post on serversor to redistributeto lists,requires prior specific
+permission and/or a fee.
+SIGKDD 02 Edmonton, Alberta, Canada
+Copyright 2002 ACM 1-58113-567-X/02/0007/...$5.00.
+primary task in data raining is the development of mod-
+els about aggregated data, can we develop accurate mod-
+els without access to precise information in individual data
+records? Specifically, they studied the technical feasibility
+of building accurate classification models using training data
+in which the sensitive numeric values in a user's record have
+been randomized so that the true values cannot be estimated
+with sufficient precision. Randomization is done using the
+statistical method of value distortion [12] that returns a
+value z, + r instead of ~, where r is a random value drawn
+from some distribution.
+They proposed a Bayesian proce-
+dure for correcting perturbed distributions and presented
+three algorithms for building accurate decision trees [9] [21]
+that rely on reconstructed distributions}
+In [2],the au-
+thors derived an Expectation Maximization (EM) algorithm
+for reconstructing distributions and proved that the EM
+al-
+gorithm converged to the maximum
+likelihood estimate of
+the original distribution based on the perturbed data. They
+also pointed out that the EM
+algorithm was in fact identical
+to the Bayesian reconstruction procedure in [7],except for
+an approximation
+(partitioning values into intervals) that
+was made by the latter.
+
+1.1
+Contributions of this Paper
+We continue the investigation of the use of randomization
+in developing privacy-preserving data mining techniques, and
+extend this line of inquiry along two dimensions:
+
+· categorical data instead of numerical data, and
+
+· association rule mining [4] instead of classification.
+
+We
+will focus on the task of finding frequent itemsets in
+association rule mining, which we briefly review next.
+
+DefinitionI. Suppose we have a set 27 of n items: 27 --
+{al,a2,... ,an}. Let T be a sequence of N transactions
+T = (ix,t2,... ,tN) where each transaction ti is a subset of
+27. Given an itemset A C Z, its support suppZ(A) is defined
+
+as
+
+#{te T IA C_t}
+suppa'(A) :=
+N
+(1)
+
+An itemset A C 27 is called frequent in 7" ff suppT(A) /> %
+where I- is a user-defined parameter.
+
+We
+consider the following setting. Suppose we have a
+server and many clients. Each clienthas a set of items (e.g.,
+
+Once we have reconstructed distributions, it is straightfor-
+ward to build classifiersthat assume independence between
+attributes, such as Naive Bayes [19] .
+
+
+
+
+217
+
+books or web pages or TV programs). The clientswant the
+server to gather statisticalinformation about associations
+among items, perhaps in order to provide recommendations
+to the clients. However, the clients do not want the server
+to know with certainty who has got which items. When
+a
+client sends its set of items to the server, it modifies the
+set according to some specific randomization policy. The
+server then gathers statisticalin.formation from the modified
+sets of items (transactions) and recovers from it the actual
+associations.
+The following are the important results contained in this
+paper:
+
+· In Section 2, we show that a straightforward uniform
+randomization leads to privacy breaches.
+· We formally model and define privacy breaches in Sec-
+tion 3.
+· We present a class of randomization operators in Sec-
+tion 4 that can be tuned for different tradeoffsbetween
+discoverability and privacy breaches.
+We
+derive for-
+mulae for the effectof randomization on support, and
+show how to recover the original support of an associ-
+ation from the randomized data.
+
+· We present experimental results on two real datasets
+in Section 5, as well as graphs showing the relationship
+between discoverability,privacy, and data characteris-
+tics.
+
+1.2
+Related Work
+There has been extensive research in the area of statistical
+databases motivated by the desire to provide statisticalin-
+formation (sum, count, average, maximum,
+minimum, pth
+percentile, etc.) without compromising sensitive informa-
+tion about individuals (see surveys in [1] [22].) The pro-
+posed techniques can be broadly classified into query re-
+striction and data perturbation. The query restriction farn-
+ily includes restricting the size of query result, controlling
+the overlap amongst successive queries, keeping audit trail
+of all answered queries and constantly checking for possi-
+ble compromise, suppression of data cells of small size, and
+clustering entities into mutually exclusive atomic popula-
+tions. The perturbation family includes swapping values
+between records, replacing the original database by a sam-
+ple from the same distribution, adding noise to the values
+in the database, adding noise to the results of a query, and
+sampling the result of a query. There are negative results
+showing that the proposed techniques cannot satisfy the con-
+flictingobjectives of providing high quality statisticsand at
+the same time prevent exact or partial disclosure of individ-
+ual information [1].
+The most relevant work from the statistical database lit-
+erature is the work by Warner [26], where he developed
+the "randomized response" method for survey results. The
+method deals with a single boolean attribute (e.g., drug ad-
+diction). The value of the attribute is retained with prob-
+ability p and flipped with probability 1 ,COp. Warner then
+derived equations for estimating the true value of queries
+such as COUNT (Age = 42 & Drug Addiction = Yes). The
+approach we present in Section 2 can be viewed as a gener-
+alization of Warner's idea.
+Another related work is [25], where they consider the
+problem of mining association rules over data that is ver-
+tically partitioned across two sources, i.e, for each transac-
+tion, some of the items are in one source, and the rest in the
+other source. They use multi-party computation techniques
+for scalar products to be able to compute the support of an
+itemset (when the two subsets that together form the item-
+set are in different sources), without either source revealing
+exactly which transactions support a subset of the itemset.
+In contrast, we focus on preserving privacy when the data
+is horizontally partitioned, i.e.,we want to preserve privacy
+for individual transactions, rather than between two data
+sources that each have a vertical slice.
+Related, but not directly relevant to our current work,
+is the problem of inducing decision trees over horizontally
+partitioned training data originating from sources who do
+not trust each other. In [16],each source firstbuilds a lo-
+cal decision tree over its true data, and then swaps values
+amongst records in a leaf node of the tree to generate ran-
+domized training data. Another approach, presented in [18],
+does not use randomization, but makes use of cryptographic
+oblivious functions during tree construction to preserve pri-
+vacy of two data sources.
+
+
+2.
+UNIFORM RANDOMIZATION
+A straightforward approach for randomizing transactions
+would be to generalize Warner's "randomized response" me-
+thod, described in Section 1.2. Before sending a transaction
+to the server, the client takes each item and with probabil-
+ity p replaces it by a new item not originally present in this
+transaction. Let us callthisprocess uniform randomization.
+Estimating true (nonrandomized) support of an itemset
+is nontrivial even for uniform randomization.
+Randomized
+support of, say, a 3-itemset depends not only on its true
+support, but also on the supports of its subsets. Indeed, it
+is much more likely that only one or two of the items are
+inserted by chance than all three. So, almost all "false" oc-
+currences of the itemset are due to (and depend on) high
+subset supports.
+This requires estimating the supports of
+all subsets simultaneously. (The algorithm is similar to the
+algorithm presented in Section 4 for select-a-size random-
+ization, and the :formulae from Statements 1, 3 and 4 apply
+here as well.) For large values of p, most of the items in
+most randomized transactions willbe "false",so we seem to
+have obtained a reasonable privacy protection. Also, ifthere
+are enough clients and transactions, then frequent itemsets
+will stillbe "visible", though less frequent than originally.
+For instance, after uniform randomization withp = 80%, an
+itemset of 3 items that originally occurred in 1% transac-
+tions will occur in about 1% ·(0.2)s = 0.008% transactions,
+which is about 80 transactions per each million. The op-
+posite effect of "false" itemsets becoming more frequent is
+comparatively negligible if there are many possible items:
+for 10,000 items, the probability that, say, 10 randomly in-
+serted items contain a given 3-itemset is less than 10-r%.
+Unfortunately, this randomization has a problem.
+If we
+know that our 3-itemset escapes randomization in 80 per
+million transactions, and that it is unlikely to occur even
+once because of randomization, then every time we see it
+in a randomized transaction we know with near certainty of
+its presence in the nourandomized transaction. With even
+more certainty we willknow that at least one item from this
+itemset is "true": as we have mentioned, a chance insertion
+of only one or two of the items is much more likely than
+of all three. In this case we can say that a privacy breach
+has occurred.
+.Although privacy is preserved on average,
+personal information leaks through uniform randomization
+
+
+
+
+218
+
+for some fraction of transactions, despite the high value ofp.
+The rest of the paper is devoted to defining a framework
+for studying privacy breaches and developing techniques for
+finding frequent itemsets while avoiding breaches.
+
+
+3.
+PRIVACY BREACHES
+
+Definition ~. Let (fl,Y, P ) be a probability space of el-
+ementary events over some set 12 and a-algebra Y. A ran-
+domization operator is a measurable function
+
+R : lfl x {all possible T) ~ {all possible T}
+
+that randomly transforms a sequence of N transactions into
+a (usually) different sequence of N
+transactions. Given a
+sequence of N
+transactions T, we shall write T ~ = R(T),
+where T is constant and R(T) is a random variable.
+
+
+Definition 3. Suppose that a nonrandomized sequence T
+is drawn from some known distribution, and tl E T is the
+i-th transaction in T. A general privacy breach of levelp
+with respect to a property P(ti) occurs if
+
+3T':
+P [P(ti) [ R(T) = T'] i> p.
+
+We say that a property Q(T ~) causes a privacy breach of
+level p with respect to P(ti) if
+
+P [P(t,)IQ(R(T)) ] I>p.
+
+
+When
+we define privacy breaches, we think of the prior
+distribution of transactions as known, so that it makes sense
+to speak about a posterior probability of a property P(t~)
+versus prior. In practice, however, we do not know the
+prior distribution. In fact,there isno prior distribution; the
+transactions are not randomly generated. However, model-
+ing transactions as being randomly generated from a prior
+distribution allows us to cleanly define privacy breaches.
+Consider a situation when, for some transaction t~ E T,
+an itemset A C 27and an item a E A, the property "A C_t~ E
+T'' causes a privacy breach w. r. t. the property "a E ti." In
+other words, the presence of A in a randomized transaction
+makes it likely that item a is present in the corresponding
+nonrandomized transaction.
+
+
+Definition 4. We say that itemset A causes a privacy
+breach of level p if for some item a E A and some i E 1... N
+we have P [a E ti I A C_
+t:]/>
+p.
+
+
+We will focus on controlling the class of privacy breaches
+given by Definition 4. Thus we ignore the effect of other
+information the server obtains from a randomized transac-
+tion, such as which items the randomized transaction does
+not contain, or the randomized transaction size. We also
+do not attempt to control breaches that occur because the
+server knows some other information about items and clients
+besides the transactions. For example, the server may know
+some geographical or demographic data about the clients.
+Finally, in Definition 4, we only considered positive breaches,
+i.e., we know with high probability that an item was present
+in the original transaction.
+In some scenarios, being confi-
+dent that an item was notpresent in the original transaction
+may also be considered a privacy breach.
+4.
+ALGORITHM
+
+"Where does a wise man hide a leaf?
+In the
+forest. But what does he do ff there is no forest?"
+...
+"He grows a forest to hide it in."
+- G.K.
+Chesterton, "The Sign of the Broken Sword"
+
+
+The intuition of breach control is quite simple: in addition to
+replacing some of the items, we shall insert so many "false"
+items into a transaction that one is as likely to see a "false"
+itemset as a "true" one.
+
+4.1
+Randomization Operators
+
+Definition 5. We call randomization R a per-transaction
+randomization if, for T = (ta, t2,... , tN), we can represent
+R(T) as
+
+R(ta, t~.... , tjv) = (R(1, ta), R(2, t2).... , R(N, tN)),
+
+where R(i, t) are independent random variables whose dis-
+tributious depend only on t (and not on i). We shall write
+t~ = R( i, t~) = R( t~).
+
+Definition 6. A randomization operator R is called item-
+invariant if, for every transaction sequence T and for ev-
+ery permutation Ir : Z --~ Z of items, the distribution of
+~r-I R(IrT) is the same as of R(T). Here a'T means the ap-
+plication of ~" to all items in all transactions of T at once.
+
+Definition 7. A select-a-size randomization operator has
+the following parameters, for each possible input transaction
+size
+m:
+
+
+· Default probability of an item (also called randomiza-
+tion level) pme (0, 1);
+
+* Transaction subset size selection probabilities pm[0],
+p,~[1],... ,pm[m], such that every p,~[j]/> 0 and
+
+p~[O] +pro[l] +... +p,~[m] = 1.
+
+
+Given a sequence of transactions T = (ti, t2,... ,iN), the
+operator takes each transaction t~ independently and pro-
+ceeds as follows to obtain transaction t~ (m = It~I)-
+
+1. The operator selects an integer j at random from the
+set {0, 1,... , m) so that P [j is selected] = p,,~[j].
+
+2. It selects j items from t~, uniformly at random (with-
+out replacement).
+These items, and no other items
+of ti, are placed into t~.
+
+3. It considers each item a ~ t~ in turn and tosses a coin
+with probability pm of "heads" and 1 ¢~p,,~ of "tails".
+All those items for which the coin faces "heads" are
+added to t~.
+
+Remark 1. Both uniform (Section 2) and select-a-size op-
+erators are per-transaction because they apply the same
+randomization algorithm to each transaction independently.
+They are also item-invariant since they do not use any item-
+specific information (if we rename or reorder the items, the
+outcome probabilities will not be affected).
+
+
+
+
+219
+
+Definition 8. A cut-and-paste randomization operator is
+a special case of a select-a-sizeoperator (and which we shall
+actually test on datasets). For each possible input transac-
+tion size m, it has two parameters: p,~ E C0,1) (randomiza-
+tion level) and an integer K,~ > 0 (the cutoff).The operator
+takes each input transaction tl independently and proceeds
+as follows to obtain transaction t~ (here m = It,l):
+
+1. It chooses an integer j uniformly at random between
+0 and K,~; ifj > m, it sets j = m.
+
+2. The operator selectsj items out of tiuniformly at ran-
+dom
+(without replacement).
+These items are placed
+into
+t~.
+
+3. Each other item (including the rest of ti) is placed
+into t~ with probability p,,~,independently.
+
+
+Remark ~. For any m, a cut-and-paste operator has only
+two parameters, p~ and Kin, to play with; moreover, K~
+is an integer. Because it is easy to find optimal values for
+these parameters (Section 4.4), we chose to test this opera-
+tor, leaving open the problem of optimizing the m parame-
+ters of the "unabridged" select-a-size. To see that cut-and-
+paste is a case of select-a-size, let us write down the formulae
+for the pm [j]'s:
+
+min'[K'J} (m ¢:~i~
+.
+Pmb']=
+~
+\ j ~i / P~-'(I~P)~-J "
+
+{ l¢~m/(K+l)
+ffi=mandi<K
+·
+1/(K + 1)
+otherwise
+
+Now let us give one example of a randomization operator
+that is not a per-transaction randomization, because it uses
+the knowledge of several transactions per each randomized
+transaction.
+
+Example 1. The mixing randomization operator has one
+integer parameter K >/2 and one real-valued parameter p G
+(0,I). Given a sequence of transactions T = (tl,t2,... ,iN),
+the operator takes each transaction ti independently and
+proceeds as follows to obtain transaction t~:
+
+1. Other than ti, pick K,¢:~,1more transactions (with re-
+placement) from T and union the K
+transactions as
+sets of items. Let t~'be this union.
+
+2. Consider each item a E t~'in turn and toss a coin with
+probability p of "heads" and 1 ,¢::~pof "tails".
+
+3. All those items for which the coin faces "tails" are
+removed from the transaction. The remaining items
+constitute the randomized transaction.
+
+For the purpose of privacy-preserving data mining, it is
+natural to focus mostly on per-transaction randomizations,
+since they are the easiest and safest to implement.
+Indeed,
+
+a
+per-transaction randomization does not require the users
+(who submit randomized transactions to the server) to com-
+municate with each other in any way, nor to exchange ran-
+dom bits. On the contrary, implementing mixing random-
+ization, for example, requires to organize an exchange of
+nonrandomized transactions between users, which opens an
+opportunity for cheating or eavesdropping.
+4.2
+Effect of Randomization
+on Support
+Let T be a sequence of transactions of length N, and
+let A be some subset of items (that is, A C 27). Suppose
+we randomize T and get T' = R(T).
+The support sI =
+
+supp T' CA) of A for T' is a random variable that depends
+on the outcome of randomization.
+Here we are going to
+determine the distribution of s', under the assumption of
+having a per-transaction and item-invariant randomization.
+
+Definition 9. The fraction of the transactions in T that
+have intersection with A of size l among all transactions in
+T is called partial support of A for intersection size l:
+
+supp~(A) := # {t E T I #(A n t) = l}
+N
+(2)
+
+It is easy to see that suppT(A) = supp~(A) for k = [A[,
+and that
+k
+supp
+(A) = 1
+1=0
+
+since those transactions in T that do not intersect A at aH
+are covered in supp0V(A).
+
+Definition 10. Suppose that our randomization operator
+is both per-transaction and item-invariant. Consider a trans-
+action t of size m and an itemset A C 27 of size k. After
+randomization, transaction t becomes t~. We define
+
+pr [l.
+l'] = p [l
+l'] :=
+P [#(t' n A) = lI I #(t n A) = l].
+
+Here both l and 1~ must be integers in {0, 1,... , k}.
+(3)
+
+
+
+Remark 3. The value of p~ [l ~ l'] is well-defined (does
+not depend on ~my other information about t and A, or other
+transactions in T and T' besides t and tl). Indeed, because
+we have a per-transaction randomization, the distribution of
+tI depends neither on other transactions in T besides t, nor
+on their randomized outcomes. If there were other ta and B
+with the same (m, k, l), but a different probability (3) for the
+same 1~, we could consider a permutation x of 27 such that
+Irt = tx and irA = E; the application of lr or of ~r-1 would
+preserve intersection sizes l and l~. By item-invariance we
+have
+
+P [#(t' n A) = l'] = p [#(~-lR(~t)
+n A) = l'],
+
+but by the choice of Ir we also have
+
+P [#(~-aR(~t) n A) = Z'] = P [#(~-lR(t,) n ~-lS) = l']
+
+= P [#(tl n B) = 11] # P [#(t' n A) = l'],
+
+a contradiction.
+
+STATEMENT 1. Suppose that our randomization operator
+is both per-transaction and item-invariant. Suppose also that
+all the N transactions in T have the same size m. Then, for
+a given subset A C_27, IAI = k, the random vector
+t
+t
+TI
+N. (so,S1 ..... st),
+where s~ := suppl CA)
+(4)
+
+is a sum of k -+ 1 independent random vectors, each having
+a multinomial distribution. Its expected value is given by
+
+E (s~, s~ .....
+s~) T = P" (,0, sl .... , s~) T
+(5)
+
+
+
+
+220
+
+where P is the (k + 1) x (k + 1) matrix with elements PI' 1 =
+p [l ~ l'], and the covariance matrix is given by
+
+k
+1
+Cov(s;,si,·..,s~)
+r = ~" ~
+s, D[l]
+(6)
+l=o
+
+where each D[l] is a (k + 1) x (k + 1) mat,~x with elements
+
+D[l]i 5 = P [l ~ if. $'=5 ¢~P[1 --+ if. p [l --+if.
+(7)
+
+Here & denotes supp~(A), and the T over vectors denotes
+the transpose operation; 6i=5 is one if i = j and zero other-
+wise.
+
+
+PROOF. See Appendix A.1.
+[]
+
+Remark ~. In Statement 1 we have assumed that all trans-
+actions in T have the same size· If this is not so, we have
+to consider each transaction size separately and then use
+per-transaction independence.
+
+STATEMENT
+2. For a select-a-size randomization with
+randomization
+level p
+and
+size
+selection probabilities
+~,~[./]}, we have:
+
+
+
+
+·
+p
+(l**e)
+.
+(8)
+l'¢~q
+
+
+PROOF. See Appendix A.2.
+[]
+
+4.3
+Support Recovery
+Let us assume that all transactions in T have the same
+size m, and let us denote
+
+~:= ($0,$1,...
+,Sk)T
+~e := ($0, Sl,... ,$k)T
+
+then, according to (5), we have
+
+E ~" = P. K
+(9)
+
+Denote Q = P-* (assume that it exists) and multiply both
+sides of (9) by Q:
+
+E=Q.EE'=EQ.E'.
+
+We have thus obtained an unbiased estimator for the original
+partial supports given randomized partial supports:
+
+~'o., := Q. i'
+(I0)
+
+Using (6), we can compute the covariance matrix of ~e,t:
+
+Co~ ~.., = Cov (Q. ~') = 0 (Cov ~') q~ =
+
+k
+1
+QT.
+= ~. ~ stQD[l]
+(11)
+I----0
+
+If we want to estimate this covariance matrix by look-
+ing only at randomized data, we may use ~'.., instead of ~'
+in (11):
+
+k
+
+·~(~..,)t QD[I] Q~.
+(Cov ~',,,).., =
+I=0
+This estimator is also unbiased:
+
+k
+1
+E (Cov i,.,).., = ~.
+E(E
+i,.t)t Q D[l] QT = Cov s'~,.,.
+1=o
+
+In practice, we want only the k-th coordinate of ~, that is,
+the support s = suppT(A) of our itemset A in T. We denote
+by ~ the k-th coordinate of s'~,~, and use ~ to estimate s.
+Let us compute simple formulae for ~, its variance and the
+unbiased estimator of its variance. Denote
+
+q [l ~- z'] := 01,.
+
+STATEMENT 3.
+
+k
+= ~
+s~,. q [k ~- z'];
+le=0
+k
+k
+1
+[l -~ r] q [k
+l']~,:~),
+Wr~=~
+~s,(~P
++-
+·
+t=O
+II=O
+
+k
+1
+,
+l'] ~
+[k
+r]).
+(Vat ~)., = ~ ~
+st, (q [k ~-
+~q
+~-
+t1=O
+
+
+
+PROOF. See Appendix A.3.
+[]
+
+We conclude this subsection by giving a linear coordinate
+transformation in which the matrix P from Statement I
+becomes triangular. (We use this transformation for privacy
+breach analysis in Section 4.4.) The coordinates after the
+transformation have a combinatorial meaning, as given in
+the following definition.
+
+Definition 11. Suppose we have a transaction sequence T
+and an itemset A C_ Z. Given an integer I between 0 and
+k = [Al, consider all subsets C C_ A of size I. The sum of
+supports of all these subsets is called the cumulative support
+for A of order l and is denoted as follows:
+
+S, = S,(A,T)
+:=
+E
+suppT(C)'
+o_c~, ICl= t
+
+:= (So, s,,...,
+s~) ~
+(12)
+
+
+STATEMENT 4. The vector ~ of cumulative supports is
+a linear transformation of the vector i of partial supports,
+namely,
+
+
+st=
+s,
+and
+s,=~(~l)
+5-I
+S,;
+(13)
+j=l
+.7----t
+
+in the ~ and ~' space (instead of ~ and ~') matrix P is
+lower triangular.
+
+
+PROOF. See Appendix A.4.
+[]
+
+4.4
+Limiting Privacy Breaches
+Here we determine how privacy depends on randomiza-
+tion. We shall use Definition 4 and assume a per-transaction
+and item-invariant randomization.
+Consider some itemset A C Z and some item a 6 A; fix
+a transaction size m. We shall assume that m is known to
+the server, so that we do not have to combine probabilities
+
+
+
+
+221
+
+for different nonrandomized
+sizes. Assume also that a par-
+tialsupport sl = supp~(A) approximates the corresponding
+prior probability P [#(t N A) = l]. Suppose we know the
+following prior probabilities:
+
+,,+ := P[#(tnA)=Z, act],
+
+sT := P [#(t n A) = l, ~ ¢ t].
+
+Notice that sl = s~+ --Fs~- simply because
+
+#(tnA)=l~
+[ ~et~#(tnA)=l'°r
+act ~ #(tnA)=L
+
+Let us use these priors and compute the posterior proba-
+bility of a 6 t given A C_ t':
+
+
+P[aEtlACt']
+= P[aet, Agt']
+-
+P [A C_ t']
+=
+
+k
+k
+= ~ P [#(t n ~) = ,, ~ Et, A _ct'] / ~ s,.p[, -~ k]
+/=I
+I=0
+
+k
+k
+Z
+P[#(tnA) = l,, e tl.p[l -~ k] / ~ s,.ptl -~ k]
+1=I
+I=0
+
+k
+k
+= Z st .pl,
+/ £
+s, .pil-
+/:I
+l=O
+
+Thus, in order to prevent privacy breaches of level 50% as
+defined in Definition 4, we need to ensure that always
+
+k
+k
+~s,+.p[l-~k] < 0.5.~s,.Ptl-~k].
+(14)
+I=I
+/=0
+
+The problem is that we have to randomize the data be/ore
+we know any supports. Also, we may not have the luxury of
+setting "oversafe" randomization parameters because then
+we may not have enough data to perform a reasonably ac-
+curate support recovery. One way to achieve a compromise
+is to:
+
+I. Estimate maximum
+possible support s,~=(/¢,m) of a
+k-itemset in the transactions of given size m, for dif-
+ferent k and ra;
+
+2. Given the maximum
+supports, find values for sl and
+s~ that are most likely to cause a privacy breach;
+
+3. Make
+randomization just strong enough
+to prevent
+such a privacy breach.
+
+Since So+ = 0, the most privacy-challenging situations occur
+when so is small, that is,when our itemset A and its subsets
+are frequent.
+In our experiments we consider a privacy-challenging k-
+itemset A such that, for every l > 0, all its subsets of size l
+have the maximum
+possible support sm~(l, ra). The partial
+supports for such a test-itemset are computed from the cu-
+mulative supports ~z using Statement 4. By it and by (12),
+we have (l > O)
+
+
+
+j=l
+
+since there are (~) j-subsets in A. The values of s~" follow if
+we note that all~/~subsets of A, with a and without, appear
+equally frequently as t N A:
+
+sl+ := P[#(tnA)=l,
+aEt] =
+
+= P [a E t I #(t n A) = l]. sz = I/Ic · s,.
+(16)
+
+While one can construct casesthat are even more privacy-
+challenging (for example, if a E A occurs in a transaction
+every time any nonempty
+subset of A does), we found the
+above model (15) and (16) to be suf~ciently pessimistic on
+our datasets.
+We
+can now use these formulae to obtain cut-and-paste
+randomization parameters p,~ and K,~ as follows. Given m,
+consider all cutoffs from K,~ = 3 to some K~x
+(usually this
+Km~x equals the maximum
+transaction size) and determine
+the smallest randomization levels pm(K,~) that satisfy (14).
+Then select (K,~, p,~) that gives the best discoverability (by
+computing the lowest discoverable supports, see Section 5.1).
+
+4.5
+Discovering Associations
+We show how to discover itemsets with high true support
+given a set of randomized transactions. Although we use the
+Apriori algorithm [5] to make the ideas concrete, the mod-
+ifications directly apply to any algorithm that uses Apriori
+candidate generation, i.e.,to most current association dis-
+covery algorithms. =
+The key latticeproperty of supports
+used by Apr~ori is that, for any two itemsets A C B, the
+true support of A is equal to or larger than the true support
+of B. A simplified version of Apriori, given a (nonrandom-
+ized) transactions fileand a minimum
+support Stain,works
+as follows:
+
+I. Let k =
+I, let "candidate sets" be all single items.
+Repeat the following until no candidate sets are left:
+
+(a) Read the data file and compute the supports of
+all candidate sets;
+
+(b) Discard all candidate sets whose support is be-
+low
+Stain;
+
+(c) Save the remaining candidate sets for output;
+
+(d) Form all possible (k + 1)-itemsets such that all
+their k-subsets are among
+the remaining candi-
+dates. Let these itemsets be the new candidate
+sets.
+
+(e) Letk=k+l.
+
+2. Output all the saved itemsets.
+
+It is (conceptually) straightforward to modify this algo-
+rithm so that now it reads the randomized dataset, computes
+partial supports of all candidate sets (for all nonxandomized
+transaction sizes) and recovers their pre~cted supports and
+sigmas using the formulae from Statement 3. However, for
+the predicted supports the lattice property is no longer true.
+It is quite likely that for an itemset that is slightly above
+minimum support and whose predicted support is also above
+minimum support, that one of its subsets will have predicted
+support below minimum support. So if we discard all candi-
+dates below minimum support for the purpose of candidate
+generation, we win miss many (perhaps even the majority)
+
+2The main class of algorithms where this would not apply
+are those that i~d only maximal frequent itemsets, e.g.,[8].
+However, randomization precludes finding very long item-
+sets, so this is a moot point.
+
+
+
+
+222
+
+of the longer frequent itemsets. Hence, for candidate gen-
+eration, we discard only those candidates whose predicted
+support is "significantly" smaller than stain, where signifi-
+cance is measured by means of predicted sigmas. Here is
+the modified version of Apriori:
+
+1. Let k = 1, let "candidate sets" be all single-item sets.
+Repeat the following until k is too large for support
+recovery (or until no candidate sets are left):
+
+(a) Read the randomized data file and compute the
+partial supports of all candidate sets, separately
+for each nonrandomized transaction sizes;
+
+(b) Recover the predicted supports and sigmas for the
+candidate sets;
+
+(c) Discard every candidate set whose support is be-
+low its candidate limit;
+
+(d) Save for output only those candidate sets whose
+predicted support is at least stain;
+
+(e) Form all possible (k + l)-itemsets such that all
+their k-subsets are among the remaining candi-
+dates. Let these itemsets be the new candidate
+sets.
+
+(f) Let k=k+l.
+
+2. Output all the saved itemsets.
+
+We tried smi, ~:~crand s=in ¢:~2cras the candidate limit,
+and found that the former does a littlebetter than the latter.
+It prunes more itemsets and therefore makes the algorithm
+work faster, and, when it discards a subset of an itemset
+with high predicted support, it usually turns out that the
+true support of this itemset is not as high.
+
+
+5.
+EXPERIMENTAL RESULTS
+Before we come to the experiments with datasets, we first
+show in Section 5.1 how our ability to recover supports de-
+pends on the permitted breach level, as well as other data
+characteristics. We
+then describe the real-lifedatasets in
+Section 5.2, and present results on these datasets in Sec-
+tion 5.3.
+
+5.1 Privacy?Discoverabilityand DatasetChar-
+acteristms
+We define the lowest discoverable support as the support
+at which the predicted support of an itemset is four sigmas
+away from zero, i.e, we can clearly distinguish the support
+of this itemset from zero. In practice, we may achieve rea-
+sonably good results even if the minimum support level is
+slightly lower than four sigma (as was the case for 3-itemsets
+in the randomized soccer, see below). However, the lowest
+discoverable support is a nice way to illustrate the interac-
+tion between discoverability, privacy breach levels, and data
+characteristics.
+Figure I shows how the lowest discoverable support changes
+with the privacy breach level. For higher privacy breach
+levels such as 95%
+(which could be considered a "plausi-
+ble denial" breach level),we can discover 3-itemsets at very
+low supports. For more conservative privacy breach levels
+
+Sln our experiments, the nonrandomized transaction size is
+always known and included as a fieldinto every randomized
+transaction
+o~
+
+o
+
+
+0')
+
+..Q
+
+
+
+
+i5
+
+
+3
+2.5
+
+
+2
+
+
+1.5
+
+
+
+1
+
+
+
+0.5
+
+
+
+0
+30
+3-itemsets -~
+2-itemsets -÷---
+1-items -~---
+
+
+
+
+2111:
+40
+50
+60
+70
+80
+90
+Privacy breach level, %
+
+
+Figure 1:
+Lowest discoverable support
+for differ-
+ent breach levels. Transaction size is 5, five million
+transactions.
+
+
+1.2
+........
+,
+
+
+
+R
+o.8
+
+
+0.6
+
+
+~5 0.4
+
+~ 0.2
+2
+
+o
+3-itemsets
+2-itemsets -+---
+i,,%~
+1-items "~""
+
+
+
+
+"N"G..G.
+~
+
+
+
+.
+.
+.
+.
+.
+.
+.
+.
+I
+.
+.
+.
+.
+.
+.
+.
+.
+
+10
+100
+Number of Transactions, millions
+
+
+Figure 2: Lowest discoverable support versus num-
+ber of transactions.
+Transaction size is 5, breach
+level is 50%.
+
+
+
+such as 50%, the lowest discoverable support is significantly
+higher. It is interesting to note that at higher breach lev-
+els (i.e. weaker randomization) it gets harder to discover
+1-itemset supports than 3-itemset supports. This happens
+because the variance of a 3-itemset predictor depends highly
+nonlinearly on the amount of false items added while ran-
+domizing. When we add fewer false items at higher breach
+levels, we generate so much fewer false 3-itemset positives
+than false 1-itemset positives that 3-itemsets get an advan-
+tage over single items.
+Figure 2 shows that the lowest disc6verable support is
+roughly inversely proportional to the square root of the num-
+ber of transactions.
+Indeed, the lowest discoverable sup-
+port is defined to be proportional to the standard deviation
+(square root of the variance) of this support's prediction. If
+all the partial supports are fixed, the prediction's variance
+is inversely proportional to the number N of transactions
+according to Statement 3. In our case, the partial supports
+depend on N (because the lowest discoverable support does),
+i.e. they are not fixed; however, this does not appear to af-
+fect the variance very significantly (but justifies the word
+"roughly" ).
+Finally, Figure 3 shows that transaction size has a sig-
+
+
+
+
+223
+
+o~
+1E
+~,. 1.5
+
+CO
+
+J~
+1
+e}
+
+
+
+i5
+"~ 0.5
+3-itemsets ~
+j
+2-itemsets .....
+/
+1-items -~--
+/
+.
+
+
+
+
+~
+-
+
+i
+i
+i
+i
+I
+i
+i
+i
+
+2
+3
+4
+5
+6
+7
+8
+9
+10
+Transaction size
+
+
+Figure
+3:
+Lowest discoverable
+support
+for different
+transaction
+sizes.
+Five million transactions,
+breach
+level is 50%.
+
+
+
+nificant influence on support discoverability. In fact, for
+transactions of size 10 and longer, it is typically not possi-
+ble to make them both breach-safe and simultaneously get
+useful in.formation for mining transactions.
+Intuitively, a
+long transaction contains too much personal information to
+hide, because it may contain long frequent itemsets whose
+appearance in the randomized transaction could result in a
+privacy breach. We have to insert a lot offalseitems and cut
+offmany true ones to ensure that such a long itemset in the
+randomized transaction is about as likely to be a falsepos-
+itive as to be a true positive. Such a strong randomization
+causes an exceedingly high variance in the support predictor
+for 2- and especially 3-itemsets, since it drives down their
+probability to "tunnel" through while raising high the prob-
+ability of a false positive. In both our datasets we discard
+long transactions. The question of how to safely randomize
+and mine long transactions is left open.
+
+5.2
+The Datasets
+We experimented with two "real-life"datasets. The soccer
+dataset is generated from the clickstream log of the 1998
+World
+Cup
+Web
+site, which
+is publicly available at
+ftp ://reseaxehsmp2.
+cc. yr. edu/pub/.orldcup/4.
+We scan-
+ned the log and produced a transaction file,where each
+transaction is a session of access to the siteby a client. Each
+item in the transaction isa web request. Not allweb requests
+were turned into items; to become an item, the request must
+satisfy the following:
+
+I. Client's request method is GET;
+
+2. Request status is Ol~;
+
+3. File type is HTHL.
+
+A session starts with a request that satisfies the above prop-
+erties, and ends when the last click from this ClientID time-
+outs. The timeout is set as 30 minutes. All requests in a ses-
+sion have the same ClientlD. The soccer transaction file was
+then processed further: we deleted from all transactions the
+items corresponding to the French and English front page
+frames, and then we deleted all empty transactions and all
+transactions of size above 10. The resulting soccer dataset
+
+4M.
+Arlitt
+and
+T.
+Jin,
+"1998
+World
+Cup
+Web
+Site
+Access
+Logs",
+August
+1998.
+Available
+at
+http : //www. acm. org/sigcomm/ITA/
+o
+'=_-
+E 1.5
+
+
+o
+
+
+
+
+~ O.5
+
+Z
+i
+
+Soccer --~
+Mailorder -÷---
+
+
+
+
+I
+i
+i
+I
+"1--
+-t
+i
+i
+
+2
+3
+4
+5
+6
+7
+8
+9
+Transaction size
+10
+
+
+Figure 4: Number
+of transactions for each transac-
+tion size in the soccer and mailorder datasets.
+
+
+
+consists of 6,525,879 transactions, distributed as shown in
+Fig. 4.
+The mailorder dataset is the same as that used in [6].
+The originaldataset consisted of around 2.9 million transac-
+tions, 15,836 items, and around 2.62 items per transaction.
+Each transaction was the set of items purchased in a single
+mail order. However, very few itemsets had reasonably high
+supports. For instance, there were only two 2-itemsets with
+support />0.2%, only five 3-itemsets with support />0.05%.
+Hence we decided to substitute all items by their parents in
+the taxonomy, which had reduced the number of items from
+15836 to 96. It seems that, in general, moving items up
+the taxonomy isa natural thing to do for preserving privacy
+without losing aggregate in.formation. We also discarded all
+transactions of size/> 8 (which was lessthan 1% of all trans-
+actions) and finallyobtained a dataset containing 2,859,314
+transactions (Fig. 4).
+
+5.3
+The Results
+We
+report the results for both datasets at a minimum
+support that is close to the lowest discoverable support, in
+order to show the resilience of our algorithm even at these
+very low support levels. We targeted a conservative breach
+levelof 50%, so that, given a randomized transaction, for any
+item in the transaction it is at least as likely that someone
+did not buy that item (or access a web page) as that they
+did buy that item.
+We used cut-and-paste randomization (see Definition 8)
+that has only two parameters, randomization level and cut-
+off, per each transaction size. We
+chose a cutoff of 7 for
+our experiments as a good compromise between privacy and
+discoverability. Given the values of maximum
+supports, we
+then used the methodology from Section 4.4 to find the low-
+est randomization levelsuch that the breach probability (for
+each itemset size)is stillbelow the desired breach level. The
+actual parameters (Kin is the cutoff, P,n is the randomiza-
+tion levelfor transaction size m) for soccer were:
+
+m
+[
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+Km
+I 7
+7
+7
+7
+7
+7
+7
+7
+7
+7
+pro%
+4.7 16.8 21.4 32.2 35.3 42.9 46.1 42.0 40.9 39.5
+
+and for mailorder were:
+
+m
+I 1
+2
+3
+4
+5
+6
+7
+Km ]
+7
+7
+7
+7
+7
+7
+7
+pro% 8.9 20.4 25.0 33.4 43.5 50.5 59.2
+
+
+
+
+224
+
+Table I shows what happens if we mine itemsets from both
+randomized and nonrandomized files and then compare the
+results. We can see that, even for a low minimum support
+of 0.2%, most of the itemsets are mined correctly from the
+randomized file. There are comparatively few false posi-
+tives (itemsets wrongly included into the output) and even
+fewer false drops (itemsets wrongly omitted). The predicted
+sigma for 3-itemsets ranges in 0.066¢:~0.07% for soccer and
+in 0.047¢:~0.048% for mailordsr; for 2- and 1-itemsets sigmas
+are even less.
+One might be concerned about the true supports of the
+false positives. Since we know that there are many more
+low-supported itemsets than there are highly supported, we
+might wonder whether most of the false positives are out-
+lists, that is, have true support near zero. We have indeed
+seen outliers; however, it turns out that most of the false
+positives are not so far off. The tables 2 and 3 show that
+usually the true supports of false positives, as well as the
+predicted supports of false drops, are closer to 0.2% than to
+zero. This good news demonstrates the promise of random-
+ization as a practical privacy-preserving approach.
+
+Privacy Analysis
+We evaluate privacy breaches, i.e., the
+conditional probabilities from Definition 4, as follows. We
+count the occurrences of an itemset in a randomized transac-
+tion and its sub-items in the corresponding nonrandomized
+transaction.
+For example, assume an itemset {a, b, c) oc-
+curs 100 times in the randomized data among transactions
+of length 5. Out of these 100 occurrences, 60 of the corre-
+sponding original transactions had the item b. We then say
+that this itemset caused a 60% privacy breach for transac-
+tions of length 5, since for these 100 randomized transac-
+tions, we estimate with 60% confidence that the item b was
+present in the original transaction.
+Out of allsub-items of an itemset, we choose the item that
+causes the worst privacy breach. Then, for each combination
+of transaction size and itemset size, we compute over all
+frequent s itemsets the worst and the average value of this
+breach level. Finally, we pick the itemset size that gave the
+worst value for each of these two values.
+Table 4 shows the resultsof the above analysis. To the left
+of the semicolon is the itemset size that was the worst. For
+instance, for all transactions of length 5 for soccer, the worst
+average breach was with 4-itemsets (43.9% breach), and the
+worst breach was with a 5-itemset (49.7% breach). We can
+see that, apart from fluctuations, the 50% levelis observed
+everywhere except of a little"slip"for 9--and 10-item trans-
+actions of soccer.
+The "slip" resulted from our decision
+to use the corresponding maximal support information only
+for itemset sizes up to 7 (while computing randomization
+parameters). 6 However, since such long associations cannot
+be discovered, in practice, we will not get privacy breaches
+above 50%.
+
+Summary
+Despite choosing a conservative privacy breach
+levelof 50%, and further choosing a minimum support around
+the lowest discoverable support, we were able to successfully
+find most ofthe frequent itemsets, with relativelysmall num-
+bers of false drops and false positives.
+
+
+
+51f there are no frequent itemsets for some combination, we
+pick the itemsets with the highest support.
+SWhile we could have easily corrected the slip, we felt it
+more instructive to leave it in.
+(a) mailorder, 0.2% minimum support
+
+Itemset
+True
+!
+True
+:False
+False
+Size
+Itemsets
+Positives Drops
+Positives
+1
+65
+65
+0
+0
+2
+228
+212
+16
+28
+3
+22
+18
+4
+5
+
+
+(b) soccer, 0.2% minimum support
+
+Itemset
+True
+True
+!False
+False
+Size
+Itemsets
+Positives
+Drops
+Positives
+1
+266
+254
+12
+31
+2
+217
+195
+22
+45
+3
+48
+43
+5
+26
+
+
+Table 1: Results
+on Real Datasets
+
+
+
+
+(a) mailorder, I>0.2% true support
+
+
+size
+Itemsets
+1
+65
+2
+228
+3
+i
+22
+<0.1
+0
+0
+0
+predicted support
+0.1¢¢0.15
+0.15¢~0.2
+0
+0
+1
+15
+I
+3
+~>o.2
+65
+212
+18
+
+
+(b) soccer, />0.2% true support
+
+predicted support
+size
+Itemsets
+<0.1
+0.1¢~0.15 0.15,~¢0.2
+i>0.2
+1
+266
+0
+2
+i0
+254
+2
+217
+0
+5
+17
+195
+3
+48i
+0
+1
+4
+43
+
+
+Table 2: Analysis of false drops
+
+
+
+
+(a) mailorder, ~ 0.2% predicted support
+
+
+size
+Itemsets
+<0.1
+1
+65
+0
+2
+240
+0
+3
+23
+1
+true support
+0.1¢¢0.15
+0.15¢~0.2
+0
+0
+0
+28
+2
+2
+
+
+(b) soccer, />0.2% predicted support
+
+
+size
+Itemsets
+1
+285
+2
+240
+3
+69
+<0.1
+0
+7
+5
+true support
+0.i¢~0.15
+0.15¢~0.2
+7
+24
+10
+28
+13
+8
+
+
+Table 3: Analysis of false positives
+i>o.2
+65
+212
+18
+
+
+
+
+/>o.2
+254
+195
+43
+
+
+
+
+225
+
+soccer
+Transaction size:
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+[
+Worst Average:
+1: 4.4%
+2: 20.2% 3: 39.2% 4: 44.5% 4: 43.9% 4: 37.5% 4: 36.2% 4: 38.7% 8: 51.0% 10: 49.4%
+l
+Worst of the Worst:
+1: 45.5%
+2: 45.4%
+3: 53.2%
+4: 49.8%
+5: 49.7%
+5: 42.7°3~
+5: 41.8%
+5: 44.5%
+9: 66.2%
+10: 65.6%
+
+mailorder
+Transaction size:
+I
+1
+2
+3
+4
+5
+6
+7
+]
+Worst Average:
+I 1: 12.0%
+2: 27.5%
+3: 48.4%
+4: 51.5%
+5: 51.7%
+5: 51.9%
+6: 49.8%
+i
+Worst of the Worst:
+1: 47.6%
+2: 51.9%
+3: 53.6%
+4: 53.1%
+5: 53.6%
+6: 55.4%
+7: 51.9%
+
+
+Table 4: Actual Privacy Breaches
+
+
+6.
+CONCLUSIONS
+In this paper, we have presented three key contributions
+toward mining association rules while preserving privacy.
+First, we pointed out the problem of privacy breaches, pre-
+sented their formal definitions and proposed a natural solu-
+tion. Second, we gave a sound mathematical treatment for a
+class of randomization algorithms and derived formulae for
+support and variance prediction, and showed how to incor-
+porate these formulae into raining algorithms. Finally, we
+presented experimental results that validated the algorithm
+in practice by applying it to two real datasets from different
+domains.
+We conclude by raising three interesting questions for fu-
+ture research. Our approach deals with a restricted (albeit
+important) class of privacy breaches; can we extend it to
+cover other kinds of breaches? Second, what are the theo-
+retical limits on discoverability for a given level of privacy
+(and vice versa)? Finally, can we combine randomization
+and cryptographic protocols to get the strengths of both
+without the weaknesses of either?
+
+
+7.
+REFERENCES
+
+[1] N. R. Adam and J. C. Wortman. Security-control
+methods for statistical databases. A CM Computing
+Surveys, 21(4):515-556, Dec. 1989.
+[2] D. Agrawal and C. C. Aggarwal. On the Design and
+Quantification of Privacy Preserving Data Mining
+Algorithms. In Proc. of the $Oth ACM Symposium on
+Principles of Database Systems, pages 247-255, Santa
+Barbara, California, May 2001.
+[3] R. Agrawal. Data Mining: Crossing the Chasm. In 5th
+Int'l Conference on Knowledge Discovery in Databases
+and Data Mining, San Diego, California, August 1999.
+Available from http://~.
+AlmAden.ibm. comics/quest/
+papers/kdd99_chasm, ppt.
+[4] R. Agrawal, T. Imielinski,and A. Swami. Mining
+assodation rules between sets of items in large
+databases. In Proc. o/the ACM SIGMOD Conference
+on Management of Data, pages 207-216, Washington,
+D.C., May 1993.
+[5] R. Agrawal, H. Marmila, R. Srikant, H. Toivonen, and
+A. I. Verkamo. Fast Discovery of Association Rules. In
+U. M. Fayyad, G. Piatetsky-Shapiro, P. Smyth, and
+R. Uthurusamy, editors, Advances in Knowledge
+Discovery and Data Mining, chapter 12, pages
+307-328. AAAI/MIT Press, 1996.
+[6] R. Agrawal and R. Srikant. Fast Algorithms for
+Mining Association Rules. Research Report RJ 9839,
+IBM Almaden Research Center, San Jose, California,
+June 1994.
+[7] It. Agrawal and R. Srikant. Privacy preserving data
+mining. In Proc. of the A CM SIGMOD Conference on
+Management of Data, pages 439---450, Dallas, Texas,
+May 2000.
+[8] R. Bayardo. Efficiently mining long patterns from
+databases. In Proc. of the A CM SIGMOD Conference
+on Management of Data, Seattle, Washington, 1998.
+[9] L. Breiman, J. H. Friedman, R. A. Olshen, and C. J.
+Stone. Classification and Regression Trees.
+Wadsworth, Belmont, 1984.
+[10] Business Week. Privacy on the Net, March 2000.
+[11] C. Clifton and D. Marks. Security and privacy
+implications of data mining. In A CM SIGMOD
+Workshop on Research Issues on Data Mining and
+Knowledge Discovery, pages 15-19, May 1996.
+[12] R. Conway and D. Strip. Selective partial access to a
+database. In Proc. ACM Annual Conf., pages 85-89,
+1976.
+[13] L. Cranor, J. Reagle, and M. Ackerman. Beyond
+concern: Understanding net users' attitudes about
+online privacy. Technical Report TR 99.4.3, AT&T
+Labs-Research, April 1999.
+[14] L. F. Cranor, editor. Special Issue on Interact
+Privacy. C,omm. ACM, 42(2), Feb. 1999.
+[15] The Economist. The End of Privacy, May 1999.
+[16] V. Estivill-Castro and L. Brankovic. Data swapping:
+Balancing privacy against precision in mining for logic
+rules. In M. Mohania and A. Tjoa, editors, Data
+Warehousing and Knowledge Discovery Da WaK-99,
+pages 389--398. Springer-Verlag Lecture Notes in
+Computer Science 1676, 1999.
+[17] European Union. Directive on Privacy Protection,
+October 1998.
+[18] Y. Linden and B. Pinkas. Privacy preserving data
+mining. In CRYPTO, pages 36---54,2000.
+[19] T. M. Mitchell. Machine Learning, chapter 6.
+McGraw-Hill, 1997.
+[20] Office of the Information and Privacy Commissioner,
+Ontario. Data Mining: Staking a Claim on Your
+Privacy, January 1998.
+[21] J. R. Quinlan. Induction of decision trees. Machine
+Learning, 1:81-106, 1986.
+[22] A. Shoshani. Statistical databases: Characteristics,
+problems and some solutions. In VLDB, pages
+208-213, Mexico City, Mexico, September 1982.
+[23] K. Thearling. Data mining and privacy: A conflict in
+making. DS*, March 1998.
+[24] Time. The Death of Privacy, August 1997.
+[25] J. Vaidya and C. W. Clifton. Privacy preserving
+
+
+
+
+226
+
+association rule mining in verticallypartitioned data.
+In Proc. of the 8th ACM SIGKDD Int'l Conference on
+Knowledge Discovery and Data Mining, Edmonton,
+Canada, July 2002.
+[26] S. Warner. Randomized response: A survey technique
+for eliminating evasive answer bias. J. Am. Stat.
+Assoc., 60(309):63-69, March 1965.
+[27] A. Westin. E-commerce and privacy: What net users
+want. Technical report, Louis Harris & Associates,
+June 1998.
+[28] A. Westin. Privacy concerns & consumer choice.
+Technical report, Louis Harris & Associates, Dec.
+1998.
+[29] A. Westin. Freebies and privacy: What net users
+think. Technical report, Opinion Research
+Corporation, July 1999.
+butions, their expectations and covariances add together:
+
+
+
+E(N.s~,)=E N.s,-P[l~l'],
+I=0
+
+l
+#
+Cov(N.
+si, N. s#) =
+
+k
+
+
+
+I=0
+
+
+
+Thus, after dividing by an appropriate power of N, the for-
+mulae in the statement are proven.
+[]
+
+
+
+A.2
+Proof of Statement 2
+
+
+
+APPENDIX
+
+A.
+PROOFS
+
+
+A.1
+Proof of Statement 1
+
+
+PROOF. Each coordinate N · sty of the vector in (4) is,
+by definition of partial supports, just the number of trans-
+actions in the randomized sequence T I that have intersec-
+tions with A of size l'. Each randomized transaction t' con-
+tributes to one and only one coordinate N · s~,, namely to
+the one with Il = #(t IN .4). Since we are dealing with a
+per-transaction randomization, differentrandomized trans-
+actions contribute independently to one of the coordinates.
+Moreover, by item-invariance assumption, the probability
+that a given randomized transaction contributes to the co-
+ordinate number l' depends only on the size of the original
+transaction t (which equals m) and the size l of intersection
+t N A. This probability equals p [I~ l'].
+So, for alltransactions in T that have intersectionswith A
+of the same size l (and there are N. sl such transactions) the
+probabilities of contributing to various coordinates N. s~,are
+the same. We can splitall N transactions into k + i groups
+according to their intersection sizewith A. Each group con-
+tributes to the vector in (4) as a multinomial distribution
+with probabilities
+
+
+(p[l ~ 0] ,p[l ~ 1],... ,p[l ~ k]),
+
+
+independently from the other groups. Therefore the vector
+in (4) is a sum of k + 1 independent multinomials. Now it
+is easy to compute both expectation and covariance.
+For a multinomial distribution (X0, Xa,.. · , Xk) with pro-
+babilities (Po,pl,... ,Pk), where Xo + X1 + ... + Xk = n,
+we have E Xi = n "Pi and
+
+
+Cov (x~, x~) = E (X~ ~p,)(Xj ~p~) = n. (p,~,=~ ¢~p,p~).
+
+
+I
+In our case, Xi = l's part of N.
+si, n = N.sl,
+and
+pi = P [l ---ri]. For a sum of independent multinornial distri-
+PROOF. We are given a transaction t E T and an itemset
+A C 27, such that [tl= m, [A[ = k, and #(t N A) = I. In
+the beginning of randomization, a number j is selected with
+distribution {p,~[j]}, and this is what the first summation
+takes care of. Now assume that we retain exactly j items
+of t, and discard m .¢::~j items.
+Suppose there are q items from t fqA among the retained
+items.
+How likely is this?
+Well, there are (~) possible
+ways to choose j items from transaction t; anti there are
+(i-q) possible ways to choose q items from t N A and
+j ,¢¢,q items from t \ A.
+Since all choices are equiproba-
+l
+rn--I
+vn
+ble, we get (q)(~_q)./(~) as the probability that exactly q
+A-items are retaaned.
+To make t' contain exactly l' items from A, we have
+to get additional 1' ¢:~q items from A \ t.
+We know that
+#(A\t) = k¢*l, and that any such item has probability p to
+get into t'. The last terms in (8) immediately follow. Sum-
+mation bounds restrict q to its actually possible (= nonzero
+probability) values.
+[]
+
+
+
+A.3
+Proof of Statement 3
+
+
+
+PROOF. Let us denote
+
+
+:= (P[Z ~ 0] ,PEl ~ 1] ..... P[Z ~ k]) T,
+
+:= (q[Z ~ 0],q[Z ~ 1],... ,q[Z ~- k])L
+
+
+Since PQ = QP = I (where I is the identity matrix), we
+have
+
+
+k
+k
+
+
+
+/=0
+lira0
+
+
+
+Notice also, from (7), that matrix D[I] can be written as
+
+
+
+
+where diag(ffl) denotes the diagonal matrix with
+fft-coord-
+
+
+
+227
+
+inates as its diagonal elements. Now it is easy to see that
+
+k
+~ = ~,T~., = ~
+q[~ +_ ~,] .~,,;
+
+
+k
+1
+
+l=O
+
+k
+1
+= ~ ~
+~,C~~ (diag(f0¢~f,~ ~)C* =
+I=0
+
+k
+1
+
+l=0
+
+k
+k
+= ~ ~ ~,(~p
+l
+[~~ ~'] ~[~~ ~']'~z=~);
+
+1=0
+V=O
+
+
+
+
+(Var ~).,t =
+k
+k
+
+= l ~(~ ~,)(~
+~ [~~ ~,] ~[~ ,_ ~,]~~,:.1 =
+N
+I=0
+I'=O
+
+k
+k
+1 ~
+,
+l,]~
+= ~
+~ ( ~ ~[~~- ~1p [~~ ~'] ~[~ ~-
+
+1
+~z_-,q[l,-3])
+= ~
+~
+s;(~ ~,,:~q[~'-l']~
+/=0
+3=0
+l~:0
+
+k
+1
+¢*q[k ~- 31) = ~ ~
+s}(q[~ ~- ~? ~q [k ~- y]).
+~=0
+
+[]
+
+
+A.4
+Proof of Statement 4
+
+
+PROOF. We prove the leftformula in (13) first,and then
+show that the right one follows from the leftone. Consider
+N. E~; it equals
+
+N.E,=N.E
+suppT(C)= E #{t'qT[cCt'}=
+co a, ICl = z
+co_A, IOl =
+
+N
+=~#{Cc_AI
+ICI = z,Cc_~,}.
+i=1
+
+
+In other words, each transaction t~ should be counted as
+many times as many different /-sized subsets C
+C A it
+contains. From simple combinatorics we know that ifj =
+#(A N t,) and j I> l, then t, contains (~) different /-sized
+subsets of .A. Therefore,
+
+
+
+
+~=~
+~=I
+
+
+and the leftformula is proven. Now we can check the right
+formula just by replacing the I]j's according to the left for-
+mula. We have:
+
+
+j·__z(C:·l)J-'
+' }]~ =
+,~=~,I)~-'
+sq=
+
+(;/(;)
+'
+(;)(;)
+= ~ (~11'-'
+~, =
+~,~(~11~-'
+l(j(e<~
+\ /
+e=z
+j=l
+k
+q--l
+
+-- z
+,,
+(y + l)! (q,~j' ~l)! --
+q=l
+3°=0
+k
+q!
+q-z
+= ~ "" l!(q~l)-------~~ (¢~iy'
+(q~l)!
+=
+q=~
+~,=o
+J'! (e ¢#l ¢~j')!
+
+
+,=,
+~,_-o
+\ 3'/
+
+
+since the sum ~'~'~(¢~.i)~'
+is zero whenever q¢:~ > O.
+~,==0
+\i']
+To prove that matrix P becomes lower triangular after
+the transformation from ~'and ~" to E and ~,', let us find
+how E ~' depends on ~ using the definition (12).
+
+EEl,--
+Esupp (C)=
+oc_a,Iol=l,
+11
+
+=
+~
+E p~ [l ~ l']. suppir(c)=
+cO_a, IOl-- z' ~=o
+
+
+=
+~
+~,..~pi~ [l ~ z'] ~
+(~1) ~-'
+~(e,T)
+=
+co_a, ICl = v ~:=o
+d--~
+()
+~=o
+.cga,
+ICl=U
+
+Cl' ~
+
+
+= E
+':"~
+E
+E
+suppT(B) =
+.~=o
+co a, IOl=V
+s_co, [al=j
+
+
+~,,# ~
+#{o IB ¢ c c A,IOl= t'}. suppr(B) =
+#=o at_a,ISl=#
+
+~" ~', ~
+~'~J supp~(B) _- ~
+~'~
+.~.
+I'¢:~
+~=0
+
+Now itisclearthat only the lower triangle of the matrix can
+have non-zeros.
+[]
+
+
+
+
+228
+

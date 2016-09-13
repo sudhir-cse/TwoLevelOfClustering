@@ -1,0 +1,1000 @@
+Mining A Stream of Transactions for Customer Patterns
+
+
+Diane Lambert
+Bell Labs, Lucent Technologies
+Murray Hill, NJ 07974
+dl@bell-labs.com
+Jos6 C. Pinheiro
+Bell Labs, Lucent Technologies
+Murray Hill, NJ 07974
+jcp@bell-labs.com
+
+
+
+ABSTRACT
+Transaction data can arrive at a ferocious rate in the or-
+der that transactions are completed. The data contain an
+enormous amount of information about customers, not just
+transactions, but extracting up-to-date customer informa-
+tion from an ever changing stream of data and mining it in
+real-time is a challenge. This paper describes a statistically
+principled approach to designing short, accurate summaries
+or signatures of high dimensional customer behavior that can
+be kept current with a stream of transactions. A signature
+database can then be used for data mining and to provide
+approximate answers to many kinds of queries about current
+customers quickly and accurately, as an empirical study of
+the calling patterns of 96,000 wireless customers who maxie
+about 18 million wireless calls over a three month period
+shows.
+
+Categories and Subject Descriptors
+H.2.8 [Information Systems]: Database Management--
+database applications, data mining; G.3 [Mathematics of
+Computing]: Probability and Statistics
+
+Keywords
+Approximate queries, customer profiles, dynamic database,
+histograms, incremental updates, massive data, signatures.
+
+
+1. BACKGROUND
+Customers continually make transactions that are recorded.
+In principle, the transaction records provide a wealth of
+up-to-date information about customers that can be used
+to predict customer behavior or to define customer-specific
+baselines or profiles for exception reporting, fraud detection
+or marketing, for example. Extracting customer informa-
+tion from transaction data is challenging, though. The data
+arrive fast, as fast as hundreds of millions of transactions
+per day, and are sorted in time order so data for different
+customers are intermingled. Customer behavior is complex
+and may not be evident in raw transaction records without
+
+
+Pcrmission to makc digital or hard copics of all or part of this work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies bear this notice and thc full citation on the first page. To copy
+otherwise, to republish, to post on servers or to redistribute to lists,
+requires prior specific permission and/or a fee.
+KDD 01 San Francisco CA USA
+Copyright ACM 2001 1-58113-391-x/01/08...$5.00
+some kind of analysis that is more sophisticated than simple
+summarization. Knowing which transactions are relevant to
+understanding a particular customer's current behavior may
+also be difficult. All transactions over the past 90 days may
+be relevant for a stable customer, but transactions more
+than a week old may be irrelevant for a fast-paced customer
+who changes behavior quickly. Analyzing a customer's past
+transactions for relevance at the time of a query is imprac-
+tical, though.
+Despite the challenges, our goal is to process a stream
+of transactions as it arrives to build multidimensional sum-
+maries (features) of customer behavior that are good enough
+for customer profiling or for providing approximate answers
+to queries about current customer behavior. For example,
+we would like to be able to provide up-to-date answers to
+such questions as how many callers make more than 100
+minutes of calls per month, and for those that do what is
+the median number of calls? Such questions lie at the heart
+of exploratory data analysis and data mining, but they can-
+not be answered quickly enough for interactive data analysis
+unless customer behavior can be tracked efficiently and ac-
+curately from a stream of transactions.
+Sections 2 and 3 describe a statistically principled way to
+track customer behavior online with a transaction stream.
+The basic idea is to build and maintain an up-to-date, com-
+pact approximation of the full, multi-dimensional distribu-
+tion that describes which transactions a customer is likely
+(or unlikely) to make now. We allow dependencies among
+transaction variables, so that the size of a purchase may de-
+pend on the time of the purchase, for example. The struc-
+ture of the approximate distribution, including the relation-
+ships among transaction variables, is chosen to optimize a
+new criterion that is appropriate when the main goal is in-
+ference or prediction about a set of customers rather than
+about an entire database of transactions.
+Section 4 then shows how an initial approximate distri-
+bution can be assigned to a new customer who has made
+only a few transactions. A novel feature of the initializa-
+tion procedure is that the principles underlying the design
+of the customer summary justify initializing each compo-
+nent or dimension of the summary separately, giving an ex-
+tremely rich set of summaries that can be assigned to new
+customers. The initial summary then evolves as the cus-
+tomer makes more transactions, so that each customer may
+eventually move to a customer segment of size one. The
+initialization procedure we propose is simple to implement,
+but somewhat cumbersome to explain. The details of the
+procedure can be skipped without loss of continuity.
+
+
+
+
+305
+
+Our methods have been empirically validated on several
+types of call data streams.
+The results of an experiment
+on answering queries about 96,000 customers who made a
+total of about 18 million wireless calls during a 90 day pe.~
+riod are reported in Section 5. The study shows that the
+proposed approximations are reliable enough for quick e~>
+ploratory data analyses, regardless of whether the unit of
+interest is transactions or customers. In summary, this pa-
+per describes a statistically sound method for approximating
+each of a massive number of customer distributions onl.ine,
+refining the approximations as customers make more tran.,~
+actions, and using the approximations for exploratory data
+analysis.
+
+2.
+SIGNATURE DESIGN
+
+2.1
+Representing a Multivariate Distribution
+Consider a stream of wireless calls. Each transaction or
+call record contains many variables, such as the date and
+time of the call, its duration, direction (incoming or outgo-
+ing), completion status (attempted or completed), the lo-
+cation of the caller, the service provider (roaming or home
+based), and which, if any, special features such as call wait.-
+ing were used. Figure 1 shows the call records for one cu~
+tomer. Vertical lines in the top panel represent calls, witlh
+height representing duration. There were 559 calls during
+the three months shown, so some calls are overplotted and
+only the longest call shows. Call rate can be discerned from
+the lower panel, in which vertical lines represent the toted
+number of calls (attempted pins completed) over intervals of
+length 3.5 hours. The shaded background bars denote week-
+days. The "Incoming" strip identifies the calls that were in-
+coming rather than outgoing; the "Wait" strip identifies the
+calls that used call waiting, and the "Attempt" strip iden-
+tities which calls were not completed (perhaps because the
+party called did not answer.)
+
+
+
+
+8,o-
+·
+l
+-1o
+
+
+
+
+I
+
+
+
+
+Total number~ ~0s: 599
+
+
+Figure 1: Call records of one wireless customer.
+
+The customer in Figure I had a stable calling pattern until
+3/28 when fraud began. Then calls became longer and more
+numerous, and they were made during nights and weekends
+instead of only during normal business hours.
+One goal,
+which is not discussed in this paper, is to use call records
+to track each customer's multidimensional calling pattern,
+incrementally updating it online with unsuspicious calls, so
+that fraud can be detected quickly and reliably.
+A
+call
+record
+can
+be
+represented
+by
+a
+vector
+X = (X1,... , Xk) of one-dimensional variables, where X1
+might be call duration, X2 call timing (day-of-week or hour-
+of-day), Xz time since last call, and so on. Some variables,
+such as duration, are explicit in the transaction record. Oth-
+ers, such as time since last transaction, are derived from the
+current and preceding records. A model of calling behav-
+ior is a multivariate distribution P(X) that describes which
+calls are likely and which are unlikely. The goal of customer
+tracking, then, is an approximation of P(X) that is accurate
+at the time of the current transaction. Note that the goal is
+not to reproduce tile customer's raw data, as it is in some
+database applications, but to assess tile customer's current
+behavior.
+The full multivariate distribution for a customer is
+
+P(X) = P(X1)P(X2[X1)... P(XMIX],... ,XM-1),
+(1)
+
+which is a product of one-dimensional marginal and condi-
+tional distributions. (The same product is obtained regard-
+less of which of the M variables is assigned to X1, which
+is assigned to X2, and so on.) Including all terms in the
+product requires modeling all possible relationships among
+all variables for each customer, which is clearly impossible
+to do well with limited data even with no space limitations.
+So, we use only a subset of the possible marginal and condi-
+tional distributions in the product (1) to approximate P(X).
+In other words, no variable X~ is allowed to depend on all
+other variables, which is not an unreasonable constraint in
+practice. We do impose one strong constraint, however: the
+same subset of distributions must be used for all customers.
+For example, if call duration is conditioned on time-of-day
+for some customers, then it must be conditioned on time-
+of-day for all customers. Forcing all customers to have the
+same kind of approximation makes it easier to update the
+approximation because otherwise the structure of the ap-
+proximation, and not just the shape of each one-dimensional
+distribution in the approximation, would have to be learned
+as the customer makes transactions.
+The approximation
+to P(X) is called a signature, and each one-dimensional
+marginal and conditional distribution in the approximation
+is called a signaturecomponent. Each signature component
+can be thought of as a feature vector for the customer.
+
+2.2
+Choosing Signature Components
+There are two important steps in designing a signature:
+the distribution in each signature component of P(X) must
+be modeled and a subset of the terms in the product (1) must
+be selected. The first task is more straightforward. Each dis-
+tribution is modeled by either a small set of probabilities or a
+small set of quantiles; i.e, by either a fixed-width histograzn
+or a fixed-depth histogram. Histograms are nonparametric,
+so they are appropriate for a wide range of customers, simple
+to update, and easy to understand. In principle, using other
+kinds of approximations instead of a vector of probabilities
+or quantiles would also be straightforward, though.
+The optimal set of conditional variables for approximat-
+ing tile full distribution of any signature variable X~ may
+vary across customers. For example, Customer 1 may tend
+to talk longer on outgoing calls than on incoming calls, but
+Customer 2 may not, so ideally duration would be condi-
+tioned on direction for Customer I but not Customer 2. Yet,
+we have to condition duration on direction for all customers
+or none. This is not a standard model selection, Bayes Net,
+
+
+
+
+306
+
+or graphical model problem because one model has to fit
+each of many customers rather than fit one set of transac-
+tions. In this sense, we are choosing a massive number of
+models instead of one model for a massive amount of data.
+Because it is not possible to optimize the set of condi-
+tioning variables for all customers simultaneously, we search
+for conditioning variables that are relevant for a majority of
+customers and very important for a significant fraction of
+customers. Here relevant means that the conditional distri-
+butions of X~ are significantly different from each other, and
+hence also significantly different from the marginal distribu-
+tion of Xi. We judge relevance by a p-value for a standard
+X2 test of independence, in part because X2 p-values are easy
+to compute. To be concrete, a conditioning variable is kept
+if its X2 p-value is below .05 for at least 50% of the customers
+in the training set and below .01 for at least 10% of the cus-
+tomers. (Of course, these are arbitrary thresholds that can
+be changed.) Using forward model selection (see, for exam-
+ple, the textbook [1]), variables are added sequentially until
+the incremental gain from adding another conditioning vari-
+able is unimportant. The number of conditioning variables
+chosen for any X~ tends to be small because the data for
+most customers is usually not rich enough to distinguish the
+fit of a model with only a few terms from that of a model
+with many terms once statistical noise is taken into account.
+More precisely, take a variable Y in the set of candi-
+date conditioning variables for a signature variable X. For
+each customer' i in the training data and each level yj of 1i,
+j = 1,... , M, compute the number of transactions a~,j for
+which X = xk and Y = y~ to obtain a K x M table. A X2
+statistic [1] for customer i is computed from the table to test
+whether Y is useful for conditioning X. The conditioning
+variable is retained if, for example, the p-values of the X2
+tests for at least 50% of all customers are below .05 and the
+p-values for at least 10% of all customers are below .01.
+The X2 test procedure is applied to each candidate condi-
+tioning variable for X in turn. If no candidate conditioning
+variable satisfies the "50% of the p-values below .05 and 10%
+below .01" criterion, then the marginal distribution of X is
+used as a signature component. If exactly one candidate
+variable Y satisfies the criterion, then X is conditioned on
+Y and each possible value of Y gives a different signature
+component for X. If more than one candidate Y satisfies
+the criterion, then the one with the largest fraction of cus-
+tomers with p-values below .05 is selected. This gives the
+first conditioning variable (if any), say Y1.
+The next step is to decide whether an additional condi-
+tioning variable 112is needed. To do that, each of the condi-
+tional histograms for X given a value of ]I1 is further parti-
+tioned according to Y2. If 111 has M1 possible values and Y2
+has M2 possible values, then a table with M1 x M2 columns,
+one for each of the possible combinations of }'1 and 112,and
+M rows, one for each of the possible values of X, is built, and
+a X2 p-value is computed for the table. Again, the candidate
+conditioning variables, if any, that satisfy the "50~0 below
+.05 and 10% below .01" criterion are found, and the one
+with the most p-values below .05 is chosen. The selection
+procedure is iterated until no further conditioning variable
+satisfies the selection criterion, or all candidate conditioning
+variables have been chosen.
+The decomposition (1) constrains the set of candidate con-
+ditioning variables for any signature variable X, since Xk
+can only be conditioned on X1, or ... or Xk-1 or variables
+that are unrelated to Xk,... ,XM. Also, the procedure here
+can handle signatures that are not based on histograms by
+replacing the X2 test with another test that is appropriate
+for the structure of the signature component.
+
+3.
+UPDATING A SIGNATURE
+A key feature of a signature is that it can be updated
+whenever the customer makes a transaction, which allows
+the signature to evolve. For example, consider a standard,
+fixed-width histogram that has bucket probabilities p~,,~ af-
+ter call n, and suppose call n + 1 is represented by a vector
+Zi,,+x that is zero in every bucket except the one that con-
+tains the observed value for call n + 1. Then with exponen-
+tially weighted moving averaging, the updated bucket prob-
+abilities are Pi,~,+l = (1-w)p~,,~+wZ~,,,+l, where 0 < w < 1
+is a weight that controls how fast old calls are aged out.
+With larger w, a calling pattern adapts more quickly to
+changes but is more variable because the effective sample
+size is smaller. Variants of exponentially weighted moving
+averaging have been developed for incrementally updating
+quantiles [3] and histograms of chronological variables [6].
+Variants for top-seller kinds of histograms are considered in
+[4], for example.
+
+4.
+INITIALIZING A SIGNATURE
+Transaction-by-transaction updating requires a starting
+point, so an initial signature has to be assigned to a cus-
+tomer. This task resembles customer segmentation, in the
+sense that there is a set of initial signatures (or customer seg-
+ments) and the customer is assigned to one of them based on
+the information available at the time of the assignment. In
+our approach, however, the customer may belong to many
+segments, one for' each signature component. For example,
+the initial distributions for incoming call duration and out-
+going call duration can be assigned independently in our
+model because the signature is a product. Independent as-
+signment for different signature components allows a huge
+number of different initial signatures.
+Suppose that the signature component for X conditional
+on Y = y is a vector of probabilities Pi = (Pi,1, ... ,pi,~c) for
+customer i and that the initial values of p~ are "filled in"
+according to rules that depend on a set of index variables
+Z that are computed from customer i's first few or several
+transaction records. Thus, each value of Z points to a rep-
+resentative signature component rz
+= (rz,1,... ,rz,K) for
+X conditional on Y. The goal is to find rules so that rz is
+close to p, for each customer i in a training set.
+As in signature design, candidate index variables are added
+sequentially until the incremental benefit from adding any
+remaining candidate is insignificant. To start, suppose the
+histogram for X conditional on Y has K buckets, the can-
+didate index variable Z has J levels labeled 1,... , J, and
+no index variable has been chosen yet. Then index selection
+has the following steps.
+1. Suppose there are Nj customers in the training set
+with Z = j. For the ith such customer, find the his-
+togram of relative frequencies p~,3 = (pi,j,1,. · · ,pi,j,K)
+of X conditional on 1I = y.
+
+2. Compute the average histogram ~hj = (thjj,... ,i~,g)
+of the Nj customers:
+
+1 ~-~t¢~
+
+
+
+
+307
+
+3. Compute the average histogram 13o over all customers,
+ignoring Z:
+
+j
+Nj
+
+Po,~ =
+s
+N
+~j=l
+9 9=1 .t=l
+
+4. Compute the bucket distances from customer i's :his-
+togram to 139 and to 130:
+
+([log(p~,9,k/fS,k)l
+Pi,Zk > 0
+b~,j,k =
+- log(pzk )
+otherwise.
+
+
+{llog(pi,9,~/100,k)]
+P~,9,k > 0
+bi,o,k =
+- log(~0,k)
+otherwise.
+
+Also define D~,9 = )-~ff=l (b~,o,k - b~,j,k), which is pos-
+itive if 139 is closer to the customer's histogram than it
+is to the average Po. The average effect of indexing by
+Z = j is then
+
+
+D9 ----E,~l D,,9
+Nj
+
+5. Because Z is known at the time of initialization, we
+can choose to index by Z only when Z would be nse-
+ful, on average, over all customers. Therefore, define
+the candidate representative signature fz for X con-
+ditional on Y by
+
+=f
+P9
+ifZi=jand/99
+>0
+rz
+[
+130
+if Zi = j and/99 -< 0.
+
+6. Let ,7 + be the set ofj for which Dj > 0. LetZ + be
+the set of customers i for which Z = j, /9j > 0, and
+Di,9 > 0; that is, the set of customers that would have
+representative signature 139 and for which that signa-
+ture would be better than 130. Let N+ be the number
+of customers in Z+. The coverage of Z is defined as
+the fraction of customers in the priming data for which
+indexing by Z is useful, so
+
+Cz = EjeJ+
+N+
+J
+E9=I N9
+
+Finally, the average value of using Z to choose an ini-
+tial signature is
+
+
+Vz = Egey+ E,~I D~,9
+E~j+ N9
+
+Whether Z is useful for indexing depends on its coverage and
+average value. Ideally, indexing should cover all customers
+and have a large value for all customers it covers, but often
+the more customers an index applies to, the smaller its av-
+erage value. Thus, it is necessary to balance coverage and
+value. For example, coverage and balance can be required
+to exceed minimum values, and then the candidate indexing
+variable with the largest coverage can be chosen.
+Index variables are added sequentially, by making the fol-
+lowing changes in the above procedure: replace the average
+histogram 130 with the current r~ and take 139, to be the
+average histogram over all customers with Z = zj for the
+jth possible combination of the current and candidate index
+variables.
+The final representative signature corresponding to index
+variables Z for the signature component for X conditional
+on Y is then computed as follows.
+
+1. Identify customers in the training set with Y = y and
+Z=z.
+
+2. Find Pi, the signature component of X conditional on
+Y = y, for each customer i identified in Step 1.
+
+3. Set rz = (rz,1,...
+,rz,K) equal to the average of the
+components found in Step 2.
+If there are nz
+such
+customers, then
+
+1
+nz
+
+rz,k :- --
+~ .Pi,k.
+nz ~=1"=
+
+
+4. The representative signature component is then
+
+= f 139
+ifZ~=jandb
+9 >0
+Tz
+130
+if Z~ = j and/99 < O,
+
+where the subscript j now denotes the jth possible
+value of the index variables Z.
+
+
+5.
+EXPERIMENTAL RESULTS
+Our experiment is based on 18.23 million wireless call
+records for a sample of 95,893 customers who made at least
+30 calls (some of which were only attempted and not com-
+pleted) over a three month period. These customers have a
+wide range of calling patterns, as Table 1 shows.
+
+Quantile
+minimum
+.25
+.5
+.75
+max
+mean
+Calls
+30
+61
+116
+207
+131,447
+190
+Minutes
+2
+67
+131
+308
+97,979
+295
+Days
+1
+76
+82
+85
+89
+77
+
+Table 1: Per customer statistics for the study data.
+
+Seven variables were derived from each call record: Direc-
+tion (Incoming/Outgoing), Service Provider (Local/Roaming),
+Status (Completed/Attempted), Features (None/Call Wait-
+ing and/or Call Forwarding), Day-of-Week, Hour-of-Day (dis-
+cretized to nine intervals), and Duration of completed calls
+(represented by tile .1, .25, .5, .75, .9, .95 quantiles and the
+minimum and maximum).
+The procedure for designing signatures described in Sec-
+tion 2 gives signatures with 14 components. Direction and
+Features are unconditional, Day-of-Week and Hour-of-Day
+are conditioned on Provider only, Provider and Status are
+conditioned on Direction only, Duration is used only for
+completed calls and is conditioned on Direction and Provider.
+As always, the procedure for designing signatures produces
+signature components that describe a valid multidimensional
+probability distribution.
+A customer identifier and the total number of calls are also
+kept in tile signature. In all, the raw call records (with only
+the variables used in this study) fill 640 MB; the signatures
+fill 20 MB or about 3% of the space required by the raw
+data. No effort was made to save space by quantizing prob-
+abilities or removing components of the signature for which
+the customer had no calls. For example, day-of-week and
+hour-of-day components were kept for roaming calls even if
+the customer had no roaming calls.
+
+
+
+
+308
+
+Exploratory data analysis involves asking questions of the
+data to find interesting facts.
+To start, we consider the
+answers to a few specific questions about calls, comparing
+the approximate answer computed from the signature data
+to the exact answer computed from the raw data. The re-
+sults are encouraging, even though signatures are designed
+to be accurate for customers rather than transactions. The
+results for queries about a set of customers are also encour-
+aging. Section 5.2 considers the results of some simulations
+of random queries.
+Both hour-of-day and duration are binned in the signature
+so some interpolation may be needed to answer queries. Lin-
+ear interpolation, which assumes uniformity within a bucket,
+is used for hour-of-day. Uniformity is not appropriate for
+duration, though. Instead, we assume that the distribution
+function for duration decreases exponentially between any
+two adjacent quantiles Qj and Qj+I, which leads us to use
+linear interpolation with weights proportional to -log(1 -
+pj) and -log(1 -pj+l)
+instead of standard linear interpo-
+lation with weights proportional to pj and pj+z.
+
+5.1
+Queries About Calls and Callers
+Although the signature database is intended to answer
+questions about customers, it can be used to answer ques-
+tions about transactions by answering the query for each
+customer and then summing results over customers. Table 2
+shows results for several queries that produce interesting re-
+sults from the perspective of exploratory data analysis. In
+particular, finding that short durations are more likely for
+local calls than for roaming calls is surprising, as is finding
+that long calls are more likely on weekdays than on Sun-
+days. These findings are not consistent with folklore about
+how people use their wireless phones.
+Query
+Exact
+Approx.
+% < 1 min
+% local < 1 min
+% roaming < 1 min
+No. > 10 min
+% peak hour (9 a.m. to 7 p.m.)
+% weekdays and peak, local
+% weekdays and peak, roaming
+% Sunday completed > 5 mins
+% weekdays and > 5 minutes
+Median local duration
+Median roaming duration
+.99 Quantile incoming duration
+.99 Quantile outgoing duration
+63.5
+61.5
+65.6
+64.8
+41.8
+38.2
+399,248
+488,804
+73.5
+74.5
+70.7
+69.5
+74.8
+73.8
+5.7
+6.5
+8.4
+7.7
+.53
+.64
+1.32
+1.50
+14.9
+14.0
+14.6
+14.9
+
+Table 2: Results for a set of queries answered with
+both the raw call data and the signature data.
+
+Many of the queries in Table 2 involve conditional and
+marginal probabilities that are not explicitly stored in the
+signature but can be inferred by using simple probability
+rules.
+For example, consider "percentage of calls shorter
+than one minute."
+In the signature, duration D of com-
+pleted calls is conditioned on Direction (incoming/outgoing,
+or I/O) and Provider (local/roaming or L/R). The query
+about marginal duration can be answered by noting that
+P(D < 1) = P(D < 1,L,I) + P(D < 1,L,O) + P(D <
+1,R,I)+ P(D <_1,R,O) and then P(D < 1,L,I)
+=
+P(D <
+I{L, I)P(LII)P(I), for example. All the right side terms re-
+fer to signature components. The average of the products
+of these terms for all customers, weighting eaci~ customer
+by its number of calls, is then returned as the approximate
+answer to the query.
+As a second example, "fraction of
+local calls in peak hours on weekdays" can be expressed
+as P(Peak, WeekdaylLocal), which is computed by noting
+that hour-of-day and day-of-week are independent condi-
+tional on Local/Roaming.
+Finally, Table 3 shows the results of a few queries about
+callers based on both the signature data and the raw call
+data. The results based on signatures are again quite en-
+couraging.
+
+Query
+Exact
+Approx.
+% callers with majority of calls >_ 1 min
+callers with one or more calls > 5 min
+% callers with ~ 70% non-peak calls
+callers with at least 20% of calls
+during lunch (11:30 am to 1:30 pm)
+14.8
+18.3
+81,973
+81,994
+32.9
+36.0
+20,366
+19,593
+
+
+
+Table 3: Results for a set of queries about callers.
+
+5.2
+Simulated Mining
+Two simulations of exploratory data analysis are described
+here. The first involves approximating many quantiles of
+the call data, and the second involves approximating many
+hour-of-day probabilities for' callers. In each simulation, 200
+random queries were simulated.
+Call queries. Each query asks for a random quantile Q of
+call duration, where Q is chosen uniformly from the interval
+[.2, .99]. When Q is not one of the seven quantiles kept in the
+signature components for duration, the result to the query
+is obtained by interpolating. The customer level quantiles
+are then averaged, with weights corresponding to the total
+number of calls used to compute the duration signature, and
+the weighted average of the quantiles over all customers is
+returned as the answer to the query. As Figure 2 shows,
+the approximate quantiles from the signature data are quite
+close to the exact quantiles computed by sorting all the call
+data.
+
+
+
+10-
+
+
+
+
+8-
+
+
+
+
+6
+
+
+
+
+4
+
+
+
+
+2
+
+
+
+
+0
+I
+I
+l
+I
+I
+I
+/o
+/j"
+
+cd.f'/"
+
+
+
+
+i
+i
+i
+i
+~
+i
+
+2
+4
+6
+8
+10
+12
+
+Signatures
+
+
+Figure 2: Approximate
+vs.
+exact quantile for 200
+random queries about duration quantiles.
+
+Customer Queries.
+The simulation for queries about
+customers is more complicated.
+The queries all have the
+form "What fraction of callers make at least a fraction L of
+their calls (or at most a fraction U of their calls, or between
+
+
+
+
+309
+
+L and U of their calls) after hour X (or before hour Y, or
+between hours X and Y)." More precisely, first one of three
+types of queries is randomly chosen with equal probabilities
+over the following three types: (a) Fraction of calls after L,
+where L is uniformly distributed between 3:00 and 21:00, (b)
+Fraction of calls before U, where U is uniformly distributed
+between 7:00 and 23:00, (c) Fraction of calls between L and
+U, where L is uniformly distributed between 3:00 and 20:09
+and U is uniformly distributed between L + 2 and 23 -- L.
+Constraints on the customer's fraction of calls are generated
+similarly: (a) The fraction of calls in the time period is at
+least A, where A is uniform on (0,.25), (b) The fractio:n
+of calls is at most B, where B is uniform on (.25, .60), or
+(c) The fraction of calls is between A and B, where A is
+uniform on (.05, .15) and B is A plus a uniform(.25, .25)
+random variable.
+Each customer in the signature database is evaluated to
+determine if it satisfies the constraints A and/or B on frac-
+tion of calls in the time period defined by L and/or U, and
+the fraction of customers that do satisfy the constraints ac-
+cording to the signature database is compared to the fraction
+computed using the raw data. Figure 3 shows that even the
+most inaccurate responses are acceptable, and most of the
+approximate responses are close to the exact answer.
+
+
+
+
+0.8
+
+
+
+
+0.6
+
+
+
+
+0.4
+
+
+
+
+0.2
+
+
+
+
+0.0
+I
+I
+I
+I ~ /
+
+
+
+
+/o
+o
+~°
+
+
+
+
+i
+i
+i
+i
+i
+
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+
+
+Signatures
+
+
+
+Figure 3:
+Experimental
+results on simulated ex>
+ploratory
+data
+analysis
+comparing
+answers
+com-
+puted from the signature and call databases.
+
+
+6.
+CONCLUSIONS
+This paper describes a statistically principled procedure
+for designing and initializing a fixed-length data structure
+called a signature that represents the information on cus-
+tomers in transaction records efficiently. Signatures do not
+attempt to give an exact accounting of the past records.
+Rather, they describe current customer-level behavior accu-
+rately. Thus, signatures are appropriate for targeted analy-
+ses, such as detecting fraud or big spenders, especially when
+the goal is to influence customer behavior in nearly real-
+time. Designing the structure of signatures and the rules
+for assigning initial signatures to new customers require in-
+tensive calculations, but these procedures only need to be
+done once and off-line. The methods described in this paper
+can be used with a variety of types of data and application,~.
+Signatures can be updated sequentially, using fast proce-
+dures that require only the current signature and the current
+transaction. Incremental updating based on exponentially
+weighted moving averaging is particularly important with
+dynamic databases, in which individuals may change their
+behavior over time. The adaptive updating allows the sig-
+nature to track evolving behavior.
+We show that the signature database can be used for
+fast and accurate approximate query answering, at both
+the transaction and customer levels. This makes online ex-
+ploratory data analysis possible, even for huge number of
+customers, because signatures can be small enough to be
+maintained in main memory. Because signature databases
+have one record per customer, they are easily merged with
+other customer databases, and the expanded database can
+be used for more in-depth analysis and prediction of cus-
+tomer behavior.
+Signatures can also be thought of as a
+way to do automatic, multivariate feature extraction for cus-
+tomers without first summarizing the data (and perhaps los-
+ing interesting information).
+This paper has explored the use of signatures for answer-
+ing queries quickly and reliably, but only approximately.
+Queries are an important part of good exploratory data anal-
+ysis. Other possibilities, which we have not yet explored,
+include using signatures as features in cluster and discrim-
+inant analysis, classification trees, or logistic regression, for
+example. In data mining applications, signatures may also
+enable good, quick association rules at the customer rather,
+than at just tile transaction level.
+
+
+7.
+REFERENCES
+[1] A. Agresti. Cate9orical data analysis. John Wiley &
+Soils, New York, NY, 1990.
+[2] D. BarbarA, W. DuMouchel, C. Faloutsos, P. J. Haas,
+J. M. Hellerstein, Y. Ioannidis, H. V. Jagadish,
+T. Johnson, R. Ng, V. Poosala, K. A. Ross, and K. C.
+Sevcik. The New Jersey data reduction report. Bulletin
+of the Technical Committee on Data Engineering,
+20(4):3-42, 1997.
+[3] F. Chert, D. Lambert, and J. C. Pinheiro. Incremental
+quantile estimation for massive tracking. In Proceedings
+of KDD-2000, pages 516-522, 2000.
+[4] P. B. Gibbons, Y. E. Ioannidis, and V. Poosala. Fast
+incremental maintenance of approximate histograms. In
+Proceedings of the P3rd VLDB Conference, pages
+466-475, 1997.
+[5] I. Grabec. Modelling of chaos by a self-organizing
+neural network. In K. Makisara, O. Simula, and
+J. Kangas, editors, Artificial Neural Networks,
+Proceedings of ICANN, volume 1, pages 151-156.
+Elsevier Science Publishers, 1991.
+[6} D. Lambert, J. C. Pinheiro, and D. X. Sun. Updating
+timing profiles for millions of customers in real-time.
+Journal of the American Statistical Association,
+96(453):316-330, 2001.
+
+
+
+
+310
+

@@ -1,0 +1,2590 @@
+MetaCost:
+A General
+Method
+for Making
+Classifiers
+Cost-Sensitive
+
+Pedro
+Domingos
+Artificial
+Intelligence Group
+Instituto
+Superior Tknico
+Lisbon 1049-001, Portugal
+pedrod@gia.ist.utl.pt
+http://www.gia.ist.utl.pt/-pedrod
+
+
+Abstract
+Research in machine learning, statistics and related fields
+has produced a wide variety of algorithms for classification.
+However, most of these algorithms assume that all errors
+have the same cost, which is seldom the casein KDD prob-
+lems. Individually
+making each classification learner cost-
+sensitive is laborious, and often non-trivial.
+In this paper we
+propose a principled method for making an arbitrary classi-
+fier cost-sensitive by wrapping a cost-minimizing procedure
+around it. This procedure, called MetaCost, treats the un-
+derlying classifier as a black box, requiring no knowledge of
+its functioning or change to it. Unlike stratification,
+Meta-
+Cost,is applicable to any number of classesand to arbitrary
+cost matrices. Empirical trials on a large suite of benchmark
+databasesshow that MetaCost almost always produces large
+cost reductions compared to the cost-blind classifier used
+(C4.5RULES) and to two forms of stratification.
+Further
+tests identify the key components of MetaCost and those
+that can be varied without substantial loss. Experiments on
+a larger database indicate that MetaCost scaleswell.
+
+
+1
+Introduction
+
+Classification
+is one of the primary
+tasks of data
+mining [18]. It has also been a subject of research in
+machine learning, statistics, pattern recognition,
+neural
+networks
+and other areas for several decades.
+As
+a result,
+many well-developed
+approaches to it now
+exist, including
+rule induction
+[20, 121, decision tree
+induction
+[8, 231, instance-based learning [ll,
+11,linear
+and neural classifiers [3], Bayesian learning
+[17, 161,
+and others.
+In classification
+problems, the goal is to
+correctly assign examples (typically
+described as vectors
+of attributes)
+to one of a finite number of classes. Most
+of the currently-available
+algorithms
+for classification
+are designed to minimize zero-one loss or error rate:
+the
+number of incorrect predictions
+made or, equivalently,
+
+
+f'mnission10makedigitalDThardtopics of all or partof this work fo,
+Personalor
+ckmroom
+me is grantedwithout feeprovided that copies
+arenot madeor distributed forprofit or commercialadvantageand tf,at
+c()Picshearthis rwticc and the full citation on the tirst page.~~~copy
+otllcr~`JisC,10republish,to poston scrvcrsor to rcdistributc to lists.
+rcqllircs
+prior
+specific permissionandior a fee.
+KDD-99
+San Diego CA [JSA
+Cowkht ACM 1999I-581 13-143-7/99/08,..$5,or~
+the probability
+of making an incorrect prediction.
+This
+implicitly
+assumes that all errors are equally costly, but
+in most KDD applications
+this is far from the case. For
+example, in database marketing the cost of mailing to a
+non-respondent is very small, but the cost of not mailing
+to someone who would respond is the entire profit lost.
+In general, misclassification
+costs may be described by
+an arbitrary
+cost matrix C, with C(i, j) being the cost
+of predicting
+that an example belongs to class i when
+in fact it belongs to class j.
+The realization
+that in
+real-world
+applications
+non-uniform
+costs are the rule
+rather than the exception
+has led in recent years to
+an increased interest
+in algorithms
+for cost-sensitive
+classification.
+(Some of these will be discussed in the
+section on related work; Turney [25] provides an online
+bibliography
+on the topic.)
+Substantial
+work has gone
+into making individual
+algorithms cost-sensitive.
+Doing
+this for all algorithms
+available in the literature
+would
+be a very time-consuming
+enterprise,
+and often it is
+far from obvious how best to perform the conversion.
+A potentially
+better
+solution
+would
+be to have a
+procedure that converted a broad variety of error-based
+classifiers into cost-sensitive
+ones. To our knowledge,
+the only currently
+available
+procedure
+of this type
+is stratification-changing
+the frequency of classes in
+the training
+data in proportion
+to their
+cost [8, 9,
+221. However, this approach has several shortcomings.
+It distorts
+the distribution
+of examples, which may
+seriously affect the performance of some algorithms.
+It
+reduces the data available for learning, if stratification
+is carried out by undersampling.
+It increases learning
+time, if it is done by oversampling.
+Most seriously,
+it is only applicable
+to two-class
+problems
+and to
+multiclass
+problems
+with
+a particular
+type of cost
+matrix,
+one where C(i, j)
+=
+C(j)
+(i.e., where the
+cost of misclassifying
+an example is independent
+of the
+predicted class).
+In this paper we propose a new procedure for cost-
+sensitive
+classification
+that
+attenuates
+or eliminates
+the disadvantages
+of stratification.
+This procedure,
+called
+MetaCost,
+is based on wrapping
+a "meta-
+learning"
+stage around the error-based classifier in such
+
+
+
+
+155
+
+a way that
+the classifier
+effectively
+minimizes
+cost
+while seeking to minimize
+zero-one loss.
+The next
+section describes in detail MetaCost and the reasoning
+leading
+to it.
+The following
+section describes an
+extensive empirical evaluation of MetaCost, where it is
+compared with stratification
+and where its properties,
+in particular
+its scalability,
+are investigated.
+The
+paper concludes with a discussion of related research,
+directions for future work, and a summary of results.
+
+2
+The MetaCost
+Algorithm
+In order to obtain a procedure for making error-based
+classifiers cost-sensitive,
+let us start with some basic
+notions.
+If, for a given example z, we know the
+probability
+of each class j P(j]z),
+the Bayes optimal
+prediction
+for z is the class i that
+minimizes
+the
+conditional
+risk [17]:
+
+
+
+
+The conditional
+risk R(i]z)
+is the expected cost of
+predicting
+that z belongs to class i. The Bayes optimal
+prediction
+is guaranteed to achieve the lowest possible
+overall
+cost (i.e., the lowest expected
+cost over all
+possible examples z, weighted
+by their probabilities
+P(x)>*
+C(i, j)
+and P(jlz)
+together
+with
+the rule
+above imply a partition
+of the example space X into
+j (possibly nonconvex) regions, such that class j is the
+optimal
+(least-cost)
+prediction
+in region j.
+The goal
+of cost-sensitive
+classification
+is to find the frontiers
+between these regions, explicitly
+or implicitly.
+This is
+complicated by their dependence on the cost matrix C:
+in general, as misclassifying examples of class j becomes
+more expensive relative
+to misclassifying
+others, the
+region where j should be predicted
+will
+expand at
+the expense of the regions of other classes, even if
+the class probabilities
+P(jlz)
+remain unchanged.
+In
+fact, we do not know what the optimal predictions
+are
+even for the pre-classified examples in the training
+set;
+depending on the cost matrix,
+they may or may not
+coincide with the classes that the examples are labeled
+with. If the examples in the training set were relabeled
+with their optimal classes according to the cost matrix
+given, an error-based classifier could be applied to learn
+the optimal frontiers, because the examples would now
+be labeled according to those frontiers.
+In the large-
+sample limit,
+a consistent
+error-based learner would
+learn the optimal,
+cost-minimizing
+frontiers.
+With
+a
+finite sample, the learner should in principle
+do no
+worse at finding these frontiers than it would at finding
+the optimal
+zero-one loss frontiers
+given the original
+training
+set.
+The MetaCost
+procedure
+is based on this
+idea.
+In order to relabel the training
+examples with their
+"optimal"
+classes, we need to find a way to estimate
+their
+class probabilities
+P(jlz).
+Note that
+this is
+different
+from finding
+class probabilities
+for unseen
+examples,
+and that
+the quality
+of these estimates
+is important
+only insofar
+as it influences
+the final
+frontiers produced; probability
+estimates can be quite
+poor and still lead to optimal
+classification,
+as long
+as the class that minimizes
+conditional
+risk given the
+estimated probabilities
+is the same that minimizes
+it
+given the true ones [16]. One possibility
+would be to
+use standard
+probability
+estimation
+techniques,
+such
+as kernel density estimation
+[17]. However, successful
+learning of a cost-sensitive classifier using this approach
+would
+require
+that
+the machine
+learning
+bias (i.e.,
+the implicit
+assumptions)
+of both the classifier and
+the probability
+estimator
+be valid for the application
+domain.
+Strictly
+speaking, this is impossible
+unless
+the classifier and the density estimator
+are the same,
+and a mismatch
+between probability
+estimation
+and
+classification
+stages has indeed been found to hurt
+performance
+in a context
+similar
+to the present one
+([13]; seealso related work section below). For example,
+decision tree and rule inducers are some of the most
+effective learners for very-high-dimensional
+domains like
+those often found in KDD, but these are precisely those
+domains were commonly-used
+probability
+estimation
+techniques
+like kernel densities and mixture
+models
+are least effective.
+Our assumption
+here will be that
+the user has chosen a particular
+classifier because its
+characteristics
+are well suited to the domain, and that
+we should therefore also use that classifier and no other.
+
+Many classifiers yield class probability
+estimates as a
+by-product
+of learning, but these are often very poor.
+For example, most decision tree and rule learners work
+by attempting
+to drive class probabilities
+to zero or one
+within each leaf or rule, and the resulting estimates are
+correspondingly
+off [7]. Because of this, and because
+some classifiers may not produce class probabilities,
+MetaCost
+allows their
+use, but does not require it.
+A more robust
+and generally-applicable
+method for
+obtaining
+class probability
+estimates from a classifier
+is suggested by recent research on model ensembles
+[lo, 141. Many authors (e.g, Breiman [5]) have found
+that most modern learners are highly unstable, in that
+applying
+them to slightly
+different training
+sets tends
+to produce very different models and correspondingly
+different predictions
+for the same examples, while the
+overall
+accuracy
+remains broadly
+unchanged.
+This
+accuracy can be much improved
+by learning
+several
+models in this way (or using other variations)
+and then
+combining
+their
+predictions,
+for example by voting.
+Thus MetaCost estimates class probabilities
+by learning
+multiple
+classifiers and, for each example, using each
+class's fraction
+of the total vote as an estimate of its
+probability
+given the example.
+(Not all learners are
+unstable in the fashion described; methods for applying
+
+
+
+
+156
+
+MetaCost to such learners are discussed in the section
+on future work.) Specifically,
+MetaCost uses a variant
+of Breiman's
+[5] bugging as the ensemble method.
+In
+the bagging procedure, given a training
+set of size s, a
+"bootstrap"
+resample of it is constructed
+by taking s
+samples with replacement from the training
+set. Thus
+a new training
+set of the same size is produced, where
+each of the original examples may appear once, more
+than once, or not at all.
+This procedure is repeated
+m times, and the resulting
+m models are aggregated
+by uniform voting (i.e., when an unclassified example is
+presented, the ensemble labels it with the class that is
+predicted by the greatest number of models). MetaCost
+differs from bagging in that the number n of examples
+in each resample may be smaller than the training
+set size s.
+This allows it to be more efficient.
+If
+the classifier being used produces class probabilities,
+a class's vote is estimated as the unweighted
+average
+of its probabilities
+given the models and the example.
+Also, when estimating
+class probabilities
+for a given
+training
+example 2, MetaCost
+allows taking
+all the
+models generated into consideration,
+or only those
+that were learned on resamples the example was not
+included
+in.
+The first type of estimate is likely to
+have lower variance, because it is based on a larger
+number of samples, while the second is likely to have
+lower statistical
+bias, because it is not influenced
+by
+the example's own class in the training
+set.
+In short,
+MetaCost
+works by:
+forming
+multiple
+bootstrap
+replicates of the training
+set, and learning
+a classifier on each; estimating
+each class's probability
+for each example by the fraction of votes that it receives
+from the ensemble; using Equation
+1 to relabel each
+training example with the estimated optimal class; and
+reapplying
+the classifier to the relabeled training
+set.
+Pseudo-code for the MetaCost
+procedure is shown in
+Table 1. Note that, if the cost matrix
+changes, only
+the final learning stage needs to be repeated, and this
+is equivalent to a single run of the error-based classifier.
+
+3
+Empirical
+Evaluation
+The question of whether MetaCost reduces cost com-
+pared to the error-based classifier and to stratification
+was studied empirically
+using 28 benchmark databas-
+es from the UC1 repository
+[4]. The C4.5 decision tree
+learner [23] was used as the error-based classifier be-
+cause of its de facto role as a standard for empirical
+comparisons.
+The C4.5RULES
+post-processor,
+which
+converts C4.5'~ decision trees to sets of "IF . . . THEN
+. . ." rules, was also used, since it tends to improve accu-
+racy and produces simpler, more comprehensible results
+[23]. In what follows, the C4.5-C4.5RULES
+combina-
+tion will be referred to by the abbreviation
+"C4.5R."
+Except where noted, all experiments were carried out by
+randomly selecting 2/3 of the examples in the database
+Table 1: The MetaCost algorithm.
+
+
+Inputs:
+S is the training
+set,
+L is a classification
+learning algorithm,
+C is a cost matrix,
+m is the number of resamples to generate,
+n. is the number of examples in each resample,
+p is Z+ue iff L produces class probabilities,
+Q is True iff all resamples are to be used for
+each example.
+
+Procedure MetaCost (S, L, C, m, n,p, q)
+
+For i = 1 to m
+Let ,S'ibe a resample of S with n examples.
+Let &Ii = Model produced by applying L to Si.
+
+For each example x in S
+For each class j
+
+
+Where
+If p then P(j]x,
+Mi) is produced by Mi
+Else P(j]z, Mi) = 1 for the class predicted
+by Mi for Z, and 0 for all others.
+If q then i ranges over all iVi
+Else i ranges over all Mi such that 2 $ Si.
+Let x's class = argmini CP(j]x)C(i,
+j).
+j
+
+Let M = Model produced by applying L to S.
+
+Return M.
+
+
+
+for training
+the classifiers, and using the remaining l/3
+for measuring the cost of their predictions.
+The results
+reported are the average of 20 such runs. We first report
+the results of experiments
+on 15 multiclass
+databas-
+es, followed by experiments
+on 12 two-class databas-
+es. Lesion studies and a scaling-up study using a larger
+database complete this section.
+
+3.1
+Multiclass
+Problems
+Experiments
+were conducted with two different types
+of cost model.
+In the first, each C(i,i)
+was chosen
+at random from a uniform distribution
+in the [0, lOOO]
+interval,
+and each C(i, j) for i # j was chosen at
+random from the fixed interval
+[0, lOOOO]. Different
+costs were generated for each of the 20 runs conducted
+on each database; thus the standard deviations reported
+incorporate the effects of varying the cost matrix.
+In the
+second experiment,
+each C(i,i)
+was chosen as before,
+
+
+
+
+157
+
+Table 2: Average costs and their standard deviations for multiclass problems.
+
+Database
+Costs from fixed interval
+Costs from class-prob.-dependent
+interval
+C4.5R
+Underspl
+Overspl
+MetaCost
+C4.5R
+Underspl
+Overspl
+MetaCost
+Annealing
+1061f23
+1076f18
+989f20
+984jc24
+1258f89
+711f44
+1027f53
+46f3
+Audiology
+1842f90
+2008f81
+1569f83
+1769f78
+2264f195
+609f124
+1833f145
+17flO
+Glass
+1986&81
+1856f102
+1786f90
+1217Ifr64
+1169f92
+548f36
+1052f86
+221flO
+Iris
+652f30
+618f26
+641f25
+513f16
+470f22
+454f18
+469f20
+345f20
+LED
+2016f92
+2181f78
+1897581
+1484f67
+835f44
+814f52
+727f21
+393f16
+Lenses
+1624f132
+1687f159
+1596f167
+1515fllO
+1171f264
+910f218
+972f115
+192f18
+Lung cancer
+2363f261
+1714f148
+1957f263
+1577f144
+969f135
+624f74
+1013f146
+370f39
+Lymphogr.
+1055f50
+lOOOf
+970f57
+721f33
+1118fllO
+489f86
+1054flll
+60f5
+Post-oper.
+1239f152
+686f31
+1614f91
+666f31
+2322f230
+841f112
+2016f151
+83f9
+Pr. tumor
+3475f88
+3478f123
+3759f98
+3446f87
+3193f338
+936f117
+1691f117
+17f7
+Solar flare
+1602f88
+1430f94
+1425f79
+875f43
+1342f98
+542f66
+996f70
+133f7
+Soybean
+716f35
+718f44
+739f46
+873&91
+682f33
+632f37
+685f35
+283f26
+Splice
+659f12
+602f13
+715flO
+556fll
+412f12
+424f9
+419fll
+342f4
+Wine
+685f24
+647f33
+670f29
+558zt25
+461f18
+475f13
+455f14
+264f13
+Zoology
+1148f103
+1153f105
+857f49
+873566
+624f85
+650f108
+540f62
+169&14
+
+
+but C(i, j) was chosen with uniform
+probability
+from
+the interval
+[0, 2OOOP(i)/P(j)],
+where P(i) and P(j)
+are the probabilities
+of occurrence of classes i and j
+in the training
+set. Thus the expected value of C(i, j)
+was 1000 P(i)/P(j).
+Th is means that the highest costs
+are for misclassifying
+a rare class as a frequent one,
+and inversely for the lowest. This mimics the situation
+often found in practice (e.g., in the database marketing
+domains mentioned before) where the rarest classes are
+the ones that it is most important
+to identify correctly.
+When this is the case, a low error rate can be achieved
+simply by ignoring
+the minority
+classes, but the cost
+will be high. Cost-sensitive learning is thus particularly
+important
+in these problems. As before, a different cost
+matrix was generated for each run.
+
+Since stratification
+cannot
+be directly
+applied
+to
+arbitrary
+multiclass cost matrices, we followed Breiman
+et al.`s (81 suggestion of making
+C(j)
+= xi C(i]j),
+where C(j) is the cost of misclassifying
+an example of
+class j, irrespective of the class predicted.
+The training
+set was then resampled so as to make each class's
+probability
+equal to P'(j)
+= C(j)P(j)/
+Cj C(j)P(j).
+(See P, PP.
+112-1151 for a detailed
+justification
+of this procedure.)
+This was done in two different
+ways:
+by undersampling
+and by oversampling.
+In
+the undersampling
+procedure, all examples of the class
+j with
+highest
+P'(j)
+are retained,
+and a fraction
+P'(i)/P'(j)
+of the examples of each other class i is
+chosen at random for inclusion in the resampled training
+set. Although
+this is probably the most frequently
+used
+type of cost-based stratification,
+it has the disadvantage
+of reducing the data available for learning, which may
+increase cost.
+Thus oversampling
+is sometimes used
+instead.
+In this alternative,
+all examples of the class
+j with lowest P'(j)
+are retained, and then the examples
+of every other class i are duplicated
+approximately
+P'(i)/P'(j)
+times in the training
+set. This avoids the
+loss of training
+data, but may significantly
+increase
+learning time, particularly
+for superlinear
+algorithms.
+
+MetaCost was applied considering for each example
+only the models it was not used to train, using C4.5R's
+rule class probabilities,
+and generating
+50 resamples,
+each of size equal to the original training
+set's (i.e., g =
+False, p = True, m = 50 and n = s in Table 1). The
+results obtained are shown in Table 2, and graphically
+in Figure 1.
+(Results obtained
+using other variants
+of MetaCost
+are reported
+in the section on lesion
+studies.)
+In the fixed-interval
+case, neither
+form of
+stratification
+is very effective in reducing costs, which
+is perhaps not surprising given that the approximations
+made in order to apply them are far from true.
+In
+contrast,
+MetaCost
+reduces costs compared to C4.5R
+and undersampling
+in all but
+one database,
+and
+compared to oversampling
+in all but three.
+In the
+probability-dependent
+case, which more closely matches
+the assumptions
+used to apply
+stratification,
+both
+undersampling
+and oversampling reduce cost compared
+to C4.5R in 12 of the 15 databases.
+MetaCost
+does
+better,
+achieving
+lower costs than C4.5R and both
+forms of stratification
+in all 15 databases. Globally, the
+average cost reduction obtained by MetaCost compared
+to C4.5R is approximately
+twice
+as large as that
+obtained
+by undersampling,
+and five times that
+of
+oversampling.
+In both sets of experiments,
+the costs
+obtained by MetaCost are lower than those of each of
+the other three algorithms
+with confidences exceeding
+99% using sign and Wilcoxon
+tests.
+These results
+support
+the conclusion
+that
+MetaCost
+is the cost-
+
+
+
+
+158
+
+g
+2000
+
+3
+1500
+
+1000
+
+500
+
+0
++
+*/...`._...
+.f!
+0
++
+__/
+0 e
++
++
+_A.
+//"
+*
+0.
+++O* 0
+l +
++ ++e
+*.,./,/
+_._.`.
+I
+
+
+
+t
+0
+I
+0 l; &__.,..T_....-c.
+Multiclass
+0
+of3 .yt..`;
+Two-class
++
+*.w
+y=x . ....
++ .f.
+p'.
+I
+
+0
+300
+600
+900
+1200
+1500
+1800
+MetaCost
+
+
+
+
+.
+* . ,.....,.'
+,/
+,/
+0
+_.I.
+_/
+/
+,./
+
+0
+0 ,,..",...`.
+0
+0
+0
+,..'_..`.
+0
+0
+++
+"
+*
+e
++y/.;
+* e
+-Do *
+;gw*
++*++
+Multiclass
+0
+l
+f,.+Q+
+Two-class
++
+,$..J..@
+y=x
+.
+,.pf'.
+
+0
+300
+600
+900
+1200
+1500
+1800
+MetaCost
+
+
+
+
+0 I...++.."I
+I
+0
+300
+600
+900
+1200
+1500
+1800
+MetaCost
+
+Figure 1: Comparison of MetaCost's costs (z axis) with
+those of C4.5R, undersampling
+and oversampling
+(y
+axes). Each point corresponds to a database and type
+of cost matrix.
+Points above the y = 2 line are those
+where MetaCost outperformed
+the alternative
+classifier.
+reduction method of choice for multiclass problems.
+
+3.2
+Two-Class
+Problems
+
+In two-class problems where C(l, 1) = C(2,2)
+= 0,
+stratification
+can be applied without any approximation
+by making
+C(1)
+=
+C(2, l),
+C(2)
+=
+C(1,2)
+and
+proceeding as before. Letting/l
+be the minority
+class
+and 2 the majority
+class, experiments
+on two-class
+databases were conducted
+using the following
+cost
+model: C(l, 1) = C(2,2) = 0; C(l, 2) = 1000; C(2,l)
+=
+1000 T, where T was set alternately
+to 2, 5, and 10.
+Note that the absolute values of C(2,l)
+and C(1,2)
+are irrelevant
+for algorithm
+comparison purposes; only
+their ratio r is significant.
+The results obtained, using
+the same settings for MetaCost
+as before, are shown
+in Table 3, and graphically
+in Figure 1. Oversampling
+is not very effective in reducing cost with any of the
+cost ratios.
+Undersampling
+is effective for r = 5 and
+r = 10, but not for r = 2. MetaCost
+reduces costs
+compared to C4.5R, undersampling
+and oversampling
+on almost all databases, for all cost ratios. In all cases,
+the costs obtained by MetaCost
+are lower than those
+of each of the other three algorithms
+with confidences
+exceeding 99% using sign and Wilcoxon
+tests (except
+for the sign test for undersampling
+with
+r = 10,
+where the confidence is 98%).
+These results support
+the conclusion
+that
+MetaCost
+is the cost-reduction
+method of choice even for two-class problems where
+stratification
+can be applied without
+approximation.
+
+3.3
+Lesion
+Studies
+
+Several questions arise in connection with MetaCost's
+results.
+How sensitive
+are they to the number of
+resamples used? Would it be enough to simply use
+the class probabilities
+produced by a single run of the
+error-based classifier on the full training
+set? Would
+MetaCost
+perform better if all models were used in
+relabeling
+an example,
+irrespective
+of whether
+the
+example was used to learn them or not? And how well
+would MetaCost do if the class probabilities
+produced
+by C4.5R were ignored, and the probability
+of a class
+was estimated
+simply as the fraction
+of models that
+predicted it? This section answers these questions by
+carrying
+out the relevant experiments.
+For the sake
+of space, only results on the two-class databases are
+presented;
+the results on multiclass
+databases were
+broadly similar.
+Table 4 reports the results obtained
+for r = 2, 5 and 10 by the following
+variations
+of
+MetaCost:
+using 20 and 10 resamples instead of 50
+(labeled "m=20"
+and "m=lO");
+relabeling the training
+examples using the class probabilities
+produced
+by
+a single run of C4.5R on all the data (labeled
+"C4
+Probs");
+ignoring
+the class probabilities
+produced by
+C4.5R (labeled "O-1 Votes");
+and using all models in
+relabeling an example (labeled "All MS"). In each case,
+
+
+
+159
+
+Table 3: Average costs and their standard deviations for two-class problems.
+
+Cost ratio
+
+
+
+
+2
+
+
+
+
+5
+
+
+
+
+10
+Database
+Breast cancer
+Credit
+Diabetes
+Echocardiogram
+Heart disease
+Hepatitis
+Horse colic
+Labor
+Liver disease
+Promoters
+Sonar
+Voting
+Breast cancer
+Credit
+Diabetes
+Echocardiogram
+Heart disease
+Hepatitis
+Horse colic
+Labor
+Liver disease
+Promoters
+Sonar
+Voting
+Breast cancer
+Credit
+Diabetes
+Echocardiogram
+Heart disease
+Hepatitis
+Horse colic
+Labor
+Liver disease
+Promoters
+Sonar
+Voting
+C4.5R
+505f25
+239fll
+404f12
+590f23
+323f15
+346f24
+244flO
+226f35
+593*24
+340f29
+484f25
+65rt7
+1078f70
+491f28
+824f34
+1244f65
+632f43
+741f60
+520-+24
+463f89
+1268f75
+743f69
+1019f66
+123f18
+2034f148
+911f57
+1524f72
+2335f137
+1147f90
+14OOzk123
+979f50
+858ztl79
+2393f162
+1414f138
+191Ozk138
+220f37
+Underspl
+509f14
+Overspl
+MetaCost
+577f23
+511f20
+218f8
+386flO
+514f21
+328fll
+327f21
+273514
+308f33
+540f15
+306f30
+442f21
+67f5
+821f37
+306f15
+556f20
+727f43
+466f23
+517f47
+510f31
+579f48
+625f22
+449rt40
+654f49
+89f9
+792f37
+481f29
+684f24
+856f60
+567f40
+770f62
+638f17
+671f22
+671f33
+436k12
+740f69
+132f16
+247flO
+395f8
+549f22
+350f15
+337f21
+275f13
+245f35
+503f18
+316f35
+472f33
+71f6
+1130f57
+557f24
+727f21
+1068f67
+700f37
+628rt54
+531rt31
+484f54
+1054f46
+829f102
+lOOlf57
+106f13
+2039f98
+1039f53
+1326f63
+1945f151
+1209f83
+1190f110
+946-+57
+858f95
+1883f103
+1634f173
+1799f132
+168f27
+187f7
+335f7
+497f22
+304flO
+326f25
+244f8
+247f24
+548f16
+296f16
+439f21
+59f4
+688f21
+282fll
+48Oztl3
+688f23
+416f22
+503f40
+415f24
+539f35
+616f13
+409f32
+517f23
+7656
+711f16
+396f13
+549f15
+668f16
+576f17
+721f51
+617f16
+674f34
+58Ozt13
+506f52
+498f20
+118f8
+
+
+all other settings are those used in the previous sections.
+Some of the main observations
+that can be made by
+comparing Table 4 with Table 3 are:
+
+
+l
+In the m = 50 to m = 10 range, cost increases
+as the number
+of resamples decreases, but only
+very gradually.
+In particular,
+there is no significant
+difference between the costs obtained with m = 50
+and m = 20, for all costs ratios, and with m = 10
+MetaCost still reduces costs compared to C4.5R and
+both forms of stratification
+in almost all datasets, for
+all cost ratios.
+all the data produces worse results than MetaCost
+and undersampling
+in almost all datasets for all
+cost ratios
+(except that
+it performs
+similarly
+to
+undersampling
+for r = 2).
+It still
+outperforms
+oversampling
+and C4.5R.
+
+l
+Ignoring
+C4.5R's class probabilities
+increases cost
+in a majority
+of the datasets,
+but the relative
+differences are generally minor.
+MetaCost
+in this
+form still
+outperforms
+C4.5R and both types of
+stratification
+in a large majority
+of the datasets, for
+all cost ratios.
+
+l
+However,
+using multiple
+runs to estimate
+class
+l
+Using all models decreases cost for T = 10 but
+probabilities
+is essential.
+Using a single run on
+increases it for r = 5 and T = 2.
+In all three
+
+
+
+
+160
+
+Table 4: Average costs and their standard deviations for different versions of MetaCost.
+
+Cost ratio
+
+
+
+
+2
+
+
+
+
+5
+
+
+
+
+10
+Database
+Breast cancer
+Credit
+Diabetes
+Echocardiogram
+Heart disease
+Hepatitis
+Horse colic
+Labor
+Liver disease
+Promoters
+Sonar
+Voting
+Breast cancer
+Credit
+Diabetes
+Echocardiogram
+Heart disease
+Hepatitis
+Horse colic
+Labor
+Liver disease
+Promoters
+Sonar
+Voting
+Breast cancer
+Credit
+Diabetes
+Echocardiogram
+Heart disease
+Hepatitis
+Horse colic
+Labor
+Liver disease
+Promoters
+Sonar
+Voting
+m=20
+m=lO
+C4 Probs
+O-l Votes
+All MS
+514f18
+506f25
+498f22
+495f19
+519f19
+188f7
+196f6
+227f9
+202f8
+193f7
+343f7
+348f8
+390f9
+357f8
+355f8
+477f20
+460f20
+542f20
+507f26
+.547f25
+292f12
+306flO
+320f14
+308f12
+300fll
+330f24
+333525
+337f22
+317f22
+336f21
+247f9
+258flO
+255flO
+237f8
+255flO
+213f29
+300*35
+242f33
+266f29
+208f26
+535fll
+553f17
+566f16
+537f13
+546f19
+310525
+337+20
+327k45
+357k31
+330f30
+436f24
+449f26
+451f25
+469f18
+429f18
+58f5
+65f4
+64f6
+59f4
+60f5
+712f24
+732f27
+823f45
+809f41
+719f25
+277f12
+289f12
+331f20
+287f14
+286~tll
+477flO
+511f13
+6OO~t27
+490fll
+499fll
+699f31
+684f32
+876f55
+791f47
+730f32
+418f20
+442f21
+514f42
+404f20
+431f24
+546f29
+551f30
+640f55
+579f48
+513f34
+405f23
+417f17
+530&26
+446k28
+453f20
+582&51
+542*44
+484f64
+403f54
+534&50
+613f14
+646f20
+751f33
+707f29
+628516
+473f40
+456f46
+569rt90
+491f41
+357f25
+556f31
+638f38
+834f59
+608f37
+552f41
+76f6
+79f6
+86f9
+92f6
+73f6
+733f17
+707f25
+765f49
+981f44
+700f19
+412f14
+403f21
+514f35
+427&22
+400f16
+556f15
+577416
+688f33
+623f21
+551flO
+664f15
+678%17
+986f92
+884f53
+670515
+560f26
+576f22
+596zt43
+514f39
+529*15
+667f38
+710&60
+9424297
+709f64
+675f49
+643f14
+615&18
+730f37
+585f53
+596f13
+666f29
+718%46
+682k72
+645*82
+634f31
+580f13
+628f30
+847k48
+673&30
+580*13
+531f91
+429f19
+686591
+573f58
+446f13
+540f26
+59Ort29
+947rt88
+617~t53
+49Ozt20
+105fll
+106flO
+106f13
+118f9
+106flO
+
+
+cases the relative
+differences are generally minor,
+and the performance vs. C4.5R and stratification
+is generally similar.
+
+To summarize, the one crucial element of MetaCost is
+the use of multiple runs to estimate class probabilities,
+but
+a number
+of runs as low as 10 is sufficient
+for excellent
+performance.
+The use of the error-
+based learner's class probabilities
+is beneficial but not
+critical, as is estimating an example's class probabilities
+excluding the models it was used to learn.
+
+3.4
+Scaling
+Up
+An obvious potential disadvantage of MetaCost as used
+so far is that it increases learning time compared to
+the error-based
+classifier.
+In the databases used in
+the previous sections, where all learning times are on
+the order of seconds or fractions
+of a second, this
+is arguably
+immaterial.
+But in larger databases this
+might become a serious limitation.
+Although
+MetaCost
+only increases time by a fixed factor
+(the number
+of resamples, approximately)
+and so its asymptotic
+time complexity
+is of the same order as the error-
+based classifier's, the increased constant may be critical
+in large-scale applications.
+One solution
+lies in the
+fact that,
+since the multiple
+runs of the error-based
+classifier required
+to form the probability
+estimates
+are completely independent
+of each other, they can be
+trivially
+parallelized,
+reducing the time increase factor
+
+
+
+
+161
+
+Table 5: Costs and CPU times (in minutes and seconds)
+of C4.5R, oversampling and six variants of MetaCost on
+the shuttle database.
+
+Algorithm
+
+C4.5R
+Undersampling
+m = 10, n = &
+m = 10, n = &
+m = 20, n = z
+m = 20, n = &
+m = 50, n = s
+m = 50, n = +
+No Noise
+Cost
+Time
+15.6
+1:41
+15.9
+0:Ol
+0.6
+1:44
+0.7
+0:15
+0.6
+2~43
+0.6
+1:51
+0.6
+28:49
+0.6
+2:38
+10% Noise
+Cost
+Time
+2591.2
+91:56
+232.5
+1:40
+52.4
+4:18
+53.2
+0:17
+
+52.5
+8:18
+
+52.5
+21:35
+
+
+to about two. But a potential
+solution that does not
+require parallel
+processing is to use resamples that
+are smaller than the original training
+set (in addition
+to using a relatively
+small number of resamples, for
+example 10). Smaller resamples may result in higher
+costs, but conceivably
+still lower than those obtained
+with the error-based learner or with stratification,
+and
+therefore still worthwhile.
+Further, the increase in cost
+caused by learning
+the class probabilities
+on smaller
+samples may be offset or exceeded by the reduction
+obtained
+by the use of multiple
+models.
+Indeed,
+this idea is behind Breiman's
+[6] successful "pasting"
+method for scaling up learners.
+At the same time,
+reducing resample sizes will reduce running
+time, by
+a factor that will be particularly
+significant if the error-
+based learner used has superlinear
+running
+time.
+For
+example, if the classifier's running time is quadratic in
+the number of examples, using a tenth of the examples
+will reduce running time for each resample by a factor
+of 100. If 10 resamples are used, this will make the
+CPU time of the probability
+estimation
+phase an order
+of magnitude
+smaller than that of a single run of the
+error-based
+classifier on all the data, and therefore
+insignificant.
+
+To test whether this approach is feasible, experiments
+were carried out using the largest database available
+in the UC1 repository:
+shuttle
+[4]. The goal in this
+database is to diagnose the state of the space shuttle's
+radiators from a set of sensor readings. This problem is
+well suited for testing cost-sensitive algorithms,
+because
+there is a large majority
+of one class (the "normal"
+state) and it is easy to obtain
+very low error rates
+[12], but presumably the cost of missing one of the rare
+anomalous states is potentially
+much higher than that
+of a false alarm, making error rate an inappropriate
+measure of performance.
+
+There are seven possible states, and nine numeric
+readings. The database contains 43500 examples from
+one shuttle flight and 14500 from another.
+The first
+flight was used for training,
+and the second for testing.
+All runs were carried out on a 300 MHz Pentium
+computer.
+Costs were set to C(i,i)
+= 0 for all i,
+and to C(i,j)
+= lOOOP(i)/P(j)
+for all i # j.
+It was
+not possible to obtain results for oversampling because
+C4.5R running on the expanded training
+set exceeded
+the available memory. (Judging from the results in the
+previous sections, there is a high probability
+it would
+do worse than undersampling.)
+Table 5 shows the
+costs and running times for C4.5R, oversampling,
+and
+MetaCost with several combinations
+of m (number of
+resamples) and n (resample size, as a function
+of the
+training
+set size s). As before, MetaCost was used with
+p = Due and q = False (see Table 1). Undersampling
+is fast, but it does not reduce cost. MetaCost with 10
+resamples each one tenth the size of the original training
+set reduces cost by over an order of magnitude,
+and its
+running time is very similar to C4.5R's. Increasing the
+number of resamples and the resample sizes predictably
+increases running
+time, but does not further
+reduce
+cost. Reducing resample size to l/100
+of the training
+set size increases cost by 17%.
+
+The poor results obtained by undersampling
+suggest
+that MetaCost's
+excellent performance is not just due
+to the problem being "easy," requiring
+only a small
+number of examples to achieve low costs.
+However,
+as a further
+check we repeated the experiment
+with
+10% class noise added to training
+and test sets (i.e.,
+with 10% probability
+an example's class was changed
+to a different
+one, with
+all classes having the same
+probability
+of being the new one). The results are also
+shown in Table 5. Costs and running
+times are now
+much higher for all algorithms,
+and undersampling
+is
+now effective at reducing C4.5R's cost, but MetaCost is
+again by far the best performer.
+As before, increasing
+m above 10 produces no significant improvements.
+(For
+n =
+$ and n =
+s C4.5R exceeded the available
+memory.)
+Remarkably,
+MetaCost
+with m = 10 and
+n = h is over an order of magnitude faster than C4.5R,
+while reducing
+cost by over an order of magnitude.
+This result, which may appear surprising
+at first, is
+due to the fact that estimating
+class probabilities
+by
+averaging several models learned on small subsamples
+has the effect of filtering
+out noise, producing a cleaner
+dataset,
+on which C4.5R runs much faster than on
+the original
+one.
+Examining
+the algorithms'
+output
+shows that MetaCost
+induces a single short rule for
+each anomalous
+state and makes the normal
+state
+the default, while C4.5R's output
+is over an order of
+magnitude
+larger.
+C4.5R is known to be inefficient
+on large noisy databases [12], so these results may
+not generalize to other error-based learners.
+However,
+although preliminary,
+they are a strong indication
+that
+MetaCost can be applied effectively to large databases,
+reducing cost without
+significantly
+increasing running
+
+
+
+
+162
+
+time.
+They
+also suggest that
+in noisy databases
+MetaCost may additionally
+be useful as a method for
+speeding up learning.
+
+4
+Related
+Work
+
+Cost-sensitive
+learning is the subject of a burgeoning
+literature,
+which space does not allow us to review here.
+We point the reader to [15] for a brief review, and to
+[25] for an online bibliography.
+This section discusses
+those elements of previous research that are most closely
+related to MetaCost.
+Chan and Stolfo [9] have proposed a variation
+of
+stratification
+that involves learning multiple
+classifiers
+on stratified subsamples of the database, which are then
+combined by a classifier that uses the others' outputs
+as inputs.
+This method does not produce a single
+model, and thus its output is hard to understand, while
+MetaCost produces a single model of similar complexity
+to that
+of the error-based
+classifier.
+Compared to
+stratification
+by undersampling,
+Chan and Stolfo's [9]
+method avoids the loss of training data, but is also only
+applicable (in its present form) to two-class problems. It
+is more ad hoc than stratification,
+lacking large-sample
+guarantees
+or clear foundations
+for its resampling
+scheme. Unlike MetaCost, it requires repeating all runs
+every time the cost matrix
+changes. It has only been
+tested in a single domain (credit-card
+fraud detection).
+Ting and Zheng [24] have proposed a cost-sensitive
+variant of boosting (an ensemble method) for decision
+trees.
+It is significant
+here because it should be
+easily adaptable to other error-based learners, and like
+MetaCost creates a cost-sensitive learner from multiple
+runs of an error-based
+one.
+However,
+like Chan
+and Stolfo's [9] method, it does not produce a single
+comprehensible model. Compared to regular boosting,
+it is also more ad hoc, lacking its guarantees of near-
+optimal performance on the training
+data. It requires
+repeating all runs every time the cost matrix
+changes.
+Based on published
+results,
+it appears to produce
+substantially
+smaller cost reductions than MetaCost.
+MetaCost's
+architecture
+is in some respects similar
+to that of CMM
+[13], a meta-learner
+that combines
+multiple
+models into a single one. While MetaCost's
+goal is to reduce costs, CMM's
+goal is to increase
+comprehensibility,
+while retaining some of the accuracy
+gains of multiple
+models.
+MetaCost
+uses the model
+ensemble to relabel training examples, while CMM uses
+it to label additional
+artificially-generated
+examples. A
+combination
+of the two may conceivably bring together
+the advantages of both.
+
+5
+Future
+Work
+One item for future work is to carry out experiments
+on additional
+large databases, and using other error-
+based learners besides C4.5R. Of particular
+interest
+would be to apply MetaCost to algorithms
+that are not
+unstable with respect to variations
+in the training
+set,
+like &nearest neighbor [ll]
+and naive Bayes [16]. In its
+present form, MetaCost may not be very effective with
+these algorithms, but an alternative
+is readily suggested
+by the results of [2] and [26]. Their method consists of
+learning multiple
+models using different subsets of the
+attributes,
+instead of different subsets of the examples.
+K-nearest neighbor and naive Bayes are unstable with
+respect to changes in the attributes
+used, and this
+method was indeed found to reduce those algorithms'
+errors to an extent
+similar
+to bagging's with
+other
+learners. It is readily incorporated
+into MetaCost.
+The application
+of MetaCost to large databases may
+be improved by stratifying
+the subsamples used, and/or
+by using partitioning
+instead of bagging.
+This would
+be similar to the first phase of Chan and Stolfo's [9]
+method, and might avoid losing useful information
+in
+some of the resamples. It might be necessary, however,
+to correct the probability
+estimates obtained for the
+effects of stratification.
+An interesting comparison that has not yet been per-
+formed is to use an "off-the-shelf"
+probability
+estimator
+(e.g., kernel densities) for the first phase of MetaCost
+instead of multiple runs of the error-based classifier. Al-
+though unlikely
+to be generally useful, given previous
+results [13], this may be successful for some domains and
+some combinations
+of probability
+estimator and classi-
+fier.
+More generally, the effect on MetaCost's
+perfor-
+mance of the quality of the probability
+estimates used
+needs to be investigated.
+This is best done using syn-
+thetic data, for which we know the true class probabili-
+ties for every example. It would also be interesting to do
+an ROC analysis of MetaCost, by varying the probabil-
+ity thresholds at which an example's relabeling changes
+from one class to another [21].
+The current version of MetaCost is based on bagging.
+An alternative
+method for constructing
+model ensem-
+bles is boosting [19]. Boosting often achieves lower er-
+ror rates than bagging, and using it in MetaCost might
+produce corresponding
+reductions in cost.
+
+6
+Conclusion
+KDD
+applications
+have often been hindered
+by the
+lack of powerful
+cost-sensitive
+learners.
+Converting
+individual
+error-based learners into cost-sensitive ones
+is a tedious and sometimes difficult
+process, but the
+general-purpose alternative
+of stratification
+is of limited
+applicability,
+and has a number of other disadvantages.
+In this paper we proposed and evaluated MetaCost,
+a
+new procedure for making error-based classifiers cost-
+sensitive.
+MetaCost
+is based on relabeling
+training
+examples with their estimated minimal-cost
+classes, and
+applying
+the error-based learner to the new training
+
+
+
+163
+
+set. Experiments
+show that MetaCost
+systematically
+reduces cost compared to error-based classification
+and
+to stratification,
+often by large amounts,
+and that
+MetaCost can be efficiently
+applied to large databases.
+
+Acknowledgements
+This research was partly funded by the PRAXIS
+XXI
+program.
+The author
+is grateful
+to all those who
+provided the datasets used in the empirical study.
+
+References
+PI
+
+PI
+
+
+PI
+
+PI
+
+
+
+PI
+
+PI
+
+
+VI
+
+PI
+
+PI
+
+
+w4
+
+
+Pll
+
+
+WI
+D. W. Aha, D. Kibler, and M. K. Albert. Instance-
+based learning
+algorithms.
+Machine
+Learning,
+6:37-66, 1991.
+S. D. Bay. Combining
+nearest neighbor classifiers
+through multiple
+feature subsets. Proc. 17th Intl.
+Conf. on Machine Learning, pp. 37-45, Madison,
+WI, 1998.
+C. M. Bishop.
+Neural
+Networks
+for
+Pattern
+Recognition. Oxford University
+Press, Oxford, UK,
+1995.
+C. Blake, E. Keogh, and C. J. Merz. UC1 repository
+of machine learning databases. Dept. of Informa-
+tion and Computer Science, University
+of Califor-
+nia at Irvine, CA, 1999. http://www.ics.uci.edu/-
+-mlearn/MLRepository.html.
+L. Breiman.
+Bagging predictors.
+Machine Learn-
+ing, 24:123-140, 1996.
+L. Breiman.
+Pasting bites together for prediction
+in large data sets and on-line.
+Technical report,
+Statistics Dept., University
+of California
+at Berke-
+ley, CA, 1996.
+L. Breiman.
+Out-of-bag
+estimation.
+Technical
+report, Statistics Dept., University
+of California
+at
+Berkeley, CA, 1998.
+L. Breiman,
+J. H. Friedman,
+R. A. Olshen, and
+C. J. Stone.
+Classification
+and Regression Trees.
+Wadsworth, Belmont, CA, 1984.
+P. Chan and S. Stolfo.
+Toward scalable learning
+with
+non-uniform
+class and cost distributions.
+Proc. 4th Intl. Conf. on Knowledge Discovery and
+Data Mining, pp. 164-168, New York, NY, 1998.
+P. Chan, S. Stolfo, and D. Wolpert, editors. Proc.
+AAAI-96
+Wkshp. on Integrating
+Multiple
+Learned
+Models for Improving
+and Scaling Machine Learn-
+ing Algorithms.
+AAAI
+Press, Portland,
+OR, 1996.
+B. W. Dasarathy, editor.
+Nearest Neighbor (NN)
+Norms:
+NN Pattern
+Classification
+Techniques.
+IEEE Computer Society Press, Los Alamitos,
+CA,
+1991.
+P. Domingos.
+Linear-time
+rule induction.
+Proc.
+2nd Intl. Conf. on Knowledge Discovery and Data
+Mining, pp. 96-101, Portland,
+OR, 1996.
+WI
+
+
+P4
+
+
+P51
+
+
+
+P31
+
+
+1171
+
+WI
+
+
+
+
+P91
+
+PO1
+
+Pll
+
+
+w
+
+
+
+
+1231
+
+
+1241
+P. Domingos.
+Knowledge acquisition
+from exam-
+ples via multiple
+models.
+Proc. 14th Intl.
+Conf.
+on Machine Learning, pp. 98-106, Nashville, TN,
+1997.
+P. Domingos. Why does bagging work? A Bayesian
+account and its implications.
+Proc. 3rd Intl. Conf.
+on Knowledge
+Discovery
+and Data Mining,
+pp.
+155-158, Newport Beach, CA, 1997.
+P. Domingos.
+How to get a free lunch:
+A simple
+cost model for machine learning applications.
+Proc.
+AAAI-98/ICML-98
+Wkshp. on the Methodology of
+Applying
+Machine
+Learning,
+pp. l-7,
+Madison,
+WI, 1998.
+P. Domingos and M. Pazzani. On the optimality
+of
+the simple Bayesian classifier under zero-one loss.
+Machine Learning, 29:103-130, 1997.
+R. 0. Duda and P. E. Hart. Pattern Classification
+and Scene AnaZysis. Wiley, New York, NY, 1973.
+U. Fayyad, G. Piatetsky-Shapiro,
+and P. Smyth.
+From data mining
+to knowledge
+discovery:
+An
+overview. In U. M. Fayyad, G. Piatetsky-Shapiro,
+P. Smyth, and R. Uthurusamy,
+editors, Advances
+in Knowledge Discovery and Data Mining,
+pp. l-
+34. AAAI
+Press, Menlo Park, CA, 1996.
+Y. Freund and R. E. Schapire. Experiments
+with a
+new boosting algorithm.
+Proc. 13th Intl. Conf. on
+Machine Learning, pp. 148-156, Bari, Italy, 1996.
+R. S. Michalski.
+A theory and methodology
+of
+inductive
+learning.
+Artificial
+Intelligence,
+20:11l-
+161, 1983.
+F. Provost and T. Fawcett.
+Analysis and visual-
+ization of classifier performance.
+Proc. 3rd Intl.
+Conf. on Knowledge Discovery and Data Mining,
+pp. 43-48, Newport Beach, CA, 1997.
+F. Provost,
+T. Fawcett,
+and R. Kohavi.
+The
+case against accuracy estimation
+for comparing
+induction
+algorithms.
+Proc. 15th Intl.
+Conf. on
+Machine
+Learning,
+pp. 445-453,
+Madison,
+WI,
+1998.
+J. R. Quinlan.
+C4.5:
+Programs for Machine
+Learning.
+Morgan
+Kaufmann,
+San Mateo,
+CA,
+1993.
+K. M. Ting and 2. Zheng. Boosting trees for cost-
+sensitive classifications.
+Proc. 10th European Conf.
+on Machine
+Learning,
+pp. 191-195,
+Chemnitz,
+Germany, 1998.
+P. Turney.
+Cost-sensitive
+learning
+bibliogra-
+I251
+phy.
+Online bibliography,
+Institute
+for Informa-
+tion Technology
+of the National
+Research Coun-
+cil of Canada, Ottawa,
+Canada, 1997.
+http://-
+ai.iit.nrc.ca/bibliographies/cost-sensitive.html.
+[26] Z. Zheng.
+Naive Bayesian classifier committees.
+Proc. 10th European Conf. on Machine Learning,
+pp. 196-207, Chemnitz,
+Germany, 1998.
+
+
+
+
+164
+

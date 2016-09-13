@@ -1,0 +1,807 @@
+Hardening Soft Information Sources
+
+
+William W. Cohen
+AT&T Labs­Research
+Shannon Laboratory
+180 Park Avenue
+Florham Park, NJ 07932
+wcohen@whizbanglabs.com
+Henry Kautz
+y
+AT&T Labs­Research
+Shannon Laboratory
+180 Park Avenue
+Florham Park, NJ 07932
+kautz@cs.uw.edu
+David McAllester
+AT&T Labs­Research
+Shannon Laboratory
+180 Park Avenue
+Florham Park, NJ 07932
+dmac@research.att.com
+
+
+ABSTRACT
+The web contains a large quantity of unstructured infor-
+mation. In many cases, it is possible to heuristically ex-
+tract structured information, but the resulting databases
+are\soft": theycontain inconsistencies andduplication, and
+lack unique, consistently-used object identi ers. Examples
+include largebibliographic databases harvestedfromrawsci-
+enti c papers or databases constructed by merging hetero-
+geneous \hard" databases. Here we formally model a soft
+database asanoisy version ofsome unknown hard database.
+We then consider the hardening problem, i.e., the problem
+of inferring the most likely underlying hard database given
+a particular soft database. A key feature of our approach
+is that hardening is global | many sources of evidence for
+a given hard fact are taken into account. We formulate
+hardening as an optimization problem and give a nontrivial
+nearly linear time algorithm for nding a local optimum.
+
+Categories and Subject Descriptors
+H.4.m Information Systems]: Miscellaneous
+
+General Terms
+data integration
+
+1. INTRODUCTION
+The web contains a large quantity of unstructured infor-
+mation. In many cases, it is possible to heuristically ex-
+tractstructuredinformation, buttheresulting databases are
+\soft": theycontainduplication andlackuniqueconsistently-
+used object identi ers.
+As an example of a soft database, consider the large bib-
+liographic databases harvested from raw scienti c papers
+Current address: Whizbang Labs-Research, East, 4616
+Henry St, Pittsburgh, PA 15213.
+yCurrent
+address: Dept. of Computer Science, Univ. of
+Washington, Seattle WA.
+
+
+
+
+KDD '00 Boston, Massachusetts USA
+A \soft" database S:
+author(\Bart Selman", \Critical behavior in satis ability").
+a liation(\Bart Selman", \Cornell University").
+author(\B. Selman", \Critical behavior for satis ability").
+author(\B. Selman", \BLACKBOX theorem proving").
+A \hard" database H:
+author(bart selman, critical).
+a liation(bartselman, cornell).
+author(bart selman, blackbox).
+
+
+Figure 1: A \soft" bibliographic database and the
+underlying \hard" data
+
+by systems such as ResearchIndex 11] or Cora 4]. These
+databases contain information about thousands of technical
+papers. However, it is often hard to determine if two cita-
+tions refertothe samepaper, orif twonames (e.g. \William
+Cohen" and \W. E. Cohen") refer to the same person. This
+makes it di cult to perform basic operations such as count-
+ing the number of citations to a particular paper or person.
+Here we formalize a soft database as one in which distinct
+identi ers may refer to the same entity. We formalize hard-
+ening as the problem of determining the (most likely) co-
+references between the soft identi ers|that is, determining
+which pairs of soft identi ers refer to the same real-world
+object. The result of this is a hard (conventional) database.
+An example is shown in Figure 1. Notice that more con-
+clusions can be drawn from the hard database H than the
+soft database S. In particular, H implies that an author of
+the paper \BLACKBOX theorem proving" is a liated with
+Cornell, where as S does not.
+Although we will use bibliographic data as a running ex-
+ample, we wish to emphasize that soft data arises in many
+di erent contexts. For instance, soft data might be cre-
+ated by automatically extracting facts from classi ed ads
+2], or newsgroup postings 5]. A soft database might also
+arise from merging the contents of several heterogeneous,
+autonomously-created \hard" databases.
+Formally, wewill assumesoftfactsaregiven alongwithsome
+measure of how likely two identi ers are to be co-referent.
+(For example, the strings \W. E. Cohen" and \William Co-
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+255
+
+hen" are a-priori plausibly co-referent, whereas the strings
+\William Cohen" and \Bart Selman" are not.) Wethen for-
+malize the problem of nding the best \hard" model ofa set
+of soft facts probabilistically. We de ne a prior probability
+distribution over possible hard databases and a prior prob-
+ability distribution over name co-references. Given these
+distributions, the task of constructing the most likely hard
+databasebecomesawell-de ned optimization problem. This
+optimization problem involves minimizing the sum of the
+number of tuples in the hard database, plus a cost associ-
+ated with the set of co-reference assumptions required.
+
+2. A FORMAL VIEW OF HARDENING
+We will assume a set of \references", each of which is some
+string referring to some real-world object. A tuple of refer-
+ences is written R(r1 ::: r
+n
+) where R ranges over some
+xed set of relations and r1, :::, r
+n
+are references. Unlike
+a conventional hard database, we will allow distinct refer-
+ences to referto the same real-world entity. We de ne a soft
+database to be a set of tuples of the form R(r1 ::: r
+n
+),
+where R ranges over some xed set of relations and r1, :::,
+r
+n
+are references.
+In the bibliographic domain the same string might denote
+di erent entities when used in di erent contexts, e.g., the
+string \Michael Jordan" might denote a di erent person in
+a news story than in a paper on graphical models. To cir-
+cumvent this problem we can construct references by con-
+catenating astring with some indication ofthe context from
+which that string was extracted for instance, the author
+name \Michael Jordan" extracted from a postscript paper
+p would be represented as the reference \Michael Jordan"
+p
+,
+and would be distinct from the reference \Michael Jordan"
+b
+extracted from a news story b.
+To return to the example of Figure 1, suppose one has pro-
+cessed two postscript papers p1 and p2. The following facts
+have been extracted from the title page of p1:
+
+author(\Bart Selman"
+p
+1, \Critical behavior in satis ability"
+p
+1).
+a l(\Bart Selman"
+p
+1, \Cornell University"
+p
+1).
+
+and suppose the following facts have been extracted from
+the bibliography section of p2:
+
+author(\B. Selman"
+p
+2, \Critical behavior for satis ability"
+p
+2).
+author(\B. Selman"
+p
+2, \BLACKBOX: Applying theorem
+proving to problem solving"
+p
+2).
+
+Together these facts form a soft database S.
+Hardening determinestheco-referencerelationships between
+references in the soft database. The co-reference relation is
+perhaps most naturally represented by an equivalence rela-
+tion on the soft references. However, here it is technically
+more convenient to work with an interpretation function |
+a function mapping each soft reference to a hard interpre-
+tation. In order to incrementally construct interpretation
+functions we formulate an interpretation function as a set
+of interpretation arcs each of which is an arc of the form
+r1
+w
+!r2 where r1 and r2 are distinct references, and w is a
+non-negative real number weight (or cost)discussed in more
+detail below. An interpretation I is an acyclic set of inter-
+pretation arcs, such that for all references r1 appearing in
+I there is at most one arc of the form r1
+w
+! r2 2 I. This
+de nition allows interpretation arcs to be chained, i.e., it is
+possible that r1
+w
+! r2 2 I and r2
+w0
+! r3 2 I. In this case
+r1 is indirectly interpreted as r3. For any given interpreta-
+tion I and any reference r, we de ne I(r) to be the ultimate
+interpretation of r:
+I(r) =
+I(r0) if I contains r
+w
+!r0
+r
+otherwise
+Note that an interpretation I de nes a hard database I(S)
+derived by replacing each reference in S by its ultimate in-
+terpretation under I.
+Of course not all interpretations are possible | we would
+not want to interpret \B. Selman" as \H. Kautz". The
+weight w in the arc r1
+w
+! r2 is the cost (or unlikeliness)
+of interpreting r1 as r2. Formally we assume the costs are
+provided in the form of a potentialinterpretationset, i.e., a
+set Ipot of (weighted) potential interpretation arcs. Given
+a soft database S and a set Ipot of potential interpretations
+ourgoalwill beto ndaninterpretation I Ipot minimizing
+the cost function c(I) de ned as follows where 1 and 2
+are parameters of the cost function jI(S)j is the number
+of distinct tuples in the hard database I(S) and jIj is the
+number of interpretation arcs in I.
+
+
+c(I)
+w(I)+ 1jI(S)j+ 2jIj
+(1)
+
+w(I)
+X
+
+r
+1
+w
+!
+r
+2
+2
+I
+w
+
+
+Note that as more arcs are added to I we have that w(I)+
+2jIj increases while 1jI(S)j decreases. The cost function
+hence represents a tradeo between the unlikeliness of the
+interpretation and the compactness of the resulting hard
+database. This objective function is approximately derived
+from a probabilistic model in the following section.
+
+3. A PROBABILISTIC MODEL
+In this section we give an approximate probabilistic deriva-
+tion of the cost function (1). Let Pr(H I S) a distribution
+on hard databases H, interpretations I, and soft databases
+S. An optimal hardening of S is a pair H I that maximizes
+Pr(H IjS). Notice that for a xed S the optimal hardening
+can be found by simply maximizing the joint probability of
+H I and S.
+Tode nePr(H I S)wewill assume thatthereis a nite set
+U ofpotential real-world objectsand a nite setofrelations,
+each of xed arity. These assumptions imply that there is
+a nite set of possible tuples which could appear in H.
+We let N be the number of possible hard tuples. In the
+probabilistic model we assume that both the hard data base
+H and the soft database S can contain duplicate tuples.
+We let jHj and jSj be the number of tuples in H and S
+respectively wheredistinct occurrences ofthesametuple are
+
+
+
+256
+
+treated as separate elements. We also let jIj be the number
+ofarcsin an interpretation I |notethat duplication ofarcs
+in I is ruled out by the requirement that every reference has
+at most one outgoing arc. We nowassume that Pr(U I S)
+can be decomposed as follows where
+H
+,
+I
+, and
+S
+are real
+number parameters in the interval (0 1) and the number Z
+is selected so that Pr(I) sums to 1.
+Pr(H I S) = Pr(SjI H) Pr(I) Pr(H)
+(2)
+
+Pr(H) =
+H
+(1;
+H
+)j
+H
+j
+1
+N
+j
+H
+j
+(3)
+
+Pr(I) =
+1Z
+I
+(1;
+I
+)j
+I
+j
+Y
+
+r
+1wi
+!
+r
+2
+2
+I
+e;
+w
+i
+(4)
+
+
+Pr(SjI H) =
+S
+(1;
+S
+)j
+S
+j
+1
+jI;1(H)j
+j
+S
+j
+(5)
+In (5) we have that I;1(H) is the set of soft tuples such
+that I( )2 H and jI;1(H)j is the cardinality of this set.
+Theaboveequations correspond toacertain processforgen-
+erating thetriple H I S. FirstH isgenerated byrepeatedly
+selecting one of the N possible hard tuples at random. At
+each iteration the selection process stops with probability
+H
+and continues with probability 1 ;
+H
+. A similar pro-
+cess is used to generate I by selecting arcs from Ipot where
+the probability of the arc r1
+w
+! r2 is proportional to e;
+w
+and where, on each selection iteration, the selection process
+terminates with probability
+I
+. In the case of generating I,
+however, after the arcs have been selected we check that I
+is well formed, i.e., that it is acyclic and that each reference
+has at most one outgoing edge. If I is not well formed then
+we start over. If the weights in Ipot are normalized so that
+the probability of selecting r1
+w
+!r2 is exactly e;
+w
+, we have
+that the constant Z equals the probability that a I is well
+formed when the selection phase terminates. Finally, given
+H and I wegenerate S using a process analogous to thatfor
+generating H except that we select individual tuples from
+the set I;1(H).
+Given a soft data base S our objective is nd the values I
+and H maximizing P
+r
+(I HjS). This is equivalent to nd-
+ing I and H so as to maximize Pr(H I S). For any given
+value of S and I the optimal value of H is simply I(S).
+So, given S, it su ces to nd the value of I maximizing
+Pr(I(S) I S). This is in turn equivalent to minimizing the
+\complexity" of the triple H, I, and S, i.e., minimizing the
+quantity ;lnPr(I H S). Forthisminimization problem we
+can ignore terms that do not depend on the choice of I. So
+the problem becomes that of selecting I so as to minimize
+the cost c0(I) de ned as follows.
+c0(I)
+jI(S)jlog
+N
+1;
+H
+(6)
+
++jIjlog
+1
+1;
+I
++w(I)
++jSjlogjI;1(I(S))j
+
+To derive (1) we assume that the last term in (6) can be
+approximated by a linear function of the form + jIj.
+4. OPTIMAL HARDENING IS NP-HARD
+Hereweshowthattheoptimization problem de nedby(1)is
+NP-hard. The problem remains NP-hard even under rather
+severe restrictions. In particular, we can assume that all
+weights in Ipot are zero and that 2 in (1) is also zero so
+that we are simply minimizing jI(S)j. Furthermore, we can
+assumethatIpot hasaratherrestrictedform. De nea\hard
+reference" to mean a reference h such that Ipot contains an
+arc of the form r
+w
+!h and de ne a \soft reference" to be a
+reference r such that Ipot contains an arc ofthe formr
+w
+!h.
+The graph Ipot is bipartite if and only if the hard references
+are disjoint from the soft references.
+
+Theorem 4.1. Unless NP = P, there is no polynomial
+time algorithm for computing an interpretation I Ipot
+minimizing jI(S)j even under the assumption that Ipot is
+bipartite and every soft reference occurs at most once in S.
+
+Proof. The proof is by reduction of vertex cover 7]. Let
+G =(V E) be a graph. The vertex cover problem is that of
+determining if there exists V0 V with jV0j < k such that
+every edge in E contains a vertex in V0. Given the graph let
+S be the soft data base such that for each edge fx yg 2 E
+we have that S contains the tuple R(rf
+x y
+g
+). Note that no
+reference occurs more than once in S. Let Ipot consist of
+all arcs of the form rf
+x y
+g
+0
+! x and rf
+x y
+g
+0
+! y. Note that
+Ipot is bipartite. For any interpretation I providing a hard
+interpretation for every reference we have that I(S) de nes
+a subset of the vertices that covers the edges. We now have
+that there exists an I with jI(S)j < k if and only if there
+exists a vertex cover of the given graph smaller than k.
+
+5. A GREEDY HARDENING ALGORITHM
+While nding anoptimalhardening isintractable, itisclearly
+possible to heuristically search fora good hardening. Anat-
+ural approach is to use a local search algorithm that begins
+with an empty interpretation I and iteratively extends it
+so as to improve the cost function (1). We will consider a
+simple algorithm that adds one arc ata time | at each iter-
+ation I is replaced with I fr1
+w
+!r2g. Each arc is selected
+greedily so as to induce the largest reduction in c(I).
+Toconstructing ane cientgreedyalgorithm itisconvenient
+tointroduce some formal notation. Weabbreviate I fr1
+w
+!
+r2g as I +r1
+w
+! r2. We de ne
+candidates(I) to be the set
+of arcs r1
+w
+!r2 2Ipot suchthatI+r1
+w
+!r2 isawell formed
+interpretation, i.e., such that I(r2) 6= I(r1) and I(r1) = r1.
+Assuming that I and S are clear from context we de ne
+(r1
+w
+!r2) to be the reduction in cost achieved by adding
+r1
+w
+!r2,i.e., the quantity c(I);c(I+r1
+w
+!r2).
+The greedy algorithm can be viewed as repeatedly merging
+equivalence classes. Ateach point in time the interpretation
+I de nes anequivalence relation onthesetofreferencesused
+in S, i.e., r1 and r2 are equivalent under I if I(r1) = I(r2).
+Each new arc r1
+w
+! r2 added to I merges two equivalences
+classes.
+Each step of the form I := I +r1
+w
+!r2 can also be viewed
+as a kind of heuristic inference. For example, if S contains
+
+
+
+257
+
+a tuple stating that \B. Selman"
+p
+1 is an author of paper
+x and another tuple stating that the (di erent) reference
+\Bart Selman"
+p
+2 is also an author of x then merging these
+two references reduces the number of tuples in I(S). If two
+references have several overlapping facts, e.g., they are both
+authors of the same two papers, then we have even stronger
+evidence that they are the same. The above algorithm it-
+eratively nds the \safest" heuristic inference, i.e., the one
+for which the positive evidence in the form of shared tuples
+most strongly outweighs the cost of the identi cation.
+Note that as more inferences are made additional evidence
+can be generated for further inferences. For example, orig-
+inally we may have that r1 authors papers x and y r2 au-
+thors papers y and z and r3 authors papers x and z. The
+evidence for any single merger is originally one shared pa-
+per, e.g., r1 and r2 share paper x. Once we have merged r1
+and r2, however, the evidence for merging r3 with the class
+fr1 r2g becomes stronger | it is now based on twoshared
+papers.
+Theabovecommentsimply thatevenfora xedarcr1
+w
+!r2,
+the value of (r1
+w
+!r2),whichcanbeviewedasthecurrent
+weightofevidence infavorofr1
+w
+!r2,canchangeduringthe
+execution of the algorithm. So it is not immediately clear
+that nding the next greedy arc (the safest next inference)
+can be done without searching though all the potential arcs.
+Assuming that Ipot is roughly proportional to jSj, the naive
+implementation would run in time quadratic in the size of
+S. For soft data bases of sizes typical for web applications
+quadratic behavior is prohibitive. Our main result is that
+thegreedy algorithm canbe implemented in awaythat runs
+to completion in nearly linear time.
+We now de ne the ambiguity of a reference r1 to be the
+numberofarcsoftheformr1
+w
+!r2 inIpot. Theambiguityof
+a potential interpretation set Ipot is the maximal ambiguity
+ofanyreferencer1 appearing inIpot. Letdbetheambiguity
+of I. Let k be the maximum number of arguments of any
+relation symbol. We now have the following.
+
+
+Theorem 5.1. It is possible to run the greedy search al-
+gorithm to completion in time O(jSjk3dlog(jSjkd)).
+
+
+The e cient implementation keeps the elements of
+candidates(I) in a priority queue where the priority of
+r1
+w
+! r2 is (r1
+w
+! r2). The algorithm incrementally up-
+dates priorities on each iteration. The e cient version can
+be written as follows where Q is a priority queue containing
+arcs in Ipot. Each time an arc is removed from Q it is ei-
+ther determined to no longer be a candidate or is added to
+I. The algorithm maintains priorities so the priority of an
+arc r1
+w
+! r2 in
+candidates(I) is always (r
+1
+w
+! r2). The
+algorithm also uses a union- nd data structure to maintain
+the current equivalence relation on references. The opera-
+tion union(r1 r2) declares two references to be equivalent,
+and two references r1 and r2 have been made equivalent if
+and only if find(r1) is the same as find(r2). The e cient
+implementation is summarized below.
+E cient Implementation
+I :=
+Q := a priority queue containing all arcs in Ipot
+where the priority of r1
+w
+!r2 is (r1
+w
+!r2).
+while Q is not empty and the largest priority is positive
+Remove the highest priority arc r1
+w
+!r2 from Q
+If find(r1)6= find(r2) and I(r1)= r1 then
+execute I :=I +r1
+w
+!r2
+union(r
+1 r2) and
+update the priorities of arcs on Q
+
+The remainder of this section describes how the priority up-
+dates on each iteration can be done in sublinear time (amor-
+tized over all iterations). We rst reduce the problem of
+maintaining priorities to the conceptually simpler problem
+of maintaining the e ect of each arc on the quantity jI(S)j.
+Note that the equivalence relation maintained in the union-
+nd data structure is the same as that de ned by I, i.e., we
+have that I(r1) = I(r2) if and only if find(r1) = find(r2).
+For any arc r1
+w
+! r2 2 Ipot de ne
+H
+(r1
+w
+! r2) to be the
+change in jI(S)j. We then have the following where find(S)
+istheresult ofreplacing each softreferencer inS byfind(r)
+and find+union(r1 r2) denotes the nd map that results
+from performing the union operation on r1 and r2.
+
+H
+(r1
+w
+!r2)=jfind(S)j;jfind+union(r1 r2)](S)j
+Since (r1
+w
+!r2)canbewrittenas 1
+H
+(r1
+w
+!r2);w; 2
+it now su ces to incrementally maintain
+H
+(r1
+w
+!r2).
+To e ciently update
+H
+(r1
+w
+! r2) we maintain a set E of
+e ect assertions each of which is a triple h r1
+w
+!r2 i
+where 2 find(S), r1
+w
+! r2 2 Ipot with
+find(r1) occur-
+ing in , and where is the result of replacing find(r1)
+by find(r2) in . Note that we do not require the arc to
+be in candidates(I). The assertion h r1
+w
+!r2 icanbe
+viewed asakind ofmeta-assertion about thee ectofadding
+the arc r1
+w
+! r2 to I. The assertion h r1
+w
+!r2 i states
+that if we union r1 and r2 and change the nd map so that
+the nd of elements in the equivalence class of r1 are set to
+the nd of r2, then will be converted to . The algorithm
+maintains the invariant that E is the set of all e ect asser-
+tions (for the current values of I and find). The initial set
+E0 is the set of triples h r1
+w
+!r2 isuch that 2S, r1
+occurs in and is the result of replacing r1 by r2 in .
+We nowdescribe therelationship between the set E of e ect
+assertions and the quantities
+H
+(r1
+w
+!r2). De ne, for any
+arc x,the set range(x)to be theset of such that there ex-
+ists a 2find(S) such that E contains a triple of the form
+h x i. Forany in
+range(x) we de ne count(x ) to
+be the number of triples in E ofthe form h x iplus one
+if find(S) contains . It is possible to show the following.
+
+H
+(x) =
+X
+2range(
+x
+)
+count(x )
+;1]
+(7)
+
+
+By maintaining appropriate indices, it is possible to e -
+ciently incrementally maintain the set E, the set find(S),
+and the values of count(x ) and
+H
+(x). One key detail
+is that in merging equivalence classes for references r1 and
+r2 we change the value of the nd map on the smaller of
+
+
+
+258
+
+the two classes. This ensures that each time the nd of a
+reference changes the size of its equivalence class at least
+doubles. So the number of nd changes for a given refer-
+ence can be at most the log of the number of references, i.e.,
+at most log(jSjk). Another key observation is that in any
+triple h x i 2 E we have that and x determine .
+This implies that are at most jSjkd triples in E. Details are
+given in the full paper.
+
+6. CONCLUSIONS
+Previous work has considered reasoning directly with soft
+databases (e.g. 3,6, 1]). Onedisadvantage ofthis approach
+is that queries to a soft, probabilistic database are generally
+more expensive to answer than queries to a conventional
+\hard" database. There is also close connection between
+the work described here and well-studied problem of record
+linkage (e.g. 10, 8, 9]). In record linkage the goal to deter-
+mine which entity descriptions are co-referent (that is, refer
+to the same real-world object). It is generally assumed that
+each entity is represented by a \record"|a vector of atomic
+values|and the similarity or dissimilarity of two records is
+measured by comparing these vectors. However, there are
+many situations where the similarity of two entity names
+depends on properties that cannot be easily represented in
+a single record. For instance, \B. Selman" and \Bart Sel-
+man" areclearly morelikely tobevariants ofthe samename
+if \B. Selman" and \Bart Selman" have authored similarly-
+titled technical papers however, a publication history is not
+easily stored as a record attribute. This heuristic could be
+easily incorporated into our approach by extending a soft
+bibliographic database with facts about co-authorship.
+In this paper we have considered the following more general
+problem: given a soft database S, and a structure Ipot in-
+dicating which name co-reference relationships are possible,
+nd the hard database H that is most likely given S. We
+show that a natural formalization of this optimization prob-
+lemisNP-completebutthatoptimally greedyhardening can
+be done in time nearly linear in jSj.
+
+7. REFERENCES
+1] D. Barbara, H. Garcia-Molina, and D. Porter. The
+management of probabilistic data. IEEE Transations
+on knowledge and data engineering,4(5):487{501,
+October 1992.
+2] M. E. Cali and R. Mooney. Relational learning of
+pattern-match rules for information extraction. In
+Working Papers of ACL-97 Workshop on Natural
+Language Learning,1997.
+3] W. W. Cohen. Integration of heterogeneous databases
+without common domains using queries based on
+textual similarity. In Proceedings of ACM
+SIGMOD-98, Seattle, WA, 1998.
+4] Cora: Computer science research paper search engine.
+http://www.cora.justresearch.com, 2000.
+5] D. Freitag. Multistrategy learning for information
+extraction. In Proceedings of the Fifteenth
+InternationalConference on Machine Learning.
+Morgan Kaufmann, 1998.
+6] N. Fuhr. Probabilistic Datalog|a logic for powerful
+retrieval methods. In Proceedingsof the 1995 ACM
+SIGIR conference on research in information retrieval,
+pages 282{290, New York, 1995.
+7] M. R. Gary and D. S. Johnson. Computers and
+Intractibility: A Guide to the Theory of
+NP-completeness.W. H. Freeman and Company, New
+York, 1979.
+8] M. Hernandez and S. Stolfo. The merge/purge
+problem for large databases. In Proceedings of the
+1995 ACM SIGMOD, May 1995.
+9] A. Monge and C. Elkan. An e cient
+domain-independent algorithm for detecting
+approximately duplicate database records. In The
+proceedings of the SIGMOD 1997 workshop on data
+mining and knowledge discovery,May 1997.
+10] H. B. Newcombe, J. M. Kennedy, S. J. Axford, and
+A. P. James. Automatic linkage of vital records.
+Science,130:954{959, 1959.
+11] Researchindex: The NECI scienti c literature digital
+library. http://www.researchindex.com, 2000.
+
+
+
+
+259
+

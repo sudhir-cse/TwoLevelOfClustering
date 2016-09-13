@@ -1,0 +1,773 @@
+Hybrid Poisson Process
+
+
+Ayman Farahat
+HNC Software
+aof@hnc.com
+
+
+
+
+ABSTRACT
+Several statistical problems encounteredin real world appli-
+cations appear to be speci c instances of a general frame-
+workbasedonhybridPoissonmodels. Restatingtheseprob-
+leminthisframeworkallowsustodrawuponalargenumber
+ofstatistical analysistechniquesandsuggestsavarietyofal-
+gorithms which provide new and more robust methods for
+analysis. Inparticular, wedevelopanew methodfordetect-
+ing behavioral changes of a class of stochastic process.
+
+1. INTRODUCTION
+Oneofthemajorchallengesindatacustomerbehaviorman-
+agement is predicting consumer behavior and when a par-
+ticular consumer is likely to switchto another behavioral
+pattern. Consider for example the case of a credit card
+holder. In general, the card holder will have a fairly pre-
+dictable purchasing statistics, e.g., ve transactions a week.
+Ifhowever,thecardholdergetsanewcard, therateofusing
+thecardislikelytobeimpactede.g. thepurc haseratemight
+drop to say 2 transactions a week. Early detection of the
+switchingin consumer behavior allows the original service
+provider to actively intervene and try to win the customer
+back. For example, a credit card issuer might send the card
+holder new incentives, frequen t ier program and other pro-
+motional items. However, a key issue in trying to win the
+customer back is timely intervention and detection of the
+change point. If the service provider waits for too long, it
+might be to late to win the customer back. On the other
+hand, the service provider does not want to prematurely in-
+tervene with a customer who shows no sign of behavioral
+changes since this would result in higher operating expenses
+and more importantly might divert resourcesfrom border
+line accounts.
+Another area where early detection of the switching in be-
+havior pro vides added value is in the analysis of consumer
+market data.In general, the consumer will have a fairly pre-
+dictable purchasing statistics, e.g., a college student might
+have an average of one transactions a week at a restaurant,
+one transaction a week at gas station, and two transactions
+a year at the department store. When the student gradu-
+ates and is employed the behavior might change to say two
+transactions aweekatarestaurant, twotransactions aweek
+atagas stationandtwotransactions amonthatthedepart-
+mentstore. If this change is detected, an opportunity exists
+for cross-selling otherservices e.g.,carloan, creditcard, etc.
+Detectionoftheswitchinginthebehaviorofcellulartelecom-
+m unication subscribers can provide an e cient method for
+detecting fraud 3]. The subscriber will have a fairly sta-
+ble calling pattern, e.g., an average of ve local calls, and
+twolong distance calls a day.In case of fraud, the calling
+rates might change to say two local calls and nine long dis-
+tance calls. If this change in calling rates is detected early,
+the phone company can take action to insure that the calls
+were legitimate or to deactivate thecellular phone. Another
+application of switching detection is in the area of network
+intrusion detection 3].
+In all these cases, the observ eddata consist of individual
+activities whic h happen at particular times during a spec-
+i ed period of observation. Thus the observation consists
+of a total observation time, t, the total n umber of symbols
+observ ed,n, and an n-long sequence of symbol/time pairs
+(
+1
+t
+1
+):::( n tn).
+A typical method for approaching these problems is to re-
+duce the observationsto coun tsfor each di erent kind of
+symbol. Thisreductionresultsinasequenceofcountsk
+1
+:::kv
+whic hisas long asthesizeof thevocabularyfromwhichthe
+symbolsaredrawn. Thesecountscanthenbeanalyzedusing
+contingency table methods such as log-likelihood ratio tests
+2], termweightingmethods 6]orreduceddimensionalterm
+weightingmethods 1]. Unfortunately, none of thesetech-
+niques make any use of the available temporal information.
+None of these techniques could, for instance, distinguish be-
+tween two fair coins, one ipped at an average rate of once
+per second and another ipped at an average rate of once
+per minute. There is a di erence between two such coins,
+of course, and if our goal is to discriminate between them,
+then wem ustpayattentionto the temporal information
+since that is the only di erence that we will be able to dis-
+cern.
+
+In 3], F awcett and Provost use uniform pro ling to detect
+change points. A large number of hand-tagged reference
+data events are compiled and used to train a regression
+model. For example, in a telephone fraud detection appli-
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+474
+
+cation, transactions are tagged as fraud or no fraud. These
+transaction are then used to train a regression model e.g.,
+a neural network or a classi cation tree. The input vari-
+ables used to train the model could be raw transaction data
+e.g., the duration of the call or derived variables computed
+from the transaction data. In order to determine if a new
+transaction isfraudulent,therawdataare rstusedtocom-
+putederivedvariables which are thenusedbytheregression
+model to compute a raw score. If the raw score is above a
+certain threshold the transaction is classi ed as fraudulent
+otherwise the transaction is classi ed as no fraud 3]. While
+this approach been used in real world applications it has a
+number of short coming. The rst draw back of this ap-
+proach is that the transactions of each user are compared
+to a pro le built using transactions of all users. Another
+draw back of this algorithm is its performance in detecting
+rare events. A third draw back of this approach is that the
+transactions are often hand tagged which could result in a
+considerable delay from the time the fraudulent transaction
+is committedtothetimethetransaction isusedtobuildthe
+model.
+
+AnotherrelatedapproachwasrecentlypresentedbybyGurlaink
+e.t. al. 4]. Gurlainkaddressthesameproblemaddressedby
+this work, namely developing a general approach to change
+point detection. The approach adopted by Gurlaink divides
+the time series of interest into two disjoint sets T1 and T2.
+A function from a set of candidate polynomial functions are
+used to t the two subsets T1 and T
+2
+as well as the original
+timeseries T. The criteria usedto select the tting function
+is a goodness of t criteria. If the data is better tted by
+two polynomials, a change point is declared. The algorithm
+is then applied recursively on the two new segments T1 and
+T2. Whilethisapproachhasanumberofdesirablefeatures,
+itisbettersuitedfordeterministicdatawithasmallamount
+of randomnoise. Itdoesnothowever,handlethecasewhere
+the data is generated by a stochastic process e.g., number
+of phone calls a customer makes each week.
+In a large number of practical applications, the observed
+data can be modeled by a Poisson process. Modeling the
+data by a Poisson process allows us to handle a wide range
+of stochastic process of practical interest. In addition, mod-
+eling the data by a Poisson process allows us to analyze an
+observed data sequence by analyzing its generative model.
+Generative models have been used in discriminative classi-
+ers 5] and can be used to compare two observed data sets
+by comparing their generative models. In addition, gen-
+erative models allow us to draw upon a large number of
+statistical analysis techniques. One such technique is the
+log-liklehood ratio technique 2]. In this paper, we com-
+bine generative models with log-liklehood ratio techniques
+to providea robusttechniquethatcancapturethetemporal
+natureofthedata. Thesetechniquesarealsomorerobustto
+low counts and can be used in situations where traditional
+techniques such as
+2
+test can not be used.
+This paper is organized as follows: In Section 2we give an
+overview of the log-likelihood method,present a mathemati-
+cal model of the HybridPoisson processes and give a formal
+description of the problem addressed by this work. In sec-
+tion 3 we develop an algorithm for change point detection
+based on log-likelihood and compare theperformance of our
+algorithm to a perfect knowledge reference. Finally, in Sec-
+tion 5,wegiveourconclusionanddirectionsforfuturework.
+The contributions of this paper are:
+
+
+The formulation of a generative model using a Poisson
+process together with a multinomial distribution,
+developing log-likelihood ratio test for testing hybrid
+Poisson processes for identical distributions.
+A general method of nding change points in hybrid
+Poisson process.
+
+2. METHODS
+ConsiderthecaseofasymbolicvariableAthatwasobserved
+A
+1
+timesoutofatotal T
+1
+observationsinprocessP
+1
+andA
+2
+timesoutof atotal T
+2
+observations inclass P
+2
+. Weposethe
+following question: Did the same binomial process generate
+thesymbol Ainboth class orwhere theygenerated bytwodif-
+ferent processes? This question can be formulated in terms
+hypothesis testing. In this case, the null hypotheses H
+0
+is
+that the same process generated both A
+1
+and A
+2
+and the
+alternate hypothesisH
+1
+is thatthe observations were gener-
+atedbytwodi erentprocesses. Ifthenullhypothesisistrue,
+the probability of observing A
+1
++A
+2
+is p(A
+1
+A
+2
+jpANULL)
+and the maximum likelihood estimate of the parameters of
+the Poisson process is given
+pANULL =
+A
+1
++A
+2
+T
+1
++T
+2
+(1)
+If however, the null hypothesis is not true, the probability
+of observing A
+1
+and A
+2
+observations is given by
+
+
+p(A
+1
+A
+2
+jpA
+1
+pA
+2
+)=p(A
+1
+jpA
+1
+) p(A
+2
+jpA
+2
+)
+where the maximum liklehood estimates are given by
+pA
+1
+=
+A
+1
+T
+1
+(2)
+pA
+2
+=
+A
+2
+T
+2
+:
+(3)
+
+Theclosertheprobabilitiesp(A
+1
+A
+2
+jpA
+1
+pA
+2
+)andp(A
+1
+A
+2
+jpANULL
+the more likely the null hypothesis. Conversely, the test for
+the likelihood of the null hypothesis can be formulated as
+the ratio of the log of two probabilities to give
+=;2 log
+p(A
+1
+A
+2
+jpANULL)
+p(A
+1
+A
+2
+jpA
+1
+pA
+2
+)
+(4)
+
+2.1 Poisson Process Basics
+A Poisson distribution de nesthe probability p(k jt) thatk
+eventsareobservedinanyperiodoftimetlong. ThePoisson
+distribution is de ned such that the number of events that
+appear in disjoint periods of time are independent and such
+that limt!
+0
+p(0 j t) = 1 and limt!
+0
+p(k j t) = 0 for k >
+0. The independence constraint has the consequence that
+p(k
+1
++k
+2
+jt
+1
++t
+2
+)=p(k
+1
+jt
+1
+) p(k
+2
+jt
+2
+) where represents
+
+
+
+475
+
+discreteconvolutionoverthenon-negativeintegers.The nal
+result, given here without proof is
+p(k jt)=
+( t)ke;
+t
+k!
+(5)
+From this it is relatively easy to determine that the maxi-
+mum likelihood estimator for is the very natural k=t. If
+we observe two Poisson processes and notethat the rsthas
+k
+1
+events in time t
+1
+and the second k
+2
+events in time t
+2
+,
+then we can use the following generalized log-likelihood ra-
+tio test statistic to test for the hypothesis thatboth Poisson
+processes have the same parameter :
+;2log = ;2log
+P(k
+1
+k
+2
+j )
+p(k
+1
+j
+1
+)p(k
+2
+j
+2
+)
+(6)
+
+;2log =
+(^ (
+t1
++
+t2
+))
+(
+k1
++
+k2
+)
+e;^
+t
+(
+k1
++
+k2
+)!
+
+(^
+1
+t1
+)
+(
+k1
+)
+e;^1t1
+k1
+!
+(^
+2
+t2
+)
+(
+k2
+)
+e;^2t2
+k2
+!
+(7)
+
+;2log = 2X
+i
+kilog
+^i
+^
++C
+(8)
+
+where ^ = (k
+1
++k
+2
+)=(t
+1
++t
+2
+) and ^i = ki=ti and C is a
+constantwhichdoesnotdependontheparameters
+1
+2
+.
+If the null hypothesis is true, then this statistic will be
+2
+(m;1) distributed. This same formula can also be gen-
+eralized to the case of m Poisson processes simplybyletting
+i range over 1:::m. The null hypothesis in the case of m
+Poisson processes isthattheobservationswere generatedby
+the same Poisson processes.
+
+3. RESULTS
+Consider a time series denoted by y(t) t 2 t
+0
+T] where t
+is a time variable. We assume that the time series y(t) was
+generated by Hybrid Poisson Process. In addition,we want
+totestthehypothesisthaty(t)hasachangepointm2 0 T]
+and that the observations were generated by two process.
+In order to compute the change point, we rewrite Equation
+8 as
+
+
+;2log (y t
+0
+t m) = 2X
+i
+=2
+kilog
+^i
+^
+(9)
+m 2 t
+0
+T]
+(10)
+t 2 m
+(11)
+For each value of m Equation 9 splits the time series into
+a time series t
+0
+t] and the time series (t m] t m and
+computesthe1ratiothatthetwotimeseries weregenerated
+by the same Poisson process.
+Figure 1 shows the value of the test statistic for a Poisson
+process that was generated with t = 1 t 2 (0 10) and
+t = 3 t 2 (10 20). The curve m = 6 represents the test
+statistic computedattime6where thexaxesrepresentsthe
+time and the y axes represents the value of the test statistic
+at this time given all information up to time 6. Curves
+m = 15 m = 20 represent the test statistic computed with
+information up to times 15 and 20 respectively. Note that
+at m = 15, the test statistic reaches its maximum value at
+time t = 10. As more information becomes available, the
+time at which the test statistic reaches is maximum value
+remains unchanged.
+In view of the above discussion and Figure 1, we propose
+to detect changes in Poisson processes by computing the
+maximumofteststatisticanddeclaringachangepointwhen
+the test statistic exceeded a certain threshold. We select
+the threshold such that the probability of a false positive is
+below a certain value e.g. 5%.
+Figure ?? shows the Cumulative distribution function for
+the test statistic computed by Equation 9 of 100,000 Pois-
+son processes. The distribution which has a log normal like
+distribution, can be used to compute the threshold score
+corresponding to speci c false positive rate. A maximum
+test statistic greater than 7 indicates that we can accept
+the null hypothesis with only 10% con dence. A score of
+8.23 indicates that we can accept the null hypothesis with
+5% con dence. Going back to Figure 1, we can see that at
+m = 15, we can declare a change in the Poisson at time
+t=10 with 90% con dence. Also note thatt timet=2, we
+were able to correctly attribute the observed change in the
+rates of the Poisson process to chance and did not declare a
+change point at t=2 even though we had two observations
+separated by a very short time.
+In order to evaluate our model, we need to compare its per-
+formance to a reference system. Of particular interest, is a
+perfectknowledgereferenceforwhichwehaveperfectknowl-
+edge of a subset of parameters that are not known to our
+model. In the case of Poisson process, an example of a per-
+fect knowledge reference is when the change time is known
+and we are interested in verifying the change with a cer-
+tain con dence e.g. at the the 90% con dence level. The
+rates of the Poisson process can be used to compute an ex-
+pected vector of observations in a number of intervals after
+thechangepoint,ET. This is comparedtotheactual vector
+of observations after the change point OT using a
+2
+test.
+
+perfect =
+X
+
+i
+;
+ETi;OTi
+2
+
+ETi
+(12)
+
+where i is the number of intervals . In this case, the test
+statistic perfect has a
+2
+distribution and we can use stan-
+dard tables to compute the con dence.
+Figure 3 shows the value of the test statistic for a Pois-
+son process that was generated with t = 1t 2 0 10 t =
+3t 210 20. At time m=14:627, the LLR method detected
+that the time series had a change at t = 13:7374 with 90%
+con dence. Thetimeatwhichthechangeoccurredwas con-
+rmed by computing the change point at m=20. By com-
+parison, a
+2
+test detected the change point at t = 15:4945
+with con dence level %90.
+
+4. RETAIL DATA
+We applied our algorithm to analyze retail data from a de-
+partment store. Our data included transaction data for a
+period of two years. Table 1 shows the detection times as
+well as the actual change times for the rst 10 customers
+that were identi ed as changing their shopping behavior
+computed using the LLR methods at the 90% con dence
+level. We did not use the
+2
+test since with an average in-
+ter arrival time of 66:59 days, it would take about one year
+to observe ve purchases and another year to compute the
+
+
+
+476
+
+expected purchases.
+In order to investigate the performance of our method, we
+picked a customer at random and studied that customers
+behavior. Consider for example customer 6, with purchase
+vector y
+70
+= 0 3 7 25 27 41 61 61 63]. The shoppingrate
+of the customer slows down after t = 7 and picks up at
+t=61. Due to the low numberof counts, we can not detect
+the change at t = 7 with 90% con dence. However, we can
+detect the change at t=61 with 90%.
+
+5. SUMMARY
+In this paper we presented a new algorithm based on log
+likelihood ratio for change point detection for a large class
+ofrealworldproblems. Theapproachpresentedinthiswork
+address a number of short comings of other approaches in-
+cluding its ability to deal with rare events. In addition, the
+workpresentedinthispaperprovidesavehicleforindividual
+discrimination as compared to the uniform discrimination
+approach employed by conventional systems. This provides
+a new level of personalization. The utility of this approach
+was demonstrated by comparing it to a perfect knowledge
+reference system. It was shown that the log likelihood ratio
+test out performed a perfect knowledge system.
+
+6. ACKNOWLEDGMENT
+The author would like to thank Ted Dunning for his help
+with work. Inparticular, Tedwas responsible for pioneering
+this work while at eHNC.
+
+7. REFERENCES
+1] W. R. Caid, S. T. Dumais, and S. I. Gallant. Learned
+vector-space models for document retrieval.
+Information Processing and Management,
+31(3):419{429, 1995.
+2] T. E. Dunning. Accurate methods for the statistics of
+surprise and coincidence. Computational Linguistics,
+19(1):61{74, 1993.
+3] T. Fawcett and F. Provost. Activity monitoring:
+Noticing interesting changes in behavior. In
+S. Chaudhuri and D. Madigan, editors, Proceedings of
+the Fith ACM SIGKDD International Conference on
+Knowledge and Data Mining, 1999.
+4] V. Guralnik and J. Srivastava. Event detection from
+time series data. In S. Chaudhuri and D. Madigan,
+editors, Proceedings of the Fith ACM SIGKDD
+International Conference on Knowledge and Data
+Mining, 1999.
+5] T. Jaakkola and D. Haussler. Exploiting generative
+models in descriminative classi ers. Advances in Neural
+Information Processing Systems, 11, 1999.
+6] G. Salton and M. McGill. Introduction to Modern
+Information Retrieval. McGraw Hill, 1983.
+
+
+
+
+477
+
+0
+2
+4
+6
+8
+10
+12
+14
+16
+18
+20
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+
+
+
+Time
+Test
+Statistic
+m=20
+m=15
+m=6
+Original Series
+
+
+
+
+Figure 1: Poisson test statistic computed at di erent values of m
+
+
+
+
+0
+5
+10
+15
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+
+
+
+
+Test Statistic
+CDF
+Score distribution
+
+
+
+
+Figure 2: Distribution Function of the test statistic under the null Hypothesis
+
+
+Table 1: Bayesian retail switching times
+Customer Number
+1 2
+3
+4 5 6 7
+8 9 10
+LLR Change time 1 25 103 119 1 61 282 152 89 55
+LLR Detection time 45 106 108 121 16 62 284 155 94 58
+
+
+
+
+478
+
+0
+2
+4
+6
+8
+10
+12
+14
+16
+18
+20
+0
+2
+4
+6
+8
+10
+12
+14
+16
+18
+
+
+
+
+Time
+Test
+Statistic
+m=14.627
+m=20
+original series
+
+
+
+
+Figure 3: Comparison to a perfect Knowledge system
+
+
+
+
+479
+

@@ -1,0 +1,2036 @@
+On Interactive Visualization of High-dimensional Data
+using the Hyperbolic Plane
+
+
+J6rg A. Walter
+Helge Ritter
+
+Neuroinformatics Group . Department of Computer Science
+University of Bielefeld
+D-33615 Bielefeld . Germany
+
+walter @ techfak.uni-bielefeld.de
+
+
+ABSTRACT
+
+We propose a novel projection based visualization method
+for high-dimensional datasets by combining concepts from
+MDS, and the geometry of the hyperbolic spaces. Our ap-
+proach Hyperbolic Multi-Dimensional Scalin9 (H-MDS) ex-
+tends earlier work [7] using hyperbolic spaces for visualiza-
+tion of tree structures data ( "hyperbolic tree browser" ).
+By borrowing concepts from multi-dimensional scaling we
+map proximity data directly into the 2-dimensional hyper-
+bolic space (H2). This removes the restriction to "quasi-
+hierarchical", graph-based data - limiting previous work.
+Since a suitable distance function can convert all kinds of
+data to proximity (or distance-based) data this type of data
+can be considered the most general.
+We used the circular Poincar~ model of the H2 which al-
+lows effective human-computer interaction: by moving the
+'~ocus" via mouse the user can navigate in the data without
+loosing the "context". In H2 the "fish-eye" behavior orig-
+inates not simply by a non-linear view transformation but
+rather by extraordinary, non-Euclidean properties of the H2.
+Especially, the exponential growth of length and area of the
+underlying space makes the H2 a prime target for mapping
+hierarchical and (now also) high-dimensional data.
+We present several high-dimensional mapping examples
+including synthetic and real world data and a successful ap-
+plication for unstructured text. By analyzing and integrat-
+ing multiple film critiques from news:rec.art.movies.reviews
+and the internet movie database, each movie becomes placed
+within the H2. Here the idea is, that related films share more
+words in their reviews than unrelated. Their semantic prox-
+imity leads to a closer arrangement.
+The result is a kind
+of high-level content structured display allowing the user to
+explore the "space of movies".
+
+
+Keywords:
+visualizing high-dimensional data, infoViz, hyper-
+bolicmulti-dimensional scaling, H-MDS, focus+context, semantic
+browsing, text mining.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroomuse is granted withoutfee providedthat copiesare
+not madeor distributedfor profitor commercialadvantageand that copies
+bearthisnoticeand thefullcitationon the firstpage. Tocopyotherwise,to
+republish, topostonserversor toredistributeto lists,requirespriorspecific
+permissionand/ora fee.
+SIGKDD'02 Edmonton,Alberta,Canada
+Copyright2(102ACM 1-58113-567-X102/0007...$5.00.
+1.
+INTRODUCTION
+
+For many tasks of exploratory data analysis visualization
+plays an important role. It is a key for efficient integration
+of human expertise - not only to include his background
+knowledge, intuition and creativity, but also his powerful
+pattern recognition and processing capabilities. The design
+goals for an optimal user interaction strongly depend on the
+given visualization task but they certainly include an easy
+and intuitive navigation with strong support for the user's
+orientation.
+Since most of available data display devices are two-dimen-
+sional - paper and screens - the following problem must be
+solved: finding a meaningful spatial mapping of data onto
+the display area. One limiting factor is the "restricted neigh-
+borhood" around a point in a Euclidean 2D surface. Hyper-
+bolic spaces open an interesting loophole. The extraordi-
+nary property of exponential growth of neighborhood with
+increasing radius - around all points - enables one to build
+novel displays.
+The %yperbolic tree viewer", developed at Xerox Pare [7],
+demonstrates the remarkable elegant interactive capabilities
+(visit http://www.inxight.com for a Java demo). The hyper-
+bolic model appears as a continuously graded, focus+context
+mapping to the display.
+Very quickly the navigation by
+mouse clicks and drags appear natural and intuitive.
+It
+supports up to 10 times as many nodes as conventional ap-
+proached while providing more effective navigation around
+the tree-hierarchy.
+The question how effective is visualization and navigation
+in the hyperbolic space was studied by Pirolli et at. [12]. By
+conducting eye-tracker experiments they found that the fo-
+cus+context navigation can significantly accelerate the "in-
+formation foraging". Risken et al. [14] compared traditional
+and hyperbolic browsers and found significant improvement
+in task time for this novel display type.
+Unfortunately, previous usage of direct hyperbolic visu-
+alization was limited to hierarchical, tree-like, or "quasi-
+graph" data.
+A H2 grid layout of data was recently in-
+troduced by one of the authors by generalizing Kohonen's
+Self-Organizing Map algorithm (HSOM) to the hyperbolic
+space [15]. JSrg Ontrup applied this HSOM successfully to
+text categorization and browsing [11].
+In this work we go one step further and introduce the
+hyperbolic multi-dimensional scaling (H-MDS) for a direct
+construction of a distance preserving embedding of high-
+dimensional data into the hyperbolic space. The resulting
+H-MDS combines a number of attractive features of multi-
+
+
+
+
+123
+
+dimensional scaling and hyperbolic spaces for an interactive
+display. Compared to the HSOM it is not based on a discrete
+grid and can be used also in situations where only dissimi-
+laxity data but not a vector representation is available.
+In Sec. 2 and 3 we introduce the hyperbolic space and
+the standard multi-dimensional scaling. Sec. 4 explains the
+combination of both concepts into H-MDS. Even though the
+look and feel of an interactive visualization and navigation
+is hardly compressible to paper format, we report several
+results and snapshots of first experiments in Sec. 5. In Sec. 6
+we apply the H-MDS for spanning a space of unstructured
+text documents, i.e., special "averaged" film critiques. This
+approach allows to navigate in the space of selected movies.
+
+
+2.
+THE HYPERBOLIC SPACE H2
+
+2300 years ago, the Greek mathematician Euclid founded
+his geometry on five axioms. The fifth, the "parallel axiom",
+appeared unnecessary to many of his colleagues. And they
+tried hard to prove it derivable - without success.
+After
+almost 2000 years Lobachevsky (1793-1856), Bolyai (1777-
+1855), and Gauss (1802-1860) negated the axiom and in-
+dependently discovered the non-Euclidean geometry. There
+exist only two geometries with constant non-zero curvature.
+Through our sight of common spherical surfaces (e.g. earth,
+orange) we are familiar with the spherical geometry and
+its constant positive curvature.
+Its counterpart with con-
+stant negative curvature is known as the hyperbolic plane
+H2 (with analogous generalizations to higher dimensions)
+[2, 18]. Unfortunately, there is no "good" embedding of the
+H2 in IRa, which makes it harder to grasp the unusual prop-
+erties of the H2.
+Local patches resemble the situation at
+a saddle point, where the neighborhood grows faster than
+in fiat space. Standard textbooks on Riemannian geometry
+(see, e.g. [8]) examine the relationship and expose that the
+circumference c and area a of a circle of radius r axe given
+by
+
+area:
+a(r)
+=
+47rsinha(r/2)
+(1)
+
+circumference:
+c(r)
+=
+27rsinh(r).
+(2)
+
+This bears two remarkable asymptotic properties, (i) for
+small radius r the space "looks fiat" since a(r) ,~ 7rr2 and
+c(r) .~ 27rr.
+(ii) For larger r both grow exponentially
+with the radius. As observed in [7, 6], this trait makes the
+hyperbolic space ideal for embedding hierarchical structures.
+Fig. 1 illustrates the spatial relations by embedding a small
+patch of the H2 in IR3.
+To use the visualization potential of the H2 we must solve
+two problems: (i) the data must be "accommodated" in the
+hyperbolic space (see Sec. 4) and (ii) in order to inspect the
+result we need a projection of the H2 onto a suitable display.
+For practical and technological reasons this is a "flat surface"
+(we will not be able to buy a hyperbolic screen - at least for
+the foreseeable future). Fortunately, the projection problem
+was solved more than a century ago.
+
+2.1
+Projections of the Hyperbolic Space H2
+It lays in the nature of a curvated space to resist the per-
+fect projection into the flat Euclidean surface. Each attempt
+compromises one or more correct representations of length,
+area, and angle (form) relations, as is well known from the
+spherical geometry (e.g., the Mercator, Lambert, and stere-
+ographic projection).
+Similarly to the spherical geometry
+Figure
+1:
+There
+is literally more room
+in hyperbolic
+space than in Euclidean
+space, as shown
+in this illus-
+trated embedding
+of the hyperbolic plane into 3D Eu-
+clidean
+space
+(from
+[19], courtesy
+of Jeffrey
+Weeks).
+(Right:) Exponential growth (Eq. 1) of the circumference
+c(r) and area a(r) is experienced if a "circle" with radius
+r is drawn in the wrinkling structure.
+(Left:) The sum
+of angles in a triangle is smaller than 180 °.
+A H2
+paper model
+of the H2 can be made
+by gluing many
+equilateral triangles along their edges in such a way that
+seven triangles meet at each vertex.
+
+
+
+
+several mappings were developed, four are especially well
+examined: (i) the Minkowski, (ii) the upper-half plane, (iii)
+the Klein-Beltrami, and (iv) the Poincard or disk mapping.
+See [2] for more details and geometric mapping to convert
+in-between (i)-(iv).
+
+2.2
+Properties of the Poincar~ Projection
+
+What makes the Poincax~ projection for our purpose the
+most suitable?
+
+
+Display compatibility: The infinite large area of the H2
+is mapped entirely into a circle, the Poincax~ disk PD.
+This infinity representation fascinated M. Escher and
+inspired him to Fig. 2.
+
+Circle rim "= (x~" : All remote points axe close to the rim,
+without touching it.
+
+FocusWContext: The focus can be moved to each location
+in H2, like a '~fovca". The zooming factor is 0.5 in the
+center ~md falls (exponentially) off with distance to the
+fovea. Therefore, the context appears very natural. As
+more remote things are, the less spatial representation
+is assigned in the current display.
+
+Lines become circles: All H2-1ines1 appear as circle arc
+segments or (centered) straight lines in PD. There ex-
+tensions cross the PD-rim always perpendicular on
+
+1A line is by definition the shortest path between two points
+
+
+
+
+124
+
+Figure 2: Woodcut by Maurits Escher, named "Cir-
+cle Limit III" (1958). After seeing Coxeter's picture
+[2] of the ,Polncar6 projection of the H2, the artist
+was fascinated by the infinite space covered precisely
+in the disk. All the white arcs are lines in H2 which
+(should) intersect perpendicular
+at the rim (some
+are not perfectly drawn).
+Note the "fish-eye" ef-
+fect, seen at the fishes: all are of equal size in H2 -
+but they appear larger in the center.
+
+
+both ends 2, see Fig. 2.
+
+Conformal mapping: Angles (and therefore form) rela-
+tions are preserved in PD, area and length relations
+obviously not (in contrast, e.g., to the Klein-Beltrami
+model which is length preserving).
+
+
+Parallel axiom can be demonstrated. While the Euclidean
+space accommodates exactly one parallel3 to a line
+through a given point (not laying on this line), the
+H2 offers infinitely many. In PD a line is an arc who's
+ends are perpendicular to the circle rim.
+It is easy
+to draw many non-crossing circles through any given
+isolated point (see again Fig. 2).
+
+Exponential large space: There exist two kinds of "par-
+allels": (i) asymptotic parallels, circles which touch at
+the rim in the same "ca-point", and (ii) ultra paral-
+lels, circle arcs which do not intersect within PD. One
+can anticipate, there is much more space in cx~ than
+"usual" - sometimes the H2 is also called "more inten-
+sive infinite" than the IR2. This extra space is desired
+for finding good accommodation for our data.
+
+2.3
+All in one Picture:
+Usage of Isometric Transformations
+
+2Sometimes straight lines through the center point are re-
+ferred to as generalized circle and considered as a circle arc
+with infinite radius.
+3A parallel is by definition a line which does not intersect.
+For changing the focus point in PD we need a translation
+operation (which can be associated to a mouse click or drag
+event). In general, the transformations which do not change
+form and metric in H2 axe, similar to n:~2 the translations,
+rotations, and the reflection. How do these operations look
+in the Poincar6 PD? Because all H2-1ines remain H2-1ines,
+their corresponding PD circle arcs must remain (general-
+ized) circle arcs in PD.
+The Transformations that respect these properties (also
+called "circle auto-morphy" transformations) are here the
+MSbius transformations T(z) which can be formulated using
+complex numbers z,a,b: Ta,b(Z) = (az + b)/(bz + ~) with
+la[2 - [b[2 = 1. By describing the Poincar6 disk PD as the
+complex unit circle, the isometric transformations for a point
+z E PD can be rewritten in the more comprehensible form:
+
+z'=T(z; c,O)= Oz+c
+~.0z + 1'
+10[ = 1, [eI < 1.
+(3)
+
+Here complex number 0 describes the pure rotation of PD
+around the origin 0. The following translation by c maps
+the origin to c and -c becomes the new center 0 (if 0 ----1).
+The inverse transformation is
+
+T-l(z; c, 0) = T(z; -0c, 0) .
+(4)
+
+Two successive transformations in PD are computed faster
+by evaluating the concatenated transformation (see also [6]):
+
+T(T(z; c1,01); c2, 02) = T(z, e, 0),
+with
+
+02cl + c2
+and
+0 - 0102 + 01~1c2
+C = 02ClC2 @ 1'
+02e1~2 + 1
+
+2.4
+Data Accommodation in H2: Trees
+
+Now we turn to the question raised earlier: how to ac-
+commodate data in the hyperbolic space.
+A solution to
+this question for the case of acyclic, tree-like graph data
+was provided by Larnping and Rao [7, 6]. By using mainly
+successive applications of transformation Eq. 3 they devel-
+oped (and patented) a method to find a suitable layout for
+this data type in H2.
+Each tree node receives a certain
+open space pie segment, where the node chooses the loca-
+tions of its siblings. For all its sibfings i it calls recursively
+the layout-routine after applying the MSbius transformation
+Eq. 3 in order to center i.
+Munzner developed an other graph layout algorithm for
+the three-dimensional hyperbolic space [9]. Her "H3Viewer"
+[10] allows fast drawing and frame rate interaction and ar-
+ranges trees often as flower-like structures.
+
+
+3.
+MULTIDIMENSIONAL SCALING (MDS)
+
+First we review MDS and the Sammon algorithm.
+Multidimensional scaring refers to a class of algorithms for
+finding a suitable representation of proximity relations of N
+objects by distances between points in a low dimensional
+- usually Euclidean - space.
+For a detailed analysis on
+proximity structures, see Hartigan [4]. In the following we
+represent proximity as dissimilarity values between pairs of
+objects, mathematically written as dissimilarity ~O E ~t~
+between the i and j item. As usual we assume symmetry,
+i.e. Jij = 6j~.
+Often the raw dissimilarity distribution is
+not suitable for the low-dimensional embedding and an ad-
+ditional 6-processing step is applied. We model it here as
+a monotonic transformation D(.) of dissimilarities Jij into
+
+
+
+
+125
+
+disparities Dij = D(6ii). In See. 6.3 we will discuss a trans-
+formation of adjusting a potential dimeusionality mismatch.
+The goal of the MDS algorithm is to find the spatial rep-
+resentation xi of each objects i in the L-dimensional space,
+where the pair distances d~j -_--d(x~,xj) match the dispar-
+ities Dij as faithfully as possible Vi#jDij ,~ dij. Here, L is
+typically two or three, since again the main purpose of MDS
+is visualization and explorative data analysis. The pair dis-
+tance is usually measured by the Euclidian distance:
+
+du=llxl-xJll
+with
+xiE]R L, i,j E {1, 2, ..N}
+(5)
+
+3.1
+Sammon's Algorithm
+
+One of the most widely known MDS algorithms was intro-
+duced by Summon [17] in 1969. He formulates a minimiza-
+tion problem of a cost function which sums over the squares
+of disparities-distance misfits, here written as
+
+N
+
+EC{xi }) = Z
+E
+wij (dij - Dij)2.
+(6)
+i=1 j>i
+
+The Cactors w~j are introduced to weight the disparities in-
+dividually and also to normalize the cost function E to be
+independent to the absolute scale of the disparities Dij. De-
+pending on the given analysis task the factors can be cho-
+sen to weight all the disparities equally - the #lobal variant
+(wij"(u) =const) - or to emphasize the local structure by re-
+
+ducing the influence of larger disparities (w~))
+
+w!q)
+1
+. (t)
+2
+I
+sJ
+=
+N
+'
+wiJ =
+D?."
+(7)
+
+
+Note that the latterisundefined ifany pair has zero dispar-
+ity.In his original work [17] Summon suggested an interme-
+diate normalization
+
+1
+1
+I/1~?)~"
+N
+Di--~
+(8)
+~t,=* ~z>t, Dkl
+
+which we are using in the following. Summon
+proposed a
+steepestgradient method, in particular,the (diagonal)New-
+ton method to iterativelyminimize the remaining cost or
+stress E. He ignored the off-diagonalpart of the Hessian
+matrix and used a step length reduced by a "magic" factor
+r/of 0.3-0.4. Starting from a random {xi} initialization,in
+each iterationstep, one object i" is considered, and Eq. 6
+minimized with respect to xi.
+
+x~:`'~) = x~.°'~) + ~,.
+(9)
+
+with Ai* here written per component q 6 {I,..,L}
+
+OE .I
+O~E
+(10)
+
+The algorithm usually needs several epochs (with random
+sequence of selectedi*) to converge to an cost-functionmin-
+imum. The usual methods to deal with therisk ofconverging
+to a localminimum are restartingwith differentinitialcon-
+ditionsand selectingthe resultwith the lowest cost function
+or stressE. To save CPU time one may want to start with
+a good initialconfiguration {xi} for example by using the
+firstL principalcomponents found by PCA.
+The reader isreferredto [1]for further detailson thisand
+other MDS
+algorithms.
+4.
+MULTIDIMENSIONAL
+SCALING IN H2
+
+The principtd idea is rather straight forward: instead of
+using the Euclidean L-dimensional p,L as target space we
+apply Sammon's idea in the hyperbolic space PD. I.e. we
+replace the distance metric Eq. 5 by the appropriate distance
+metric for the Poincard model (see, e.g. [8])
+
+dij = 2 arctanh f Ixl - xjl
+X,.IX-x,mjl) ' x,,x+ ePD.
+(11)
+
+Several aspects need consideration:
+
+Stay on disk:
+Care must be taken to stay within the
+circle PD when updating the point i*. Simple restriction of
+the update step ~/Ai* in Eq. 9 is not appropriate. Instead
+the Mfbius transformation Eq. 3 leads in the right direction
+and handles the exponential shrinkage in the vicinity of the
+circle rim.
+x~.new) = T(X~.°'d); WAi., 1);
+(12)
+
+
+Gradients:
+While the gradients ~dij,~/~Xi,q required in
+Eq. 10, are rather simple to compute for the Euclidean ease
+(= (zl,q - zj,q')/dij), the case becomes complex for Eq. 11
+
+
+0
+d(xi,xj)
+=
+2t
+(
+lJl
+Xj,lVS-I-~j,2V4~
+a~,,1
+1 -~
+~ + v~
+~ + ~
+)
+
+0
+d(x,,xj)=
+2t
+(
+v2
++Z,,lV4-Zj,2v3~
+
+
+with
+
+X,
+=
+(Xi,i + ixi,2) E PD C C
+
+xj
+=
+(zj,t+izj,2)
+6PDCC
+
+Vl
+~-
+~i,1 -- Xj,1
+
+vs
+=
+xi,,xj,, + zi,2zj,z -- 1
+
+~2
+=
+Xl,2
+--
+Xj,2
+
+V4
+=
+Xi,lXj,2 -- Xj,I~i,2
+
+
+t2 _
+v~ +v~
+v~ + ~
+
+with two special cases: (i) the denominator v~ +v] becomes
+zero only if the points xi and xj are equal. (ii} v32+ v~ = 0
+does not occur for valid points inside the unit circle.
+
+Cost Minimization
+without Second Derivatives:
+Due
+to the complexity of these results we do not compute sec-
+ond derivativesand rather improve the cost minimization
+step Eq. 10.
+We employed the Levenberg-Marquardt ap-
+proach and followed the argumentation in [13]by dropping
+the higher derivatives. Each point i has an individual and
+bounded A-parameter. More detailswill be reported else-
+where (in preparation).
+
+Disparity preprocesslng:
+Due to the non-linearityof
+Eq. 11 the preprocessing function D(.) (seeSec.3.1)has more
+influencein H2. Consider, e.g.,linearrescaiingofthe dissim-
+ilaritiesDij = ot6ij:in the Euclidean case the visual struc-
+ture is not affected- only magnified by a. In contrast in
+H2, a scales the amount of curvature felt that is by the
+data. In the PD
+this has the effectthat the increasing a
+shifts all points further outside - but there is also much
+more (exponentially more) space. It depends on the given
+dataset and its dissimilaritystructure,what is the optimal
+
+
+
+
+126
+
+~. In the experiments reported below, we set a manually.
+We use thisextra degree-of-freedom to choose a compromise
+between visibilityof the entirestructure and space for navi-
+gation in the detail-richouter areas. It iscertainlypossible
+to integrate the optimization of a in the overallminimiza-
+tion. However, formapping problems with IRa topology,this
+would obviously lead to zeroing a, which is not intended.
+
+
+5.
+FIRST EXPERIMENTS
+
+We conducted first experiments and present several real
+and synthetic datasets.
+
+5.1
+Iris Dataset
+
+Fig. 5(a-d) displays the obligatory "Hello World" exam-
+ple of data mining - Fisher's Iris data set. It describes 150
+flower samples of three types: ir/s setosa ("A"), iris ver-
+sicolour ("x"), and iris virginica ("+"). 6 is here the Eu-
+clidean pair distance in the four components sepal length,
+sepal width, petal length, and petal width. They demon-
+strat~ that MDS performs well in the hyperbolic plane and
+visualize the focus + context effect with three navigation snap-
+shots.
+
+5.2
+Characteristics of
+High-Dimensional Distributions
+
+Feature-rich datasets are inherently high-dimeusional. With
+growing dimeusionality most of their volume is contained in
+a thin, outer shell. This has consequences of the proximi-
+ties distribution of those feature-rich, possibly heterogenous
+datasets. Using Monte-Carlo simulations we examined M-
+dimensional point distributions with (i) M i.i.d. Gauss ran-
+dom variables for each component, (ii) uniform distribution
+inside the unit sphere, (iii) on its surface, (iv} inside the
+Md-hypercube and (v) on its corners.
+
+
+Gauss - Distance - Histogramm
+
+6000
+
+5000
+
+4000
+
+3000
+
+2000
+
+1000
+
+0
+0
+5
+10
+15 20
+25
+30
+35 40
+45
+50
+
+Distance
+
+Figure 4: Histogram of pair distances 6 shown for var-
+ious dimensions M (124,750 pairs from 500 Gauss dis-
+trlbuted, random points with unit variance; binning
+width is 0.1).
+
+
+
+Fig. 4 illustrates the first case. With growing M, the dis-
+tance distribution 6 shifts to larger distances without sig-
+nificant widening. Even though the peak structures differ
+for smaller M, the observation holds also for the other cases
+(ii-v) and can be generalized to inherently high-dimensional
+data, i.e.not laying in a low-dimensional sub-space.
+As noted by several other authors [3, 5] the optimal em-
+bedding in low-L spaces tends to a circularring structure
+with growing M-dimensionality.
+Unfortunately, the situa-
+tion bears numerous local minimal and the Sammon algo-
+rithm often returns sub-optimal results (some availableim-
+plementations exhibit numerical problems and return here
+bizarre structures,e.g.the sompak-package).
+How does the H2 accommodate such a dataset? It turns
+out, that circumstances are much better since the cost func-
+tion landscape offersmore space to circumvent local min-
+ima. Fig.5 shows the two target mappings for IRa and H2
+together with theirdisparity--distancescatterplots{Dij,dlj}
+(c~ = 0.33). The remaining stresswas 40% higher for the
+Euclidean embedding with ERa = 0.40 versus EH2 = 0.285,
+which is comprehensible also in the two {&j, Dij } scatter-
+plots in Fig.5(c,d).
+
+
+6.
+APPLICATION TO NAVIGATION
+
+IN UNSTRUCTURED TEXT:
+
+THE "SPACE OF MOVIES"
+
+In times of exponential growth of digital information the
+semantic navigation in datasets - particularly for the case of
+unstructured text documents - is a major challenge. In this
+experiment we demonstrate the application of the hyperbolic
+MDS to this situation.
+
+6.1
+Bag of Words -
+Standard Representation for Text Mining
+
+In the domain of the information retrieval and text min-
+ing text is very often treated as bag-of-words and represented
+as very high-dimensional vector. One may argue that this
+ignores completely semantic information word order - amaz-
+ingly the results justify this drastic step.
+Given a collection of N text documents, first a vocabulary
+- a set of words {wi} is determined.
+Words in text are
+always preprocessed by a suitable word stemming procedure
+and filtering out of stop words. The vocabulary is then the
+interesting part of all unique word stems, i.e. the most and
+the least frequent words are rejected. Each text document t
+is represented by a feature vector ft, where the components
+ft,i are determined by
+
+
+ft,~ = TF(t, wi) log ~
+.
+
+
+TF(t, wi) is the term frequency and counts the number of
+times the term wt occurred in document t. DF(wi) denoted
+the document frequency and counts the number of docu-
+ments where the term occurred. This standard weighting
+scheme emphasizes rare words as more significant than com-
+mon words, for more details see [16]. Proximity (= 1 - 6)
+and therewith diesimflarities of two documents is computed
+with the cosine metric
+
+"
+f
+(14)
+6ij = 1 -- cos(~, fit ) = 1 - f~, f,j, with fl =
+
+
+and efficiently implemented by storing the normalized doc-
+ument feature vectors p.
+
+
+
+
+127
+
+?: x
+]
+x
+x
+xX
+x
+Figure 3: (a-d) Iris dataset: the three iris classes are clustered and well sepa-
+rated in PD as indicated by their m~rkers.
+(a) uses a smaller ~ for dissimilarity
+rescaling than
+(b). While (a) looks comparable
+to a common
+Sammon
+map in
+]R,2, in (b) - (d) the wider space is H2 is used and can be explored
+by moving
+the focus point (via mouse drag) to the areas of interest.
+The arrows indicate
+the original focus location in (b).
+
+
+
+
+x x x
+\
+
+
+(
+x;
+.
+,~.
+¢
+I
+-
+x
+x
+x
+÷" ~:
++
+x
+~<
+÷
+.,. + "+" .+"
+
+x
+x T ~
++,
+++. 4..~..÷.
+x
+.(.
++ +"
+~. +
+
+·'
++
+·
+..
+d:
+A
+
+
+
+
+5
+
+2.5
+
+0
+
+-2.5
+
+-5
+
+-7.5
+
+-10
+
+
+a
+
+
+
+
+22.5
+
+20
+
+17.5
+
+15
+
+12.5
+
+10
+
+7.5
+
+5
+10
+
+7.5
+..............
+..
+,..,
+.,;
+.........
+n?....'..., i ...
+m m
+·
+·
+·
+i
+n
+·
+·
+·
+
+Rim
+·
+·
+·
+
+.
+·
+m I
+·
+mm
+·
+·
+·
+·
+·
+
+·
+·
+·
+·
+·m
+·
+·
+·
+·
+·
+·
+m m
+m ·
+· ·
+·
+·
+mm
+
+
+·
+l I
+·
+·
+·
+mm ·
+
+
+
+
+·
+·
+·
+·
+·
+·:
+·· ·
+
+......... ,...:..,.,..,;.,..,
+................
+-10-7.5
+-5
+-2.5
+0
+2.5
+5
+7.5
+10 12.5
+
+
+
+
+2.5
+
+
+C
+0
+2.5
+5
+7.5
+10
+12.5
+15
+17..,5.
+d
+o75
+
+
+0.5
+~ "
+i
+0.25
+| m
+,:
+
+
+-0.25 ~
+
+
+· .5
+:a:
+
+
+,,
+,7ql .,JILNi..is.~. ...........
+(
+b
+-0.75 -0.5
+-0.25
+0
+0.25
+0.5
+0.75
+
+
+
+
+6
+
+
+
+5
+
+
+4
+
+
+3
+
+
+2
+
+
+
+1
+
+
+
+
+0
+1
+2
+3
+4
+5
+6.
+Figure
+5: (Top) Multi-dimensional
+scaling
+of
+150
+Gauss
+distributed
+points
+in M = 100 dimensions
+into
+the
+(a) ]R2 and
+(b) into the hyper-
+bolic H2.
+(Top:)
+The
+MDS
+in Euclidian
+space
+(a) gets more easy locked in
+local minima
+than
+the MDS
+in the
+hyperbolic space. The right side (b)
+shows
+the
+ring-like structure
+pre-
+viously reported
+to be more
+opti-
+mal for this high-dimensional
+map.-
+ping task. Probably
+the extra space
+in H2 allows to circumvent
+around
+the local minima
+during
+the
+itera-
+tive MDS
+process.
+(Bottom:)
+The two corresponding
+scatterplot
+exhibit
+the
+target
+dis-
+similaritys Dij and the obtained
+dis-
+tances dij · The optimal distribution
+has
+little rest
+stress
+and
+approxi-
+mates the dashed diagonal line. (d)
+In
+H2
+the
+majority
+of points
+lay
+closer than
+in the
+left diagram
+(c)
+which tends to smaller dlj below the
+diagonal.
+
+
+
+
+128
+
+6.2 Computing the Movie Representation:
+
+As an example we used a text collection consisting of film
+critiques taken from the rec.art.movies.reviews newsgroup
+augmented with genre information drawn from the inter-
+net movie database (http://www.imdb.org).
+The vocabu-
+lary with 5084 distinct terms was extracted and the feature
+vectors f, computed (for more details consult [11]). Based
+on this intermediate review database we selected all movies
+of the categories animation and science-fiction which had
+more than five recorded reviews. Then, each average movie
+feature vector was calculated from the set of its associated
+reviews
+
+f,~=~f~,
+/={tit
+describing movie m}.
+(15)
+tEA
+
+In contrast to the usage of directly accessible, brief movie
+plot description this procedure increases not only the amount
+of source information but also increases author indepen-
+dence by averaging.
+Fig. 6 shows two hyperbolic MDS results of the 132 se-
+lected, well reviewed movies. The color markers indicate
+the genre of the accommodated movies. Even though this
+information was not encoded in the feature vectors, the hy-
+perbolic MDS grouped the movies obviously in a semanti-
+cally meaningful manner. The "+" marked film belong to
+both main genres displayed here - we find them in the mid-
+die, close to the separating border.
+
+6.3 Proximity Contrast Enhancement:
+
+Fig. 7 shows the histogram of the obtained 8646 dissimi-
+larities for the 132 selected, well reviewed movies. The dis-
+tribution resembles a high-dimension random distribution,
+but with an "effective" dimeusionality (compare Fig. 4) cer-
+tainly lower then the 5084 dimensions of the movie feature
+vector f.
+Following an idea from [5] we experimented with non-
+linear transformation D(.), which shifts effectively the high-
+dimensional dissimilarity modes, seen in Fig. 4, to the left.
+The mathematical details are reported elsewhere (in prepa-
+ration). The first general effect is the reduction of the "ring-
+like" structure toward a more uniform movie placement as
+seen in the left versus the right graphic in Fig. 6. The main
+rationale is the contrast enhancement between documents
+or movies: we want to see related movies closer than their
+pure review text statistics would justify.
+The improvement can be examined in the lower part of
+Fig. 6. The lower left group of triangle, indicating the genre
+animations, displays stronger cohesion. In conjunction with
+the fully labeled snapshots in Figs. 8,9 they can be identified
+as Disney World cartoons.
+Furthermore two tight groups
+appear: the lower left z~ pair represent "Toy Story 1+2",
+the x-cluster on the opposite (1 o'clock) can be identified
+as four "Alien" films (see Fig. 9).
+
+7.
+DISCUSSION AND CONCLUSION
+
+The snapshots in Figs. 8,9 give a glimpse at the potential
+exploratory usage of the introduced H-MDS, the hyperbolic
+multi-dimensional scaling technique.
+Obvious clusters like the "Star 'l~tek" group, or the prox-
+imity of "Bug's Life" and "Antz" strike. Cineastes may want
+to mine further examples in the appendix figures.
+Note,
+that no extra information was imposed. The spatial struc-
+/
+A~
+x
+xx
+\
+..
+xXx
+\
+x
+
+
+.~
+x x \
+~
+A
+X x~x 1
+
+2~.
++
+x
+xXx
+
+z..~Ax
+x
+
+x
+x
+×x x
+~
+]
+\nx
+x
+XxX
+/
+\Xxx
+x
+x
+x
+/
+\X~x
+x
+x
+~
+/
+x xx~
+x
+x
+x
+x x
+/
+xxx
+
+
+
+
+XXx
+X
+X x
+XX X
+~
+~x~
+x
+x
+
+Xx
+X X X X
+X
+X
+X
+X
+X
+
+X
+X X
+X
+X
+X
+X
+
+X
+X
+Xx
+X
+1
+XxX
+x
+x
+AA
+A
+x
+x x
+xj
+A
+x x
+x
+xX
+/
+
+x X
+x
+xX
+/
+Z~ ~Z~
+x
+~'~
+x
+x xx
+x
+/
+~Z~x+A
+Xx x x
+x x x
+x
+/
+
+x
+x
+x
+
+
+
+
+Figure 6: Genre separation with and without distance
+contrast enhancement.
+The movie become well sep-
+arated along their major genres:
+the red "x"
+mark
+science-fiction, the black "A" animation, and the green
+"-}-" mark films belonging to both genres.
+Again, this
+genre information was marked in post processing - not
+given.
+(Top:) Without the distance contrast enhancement a
+ring structure is visible; (bottom) turning it on, allows
+to better populate the center area and strongly related
+films can get now very close in PD. See the A-couple (7
+o'clock) and the x-cluster (1 o'clock).
+
+
+
+
+e00
+
+
+
+
+0
+i
+
+rf~[[ ill
+
+0.e
+Figure
+7:
+His-
+togram
+of
+dis-
+similarities
+3/,./
+for the selected
+movies.
+
+
+
+
+129
+
+/
+,
+XEscape
+from_L.A._(1996)
+"
+XNo Escape_(lff94)
+XFac1~1~11~9.
+~)
+"',
+"/"
+, ..~-
+XAlien:l:(1992)
+""',~
+
+/"
+I
+\
+XTruman Show
+e
+- In
+tion
+/"
+-
+,-Tl~n-~ ~r.~Trek._ surrec
+_(
+XAiien_(1979)
+xStar0ate (1994
+,/
+-'" - X~tar_Trek:_Flrst_CGfllaCllt.al,_'llle (1996)
+\
+
+/
+XHighlander:-P.,~ti~4Jl~onic-(1995)
+XMen in Blac'~ (199~
+XTa
+·
+.
+i~e_t~uuu/
+- _
+_
+/
+I~"-(l~lll~r-~l~l'~'~
+xStrange-Days-(1995)
+......
+ti~li~B~0n (19~;n
+/
+xpi-(1998)
+XFifth-Element,-'~l'~nce
+Day ~11~6~°n-z°Lm-L~''
+...... ~"
+/
+×Delicatessen_(19911
+,.^
+~/~S_(19~i~/OVsS "l'b.e_(1989~- - \
+XFrsauenev J2000) XX-Files'-The-~ t u98)
+'-
+\
+XFI0cket~H~'l-I~l~(~000)
+XBa~efield-Eartl'Y:J~'~06~pkp~0-~sters~The-(1994
+aut's WifeThe (,~
+XContact_(1997)
+XScre....
+~1~
+~'UI:~_~997T'~'~
+L~NZght~'~m~
+Ch~stma
+_ ~q1981~'~ur~.PcVSd~_9~_assic-P.P~1~..
+XSu.emova t2000~
+XSphere-(1998)
+z..~Chicken_Hun_(2000)
+xCong0_O~arship_Tto~rs_( 1~'~)
+'
+/
+
+
+
+L~Bug's~I~II~It-~IB~0"[1997/I) Z~Pok~rnon the First Movie'
+-
+~
+XTep:nJg~t°r-2:-JudgmenLDa
+'~'
+~'-~"~
+--
+-
+e
+-
+-
+-
+'-
+XL°st-in-e>pace-tl~r~°~'-
+-- m
+nder ,,..L
+"-~'Ul~t~°um'~t'ark:-B-lg'ger'-L°rtOovie The "19^~"
+"
+×
+.WYlno_uo ~
+SSO-U~
+A--
+L.-~tugr~t~l~
+,_
+--~ '~l~tar_Wars_(1977)
+2001:_A_space_
+Y
+Y.-t~
+.~...¥,dnce of Egypt, The_(~ ,_
+-~. t20~O~
+XThk.teen~ Floor TheM19
+-
+-
+]
+-?'Tltan_~.._t
+i
+-
+\
+Z~Hercu~os~_~a~L~-Sb-Dorado.-T~°-( 2
+xStar-Wars:-Episg~PotJoC~ph_(1987)
+xWild Wild_West_~l -¢
+\
+~Akldd/BL( ~1992~......
+1989
+xWaterworld_(1995)
+XTirnecop-(1994)
+/
+
+L ~ K i n Z ~ ¢ I ~ I ~
+il~l~-(`997)
+x6th Oay,_Tlle_(2000)/
+
+Z~rar-~tt~lt~9~1996 )
+xSmilla's_S.....
+f_Sno~te~_~lee~Belu~1~aT(_~r .9_~tra~l .....
+
+
+,~,~,,,~,~,,~,,i'~,~.~.-...~_-~-~9.-_,
+~ : . ~
+/
+it,
+o
+nteTInrat'~" rl_(
+) AAOr
+OS oj
+l
+
+
+
+"\-,.
+--
+~ 2 - ' ~
+ua~.Re~a~oer-~1999)
+XClockwork-Orange,~(' 971
+\
+.L.~OOl_Wonu-_'r
+-
+-
+/
+
+×Nutty Professor, ~il~ni~f~1994)
+~"
+"~
+.j
+J
+
+
+
+
+//
+
+
+///
+
+/."
+/
+/
+/
+"\\
+
+XEscape_jrom_L.A. (1996)
+"\
+
+X'No Escape_(1994)
+XFacult~s'~i~x'~1-~st-(1999)
+
+rs A cks~ 1996)
+
+XMy_l=avorite_Martian_(1999
+xWh~l~n- ~-Y~Sc2~°m
+?
+\
+XStar_Trek:_tnsurrection_(
+x._.~.es U. (~
+n~ "1992"
+\
+--
+eT~
+.
+c
+XMimic-(1997)
+xStar_Trek: First_Contact_
+XAl~l:~.e.~l~J~on-( 199~
+
+XTruman_Show~The_(1998,
+XArrival'-'131e~'~ie~n~;;;; -"
+-
+\
+
+~-Johnny_~nemon'¢_~'~~5~
+xStrange-Days-(1995)
+XMe~ in ¢al=ck.L1997~
+XHighla~000
+Y-Fifth Eloment~The (1997)
+- -'iq~'e~'-Phneg-(2000)
+-
+X~dopendence
+Day_( 1996 )
+-
+
+:'~Godzi a~it-~.~8~
+xx Fies_~he_(!998)
+............
+]qdilaiioo to Mars (2000}xStl
+-
+' ~.l:~attletield_Earth.z(ll~l~.)Slack (2O0D~u=_~.... /-
+-
+_
+/
+XGojira_ni-sen_mireniamu_(
+..,xP upper_Masters='~eo~cl%.~hl~r~je~}zo n (J!
+XTank Girl_(199~elicat~.eqg~t~j.~2000 )
+XContact_(19~//
+-v
+
+\
+~'" "
+M
+n
+"2000'
+xScreamers (1995)
+/
+~HOIIOW_ a _',
+v
+XSupemova ~2N£1Pb)
+~
+·
+- -
+/tlc
+:...Astronaut's Wire
+In()
+~1
+\
+xCongo_( 19,~rship Troopers_(19~'iw
+-
+,_
+E~ l~
+\
+XRockoteor Tl~(191t~t~WoddL.~jjZpssic
+Park
+XSphere (ln~O)
+/
+'-
+~30rass¢ ]-'ars ,(l~r~Ju/
+-
+...........
+-
+~ube
+(1997)/
+_
+-
+~Armagoooog.~,
+-
+\
+. . . . . . . . . . . . . . . .
+o,o~u The
+~,',~'~,~,,~'~,.99o)
+-nD.kira_t.... ,
+-'-is..... OL'~o~mon"t~
+Fits, Mnvi~:
+XLost in ,S~i11~.f2~8~,~/_(2000)
+\
+/~Nightmare_Before Christina
+"~ar w=rn';~Tl~7'r)
+r The-
+-
+r~=.^o~.~ tonn,,~)
+-X'l"h1?rdo~tti'Floo ._
+_(19
+....
+',
+- ~ ..... _,,~,_rjr~=~.~_.,,-
+. - - ~
+) 2°°'~-';4
+~4~
+xWaterworldL(lgJ~'~'~thx "gle (19,~,.)_
+.~ao~
+x/( ......
+'-
+'- XD~-rk:_'~TdE~'t r~'w~W_w~t_( ~~)
+'s
+'
+8)
+
+
+
+
+"-.
+" - ' ~ _ ~ l ~ u ~ l ~ j
+~ l ~ ' f ~ . ~ D
+r._Strangelo.......
+OW
+Figure 8: Four navigation snap-
+shots (cont. in next Fig. 9) through
+the developed
+"space of movies".
+(Top:) The mapping
+is equal to the
+right side of Fig. 6 but with labeling
+
+turned
+on.
+(Bottom:)
+By shifting the
+focus to
+the
+upper
+science;Jicti0n region
+('X
+marked)
+one
+can
+discover,
+e.g., a
+band of "Star Trek"
+movies, around
+11 o~clock.
+Now
+the tight
+"Allen '~
+cluster
+can
+be
+inspected:
+at
+2
+o'clock
+four
+movies
+of this
+series
+
+gathered
+very close.
+
+
+
+
+130
+
+./
+
+./
+· /
+./
+/
+/
+/
+/
+/
+
+
+
+
+\
+\·
+
+·\
+x"r n ~
+5
+a LG',_(t9.~ !
+
+Z3N
+>¢Gojira_ni-sen mi~teqiam~_(
+ightmare_Before_Chfistma
+"..
+,Z~Oo.... l_t,~J~i~e/~B,u_o_(20~t~:;keteer,_The_(1~ l~Tmman-Shq~ '-The-(1998)
+
++Akira_(1988)XHolow M~l]~
+,~,F~-;ap0jrom-L.A.-( 1<-
+-
+"
+97)
+X F r e q u e n c y _ ( ~ l ~
+XSta
+Z~Dinosaur (2000)
+X
+S
+t
+a
+~
+Z.~Bug's_Life,_A_(1998)-
+>CJutassic_Pa~_(199~X F / ~ i ~ . ~ i ~ l
+
+
+
+Z~South Park:_Bigger,_Longe Xlsland_ol_Dr._l~:~9~L~'_" ~r·
+r~
+A-'c
+of-
+I The "199
+>~Star,sh,~U-I~'~l~l~
+~1~
+.~-~.,nne_ _¢gyp ,_
+_(
+×Arrn,i~l~l~
+Z~PokOmon the First Movib~:-~"=~"~-±°p
+r
+-
+-
+-
+"wrJrr '
+'~F'~ugats-M°vie'-The-(199~;tar....N~l,~e~7~ji~l~ii~
+Z~H~cuteS (19g~t~ocahentas11995)
+"
+tar Wa
+-
+-
+"~"Fttan_A.E._(200T~-
+, m M ~
+,~lRoad_to~EI Dorado~The (2
+XWateP,vorld (1995) xUnbr~ ~c~
+
+z~;Aladdin_(1992)
+~mlfl~e
+_~
+Z~Little-Mermaid,-The-(1989
+......... /
+,~Beauty_and_the_Beast_(199
+,~Emperor'sNew~G..rn~veTh.
+.
+.
+.
+~/~r~u~l~l~-9~9~
+.d-ion Kinn 'The f19¢,4~
+-
+;,JMb'h~n~tce_Rime_(lgg7)~,t:~raz~_(~,OOl
+/
+
+
+
+,~King and I,_The~
+fOr-Carnal°t-(1998)
+,L4Beavts_a~t.he~
+
+,~.._~10,~)
+~,_~,~1~9, ~
+
+~'lron
+Giant,_The_(1999)
+~.~:farza~..(1999)
+.
+XOrgazmo_(Tg~l~/oyStoty_2_(1999) /
+~:Hgge~_Movie,_The_(2~y_Story_(1995)
+/
+/
+/
+/
+~'\\
+/.//·
+
+
+
+j/
+
+
+
+
+/
+./
+
+/
+/
+/
+/'
+
+
+\
+\
+\
+\N
+\
+t
+,~Ooug.s 1st Movie_(~999)
+
+
+,
+×Rock_~jir~r,h~i-)lP99~ireniamu-(
+
+
+·
+~
+zJOinosaur_(20~w~
+
+,~Hercules_0997)
+.... '~P~& C'Bfue~i~t_Pa
+rk.~(l~lj~
+
+Xlsland_of Or.
+~._~ tho_.._~o.o°._,,.)
+,n0_o%~;~ llj
+
+
+·
+~
+
+·-~on_r~mg,_IneM] ~:).,.a4)
+"
+-. .... N
+xwaterwodd_(1~,~ )-' "'"~
+
+~Kh~9_~,ncU._'1~41s~ag~Ja_(1997) Z~Emperor's_New_Gr0ove.-The
+xVirtd~!t).~
+
+
+,L~Fantasia/2000_(1999)
+,L~Quesst_for_Camelot (1998)
+><BicentenL~L.f~I,~In~.(,.L9~
+
+,~lB~vis and~
+
+Z~l'arzan_(1999)
+Z~Mulan_(19981
+z~'°°l-W°rfd~(
+~'~JmallS~ldie~_(1~8
+
+·"i'lron_Giaqt,_The_(1999)
+/
+)<Orgazmo_(1997)L~'oy_Story_2_{1999)
+/
+Lq.~gger_Movie,~The_(2000) Z3Toy_Story_(1995)/
+
+
+
+/
+/
+//
+/
+/
+/
+Figure 9: (cont. Fig. 8) two further
+navigation snapshots in the devel-
+oped "space of movies".
+(Top:) The focus got dragged into
+the lower left corner - in the area
+where the animation movies concen-
+trated (marked by '~).
+(Hottom:) A further closeup to a
+larger group of related Disney an-
+imation movies can be identified.
+
+
+
+
+131
+
+turing was automatically determined, driven by the (dis-
+)similarities of word frequencies in secondary, descriptive
+texts of totally unrelated authors.
+These resultsshow that the H-MDS
+approach iswell suited
+to support "semantic browsing" in datasets or document
+collections. Compared to the HSOM approach with a fixed
+grid [11], the H-MDS freely builds a spatial structure and
+can therefore display the closeness of objects - as seen, e.g.,
+in the tight "Alien" cluster (Fig. 6). Through the proximity
+transformation the resulting distribution and the amount of
+visible information can be adjusted to the desired situation.
+From MDS the H-MDS inherits the limiting scaling be-
+havior of N(N
+-
+1)/2 required clissimilarities for N points.
+One the positive side it also allows to process non-vectorial
+data, available only as pairwise proximities.
+From the embedding in H2 this new approach profits not
+only from the extra space for compressing semantic relation-
+ships. It also gains the superb visualization and navigation
+properties, which were found to yield significant improve-
+ment in task time compared to traditional browsing meth-
+ods. ,
+Future work will address (i) the automatic customization
+of the proximity transformation, (ii) the combination of the
+H-MDS with the HSOM for visualizing very large datasets.
+(iii) When looking at the label intense appendix figures, it
+appears obvious that the display can be successfully com-
+bined with various search operations and suitable graphical
+attribution.
+8.
+REFERFNCES
+
+[1] 'It'evor F. Cox and Micheal A. Cox. Multidimensional
+Scaling. Monographs on Statistics and Appied Probability.
+Chapman and Hall, 1994.
+[2] H.S.M. Coxeter. Non-Euclidean Geometry. University of
+Toronto Press, 1957.
+[3] J. deLeeuw and I. Stoop. An upper bound for SSTR.ESS.
+Psyehometrika, 51:149--153, 1986.
+[4] J.A. Hartigan. Representation of similarity matrices by
+trees. J. Am. Statist, Ass., 62:1140-1158, 1967.
+[5] HansjSrg Kloek and Joachim Buhmann. Multidimensional
+sealing by deterministic annealing. In Proc EMMCVPR
+Venice, 1997.
+[6] J. Lamping, R. Rao, and P. Pirrolli. A focus+context
+technique based on hyperbolic geometry for viewing large
+hierarchies. In ACM SIGCHI Conference on Human
+Factors in Computing Systems, pages 401-408, 1995.
+[7] John Larnping and Ramana Rao. Laying out and
+visualizing large trees using a hyperbolic space. In ACM
+Symposium on User Interface Software and Technology,
+pages 13-14, 1994.
+[8] Frank Morgan. Hiemannian Geometry: A Beginner's
+Guide. Jones and Bartlett Publishers, 1993.
+[9] Tamara Munzner. H3: Laying out large directed graphs in
+3d hyperbolic space. In Proceedings of the 1997 IEEE
+Symposium on Information Visualization, Phoeniz, AZ,
+pages 2-10, 1997.
+[10] 'I~mara Mmlzner. Drawing large graphs with h3viewer and
+site manager. In Proceedings of Graph Drawing '98,
+Montreal, Canada, Springer-Verlag, Lecture Notes in
+Computer Science 1547, pages 384-393, 1998.
+[11] JSrg Ontrup and Helge Ritter. Text categorization and
+semantic browsing with self-organizing maps on
+non-euclidean spaces. In Proe PKDD-~O01, pages 338-349.
+Springer LNAI 2168, 2001.
+[12] Peter Pirolli,Stuart K. Card, and Mija M. Van Der Wage.
+Visual information foraging in a focus + context
+visualization.In CHI, pages 506-513, 2001.
+[13] W. Press, B. Flannery, S. Teukolsky, and W. Vetterling.
+Numerical Hecipes in C - the Art of Scientific Computing.
+Cambridge Univ. Press, 1988.
+[14] Kirsten Risden, Mary P. Czerwinski, Tamara Munzner, and
+Daniel B. Cook. An initial examination of ease of use for 2d
+and 3d information visualizations of web content.
+International Journal of Human Computer Studies,
+53(5):695-714, 2000.
+[15] H. Ritter. Self-organizing maps on non-euclidean spaces. In
+S. Oja, E. & Kaski, editor, Kohonen Maps, pages 97-110.
+Elsevier, Amsterdam, 1999.
+[16] Gerard Salton and Christopher Bueldey. Term-weighting
+approaches in automatic text retrieval. Information
+Processing and Management, 5(24):513--523, 1988.
+[17] J. W. Sarnmon, Jr. A non-linear mapping for data
+structure analysis. IEEE Transactions on Computers,
+18:401-409, 1969.
+[18] J.A. Thorpe. Elementary Topics in Differential Geometry.
+Springer Verlag~ 1979.
+[19] William P. 'rhurston and Jeffrey It. Weeks. The
+mathematics of three-dimensional manifolds. Scientific
+American, July:94-107, 1984.
+
+Acknowledgment
+Daniel Waffling deserves many thanks for his help in conducting
+experiments and improving code and JSrg Ontrup for sharing his
+movie expertise and review database. Thanks to Jeffrey Weeks
+for Fig.1 and to Cordon Art - Baarn, Holland for permission to
+use Fig.2 (allrightsreserved on allM.C. Eschar works ~) 2002).
+
+
+
+
+132
+

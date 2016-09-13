@@ -1,0 +1,874 @@
+New Unsupervised Clustering Algorithm for Large Datasets
+
+
+William Peter
+BAE Systems Advanced
+Technologies
+6315 Hillside Court
+Columbia, MD 21046
+bill.peter@apti.com
+John Chiochetti
+BAE Systems Advanced
+Technologies
+6315 Hillside Court
+Columbia, MD 21046
+john.chiochetti@apti.com
+Clare Giardina
+BAE Systems Advanced
+Technologies
+6315 Hillside Court
+Columbia, MD 21046
+clare.giardina@apti.com
+
+
+ABSTRACT
+A fast and accurate unsupervised clustering algorithm has
+been developed for clustering very large datasets. Though
+designed for very large volumes of geospatial data, the al-
+gorithm is general enough to be used in a wide variety of
+domain applications. The number of computations the algo-
+rithm requires is  O(N), and thus faster than hierarchical
+algorithms. Unlike the popular K-means heuristic, this al-
+gorithm does not require a series of iterations to converge to
+a solution. In addition, this method does not depend on ini-
+tialization of a given number of cluster representatives, and
+so is insensitive to initial conditions. Being unsupervised,
+the algorithm can also "rank" each cluster based on density.
+The method relies on weighting a dataset to grid points on
+a mesh, and using a small number of rule-based agents to
+find the high density clusters. This method effectively re-
+duces large datasets to the size of the grid, which is usually
+many orders of magnitude smaller. Numerical experiments
+are shown that demonstrate the advantages of this algorithm
+over other techniques.
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]
+
+Keywords
+clustering, geospatial data, large datasets, data streaming
+
+1. INTRODUCTION
+Increased use of Geographical Information Systems (GIS)
+has resulted in large accumulations of spatially-referenced
+database information [7]. Spatially-referenced datasets are
+now being generated faster than they can be meaningfully
+analyzed [1]. For example, the NASA Earth Observing Sys-
+tem [8] will deliver close to a terabyte of remote sensing
+data per day. NASA estimates that this coordinated series
+of satellites will generate petabytes of archived data in the
+next few years [21].
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD'03 August 24-27, 2003, Washington DC USA.
+Copyright 2003 ACM 1-58113-737-0/03/0008 ...$5.00.
+Central to the problem of spatial data mining is clustering
+[15] which has been identified as one of the fundamental
+problems in the area of knowledge discovery in databases [2].
+In this paper, we present a new algorithm1 that has been
+developed to cluster large volumes of data automatically and
+without supervision. This algorithm is fast and accurate,
+and can quickly find locations of high data densities (i.e.,
+clusters) and rank them accordingly. It can also be used
+in a real-time, and incremental mode, so new data can be
+dynamically clustered without re-clustering old data.
+Most existing clustering algorithms require multiple data
+scans to achieve convergence [4], and many are sensitive to
+initial conditions and are then trapped at local minima. Al-
+gorithms to cluster spatial data have usually been based
+on standard heirarchical methods such as Ward's algorithm
+[19], partitioning techniques like the K-means heuristic [9],
+or density-based methods [11].
+Hierarchical clustering methods [13, 19] and the K-medoid
+partitioning method [10, 15] have an unacceptably large
+computational cost of O(N2). A less costly alternative is
+the classic K-means algorithm which is O(N) (for each it-
+eration). Because many of these methods cannot a priori
+determine the number of clusters in a dataset, they have lim-
+ited real applicability. For K-means the results are strongly
+dependent on the initial (random) choice of cluster represen-
+tatives, and thus not unique. Furthermore, many of these
+algorithms do not cluster directly on density, but on criteria
+such as merging cost, which for the least-squares criterion
+tends to overemphasize roughly equal cluster size [17].
+In the density-based approach of DENCLUE [11] (dis-
+cussed further in Section 6), a so-called influence function is
+applied to each data point of a dataset. The overall density
+function of the data space (whose local maxima are identi-
+fied as density attractors or cluster centers) is the sum of the
+influence functions of each data point. DENCLUE is funda-
+mentally O(N log N), although in practice the efficiency is
+better if the distribution of data is suitably localized.
+Clustering often relies on calculating distances between
+pairs of N data points in a multi-dimensional space. Such
+calculations are similar to the calculation of the force be-
+tween N particles separated by a given distance. During
+the past 50 years, physicists have struggled with reducing
+the computational time of these so-called N-body problems.
+The computational cost of N-body interactions is O(N2)
+since every particle's interaction with the other N - 1 parti-
+cles is calculated, and this is done for each of the N particles.
+One approach to reducing computational time on N-body
+
+1
+Patent pending.
+
+
+643
+
+problems are the so-called particle-mesh methods [12]. In
+this case, the dataset (which is assumed to have N points
+in an n-dimensional space) are weighted to the grid points
+of a mesh by some suitable weighting scheme. In this way,
+information of particle density and velocity is transferred to
+the mesh. Since the number of grid points is usually far
+less than that of the number of total particles, significant
+savings in computational times are achieved. Particle-mesh
+methods have made many problems in plasma physics and
+fluid dynamics amenable to computer simulations [12, 3]
+In this paper we are primarily interested in clustering data
+suitable for geospatial data mining and similar applications.
+We will show that these standard particle-mesh techniques
+used by physicists to solve N-body problems are applicable
+to data mining and clustering. Important advantages of this
+approach are (1) speed, (2) all clusters can be determined
+automatically, and without supervision, (3) clusters can be
+ranked by density, (4) new data can be clustered incremen-
+tally, and (5) the clustering is amenable to massively parallel
+or distributed computation.
+
+
+2. THE ACE ALGORITHM
+In this section, we will describe the ACE algorithm, which
+is based on clustering data by the particle-mesh heuristic
+and using rule-based agents to determine (and rank) the
+grid points associated with the highest data density.
+
+2.1 Grid Weighting
+Consider a database for which each of the N data items
+in the database has a number n of associated fields (or "fea-
+tures"). Then each data item can be represented by a point
+in an n-dimensional real space. In this n-dimensional region
+occupied by the data, it is possible to impose a coordinate
+system with axes whose minimum and maximum values cor-
+respond to the minimum and maximum values of the data.
+Note that this mesh does not need to be uniform through-
+out space, and in some cases it is even desirable to impose
+a nonuniform grid on the region of interest. For example, in
+the case of geospatial data, it might be useful to define a grid
+where regions of interest (e.g., forests) are finely-zoned, and
+less interesting regions (e.g., bodies of water) are coarsely-
+zoned. Consider the problem in one spatial dimension x
+with a uniform grid of cell spacing H. Generalization to
+higher n dimensions is straightforward.
+At each grid point xp on the mesh, we will define a density
+of data (xp) which is obtained by "weighting" the raw data
+values to the grid points. For a given weighting function
+W (xi - xp), the density at a grid point xp due to N data
+points at positions xi is given formally in one-dimension by
+
+
+
+(xp) =
+1
+H
+N
+
+
+i=1
+W (xi - xp)
+(1)
+
+
+The "weighting" algorithm is simply a method of assign-
+ing spatial information of data points to nearby grid points
+on the mesh. For example, to zero order, we can weight the
+data simply by assigning the positions to the nearest grid
+points. By this prescription, if there are no data points close
+to a grid point xp then (xp) = 0. Similarly, if there are 15
+data points that are closest to xp, then (xp) = 15 (in arbi-
+trary units of the inverse cell length 1/H). This zero-order
+weighting, or nearest grid point weighting [3], corresponds
+xp
+xp+1
+xi
+dx
+
+
+
+
+Figure 1: Data weighting to nearest grid points on a
+one-dimensional mesh. In nearest grid point weight-
+ing, the data point at xi is assigned to the nearest
+grid point at xp. In linear weighting, the data point
+at xi is shared between xp and xp
++1
+according to lin-
+ear interpolation.
+
+
+to the zeroth order term in a series expansion of W (x - xp)
+about the smallness parameter (x - xp).
+To next order in the expansion, the weighting is linear and
+corresponds to interpolating each data point to neighboring
+grid points. The first-order weighting prescription can be
+written formally as [12, 3]
+
+
+W (x - xp) =
+1 -
+|x-xp|
+H
+if |x - xp|  H
+0
+otherwise
+(2)
+
+Higher orders are similarly obtained. In Fig. 1, a given
+data point at xi is shown between two grid points xp and
+xp
++1
+.
+In nearest grid point weighting, the data at xi is
+assigned to the nearest grid point at xp. In this case, the
+one-dimensional density (xp) is increased in value by 1/H,
+where H is the cell size. In linear weighting the data at xi
+is shared between xp and xp
++1
+in relation to its proximity
+to each grid point. Hence, if dx = xi - xp (Fig. 1), then
+(xp) increases by (1 - dx/H)(1/H) and (xp
++1
+) increases
+by (dx/H)(1/H).
+
+2.2 Rule-Based Agents
+Once the data densities are calculated at each grid point
+of the mesh by Eqs.(1-3), high-density (xp) locations can be
+ranked by a sorting algorithm. Cluster ranking by sorting is
+computationally intensive for higher-dimensional data, so we
+choose to search for the high-density clusters by using a rule-
+based agent method. In this technique, a small number of
+agents are randomly placed on grid points of the mesh. The
+number of agents can be a fraction of the number of total
+grid points Ng. The goal of each agent is to climb the hills
+of data density. Each agent is given two "rules" of behavior,
+and is allowed a prescribed number Ns of steps to achieve
+the goal. A typical value for Ns would be the number of
+steps it would take an agent to traverse a "diagonal" across
+the data space. The two rules of behavior are as follows:
+Consider a one-dimensional grid (higher dimensions are
+easily generalized). At each step, (1) an agent residing at a
+grid point xp rolls a die to determine if it should move up
+to xp
++1
+or down to xp
+-1
+. In n-dimensions, this would be a
+2n-sided die. (2) If it is found that the agent should move
+up a grid point, the agent moves to xp
++1
+only if it is moving
+up in density. That is, it only moves from xp to xp
++1
+if the
+density (xp
++1
+)  (xp). In this way, after Ns steps, the
+agents should find themselves at places of density maxima.
+The optimal number of agents to deposit on the mesh is a
+tradeoff between speed and accuracy. There should be little
+
+
+644
+
+performance penalty in placing them on every grid point for
+low-dimensional problems. Topologically, if agents are not
+placed at every grid point, there could conceivably be some
+"data mountains" that would only be accessible via small
+"data hills". These hills would act as local maxima "traps"
+since agents will not descend the hill to climb a nearby bigger
+mountain. If only a small number of agents are initialized
+on the mesh (say, one agent for each ten grid points), we
+have found that one or two random restarts of the agent
+population are sufficient to locate the relevant grid points
+associated with density maxima.
+
+2.3 Identification of Cluster Members
+Once the positions of maximum density (xp) are deter-
+mined, it is useful to identify which data points are associ-
+ated with each hub xp. This usually involves some domain
+knowledge such as (for example) setting appropriate thresh-
+old values based on distance from the hub. The choice of
+mesh to impose also involves some domain knowledge, since
+for optimal results, the cell length H should be chosen to
+have a value less than the smallest expected cluster size.
+This allows the grid to "resolve" the size of the cluster. In
+cases where the cluster size is unknown, or varies signifi-
+cantly over parameter space, ACE includes an additional
+iterative step to more accurately associate cluster members
+with associated hubs (c.f., Section 4).
+
+2.3.1 Cell and Distance Methods
+Consider a particular grid point xp that has been tagged
+by the rule-based agents as associated with a high data den-
+sity. Data points within a user-specified distance threshold
+ can be assumed to belong to the cluster with hub at xp.
+If the cells surrounding xp have cell size H < , this is sim-
+ply done by identifying those data points lying within an
+integral number of the /H nearest-neighbor cells.
+In the case for which cluster size is unknown (or, equiv-
+alently, the grid spacing is not suitably chosen), additional
+iterations are appropriate. For example, two neighboring
+high-density grid points might suggest that the cell size is
+too fine. In such a case, ACE associates the members of the
+lower-density hub with that of its higher-density neighbor
+(although more sophisticated iterations are obviously possi-
+ble). Conversely, if (xp
+-1
+) << (xp) for a nearest-neighbor
+grid point p-1, the grid spacing might be too large. In that
+case, the mesh around xp can be rezoned more finely in order
+to confirm cluster quality.
+The position of the hub at xp can also be iteratively re-
+calculated to be the cluster centroid:
+
+
+
+¯
+x =
+1
+Np
+Np
+
+
+i=1
+xi
+(3)
+
+
+where the xi are the positions of the cluster members and
+Np is their total number. With the hub now at the data
+centroid ¯
+x, data points within a distance  of ¯
+x (and not
+xp) would belong to this cluster.
+
+2.3.2 Contouring Density Method
+This technique involves forming cluster boundaries de-
+fined by the contours of (x) having a density equal to a
+specified threshold value. It is implemented in one-dimension
+as follows: Given the values of (xp) at every hub xp, form
+"cluster boundaries" by interpolating between xp and each
+-10
+-5
+0
+5
+10
+-10
+-5
+0
+5
+10
+
+
+
+
+x
+y
+
+
+
+
+Figure 2: Plot of the simple two-dimensional exam-
+ple dataset. Three clusters can be seen with centers
+near (4,4), (-4,4), and (4,-4).
+
+
+
+of the nearest-neighbor grid locations (xp
+-1
+and xp
++1
+) to
+find the locations x such that (x) = thres on the mesh.
+For example, the threshold density could be (1/e) of the
+value of the hub density (xp), so thres = (xp)/e. Then
+all data near xp lying inside the thres contours would be
+members of the cluster at xp. If the density at a neighbor-
+ing grid point (say, xp
++1
+) satisfies (xp
++1
+) > thres, it will
+be necessary to interpolate between xp and xp
++2
+to find the
+cluster boundary, etc. In more than one dimension, contour-
+ing can be done by the usual methods [16].
+
+2.4 Computational Complexity
+The number of computations for the algorithm is O(N +
+Ng log Ng), where N is the number of data items and Ng is
+the number of grid points in the mesh. For large datasets,
+N >> Ng, so the number of computations is  O(N).
+
+
+3. SMALL DATASET EXAMPLE
+As a simple demonstration of the ACE algorithm, con-
+sider a small simulated dataset of 160 points P (x, y) in two-
+dimensions. The data consisted of one hundred of points
+randomly distributed in the interval between -10 < x < 10
+and -10 < y < 10. In addition, as shown in Fig. 2, three
+artificial clusters of points (20 points in each cluster) were
+produced that were randomly distributed around the posi-
+tions (4,4), (-4,4), and (4,-4).
+This particular small dataset (N  Ng) example was cho-
+sen to gauge the effectiveness of ACE in identifying data
+clusters immersed in a background of noisy data (Fig. 2).
+The mesh used for the example dataset was a two-dimensional
+grid only nine cells (ten grid points) wide in each dimension.
+In the region between -10 < x < 10 and -10 < y < 10,
+this corresponded to a uniform cell size of Hx = Hy = 2.2.
+
+3.1 Results with ACE
+The ACE algorithm was run on this small example dataset.
+
+
+645
+
+Figure 3: A contour plot of the data in Fig. 2
+weighted to a coarse 9 × 9 grid. The three clusters
+are clearly seen.
+
+
+
+Table 1: Cluster Ranking with Coarse-Zoned Mesh
+Agent Position
+(x, y)HxHy Comments
+(-3.3, 3.3)
+12.7
+Cluster near (-4,4)
+(3.3, -3.3)
+10.8
+Cluster near (4,-4)
+(3.3, 3.3)
+10.5
+Cluster near (4,4)
+(-1.1, -7.8)
+2.6
+Statistical background
+(-10.0, 7.8)
+2.2
+Statistical background
+(-10.0, -1.1)
+2.1
+Statistical background
+(-5.5, -3.3)
+1.8
+Statistical background
+(7.8, -7.8)
+1.5
+Statistical background
+
+
+
+Output of the code was a list of the final positions P (xp, yp)
+of each agent ranked by the associated data density (xp, yp).
+In addition, a contour plot of (x, y) is shown in Fig. 3, pro-
+viding a good visualization of the high-density data regions.
+In Table 1 is shown the first 8 of 11 total rankings of (x, y)
+as found by the rule-based agents. The top three items in
+the table represent the three clusters that were artificially
+placed in the dataset. These data peaks are at grid points
+corresponding to the coordinates (-3.3, 3.3), (3.3, -3.3), and
+(3.3, 3.3). If the zoning would have been finer, then the
+agent positions would have been closer to the exact values
+at (-4,4), (4,-4), and (4,4).
+The remaining data peaks in Table 1 had values of (x, y)
+roughly 1/10 the magnitude of the first three clusters. These
+peaks are statistical, and not meaningful, as can be easily
+shown: The region over which the data was defined had
+Ng  10×10 = 100 total grid points, and the number of total
+data points was N=160. Then statistically, each grid point
+should have an average data value (x, y)HxHy  Ng/N 
+1.6. As seen in Table 1, all but the first three clusters have
+data values near this statistical background value.
+
+3.2 Comparisons With Other Methods
+In this section, ACE is compared with a representative set
+Table 2: Small Dataset Clustering Times
+Algorithm
+Run time (secs)
+Cluster Identification
+ACE
+0.005
+distinct
+Autoclass [6]
+7.148
+distinct
+Ward [19, 14]
+0.006
+--
+K-means 7.0 [18]
+0.02
+--
+TwoStep 7.0 [18]
+0.03
+approximate
+
+
+
+of other clustering techniques. These comparisons cannot be
+claimed to be either rigorous or exhaustive, but are useful
+for outlining the general characteristics of each algorithm.
+They are indicative of both the qualitative differences and
+computational speed that can be expected.
+The results are summarized in Table 2. For each of the
+five cases, a set of six clustering trials using the small dataset
+were done. The average run time for each case is shown in
+Table 2. In addition to timing statistics, the last column of
+Table 2 outlines how successful each algorithm was in finding
+the three artificial clusters. As discussed above, ACE was
+able to find all three clusters in the small example dataset
+of 160 points (Fig. 2).
+The only other algorithm to have identified the three dense
+data regions as distinct clusters was NASA's Autoclass [6].
+Autoclass is an unsupervised algorithm based on Bayesian
+techniques for the automatic classification of data. When
+applied to the small example dataset of 160 points, Auto-
+class discovered 6 clusters, three of which represented the
+artificial clusters shown in Figs. 2. Unfortunately, Auto-
+class converges slowly to a solution, as discussed below.
+K-means and Ward's minimum variance method tend to
+find clusters with roughly the same number of observations
+in each cluster [17]. Furthermore, they cannot a priori de-
+termine the number of clusters in the dataset. The Ward's
+algorithm [19] particular implementation came from Carnegie
+Mellon University's Statlib [5]. Being a hierarchical algo-
+rithm, it provided results in the form of a dendrogram which
+(like all dendrograms) is difficult to summarize. Therefore,
+no comments were listed in the last column of Table 2. It is
+included for run-time comparisons only.
+The K-means algorithm (found in the commercial data
+mining package Clementine 7.0 [18]) depends on initializa-
+tion of the cluster representatives, and on the chosen value
+of k. Accordingly, the cluster identification column in Ta-
+ble 2 (like that for Ward's) was left empty. Even when the
+number of clusters was set to k=3, the similarity between
+the three dense clusters of Fig. 2 and the three resulting
+K-means clusters was rather marginal.
+The TwoStep algorithm from Clementine 7.0 [18] found
+five diffuse clusters, all roughly equal in size. Three of these
+large clusters seemed to contain the three clusters shown
+in Fig. 2 as approximate "subsets". The TwoStep algo-
+rithm is similar to the Birch clustering method [20] in that
+it scans the entire dataset and stores the dense regions of
+data in terms of summary statistics. It then uses a hierar-
+chical clustering algorithm to cluster the dense data regions.
+It differs from Birch in that it also includes a technique to
+automatically determine the appropriate number of clusters.
+
+3.2.1 Run Time Comparisons
+As discussed above, ACE runs were done by gridding up
+the dataset as shown in Fig.
+2.
+Agents were placed at
+
+
+646
+
+37
+39
+41
+43
+45
+169
+171
+173
+175
+177
+179
+
+
+
+
+latitude
+longitude
+
+
+
+
+Figure 4: Plot of the large spatial dataset ( 105
+data points) distributed between latitudes 37 and
+46, and longitudes 169 and 180.
+
+
+
+every grid point, which tended to penalize the run time,
+and each agent was allowed a maximum of Ns = 20 steps.
+The mimimum value of Ns is calculated from the necessary
+number of steps it would take to traverse the grid. For an
+agent to traverse the grid along its diagonal with 10 grid
+points in each direction, Ns  10
+
+2.
+As shown in Table 2, ACE clustered the data in only
+0.005 seconds, similar to the Ward algorithm [19] (0.006
+sec), but significantly faster than the K-means (0.02 sec) and
+TwoStep (0.03 sec) algorithms [18]. The Bayesian clusterer
+Autoclass [6] was the slowest at 7.148 sec. The speed of
+ACE in the parameter regime N  Ng is satisfying, since
+its performance relative to other methods improves as N >>
+Ng.
+
+
+4. LARGE DATASET EXAMPLE
+To test our method for clustering a large volume of data,
+we used a geospatial dataset made up of 105 points with co-
+ordinates in latitude and longitude format. The data points
+are shown in Fig. 4. For the ACE runs, a coarse-zoning
+mesh with 21 cells (22 grid points) in both the x- and y-
+direction was initially used, as shown in the figure. This
+corresponds to a total number of grid points Ng = 484, so
+N >> Ng. A close look at the data in Fig. 4 suggests that
+the number of clusters is  70.
+Experiments with different-sized meshes for ACE were
+performed on the large dataset to simulate the case when
+cluster size is unknown. The coarse-zoned mesh with 21
+cells in either dimension initially found only 34 clusters. A
+fine-zoned iteration with a mesh of 31 cells per dimension
+(32 grid points), found 72 clusters. When the mesh was very
+finely-zoned (50 cells in each direction), 120 clusters were
+initially found. Since there were agents on neighboring grid
+points an automatic iteration was generated to "clean" the
+extraneous agents (Section 2.3) to 73 clusters. The number
+of steps each agent was allowed was fixed at Ns = 500 for
+Table 3: Large Dataset Clustering Times
+Algorithm
+Run time (secs)
+Cluster Identification
+ACE
+0.83
+Found 72 clusters
+Autoclass [6]
+--
+Could not converge
+Ward [19, 14]
+--
+Could not initialize
+TwoStep 7.0 [18]
+2.25
+Found only 4 clusters
+K-means 7.0 [18]
+1.27
+--
+
+
+
+all cases. This was far above the minimum value required
+for the fine-zoned case of 51 grid points, Ns = 51
+
+2. In
+all cases, run times for ACE were  1 sec. Again, because
+of the low dimensionality of the data (n = 2), agents were
+initially placed on every grid point. This slightly penalizes
+the run-time results.
+In Table 3 is shown a summary of the runs. Note that two
+of the algorithms were unable to handle the large dataset.
+NASA's Autoclass tried to converge to a solution for over 20
+hours, before finally expiring. Ward's algorithm [19] from
+Statlib [5] tried in vain to initialize a static array (used
+for dissimilarity measure) of dimension N(N - 1)/2. Since
+N  105, the array was too large for initialization. The en-
+try for ACE corresponded to the case with 31 cells in each
+dimension. The run-time was on the average 0.83 seconds.
+The only other algorithms which could successfully com-
+plete the data clustering (K-means and TwoStep from Clem-
+entine 7.0) had average run times of 1.27 and 2.25 seconds,
+respectively. These algorithms, however, could not obtain
+the correct number (  70) of clusters. Even when the num-
+ber of clusters was explicitly set to 70, the resulting clusters
+were of poor quality. When TwoStep was allowed to find
+the most suitable number k of clusters between k = 2 and
+k = 75, it determined that there were only four clusters in
+the data shown in Fig. 4.
+
+
+5. OTHER CONSIDERATIONS
+In this section we discuss additional advantages of the
+ACE algorithm.
+
+5.1 Parallel and Distributed Computation
+ACE is ideal for running in a massively-parallel mode, or
+by distributed computation. Load balancing is achieved by
+dividing the spatial mesh into sectors, so that each proces-
+sor only acts on a certain well-defined region of space. For
+efficiency, each sector might contain a roughly equal number
+of grids on the physical mesh (unless there is an anisotropy
+in the data which would preferentially require more process-
+ing power in certain spatial domains). Clusters which span
+sectors would be handled transparently by interprocessor
+communication between nodes.
+
+5.2 Real-Time and Incremental Clustering
+Unlike some algorithms for which any accumulation of
+new data requires a complete re-clustering, ACE can cluster
+new data incrementally. The method can be described as
+follows (we assume for simplicity one-dimensionality, but the
+argument is easily generalized to higher dimensions):
+With the arrival of a new data point at location x, its
+position determines the mesh cell into which it is deposited.
+For example, if the magnitude of x satisfies xk < x < xk
++1
+then the data point is apportioned to the nearest grid points
+xk and xk
++1
+by linear weighting.
+So (xk) and (xk
++1
+)
+
+
+647
+
+increase by an amount given by Eq. (1). Hence the effect
+of a new data point is simply to update the density at the
+nearest-neighbor grid points.
+After a suitably large number of new data points are
+weighted to the grid, it is necessary to release a given num-
+ber of rule-based agents (Section 2.2) to check for changes
+in cluster rankings.
+
+
+6. CONCLUSIONS
+The methodology of ACE emphasizes the unsupervised
+identification of dense regions of collected data, i.e, clusters.
+It relies on imposing a mesh on the n-dimensional region
+in
+n
+over which the N data points (with n features) are
+defined, and using an appropriate algorithm to weight the
+data to the grid. In most cases, linear weighting is sufficient,
+although for some special cases, higher order weighting can
+be used. Once the density (xp) at each grid point xp on the
+mesh is known, the values at every xp can be ranked to give
+the most relevant cluster locations. The high density loca-
+tions on the grid can be quickly obtained by instantiating
+a small number of rule-based agents randomly on the grid.
+These agents are then allowed to move uphill in a certain
+amount of time (steps).
+Like the density-based method of DENCLUE [11], a clus-
+ter in ACE is defined soley by a high density of points. Un-
+like DENCLUE (whose cost is at worst  O(N log N)), ACE
+maps a set of N data points to a mesh with Ng grid points (in
+each dimension), resulting in a cost O(N) (for Ng << N).
+In addition, while DENCLUE uses a hill-climbing algorithm
+based on the local density function and its gradient, the
+agent-based approach of ACE does not require the use of
+continuous and differentiable influence functions. Moreover,
+the agent-based technique allows for a simple (yet efficient)
+method to scan the data space for high-density peaks.
+In summary, the work presented here has demonstrated
+significant possibilities to efficiently cluster large volumes
+of multidimensional geospatial data with a cost  O(N).
+It essentially reduces the size of a dataset to the size of
+the grid over which the data is defined. It was shown to
+be accurate and fast for both a small ( 160 data points)
+example dataset, and for a large ( 105 points) dataset.
+Because clusters are ranked by density, clusters made up
+of low-density noisy data can be identified (and ignored).
+Finally, the algorithm is ideally suited to incremental clus-
+tering and massively parallel or distributed computation.
+In a future publication, scalability to higher dimensional-
+ity will be demonstrated.
+
+
+7. ACKNOWLEDGMENTS
+The authors thank Brian Suesse, Freddie Cox, Bryan Wy-
+att, and Yiannis Antoniades for valuable discussions.
+
+
+8. REFERENCES
+[1] S. Aronoff. Geographic Information Systems: A
+Management Perspective. WDL Publications, Ottawa,
+Canada, third edition, 1993.
+[2] M. J. A. Berry and G. Linoff. Data Mining Techniques
+­ for Marketing, Sales and Customer Support. John
+Wiley & Sons, New York, 1997.
+[3] C. K. Birdsall and A. B. Langdon. Plasma Physics via
+Computer Simulation. Adam Hilger, Bristol, 1991.
+[4] P. S. Bradley, U. Fayyad, and C. Reina. Scaling
+clustering algorithms to large databases. In
+Proceedings of the Fourth International Conference on
+Knowledge Discovery and Data Mining, KDD-1998,
+pages 9­15, New York, New York, August 1998. AAAI
+Press.
+[5] Carnegie Mellon University. Statlib: Data, Software
+and News from the Statistics Community.
+http://lib.stat.cmu.edu/index.php.
+[6] P. Cheeseman, J. Kelly, M. Self, J. Stutz, W. Taylor,
+and D. Freeman. Autoclass: A bayesian classification
+system. In J. W. Shavlik and T. G. Dietterich, editors,
+Readings in Machine Learning, pages 296­306.
+Kaufmann, San Mateo, CA, 1990.
+[7] V. Estivill-Castro and M. E. Houle. Robust
+distance-based clustering with applications to spatial
+data mining. Algorithmica, 30(2):216­242, 2001.
+[8] Goddard Space Flight Center. NASA's Earth
+Observing System. http://eospso.gsfc.nasa.gov.
+[9] J. A. Hartigan and M. A. Wong. A k-means clustering
+algorithm. Applied Statistics, 28:100­108, 1979.
+[10] J. Hershberger and S. Suri. Finding tailored
+partitions. Journal of Algorithms, 12(4):431­463, 1991.
+[11] A. Hinneburg and D. A. Keim. An Efficient Approach
+to Clustering in Multimedia Databases with Noise. In
+Proc. 4th Int. Conf. on Knowledge Discovery and
+Data Mining. AAAI Press, 1998.
+[12] R. W. Hockney and J. W. Eastwood. Computer
+Simulation Using Particles. Adam Hilger, Bristol and
+New York, 1988.
+[13] F. Murtagh. Comments of parallel algorithms for
+hierarchical clustering and cluster validity. IEEE
+Transactions on Pattern Analysis and Machine
+Intelligence, 14(10):1056­1057, November 1992.
+[14] F. Murtagh and A. Heck. Multivariate Data Analysis.
+Kluwer, Dordrecht, Netherlands, 1987.
+[15] R. T. Ng and J. Han. Efficient and effective clustering
+methods for spatial data mining. In J. Bocca,
+M. Jarke, and C. Zaniolo, editors, Proceedings of the
+20th Conference on Very Large Data Bases (VLDB),
+pages 144­155. Morgan Kaufmann Publishers, San
+Francisco, CA, June 1994.
+[16] Open Channel Foundation. Contour Plot Algorithm.
+http://www.openchannelfoundation.org/. NASA Case
+ARC-11441.
+[17] W. S. Sarle. Cluster analysis by least squares. In
+Proceedings of the Seventh Annual SAS Users Group
+International Conference, pages 651­653, 1982.
+[18] SPSS. Introduction to Clementine. Chicago, Illinois,
+USA, March 2002. http://www.spss.com/clementine/.
+[19] J. H. Ward. Hierarchical grouping to optimize an
+objective function. Journal of the American Statistical
+Association, 58(2):236­244, 1963.
+[20] T. Zhang, R. Ramakrishnan, and M. Livny. Birch: an
+efficient data clustering method for very large
+databases. In Proceedings of the 1996 ACM SIGKDD
+international conference on Management of Data,
+pages 103­114. ACM Press, June 1996.
+[21] A. Zomaya, T. El-Ghazawi, and O. Frieder. Parallel
+and distributed computing for data mining. IEEE
+Concurrency, 7(4), 1999.
+
+
+
+648
+

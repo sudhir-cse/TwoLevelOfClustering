@@ -1,0 +1,1197 @@
+Sleeved CoClustering
+
+
+
+
+
+Avraham A. Melkman
+
+
+Department of Computer Science
+Ben Gurion University
+Beer Sheva, Israel 84105
+melkman@cs.bgu.ac.il
+Eran Shaham
+Department of Computer Science
+Ben Gurion University
+Beer Sheva, Israel 84105
+shahamer@cs.bgu.ac.il
+
+
+ABSTRACT
+A coCluster of a m × n matrix X is a submatrix determined
+by a subset of the rows and a subset of the columns. The
+problem of finding coClusters with specific properties is of
+interest, in particular, in the analysis of microarray exper-
+iments. In that case the entries of the matrix X are the
+expression levels of m genes in each of n tissue samples.
+One goal of the analysis is to extract a subset of the sam-
+ples and a subset of the genes, such that the expression lev-
+els of the chosen genes behave similarly across the subset of
+the samples, presumably reflecting an underlying regulatory
+mechanism governing the expression level of the genes.
+We propose to base the similarity of the genes in a co-
+Cluster on a simple biological model, in which the strength
+of the regulatory mechanism in sample j is Hj, and the re-
+sponse strength of gene i to the regulatory mechanism is
+Gi. In other words, every two genes participating in a good
+coCluster should have expression values in each of the par-
+ticipating samples, whose ratio is a constant depending only
+on the two genes. Noise in the expression levels of genes is
+taken into account by allowing a deviation from the model,
+measured by a relative error criterion. The sleeve-width of
+the coCluster reflects the extent to which entry i, j in the
+coCluster is allowed to deviate, relatively, from being ex-
+pressed as the product GiHj.
+We present a polynomial-time Monte-Carlo algorithm which
+outputs a list of coClusters whose sleeve-widths do not ex-
+ceed a prespecified value. Moreover, we prove that the list
+includes, with fixed probability, a coCluster which is near-
+optimal in its dimensions. Extensive experimentation with
+synthetic data shows that the algorithm performs well.
+
+Categories and Subject Descriptors:
+H.2.8 Database
+Management:
+Database Applications - Data Mining; I.5.3
+
+supported
+in part by the The Lynn and William Frenkel
+Center for Computer Sciences, and The Paul Ivanier Center
+for Robotics Research and Production Management
+Corresponding
+author.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD'04, August 22­25, 2004, Seattle, Washington, USA.
+Copyright 2004 ACM 1-58113-888-1/04/0008 ...$5.00.
+Computing Methodologies:
+Pattern Recognition - Cluster-
+ing.
+
+General Terms: Algorithms.
+
+Keywords: clustering, coclustering, gene expression data,
+co-regulation.
+
+
+1. DESCRIPTION OF THE PROBLEM
+A coCluster of a m×n matrix X is a submatrix determined
+by a subset I of the rows and a subset J of the columns.
+Recently many researchers have addressed the problem of
+finding coClusters with specific properties. One such direc-
+tion of research originated in mining high dimensional data,
+in particular projected clustering, [1], [2], [3], [13], [16]. An-
+other direction resulted from the analysis of microarray ex-
+periments.
+In that case the entries of the matrix X are
+the expression levels of m genes in each of n tissue samples.
+One goal of the analysis is to extract a subset of the samples
+and a subset of the genes, such that the expression levels of
+the chosen genes behave similarly across the subset of the
+samples, presumably reflecting an underlying co-regulation,
+[4], [5], [6], [7], [10], [11], [12], [14], [15], [16], [17].
+For
+concreteness, we will in this introductory section describe
+our approach using terminology from microarray analysis,
+although its applicability extends beyond this domain, for
+example to the analysis of term-document matrices, cf. [8].
+Call a sub-matrix determined by a set of genes (rows) I
+and a set of samples (columns) J co-varying if for any two
+genes i1 and i2 in I the ratio of elements in any sample j  J
+is a constant independent of j (but possibly dependent on
+i1 and i2): Xi1,j/Xi2,j = ci1,i2 for all j  J. Equivalently,
+there is a latent variable, H, whose value for sample j is
+Hj, such that the expression level of gene i in sample j
+is proportional to Hj, with the constant of proportionality
+depending only on the gene: Xi,j  GiHj for all (i, j) 
+(I, J).
+Presumably, in such a co-varying submatrix, the varia-
+tion in the expression levels of the genes can be attributed
+primarily to the influence of one (or more) regulators, repre-
+sented by H, whereas Gi is indicative of the strength of the
+regulation of gene i . We want to emphasize that it is not
+assumed that Hj is proportional to the abundance of some
+transcription factor in sample j, even if it is the variation
+in the latter that is responsible, directly or indirectly, for
+the variation in the expression levels. Suppose, for example,
+that the functional dependency of the expression level of a
+gene on the abundance of a transcription factor, x, is of the
+form Gu(x), with G a constant specific to the gene and u(x)
+
+
+
+635
+Research Track Poster
+
+a function common to the up-regulated genes. In the model
+described above, Hj is then u(xj) (rather than xj), with xj
+the level of the transcription factor in sample j. And the ex-
+pression levels of two up-regulated genes 1 and 2 in sample
+j are G1Hj, G2Hj.
+To allow for noise in the expression levels of genes, we will
+look for Gi and Hj such that Xi,j is well approximated by
+GiHj. To measure how well Xi,j is approximated by GiHj
+it seems natural to adopt the relative error criterion,
+
+1
+
+
+GiHj
+Xi,j
+ .
+
+Taking logarithms and setting Ai,j = log Xi,j, Ri = log Gi,
+Cj = log Hj, and  = log , the problem becomes one of
+finding Ri, Cj such that for all i, j,
+
+-  (Ri + Cj) - Ai,j  .
+
+Definition 1. The sleeve-width of a sub-matrix of A, de-
+fined by a subset I of rows and a subset J of columns, is
+
+sw(I, J) = 2 min
+R,C
+max
+iI,jJ
+|Ai,j - Ri - Cj|.
+(1)
+
+
+Definition 2. Let 0 < ,  < 1 be fixed parameters. For
+w > 0, a coCluster of A of sleeve-width w is a pair (I, J),
+with I a subset of the rows and J a subset of the columns,
+that satisfies the following conditions.
+
+Size: The number of rows is at least a -fraction of all rows,
+|I|  m  2, and the number of columns is at least a
+-fraction of all columns, |J|  n  2.
+
+Sleeve-width: sw(I, J)  w, i.e., there are Ri, i  I, and
+Cj, j  J, such that |Ai,j - Ri - Cj|  w/2 for all
+i  I, j  J. Ri, i  I will be called a column profile
+of the coCluster and Cj, j  J will be called a row
+profile.
+
+Thus, for any gene i in a coCluster there is a shift Ri which
+places its row Ai,j, j  J of expression values within a sleeve
+of width w surrounding the row profile of the coCluster.
+Remark: Clearly the profiles are not unique, e.g., Ri+Cj =
+(Ri+a)+(Cj -a) for all i, j and a fixed a. Thus an arbitrary
+Ri or Cj can be fixed at 0.
+Summarizing, we propose to identify subsets of genes that
+are purportedly co-regulated in a subset of the samples, by
+log-transforming the expression-data matrix, and then find-
+ing in it coClusters of small sleeve-width, w. Observe that,
+in contrast to a singular value decomposition, the values Gi
+and Hj found by this method, are guaranteed to be non-
+negative.
+Subsection 2.1 describes a Monte-Carlo algorithm for ex-
+tracting a list of coClusters all guaranteed to be of sleeve-
+width w. Then it is proven in subsection 2.2 that the list
+contains, with fixed probability, a coCluster that is near-
+optimal in a sense described there.
+Section 4 explains how to compute the sleeve-width of a
+given coCluster.
+The results of experiments investigating
+properties of the algorithm and its parameters, performed
+on synthetic data sets, are presented in section 3.
+The approach developed here was stimulated by the work
+of Cheng and Church [6], who also sought submatrices of A
+whose entries are approximated well by Ri + Cj, but mea-
+sured the discrepancy using the mean squared residue score;
+they called such matrices biclusters. Further work in this
+direction includes that of Yang, Wang, Wang and Yu, [17],
+and of Cho, Dhillon, Guan and Sra [7]. However, the mean
+squared residue score has some undesirable features: the
+score of a bicluster can be smaller than the score of a sub-
+matrix of this bicluster, the score is insensitive to outliers,
+and the connection to a regulatory model is unclear. In ad-
+dition, we expect that our approach will find smaller sets of
+genes with tighter co-regulation patterns.
+In another direction, our results owe much to the work
+of Procopiuc, Jones, Agarwal and Murali [13] on projective
+clustering, which also formed the basis of the work of Murali
+and Kasif [12] on gene expression motifs.
+These authors
+looked for coClusters in which all the expression values of a
+row of the coCluster have to fit within a sleeve around the
+exact same row profile, arg minC maxi
+I,jJ
+|Ai,j-Cj|. We,
+on the other hand, permit shifting each row by an individual
+fixed amount, so as to place it within a sleeve around the
+row profile.
+In a vein similar to ours, Wang, Wang, Yang, and Yu,
+[16] proposed an algorithm which finds coClusters with the
+property that any pair of rows in the coCluster have sleeve-
+width at most w/2. It follows from Theorem 2.1 that the
+cluster as a whole has then in fact sleeve-width w at most,
+in our terminology. The running time of their algorithm is,
+however, exponential.
+
+2. FINDING SLEEVED COCLUSTERS
+
+2.1 The algorithm
+
+Algorithm RSleeve
+1: loop
+R
+times
+2:
+choose a set of rows D of size d uniformly at random;
+3:
+loop
+S
+times
+4:
+choose a column s, 1  s  n, uniformly at random;
+5:
+J  ;
+6:
+for j  1 to n do
+7:
+if sw(D, {s, j})  w/2 then add j to J;
+end for
+8:
+choose a row r  D uniformly at random;
+9:
+I  ;
+10:
+for i  1 to m do
+11:
+if sw({r, i}, J)  w/2 then add i to I;
+end for
+12:
+if |I| < m or |J| < n then discard (I, J)
+13:
+else compute sw(I, J);
+end loop
+end loop
+14: return a list of the best (I, J);
+
+
+Figure 1: Algorithm for finding sleeved coClusters
+
+Figure 1 presents a Monte Carlo algorithm, RSleeve,
+which outputs a list of coClusters which are guaranteed to
+have sleeve-width not exceeding w, cf. Theorem 2.1. More-
+over, it will be proven in the next subsection that the al-
+gorithm possesses the following near-optimality property:
+with fixed probability at least one of the coClusters on the
+list, (I, J), contains a coCluster, (I, J), of sleeve-width w/2
+which is optimal in a sense that will be defined formally in
+the next subsection. Roughly speaking, (I, J) is optimal in
+the balance it strikes between the number of rows and the
+number of columns.
+
+
+
+636
+Research Track Poster
+
+Implementation notes.
+1. The computation of sw(D, {s, j}) needed in line 7 is easy:
+
+sw(D, {s, j}) =
+1
+2 (max
+iD
+(Ai,j - Ai,s) - min
+iD
+(Ai,j - Ai,s)),
+
+cf. Theorem 4.1. A similar result holds for sw({r, i}, J) in
+line 11.
+2. Although the coClusters returned by the algorithm are
+guaranteed to have sleeve-width w at most, they may well
+have smaller sleeve-width in actual fact.
+For this reason
+line 13 computes sw(I, J); the algorithm for doing this is
+detailed in section 4.
+We now prove that all coClusters returned by the algo-
+rithm do indeed have sleeve-width w.
+
+Theorem 2.1. Let I be a set of row indices, and let r  I.
+If sw({r, i}, J)  w/2 for each i  I, then sw(I, J)  w.
+Thus each coCluster (I, J) returned by RSleeve has sleeve-
+width at most w.
+
+Proof. Consider the definition of sleeve-width, equation
+(1). Fix i  I. Since sw({r, i}, J)  w/2, there are Ri and
+Rr as well as Cij, j  J, such that
+
+2|Ai,j - Ri - Cij| 
+1
+2 w,
+2|Ar,j - Rr - Cij| 
+1
+2 w,
+j  J.
+
+Hence |Ai,j - Ar,j - Ri + Rr|  w/2 for all j  J and each
+fixed i  I. In fact, according to the remark after definition
+2, we can always set Rr = 0. It follows that
+
+sw(I, J)  2 max
+iI,jJ
+|Ai,j - Ri - Ar,j|  w.
+
+
+
+Remark: The bound sw(I, J)  w cannot be improved,
+since it becomes tight as max{m, n}  .
+Namely, for
+each n there exists a n × n matrix such that every pair of
+rows has sleeve-width
+n
+n-1
+, whereas the matrix as a whole
+has sleeve-width 2.
+
+2.2 Near-optimality of the algorithm
+Algorithm RSleeve can be viewed as a heuristic, and the
+experimental evidence of section 3 shows it to be efficacious.
+This subsection proves that there are good theoretical rea-
+sons for its efficacy.
+Suppose there are several coClusters of the same sleeve-
+width. Which one is to be preferred? coClusters could be
+ranked by perimeter, |I| + |J|, or area, |I| · |J|. But in the
+context under consideration, the number of rows is several
+orders of magnitude larger than the number of columns. It
+makes sense, then, as Procopiuc, Jones, Agarwal and Murali
+[13] proposed, to specify a trade-off between the number
+of rows and the number of columns in the coCluster: the
+inclusion of an additional column in J is worth the exclusion
+of at most a (1-)-fraction of the rows in I. We adopt their
+proposal and rank coClusters by their measure.
+
+Definition 3. The rating of a coCluster (I, J) is µ(|I|, |J|),
+where µ(x, y) = x(1/)y, for fixed .
+
+With this definition our problem can be rephrased as one
+of finding an optimal coCluster of sleeve-width w, one with
+the maximum rating.
+The main result of this subsection is Theorem 2.3. Para-
+phrased it states that if the algorithm is run long enough,
+then the list returned by the algorithm contains with fixed
+probability a coCluster (I, J) of sleeve-width w, whose rat-
+ing is at least as good as that of an optimal coCluster of
+sleeve-width w/2.
+The central insight of Procopiuc, Jones, Agarwal and Mu-
+rali [13], in terms of the present context, is that in an optimal
+coCluster there must be a relatively small subset of rows, of
+size O(log n), that determines which columns participate in
+the cluster.
+
+Definition 4. Let (I, J) be a coCluster of sleeve-width w,
+and let s  J. D  I is a discriminating set for (I, J) with
+respect to s if it satisfies
+
+1. sw(D, {s, j})  w for all j  J;
+
+2. sw(D, {s, j}) > w for all j /
+ J.
+
+It is therefore a simple matter to determine J, once s and
+D are known. The next lemma shows that discriminating
+sets, with respect to any s  J, are both small and plen-
+tiful in an optimal coCluster (I, J). Consequently in our
+Algorithm RSleeve, both s and D are guessed at, and then
+J is deduced in line 7.
+
+Lemma 2.2. Let (I, J) be an optimal coCluster of sleeve-
+width w, with |I|  m, and let s be a column in J. Let
+D be a randomly chosen subset of I of size d. Then with
+probability at least
+1
+2
+, D is a discriminating set for J with
+respect to s, provided d  log(2n)/ log(1/3).
+Proof. Let Ri , i  I be a column profile, and Cj , j 
+J a row profile for (I, J). Condition (1) of the definition
+4 of a discriminating set is certainly met, since {s, j}  J,
+and so sw(D, {s, j})  sw(D, J)  sw(I, J)  w.
+Therefore D fails to be a discriminating set for J with re-
+spect to s, only if there is a j /
+ J such that sw(D,{s,j}) 
+w. The proof will be completed by showing next that the
+probability of this happening for a particular j is at most
+(3)d, so that the probability of it happening for some j is
+bounded by n(3)d 
+1
+2
+.
+By definition, sw(D, {s, j})  w means that there are
+Cj, Cs, and Ri, i  D such that
+
+|Ai,j -Ri-Cj| 
+1
+2 w,
+|Ai,s-Ri-Cs| 
+1
+2 w,
+for all i  D.
+
+Hence |Ai,j -Ai,s-C|  w for all i  D, and some C(= Cj -
+Cs). We want to show that there are no more than 3|I|
+rows i that satisfy this inequality, because the coCluster is
+optimal.
+Observe first of all that if |Ai,j - Ai,s - C|  w then
+
+(Ai,s-Ri -Cs )-w  Ai,j-Ri -C-Cs  (Ai,s-Ri -Cs )+w.
+
+Since |Ai,s - Ri - Cs |  w/2 for i  I, it follows that
+-32w  Ai,j - Ri - C - Cs 
+3
+2
+w.
+Now the optimality of (I, J) implies that if there is a
+subset of rows, I  I, and a j /
+ J such that |Ai,j -
+Ri - c|  w for some c and all i  I, then |I|  |I|;
+for otherwise (I, J), with J = J  {j}, is a coCluster of
+sleeve-width w satisfying µ(I, J) > µ(I, J), contradicting
+the optimality of (I, J).
+Therefore, for each j /
+ J and each of the intervals
+
+[- 3
+2 w,
+-1
+2 w
+], [- 1
+2 w,
+1
+2 w
+], [ 1
+2 w,
+3
+2 w
+],
+
+there are at most |I| rows i such that Ai,j - Ri - c - Cs
+lies in that interval. Thus there are at most 3|I| rows that
+satisfy |Ai,j - Ai,s - C|  w.
+
+
+
+637
+Research Track Poster
+
+Definition 5. Let (I, J) be an optimal coCluster of sleeve-
+width w. An integer d will be called acceptable for (I, J)
+if it has the following property. If a subset D  I of size
+d as well as a column s  J are chosen at random, then D
+is a discriminating set for (I, J) with respect to s, with
+probability 1/2 at least.
+
+According to the lemma any d  log(2n)/ log(1/3) is ac-
+ceptable. Our experiments on synthetic data, reported on
+in section 4, showed this bound to be wildly pessimistic: a
+random subset of size 5 of the rows of a coCluster, was found
+to be a discriminating set with probability 1.
+
+Theorem 2.3. Assume that A contains an optimal co-
+Cluster, (I, J), of sleeve-width w/2, and let d be acceptable
+for (I, J). Then, with probability at least 1/2, algorithm
+RSleeve returns a coCluster of sleeve-width w, (I, J), such
+that I  I and J = J, provided
+R
+ (2/)dln4, and
+
+S
+ 2/ .
+
+Proof. The probability that a particular choice of D in
+the outer loop satisfies D  I is at least d, since |D| = d,
+and |I|  m. By assumption, given that D  I it is
+with probability at least
+1
+2
+a discriminating set for J with
+respect to s. Hence the probability that all
+R
+iterations of
+the outer loop fail to find a discriminating set for J does
+not exceed (1 -
+1
+2
+d)
+R
+ 1/4.
+Similarly, since |J|  m, a particular choice of s in the
+inner loop over columns satisfies s  J with probability
+at least . Therefore the probability that the inner loop
+fails to find an s  J in all its
+S
+iterations is at most
+(1 - )
+S
+< 1/4.
+It follows that RSleeve chances upon a s  J and a
+discriminating set D  I with probability at least 3/4 ·
+3/4 > 1/2. When it does, it finds J = J in lines. The
+resulting I it then computes, necessarily satisfies I  I.
+Indeed, for any i  I and all j  J
+
+sw({r, i}, J)  sw(I, J) 
+1
+2 w.
+
+Thus i  I.
+
+2.3 Running time
+The inner for-loops take O(mn) time. The total number
+of iterations is upper bounded by Theorem 2.3 as
+S
+R
+=
+(2/)d2/. The experiments reported on in subsection 3.3
+show that d can be taken as 3, and that the number of iter-
+ations of the algorithm is always much less than 16/(3).
+We note that because of its inherent parallelism the algo-
+rithm can easily benefit from special-purpose hardware.
+
+2.4 Extensions
+
+1. Instead of setting w a priori, RSleeve could pick a
+different w for each choice of D.
+For example, the
+for-loop of line 6 can be replaced by one that first
+computes sw(D, {s, j}), and then sets w for the current
+D according to some density considerations.
+
+2. In line 11 of the algorithm, candidate rows could be
+tested against all of the discriminating set, rather than
+just against r. Preliminary testing of this idea indi-
+cates that it speeds up the finding of coClusters by
+some 25% on average.
+3. EXPERIMENTS ON SYNTHETIC DATA
+We report here on the results of simulations using syn-
+thetically generated data, performed on an Intel Xeon CPU
+2.40GHz dual processor with 512 KB cache size, running
+Linux operating system. The purpose of the simulations was
+to evaluate various aspects of the RSleeve algorithm, that
+can only be assessed with synthetic data. Specific questions
+we wanted to address were the following.
+
+1. How should the sleeve-width be chosen so that the
+significant coClusters are found, without introducing
+artifacts ?
+
+2. What is the size of the discriminating set, d, needed
+in practice? The bound d  log(2n)/ log(1/3), is of
+necessity a rough one, and it involves the parameter
+, which a user may be loath to specify.
+
+3. How many iterations are needed to find all significant
+clusters? Theorem 2.3 provides a functional relation-
+ship which involves the unknown size of the discrimi-
+nating set. We wanted also to assess what effect the
+presence of multiple, possibly overlapping, coClusters
+has on the running time.
+
+In each simulation run a random matrix of m = 20, 000
+rows and n = 100 columns was first generated, by setting
+the (i, j)-th entry of the matrix to a random integer number
+in the range [0, 1000].
+
+3.1 Choice of sleeve-width
+In general, the sleeve-width approach tends to produce
+tight coClusters. In our experience, setting w to 5% of the
+range of values of the matrix provides a good balance be-
+tween including most of the significant coClusters without
+introducing spurious ones due to noise.
+For example, in
+their analysis of the cell-cycle yeast data, Chen and Church
+[6] adopted a value of 300 for their parameter . This pa-
+rameter measures the average squared residual of a coClus-
+ter; therefore a coCluster of sleeve-width w has a value of
+  w2/4. Their  = 300 corresponds then to our w = 30,
+which is close to 5% of the yeast data range, [0,600].
+
+
+Table 1: Distribution of sleeve-widths.
+low, high
+and peak values are in percentages of the range. tail
+refers to a sleeve-width of less than 5%.
+rows
+cols
+low %
+high %
+peak %
+tail
+2
+4
+0.1
+97
+32.2
+2.04%
+5
+2
+0.1
+98
+38.5
+2.52%
+5
+4
+1.7
+99
+58.2
+0.09%
+10
+4
+2.8
+99
+71.2
+0.01%
+15
+4
+3.1
+99
+76.5
+0.01%
+10
+8
+15
+100
+81.5
+0.00%
+15
+8
+31
+100
+85.5
+0.00%
+
+
+In order to test our intuition, we selected one million sub-
+matrices at random, for each combination of coCluster di-
+mensions, and computed for each the sleeve-width. From
+the accumulated results we report, in Table 1, the low, high
+and peak sleeve-widths found in terms of percentage of the
+range. The larger the submatrix the closer to 100% of the
+range its sleeve-width is expected to be. The last column
+states the percentage of cases that had a sleeve-width of 5%
+
+
+
+638
+Research Track Poster
+
+or less. It shows that there is an insignificant probability of
+finding a coCluster with such a sleeve-width in all cases of
+interest.
+
+3.2 Size of discriminating set
+The determination of a discriminating set is a central part
+of algorithm RSleeve. It appears from Lemma 2.2 as if the
+size of this set is dependent on the parameter  measur-
+ing the trade-off of importance between rows and columns.
+Not only is specifying  not something we want to burden
+a user with, but also the bound provided by Lemma 2.2
+is a very coarse one. Moreover, the notion of a discrimi-
+nating set would seem not to need a tie-in to this trade-
+off. To test these ideas we performed the following exper-
+iments. After fixing the number of columns at 5, 40, 60 or
+80 ( = 0.05, 0.4, 0.6, 0.8 respectively), a random coClus-
+ter with the given number of columns was generated and
+planted in the random matrix. Then a subset of size d of
+the rows of the coCluster was chosen at random 100,000
+times , for d  {2, 3, 4, 5, 6, 7}.
+
+
+
+
+0%
+20%
+40%
+60%
+80%
+100%
+120%
+
+
+
+
+0
+2
+4
+6
+8
+
+| D |
+%
+discrim
+inating
+ 
+=0.05
+
+
+
+ 
+=0.40
+
+
+
+ 
+=0.60
+
+
+
+ 
+=0.80
+
+
+
+
+Figure 2: Percentage of discriminating sets among
+random subsets of a coCluster vs. size of subset, for
+coClusters with  = 0.05, 0.4, 0.6, 0.8.
+
+Figure 2 presents a plot of the percentage of cases in which
+the chosen subset actually was a discriminating set, as a
+function of d. The important finding from this experiment
+is that already a random subset of size 4 is a discriminating
+set with probability greater than 0.7. Since d appears as
+an exponent in the estimated running time, we chose d =
+3 in the following experiments. The plot shows also that
+coClusters with fewer columns require larger discriminating
+sets. The reason is that the discriminating set has to filter
+out more columns not belonging to the coCluster.
+
+3.3 Number of iterations of the algorithm
+To test the number of inner iterations of the algorithm,
+estimated in subsection 2.3 as ((2/)d2/), we generated
+random data in a manner analogous to the one discussed
+by Procopiuc, Jones, Agarwal and Murali [13].
+All data
+generated had values in the range [0, 1000] and were either
+cluster points or noise. Each data matrix had m = 20, 000
+rows and n = 100 columns, and contained K = 5 clusters.
+After initializing the m × n matrix with random data, the
+coClusters were generated by the following steps.
+
+1. To determine the number of rows mk of the coClus-
+ter k, we first drew random constants of proportion-
+ality rk in the range [1, 6], and computed mk = m ·
+rk/ PK
+k=1
+ri.
+Following [13], the imbalance between
+cluster sizes was increased by setting mk = mk, and
+mk+
+K/2
+= mk
++K/2
++ (1 - )mk, with  a parame-
+ter. We report here only on results with  = 0.5, be-
+cause the differences with the other values we tried,
+  {0.2, 0.33, 0.5}, were not significant.
+
+2. The number of columns of a cluster was set as a ran-
+dom integer in the range [35, 45]. In addition, when
+generating cluster k + 1, half of its columns were cho-
+sen from among the columns of coCluster k, in attempt
+to model the sharing of columns between different co-
+Clusters.
+
+3. The values of the entries of coCluster k were gener-
+ated as follows (supplanting the previously generated
+random values of the matrix).
+The values of R(
+k)
+i
+,
+associated with the rows of coCluster k, were gener-
+ated uniformly at random in [0, 500]. The values of
+C(
+k)
+j
+, associated with its columns, were also generated
+uniformly at random in [0, 500] (if not already set pre-
+viously). The value of entry (i, j) of coCluster k was
+then set to R(
+k)
+i
++ C(
+k)
+j
+. Finally noise was added, as a
+uniform random integer in the range [-25, 25], corre-
+sponding to a sleeve-width of 5%.
+
+The outer loops were run, with d = 3, until all coClusters
+had been identified. Denote by N the number of iterations
+needed to retrieve a specific coCluster.
+
+
+
+
+0
+1
+2
+3
+4
+5
+6
+7
+8
+
+
+
+
+-2.5
+-2
+-1.5
+-1
+-0.5
+0
+
+log (
+¡
+)
+log
+(ITERS
+*
+¢
+)
+
+
+
+
+Figure 3: Dependence of the number of iterations
+of RSleeve needed to locate a coCluster on the per-
+centage of rows in a coCluster
+
+Figure 3 is a plot of log10(N) as a function of log10 .
+The minimum least squares fit to the data is N  4/(2
+.9
+),
+and always N  16/(2
+.9
+).
+
+
+4. COMPUTING THE SLEEVE-WIDTH
+In this section all of the rows and columns of A are taken
+into account when computing the sleeve-width. By defini-
+tion,
+
+sw(A) = min
+R,C
+{ A - B
+M
+: Bi,j = Ri + Cj, i, j},
+(2)
+
+with A
+M
+= maxi,j |Ai,j| the matrix max norm. A similar
+notion was used in [6], [7], [11], and [17]. However, they
+
+
+
+639
+Research Track Poster
+
+employed the Frobenius norm,
+
+
+A
+2
+F
+=
+m
+X
+i=1
+n
+X
+j=1
+A2i,j.
+
+
+In that case it is easily seen that for the best R, C,
+
+Ri + Cj =
+1
+n
+n
+X
+j=1
+Ai,j +
+1
+m
+m
+X
+i=1
+Ai,j -
+1
+mn
+m
+X
+i=1
+n
+X
+j=1
+Ai,j.
+
+
+For the matrix max norm employed here, there is usually
+no explicit form for the best R, C, except in the special
+case considered in subsection 4.1.
+Subsection 4.2 presents an algorithm for computing the
+sleeve-width of a general matrix; it is a discrete version of
+the Diliberto-Straus algorithm [9].
+
+4.1 A matrix with two columns
+
+Theorem 4.1. Let A be a m × 2 matrix. Then
+sw(A) =
+1
+2
+(maxi(Ai,
+1
+- Ai,
+2
+) - mini(Ai,
+1
+- Ai,
+2
+)).
+
+An explicit solution can also be computed, as follows. First
+permute the rows of A so that
+
+A1
+,1
+- A1
+,2
+ A2
+,1
+- A2
+,2
+ ···  Am,
+1
+- Am,
+2
+.
+
+Set  = sw(A), h = (A1
+,1
+- A1
+,2
++ Am,
+1
+- Am,
+2
+)/2, and
+let
+be such that A
+,1
+- A
+,2
+ h  A
++1,1
+- A
++1,2
+. Then
+CT =< 0, -h >, and
+
+RT =< A1
+,1
++, A2
+,1
++, . . . , A
+,1
++, A
++1,1
+-,...,Am,
+1
+- > .
+
+4.2 Iterative algorithm for general matrix
+Define the row-midpoint and column-midpoint operators,
+PR(A), PC(A), as follows.
+
+PR(A)i =
+1
+2 (max
+Ai, + min Ai, ),
+
+PC(A)j =
+1
+2 (max
+A
+,j
++ min A
+,j
+).
+
+Starting with initial R(0), C(0), and E(0)
+i,j
+= Ai,j-R(0)
+i
+-C(0)
+j
+,
+the algorithm computes for k = 1, 2, . . .
+
+R(
+k+1)
+= PR(E(2
+k)
+), C(
+k+1)
+= PC(E(2
+k+1)
+),
+
+E(2
+k+1)
+i,j
+= E(2
+k)
+i,j
+- R(
+k+1)
+i
+,
+
+E(2
+k+2)
+i,j
+= E(2
+k+1)
+i,j
+- C(k
++1)
+j
+, 1  i  m, 1  j  n.
+
+If desired the algorithm also maintains
+
+R(
+k+1)
+= R(
+k)
++ R(
+k+1)
+, C(
+k+1)
+= C(
+k)
++ C(
+k+1)
+.
+
+Theorem 4.2. The DS-algorithm converges for any ini-
+tial B(0). Moreover, the sequence
+E(
+k)
+M
+decreases mono-
+tonically to
+1
+2
+sw(A), and if for some k
+
+E(
+k)
+M
+= E(
+k+1)
+M
+= E(
+k+2)
+M
+,
+
+then 2 E(
+k)
+M
+= sw(A) and R(
+k)
+, C(
+k)
+are optimal column
+and row profiles.
+
+
+5. ACKNOWLEDGMENTS
+We wish to express our appreciation of a perceptive and
+helpful reviewer.
+Avraham Melkman acknowledges with
+pleasure enlightening conversations with T.M. Murali.
+6. REFERENCES
+[1] C. C. Aggarwal, J. L. Wolf, P. S. Yu, C. Procopiuc,
+and J. S. Park. Fast algorithms for projected
+clustering. In Proc. SIGMOD, pages 61­72, 1999.
+[2] C. C. Aggarwal and P. S. Yu. Finding generalized
+projected clusters in high dimensional spaces. In Proc.
+SIGMOD, pages 70­81, 2000.
+[3] R. Agrawal, J. Gehrke, D. Gunopulos, and
+P. Raghavan. Automatic subspace clustering of high
+dimensional data for data mining applications. In
+Proc. SIGMOD, pages 94­105, 1998.
+[4] A. Alizadeh, M. Eisen., and R. D. et al. Distinct types
+of diffuse large B-cell lymphoma identified by gene
+expression profiling. Nature, 403:503­511, 2000.
+[5] Y. Chen, Z. Yakhini, A. Ben-Dor, E. Dougherty,
+J. Trent, and M. Bittner. Analysis of expression
+patterns: the scope of the problem, the problem of
+scope. Disease Markers, 17:59­65, 2001.
+[6] Y. Cheng and G. Church. Biclustering of expression
+data. In Proc. ISMB'00, pages 93­103, 2000.
+[7] H. Cho, I. S. Dhillon, Y. Guan, and S. Sra. Minimum
+sum-squared residue co-clustering of gene expression
+data. In Proc. SIAM Data Mining Conf., pages
+114­125, 2004.
+[8] I. S. Dhillon. Coclustering documents and words using
+bipartite spectral graph partitioning. In Proc. KDD,
+pages 269 ­ 274, 2001.
+[9] S. P. Diliberto and E. G. Straus. On the
+approximation of a function of several variables by the
+sum of a function of fewer variables. Pacific J. Math.,
+1:195­210, 1951.
+[10] G. Getz, E. Levine, and E. Domany. Coupled two-way
+clustering analysis of gene microarray data. Proc.
+Natl. Acad.Sci. USA, 97:12079­12084, 2000.
+[11] L. Lazzeroni and A. Owen. Plaid models for gene
+expression data. Statistica Sinica, 12:61­86, 2002.
+[12] T. Murali and S. Kasif. Extracting conserved gene
+expression motifs from gene expression data. In Proc.
+Pac. Symp. Biocomputing, pages 77­88. 2003.
+[13] C. Procopiuc, M. Jones, P. Agarwal, and T. Murali. A
+Monte Carlo algorithm for fast projective clustering.
+In Proc. SIGMOD, pages 418 ­ 427, 2002.
+[14] R. Sharan and R. Shamir. Click: a clustering
+algorithm with applications to gene expression
+analysis. In Proc. ISMB'00, pages 307­316. 2000.
+[15] P. Tamayo, D. Slonim, and J. M. et al. Interpreting
+patterns of gene expression with self-organizing maps:
+Methods and application to hematopoietic
+differentiation. Proc. Natl. Acad.Sci. USA,
+96:2907­2912, 1999.
+[16] H. Wang, W. Wang, J. Yang, and P. Yu. Clustering by
+pattern similarity in large data sets. In Proc.
+SIGMOD, pages 394­405, 2002.
+[17] J. Yang, H. Wang, W. Wang, and P. Yu. Enhanced
+biclustering on expression data. In Proc. BIBE, pages
+321­327, 2003.
+
+
+
+
+640
+Research Track Poster
+

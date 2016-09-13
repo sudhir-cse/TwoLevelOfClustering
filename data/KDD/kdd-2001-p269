@@ -1,0 +1,1161 @@
+Co-clustering documents and words using Bipartite
+Spectral Graph Partitioning
+
+Inderjit S. Dhillon
+Department of Computer Sciences
+University of Texas,Austin, TX 78712
+inderjit @cs.utexas.edu
+
+
+ABSTRACT
+
+Both document clustering and word clustering are well stud-
+ied problems. Most existing algorithms cluster documents
+and words separately but not simultaneously. In this paper
+we present the novel idea of modeling the document collec-
+tion as a bipartite graph between documents and words, us-
+ing which the simultaneous clustering problem can be posed
+as a bipartite graph partitioning problem. To solve the par-
+titioning problem, we use a new spectral co-clustering algo-
+rithm that uses the second left and right singular vectors of
+an appropriately scaled word-document matrix to yield good
+bipartitionings. The spectral algorithm enjoys some opti-
+mality properties; it can be shown that the singular vectors
+solve a real relaxation to the NP-complete graph bipartition-
+ing problem. We present experimental results to verify that
+the resulting co-clustering algorithm works well in practice.
+
+
+1.
+INTRODUCTION
+Clustering is the grouping together of similar objects. Given
+a collection of unlabeled documents, document clustering
+can help in organizing the collection thereby facilitating fu-
+ture navigation and search. A starting point for applying
+clustering algorithms to document collections is to create
+a vector space model[20].
+The basic idea is (a) to extract
+unique content-bearing words from the set of documents
+treating these words as features and (b) to then represent
+each document as a vector in this feature space. Thus the
+entire document collection may be represented by a word-
+by-document matrix A whose rows correspond to words and
+columns to documents. A non-zero entry in A, say Aij, in-
+dicates the presence of word i in document j, while a zero
+entry indicates an absence.
+Typically, a large number of
+words exist in even a moderately sized set of documents, for
+example, in one test case we use 4303 words in 3893 docu-
+ments. However, each document generally contains only a
+small number of words and hence, A is typically very sparse
+with almost 99% of the matrix entries being zero.
+Existing document clustering methods include agglomer-
+
+
+
+Permissionto make digital or hard copies of all or part of this work for
+personal or classroom use is granted without feeprovided that copies
+are not made or distributed Iorprofit or commercialadvantage and that
+copiesbear this notice and the full citation on the first page. To copy
+otherwise,to republish, to post on serversor to redistributeto lists,
+requiresprior specific permissionand/or a fee.
+KDD 01 San FranciscoCA USA
+CopyrightACM 2001 1-58113-391-x/01/08...$5.00
+ative clustering[25], the partitional /c-means algorithm[7],
+projection based methods including LSA[21], self-organizing
+maps[18] and multidimensional sealing[16]. For computa-
+tional efficiency required in on-line clustering, hybrid ap-
+proaches have been considered such as in[5]. Graph-theoretic
+techniques have also been considered for clustering; many
+earlier hierarchical agglomerative clustering algorithms[9] and
+some recent work[3, 23] model the similarity between docu-
+ments by a graph whose vertices correspond to documents
+and weighted edges or hyperedges give the similarity be-
+tween vertices. However these methods are computationally
+prohibitive for large collections since the amount of work
+required just to form the graph is quadratic in the number
+of documents.
+Words may be clustered on the basis of the documents in
+which they co-occur; such clustering has been used in the
+automatic construction of a statistical thesaurus and in the
+enhancement of queries[4].
+The underlying assumption is
+that words that typically appear together should be associ-
+ated with similar concepts. Word clustering has also been
+profitably used in the automatic classification of documents,
+see[l]. More on word clustering may be found in [24].
+In this paper, we consider the problem of simultaneous or
+co-clustering of documents and words. Most of the existing
+work is on one-way clustering, i.e., either document or word
+clustering. A common theme among existing algorithms is
+to cluster documents based upon their word distributions
+while word clustering is determined by co-occurrence in doc-
+uments.
+This points to a duality between document and
+term clustering. We pose this dual clustering problem in
+terms of finding minimum cut vertex partitions in a bipar-
+tite graph between documents and words. Finding a globally
+optimal solution to such a graph partitioning problem is NP-
+complete; however, we show that the second left and right
+singular vectors of a suitably normalized word-document
+matrix give an optimal solution to the real relaxation of
+this discrete optimization problem. Based upon this obser-
+vation, we present a spectral algorithm that simultaneously
+partitions documents and words, and demonstrate that the
+algorithm gives good global solutions in practice.
+A word about notation: small-bold letters such as ~, u,
+p will denote column vectors, capital-bold letters such as
+A, M, B will denote matrices, and script letters such as
+~3,:D,)42 will usually denote vertex sets.
+
+
+2.
+BIPARTITE GRAPH MODEL
+First we introduce some relevant terminology about graphs.
+A graph G = (12,E) is a set of vertices V = {1, 2,... , IV[}
+
+
+
+
+269
+
+and a set of edges {i,j} each with edge weight Eij.
+The
+adjacency matrix M of a graph is defined by
+
+l Eij,
+if there is an edge {i,j},
+Mij =
+0,
+otherwise.
+
+Given a partitioning of the vertex set ]) into two subsets
+V1 and 1)2, the cut between them will play an important
+role in this paper. Formally,
+
+cut(V1, ]22) =
+E
+Mij.
+(1)
+
+i~))l,jeY2
+
+The definition of cut is easily extended to k vertex subsets,
+
+cut(f)1,])2,... ,])k) = Ecut(l)i,])j).
+(2)
+i<j
+
+We now introduce our bipartite graph model for represent-
+ing a document collection. An undirected bipartite graph
+is a triple G = (:D,I/V,E) where 2) = {d~,... ,d,}, VV =
+{wl,... ,w,~} are two sets of vertices and E is the set of
+edges {{di,wj} : di 6 'D, wj 6 ~2}. In our case 2) is the set
+of documents and V9 is the set of words they contain. An
+edge {dl, wj} exists if word wj occurs in document dl; note
+that the edges are undirected. In this model, there are no
+edges between words or between documents.
+An edge signifies an association between a document and
+a word. By putting positive weights on the edges, we can
+capture the strength of this association. One possibility is
+to have edge-weights equal term frequencies. In fact, most.
+of the term-weighting formulae used in information retrieval
+may be used as edge-weights, see [20] for more details.
+Consider the m x n word-by-document matrix A such that
+Aij equals the edge-weight E O. It is easy to verify that the
+adjacency matrix of the bipartite graph may be written as
+
+
+-:
+[A°
+0
+'
+
+where we have ordered the vertices such that the first m ver-
+tices index the words while the last n index the documents.
+We now show that the cut between different vertex sub-
+sets, as defined in (1) and (2), emerges naturally from our
+formulation of word and document clustering.
+
+2.1
+Simultaneous Clustering
+A basic premise behind our algorithm is the observation:
+
+Duality of word g~ document
+clustering: Word cluster-
+ing induces document clustering while document clustering
+induces word clustering.
+
+Given disjoint document clusters ~D1,... ,:Dk, the corre-
+sponding word clusters VV1,... , VV~ may be determined as
+follows. A given word wi belongs to the word cluster ~Y,~
+if its association with the document cluster :Din is greater
+than its association with any other document cluster. Using
+our graph model, a natural measure of the association of a
+word with a document cluster is the sum of the edge-weights
+to all documents in the cluster. Thus,
+
+
+VVm= {wi:
+~f'~ A,j>
+~-~ Aij, Vl=l,...,k}.
+jeD,,,
+jeT~t
+
+Thus each of the word clusters is determined by the docu-
+ment clustering. Similarly given word clusters W1 ,. ·· , VVk,
+the induced document clustering is given by
+
+
+
+
+Note that this characterization is recursive in nature since
+document clusters determine word clusters, which in turn
+determine (better) document clusters.
+Clearly the "best"
+word and document clustering would correspond to a par-
+titioning of the graph such that the crossing edges between
+partitions have minimum weight. This is achieved when
+
+cut(}&× U :Dx,... , Wk t.J :Dk) =
+min
+cut(l)1,... , ])k)
+
+
+where ])1,... , ])k is any k-partitioning of the bipartite graph.
+
+3.
+GRAPH PARTITIONING
+Given a graph G = (V, E), the classical graph bipartition-
+ing problem is to find nearly equally-sized vertex subsets
+])~,])~ off) such that cut())~,])~) = min~ ~, cut(V1 V2).
+vl ~Y2
+Graph partitioning is an important problem and arises in
+various applications, such as circuit partitioning, telephone
+network design, load balancing in parallel computation, etc.
+However it is well known that this problem is NP-eomplete[12].
+But many effective heuristic methods exist, such as, the
+Kernighan-Lin(KL) [17] and the Fiduccia-Mattheyses(FM) [10]
+algorithms. However, both the KL and FM algorithms search
+in the local vicinity of given initial partitionings and have a
+tendency to get stuck in local minima.
+
+3.1
+Spectral Graph Bipartitioning
+Spectral graph partitioning is another effective heuristic
+that was introduced in the early 1970s[15, 8, 11], and pop-
+ularized in 1990119].
+Spectral partitioning generally gives
+better global solutions than the KL or FM methods.
+We now introduce the spectral partitioning heuristic. Sup-
+pose the graph G = (1), E) has n vertices and m edges. The
+n × m incidence matrix of G, denoted by ZG has one row per
+vertex and one column per edge. The column corresponding
+to edge {i,j} of IG is zero except for the i-th and j-th en-
+tries, which are ~
+and - ~
+respectively, where Eij is
+the corresponding edge weight. Note that there is some am-
+biguity in this definition, since the positions of the positive
+and negative entries seem arbitrary. However this ambiguity
+will not be important to us.
+DEFINITION 1. The Laplacian matrix L = LG of G is an
+n × n symmetric matrix, with one row and column for each
+vertex, such that
+
+{ Y]~kEik,
+i= j
+Lij =
+-Eij,
+i ¢ j and there is an edge {i, j}
+(3)
+0
+otherwise.
+
+TttEOREM 1. The Laplacian matrix L = LG of the graph
+G has the following properties.
+
+1. L = D - M, where M is the adjacency matrix and D
+is the diagonal "degree" matrix with Dii = ~
+Elk.
+2. L = IGIc T.
+3. L is a symmetric /)ositive semi-definite matrix.
+Thus
+all eigenvalues of L are real and non-negative, and L
+has a full set of n real and orthogonal eigenvectors.
+4. Let e = [1,..., 1]T.
+Then Le = O.
+Thus 0 is an
+eigenvalue of L and e is the corresponding eigenvector.
+
+
+
+
+270
+
+5.
+If the graph G has c connected components then L has
+e eigenvalues that equal O.
+6. For any vector.m, mTLm = ~-']{ij}e~ Eij(xl - xj) 2.
+7. For any vector m, and scalars c~ and 13
+
+(aX q-~e)TL(aa~ q-~e) = a2~TLx.
+(4)
+Proof.
+1. Part 1 follows from the definition of L.
+2. This is easily seen by multiplying IG and IG T.
+3. By part 2, ~vTLz = ~TIGI~x
+= yTy >_ O, for all
+m. This implies that L is symmetric positive semi-
+definite. All such matrices have non-negative real eigen-
+values and a full set of n orthogonal eigenvectors[13].
+4. Given any vector m, Lm = IG(IGTx).
+Let k be the
+row of IGTm that corresponds to the edge {i,j}, then
+it is easy to see that
+
+(z~%)k
+= v/-E-Sj(x,
+-
+~j),
+(5)
+
+and so when m = e, Le = 0.
+5. See [11].
+6. This follows from equation (5).
+7. This follows from part 4 above.
+[]
+For the rest of the paper, we will assume that the graph G
+consists of exactly one connected component. We now see
+how the eigenvalues and eigenvectors of L give us informa-
+tion about partitioning the graph. Given a bipartitioning
+of )2 into V1 and ])2 (V1 U ])z = V), let us define the parti-
+tion vector p that captures this division,
+
++1,
+i 6 VI,
+Pi =
+-1,
+i e 1)2.
+(6)
+
+THEOREM 2. Given the Laplacian matrix L of G and a
+partition vector p, the Rayleigh Quotient
+
+pTLp
+= 1 . 4 cut(Vz,V2).
+prp
+n
+
+Proof.
+Clearly pTp = n. By part 6 of Theorem 1, pTLp =
+~(ij}E~ Eij(pi -pj)~. Thus edges within ])1 or V~ do not
+contribute to the above sum, while each edge between ])~
+and ])z contributes a value of 4 times the edge-weight.
+[]
+
+3.2
+Eigenvectors as optimal partition vectors
+Clearly, by Theorem 2, the cut is minimized by the trivial
+solution when all pi are either -1 or +1. Informally, the cut
+captures the association between different partitions. We
+need an objective function that in addition to small cut val-
+ues also captures the need for more "balanced" clusters.
+We now present such an objective function.
+Let each
+vertex i be associated with a positive weight, denoted by
+weight(i), and let W be the diagonal matrix of such weights.
+For a subset of vertices Vt define its weight to be weight(Vt) =
+~-~-ie~,weight(i) = ~ie]), W~i. We consider subsets ]2~ and
+'l)z to be "balanced" if their respective weights are equal.
+The following objective function favors balanced clusters,
+
+Q(v~,v~) =
+cut(V~,V~) + cut(Vz,V~)
+weight(V~)
+weight(V2) "
+(7)
+
+Given two different partitionings with the same cut value,
+the above objective function value is smaller for the more
+balanced partitioning.
+Thus minimizing Q0Yz,'l)z) favors
+partitions that have a small cut value and are balanced.
+We now show that the Rayleigh Quotient of the follow-
+ing generalized partition vector q equals the above objective
+function value.
+LEMMA 1. Given graph G, let L and W
+be its Laplacian
+and vertex weight matrices respectively. Let ~h = weightOYz )
+and ~2 = weightO)2).
+Then the generalized partition vec-
+tor q with elements
+{
+i
+vz,
+q~
+-.
+/'-~Vn2
+,
+i E V2,
+
+satisfies qrWe
+= O, and qrWq
+= weightO) ).
+
+Proof.
+Let y -- We, then yl = weight(i) = Wil. Thus
+
+qTWe
+= r/t/-~-~2Z
+weight(i)- ~/-~-1 ~
+weight(i) = 0.
+V,n
+ie];1
+V r/2 iE~)2
+
+T W
+r--~n
+2
+Similarly q
+q -- 2..i=1 W.qi -- ~71+ ~2 = weight(])).
+[]
+
+THEOREM 3. Using the notation of Lemma 1,
+
+qT Lq
+cut(])z, "N2)
+eutO)z, ~)2)
+qTWq
+weight(Vx)
+
+Proof.
+It is easy to show that
+vector q may be written as
+
+01 + ~72
+q -- 2 ~ p + - -
+weight(l)2) "
+
+the generalized partition
+
+
+~12 -
+,/1
+2Vc~_~ e,
+
+where p is the partition vector of (6). Using part 7 of The-
+orem 1, we see that
+
+qTLq
+_--
+(rh + 712)2pTLp"
+4~h~72
+
+Substituting the values of pTLp and qTWq,
+from Theo-
+rem 2 and Lemma 1 respectively, proves the result.
+[]
+Thus to find the global minimum of (7), we can restrict
+our attention to generalized partition vectors of the form in
+Lemma 1. Even though this problem is still NP-complete,
+the following theorem shows that it is possible to find a real
+relaxation to the optimal generalized partition vector.
+
+THEOREM 4. The problem
+
+min qTLq
+subject to qTWe = O,
+q~O qT Wq '
+
+is solved when q is the eigenvector corresponding to the 2nd
+smallest eigenvalue A2 of the generalized eigenvalue problem,
+
+Lz
+= AWz.
+(8)
+
+Proof.
+This is a standard result from linear algebra[13]. []
+
+3.3
+Ratio-cut and Normalized-cut objectives
+Thus far we have not specified the particular choice of
+vertex weights. A simple choice is to have weight(i) = 1 for
+all vertices i. This leads to the ratio-cut objective which has
+been considered in [14] (for circuit partitioning),
+
+Ratio-cut(])l,V2) =
+cut(Vl,V2)
+cut(V1,V2)
+Wll
++
+IV~l
+An interesting choice is to make the weight of each ver-
+tex equal to the sum of the weights of edges incident on it,
+i.e., weight(i)
+=
+~-'~kEik. This leads to the normalized-
+cut criterion that was used in [22] for image segmentation.
+Note that for this choice of vertex weights, the vertex weight
+matrix W equals the degree matrix D, and weight0)i ) =
+
+
+
+
+271
+
+cut0)~,))~) +within(])i) for i = 1, 2, where within(Vi) is the
+sum of the weights of edges with both end-points in )2i. Then
+the normalized-cut objective function may be expressed as
+
+cut (]21, ])z)
+cut(l)1, ])2)
+~f(v~,Vs) =
++
+~i~V~ ~k Eik
+~i~V~ ~2k E~k'
+=
+2-S(Vl,Vz),
+within(I)1)
+within(];2)
+where
+S(])l,Ys)
+=
+weight0)1) + weight(I)9.)"
+
+Note that S(])1, ])2) measures the strengths of associations
+within each partition. Thus minimizing the normalized-cut
+is equivalent to maximizing the proportion of edge weights
+that lie within each partition.
+
+4.
+THE SVD CONNECTION
+In the previous section, we saw that the second eigenvector
+of the generalized eigenvalue problem I,z = ADz provides
+a real relaxation to the discrete optimization problem of
+finding the minimum normalized cut.
+In this section, we
+present algorithms to find document and word clusterings
+using our bipartite graph model. In the bipartite case,
+a]
+[o, o]
+L =
+-A T
+D2
+, and
+D =
+0
+D~
+
+where Dt and D2 are diagonal matrices such that D1(i, i) =
+~-~jAij,
+Dz(j,j) = ~i Aij.
+Thus Lz = ADz may be
+written as
+[
+][
+j
+io,
+o j[o]
+Dx
+-A
+a~
+=
+A
+(9)
+-A T
+Dz
+y
+0
+D2
+y
+
+Assuming that both D1 and D2 are nonsingular, we can
+rewrite the above equations as
+
+Dxl/zx _ DI-1/~Ay
+=
+)~Dll/2x,
+
+-Dz-1/ZATaz + D21/9y
+=
+ADz~/Sy.
+
+Letting u = DxI/2~ and v = Dz~/Sy, and after a little
+algebraic manipulation, we get
+
+D~-X/~AD~-~/Sv
+=
+(1- A)u,
+
+Dz-I/2ATDx-~/zu
+=
+(1-A)v.
+
+These are precisely the equations that define the singular
+value decomposition (SVD) of the normalized matrix A,~ =
+D~-I/ZADz -1/9. In particular, u and v are the left and
+right singular vectors respectively, while (1 - A) is the cor-
+responding singular value. Thus instead of computing the
+eigenvector of the second (smallest) eigenvalue of (9), we can
+compute the left and right singular vectors corresponding to
+the second (largest) singular value of An,
+
+A,~vs = a:u~,
+AnT us = azVs,
+(10)
+
+where as = 1 - A2. Computationally, working on A,~ is
+much better since A,~ is of size w × d while the matrix L
+is of the larger size (w + d) × (w + d).
+The right singular vector v~ will give us a bipartitioning
+of documents while the left singular vector u2 will give us a
+bipartitioning of the words. By examining the relations (10)
+it is clear that this solution agrees with our intuition that
+a partitioning of documents should induce a partitioning of
+words, while a partitioning of words should imply a parti-
+tioning of documents.
+4.1
+The Bipartitioning Algorithm
+The singular vectors u2 and v~ of A,, give a real approx-
+imation to the discrete optimization problem of minimizing
+the normalized cut.
+Given u2 and vs the key task is to
+extract the optimal partition from these vectors.
+The optimal generalized partition vector of Lemma 1 is
+two-valued.
+Thus our strategy is to look for a bi-modal
+distribution in the values of u2 and vs.
+Let ml and rn2
+denote the bi-modal values that we axe looking for. From
+the previous section, the second eigenvector of/-, is given by
+
+[ Dx-1/su2 ]
+z2 =
+.
+(11)
+Dz-1/zv2
+
+One way to approximate the optimal bipartitioning is by the
+assignment of zs (i) to the bi-modal values mj (j = 1, 2) such
+that the following sum-of-squares criterion is minimized,
+
+2
+
+H
+H
+(zs(i) - mj)2
+j=l Z2(i)qm i
+
+The above is exactly the objective function that the classical
+k-means algorithm tries to minimize[9]. Thus we use the
+following algorithm to co-cluster words and documents:
+
+Algorithm Bipartition
+1. Given A, form A,, = DI-1/ZADz -1/2.
+2. Compute the second singular vectors of A,~, u2 and vs
+and form the vector zs as in (11).
+3. Run the k-means algorithm on the 1-dimensional data z2
+to obtain the desired bipartitioning.
+
+The surprising aspect of the above algorithm is that we
+run k-means simultaneously on the reduced representations
+of both words and documents to get the co-clustering.
+
+4.2
+The Multipartitioning Algorithm
+We can adapt our bipartitioning algorithm for the more
+general problem of finding k word and document clusters.
+One possibility is to use Algorithm Bipartition in a recursive
+manner. However, we favor a more direct approach. Just
+as the second singular vectors contain bi-modal informa-
+tion, the g = [log2 k] singular vectors us, u3,... , ut+l, and
+vz, v~,... , vt+l often contain k-modal information about
+the data set. Thus we can form the g-dimensional data set
+
+Z=[
+DI-1/sU ]
+(12)
+Dz-1/SV
+,
+
+where U = [uz,... ,ut+l], and V = [v~.... ,vt+i]. From
+this reduced-dimensional data set, we look for the best k-
+modal fit to the g-dimensional points rni,... ,mk by as-
+signing each g-dimensional row, Z(i), to rnj such that the
+sum-of-squares
+
+k
+H
+Y~
+llZ(i)-m~ll2
+j=l Z2(i)6m j
+
+is minimized. This can again be done by the classical k-
+means algorithm. Thus we obtain the following algorithm.
+
+Algorithm Multipartition(k)
+1. Given A, form A,~ = Dx-1/2AD2 -1/~.
+2. Compute g = [log~ k] singular vectors of A,~, us,.. ·Ut+l
+and vs,.., re+l, and form the matrix Z as in (12).
+3. Run the k-means algorithm on the g-dimensional data Z,
+to obtain the desired k-way multipartitioning.
+
+
+
+272
+
+Name
+# Docs
+# Words
+# Nonzeros(A)
+MedCran
+MedCran_AII
+MedCisi
+MedCisi_AII
+Classic3
+Classic3_30docs
+Classic3_150docs
+Yahoo_KS
+Yahoo_K1
+2433
+2433
+2493
+2493
+3893
+30
+150
+2340
+2340
+5042
+17162
+5447
+19194
+4303
+1073
+3652
+1458
+21839
+117987
+224325
+109119
+213453
+176347
+1585
+7960
+237969
+349792
+
+Table 1: Details of the data sets
+
+5.
+EXPERIMENTAL RESULTS
+For some of our experiments, we used the popular Med-
+llne (1033 medical abstracts), Cranfield (1400 aeronautical
+systems abstracts) and Cisi (1460 information retrieval ab-
+stracts) collections.
+These document sets can be down-
+loaded from ftp://ftp.cs.cornell.edu/pub/smart. For testing
+Algorithm Bipartition, we created mixtures consisting of 2
+of these 3 collections. For example, MedCran contains docu-
+ments from the Medline and Cranfield collections. Typically,
+we removed stop words, and words occurring in < 0.2% and
+> 15% of the documents. However, our algorithm has an
+in-built scaling scheme and is robust in the presence of large
+number of noise words, so we also formed word-document
+matrices by including all words, even stop words.
+For testing Algorithm Multipartition, we created the Clas-
+sic3 data set by mixing together Medline, Cranfield and Cisl
+which gives a total of 3893 documents. To show that our
+algorithm works well on small data sets, we also created
+subsets of Classic3 with 30 and 150 documents respectively.
+Our final data set is a collection of 2340 Reuters news
+articles downloaded from Yahoo in October 199712]. The
+articles are from 6 categories: 142 from Business, 1384 from
+Entertainment, 494 from Health, 114 from Politics, 141 from
+Sports and 60 news articles from Technology. In the prepro-
+cessing, HTML tags were removed and words were stemmed
+using Porter's algorithm. We used 2 matrices from this col-
+lection: Yahoo_KS contains 1458 words while Yahoo_K1 in-
+cludes all 21839 words obtained after removing stop words.
+Details on all our test collections are given in Table 1.
+
+5.1
+Bipartitioning
+Results
+
+In this section, we present bipartitioning results on the
+MedCranand MedCisicollections. Since we know the "true"
+class label for each document, the confusion matrix cap-
+tures the goodness of document clustering. In addition, the
+measures of purity and entropy are easily derived from the
+confusion matrix[6].
+Table 2 summarizes the results of applying Algorithm Bi-
+partition to the MedCran data set. The confusion matrix at
+the top of the table shows that the document cluster :D0
+consists entirely of the Medline collection, while 1400 of the
+1407 documents in :D1 are from Cranfield. The bottom of
+Table 2 displays the "top" 7 words in each of the word clus-
+ters ~4)o and W1. The top words are those whose internal
+edge weights are the greatest. By the co-clustering, the word
+cluster YVi is associated with document cluster :Di. It should
+be observed that the top 7 words clearly convey the "con-
+cept" of the associated document cluster.
+Similarly, Table 3 shows that good bipartitions axe also
+obtained on the MedCisi data set. Algorithm Bipartition uses
+the global spectral heuristic of using singular vectors which
+I
+Medline Cranfield
+:Do:
+1026
+0
+:DI:
+7
+1400
+
+Wo: patients cells blood children hormone cancer renal
+~4)x: shock heat supersonic wing transfer buckling laminar
+
+Table 2: Bipartitioning results for MedCran
+I
+MedlineCisi
+l
+:Do:
+970
+0
+:DI:
+63
+1460
+
+YYo:cells patients blood hormone renal rats cancer
+WI: libraries retrieval scientific research science system boo
+
+Table 3: Bipartitioning results for MedCisi
+
+makes it robust in the presence of "noise" words. To demon-
+strate this, we ran the algorithm on the data sets obtained
+without removing even the stop words. The confusion ma-
+trices of Table 4 show that the algorithm is able to recover
+the original classes despite the presence of stop words.
+
+5.2
+Multipartitioning Results
+In this section, we show that Algorithm Multipartition
+gives us good results. Table 5 gives the confusion matrix
+for the document clusters and the top 7 words of the associ-
+ated word clusters found in Classic3. Note that since k = 3
+in this case, the algorithm uses £ = Flog2k] = 2 singular
+vectors for co-clustering.
+As mentioned earlier, the Yahoo_K1 and Yahoo_K5 data
+sets contain 6 classes of news articles. Entertainment is the
+dominant class containing 1384 documents while Technol-
+ogy contains only 60 articles. Hence the classes are of varied
+sizes. Table 6 gives the multipartitioning result obtained by
+using £ = [log2k] = 3 singular vectors. It is clearly diffi-
+cult to recover the original classes. However, the presence
+of many zeroes in the confusion matrix is encouraging. Ta-
+ble 6 shows that clusters :D1 and :D2 consist mainly of the
+Entertainment class, while :D4 and :D5 are "purely" from
+Health and Sports respectively. The word clusters show the
+underlying concepts in the associated document clusters (re-
+call that the words are stemmed in this example). Table 7
+shows that similar document clustering is obtained when
+fewer words are used.
+Finally, Algorithm Multlpartition does well on small collec-
+tions also. Table 8 shows that even when mixing small (and
+random) subsets of Medline, Cisi and Cranfield our algorithm
+is able to recover these classes. This is in stark contrast to
+the spherical k-means algorithm that gives poor results on
+small document collections[7].
+
+6.
+CONCLUSIONS
+In this paper, we have introduced the novel idea of mod-
+eling a document collection as a bipartite graph using which
+we proposed a spectral algorithm for co-clustering words and
+documents. This algorithm has some nice theoretical prop-
+erties as it provides the optimal solution to a real relaxation
+of the NP-complete co-clustering objective. In addition, our
+
+
+Medline Cranfield
+:Do:
+1014
+0
+:Dz:
+19
+1400
+Medline
+Cisi
+:Do:
+925
+0
+:DI:
+108
+1460
+
+Table 4: Results for MedCran_AIIand MedCisi_AII
+
+
+
+273
+
+Med
+Cisi
+Cran
+:Do:
+965
+0
+0
+:DI:
+65
+1458
+10
+:D2:
+3
+2
+1390
+~Yo:patients cells blood hormone renal cancer rats
+~Yl: library libraries retrieval scientifc science book system
+1412:boundary layer heat shock roach supersonic wing
+
+Table 5: Multipartitioning results for Classic3
+
+Bus
+Entertain
+Health
+Politics
+Sports
+Tech
+:Do:
+120
+82
+0
+52
+0
+57
+:DI:
+0
+833
+0
+1
+100
+0
+:D2:
+0
+259
+0
+0
+0
+0
+793:
+22
+215
+102
+61
+1
+3
+:D4:
+0
+0
+392
+0
+0
+0
+:Ds:
+0
+0
+0
+0
+40
+0
+}4)0:clinton campaign senat house court financ white
+Wx: septemb tv am week music set top
+ld)2: film emmi star hollywood award comedi fienne
+)4)3: world health new polit entertain tech sport
+V~a:surgeri injuri undergo hospit england accord recommen,
+)&5: republ advanc wildcard match abdelatif ac adolph
+
+Table 6: Multipartitioning results for Yahoo_K1
+
+algorithm works well on real examples as illustrated by our
+experimental results.
+
+7.
+REFERENCES
+[1] L. D. Baker and A. McCallum. Distributional
+clustering of words for text classification. In A CM
+SIGIR, pages 96-103, 1998.
+[2] D. Boley. Hierarchical taxonomies using divisive
+partitioning. Technical Report TR-98-012, University
+of Minnesota, 1998.
+[3] D. Boley, M. Gini, R. Gross, E.-H. Has, K. Hastings,
+G. Karypis, V. Kumar, B. Mobasher, and J. Moore.
+Document categorization and query generation on the
+World Wide Web using WebACE. AI Review, 1998.
+[4] C. J. Crouch. A cluster-based approach to thesaurus
+construction. In ACM SIGIR, pages 309-320, 1988.
+[5] D. R. Cutting, D. R. Karger, J. O. Pedersen, and
+J. W. Tukey. Scatter/gather: A cluster-based
+approach to browsing large document collections. In
+ACM SIGIR, 1992.
+[6] I. S. Dhillon, J. Fan, and Y. Guan. Efficient clustering
+of very large document collections. In V. K.
+R. Grossman, C. Kamath and R. Namburu, editors,
+Data Mining for Scientific and Engineering
+Applications. Kluwer Academic Publishers, 2001.
+[7] I. S. Dhillon and D. S. Modha. Concept
+decompositions for large sparse text data using
+clustering. Machine Learning, 42(1):143-175, January
+2001. Also appears as IBM Research Report RJ
+10147, July 1999.
+[8] W. E. Donath and A. J. Hoffman. Lower bounds for
+the partitioning of graphs. IBM Journal of Research
+and Development, 17:420-425, 1973.
+[9] R. O. Duda, P. E. Hart, and D. G. Stork. Pattern
+Classification. John Wiley L: Sons, 2000. 2nd Edition.
+[10] C. M. Fiduccia and R. M. Mattheyses. A linear time
+heuristic for improving network partitions. Technical
+Bus
+Entertain
+Health
+Politics
+Sports
+Tech
+:Do:
+120
+113
+0
+1
+0
+59
+:DI:
+0
+1175
+0
+0
+136
+0
+:D2:
+19
+95
+4
+73
+5
+1
+:D3:
+1
+6
+217
+0
+0
+0
+:D4:
+0
+0
+273
+0
+0
+0
+:Ds:
+2
+0
+0
+40
+0
+0
+Wo: compani stock financi pr busi wire quote
+~VI: film tv emmi comedi hollywood previou entertain
+)4)2: presid washington bill court militari octob violat
+)4)3: health help pm death famili rate lead
+W4: surgeri injuri undergo hospit england recommend disco~
+)A)5:senat clinton campaign house white financ republicn
+
+
+Table 7: Multipartitioning results for Yahoo_K5
+
+Med
+Cisi
+Cran
+Med
+Cisi
+Cran
+:Do:
+9
+0
+0
+:Do:
+49
+0
+0
+:DI:
+0
+10
+0
+:DI:
+0
+50
+0
+:D~:
+1
+0
+10
+:D2:
+1
+0
+50
+
+Table 8: Results for Classic3_3Odocsand Classic3_150docs
+
+Report 82CRD130, GE Corporate Research, 1982.
+[11] M. Fiedler. Algebraic connectivity of graphs.
+Czecheslovak Mathematical Journal, 23:298-305, 1973.
+[12] M. R. Garey and D. S. Johnson. Computers and
+Intractability: A Guide to the Theory of
+NP-Completeness. W. H. Freeman gz Company, 1979.
+[13] G. H. Golub and C. F. V. Loan. Matrix computations.
+Johns Hopkins University Press, 3rd edition, 1996.
+[14] L. Hagen and A. B. Kahng. New spectral methods for
+ratio cut partitioning and clustering. IEEE
+Transactions on CAD, 11:1074-1085, 1992.
+[15] K. M. Hall. An r-dimensional quadratic placement
+algorithm. Management Science, 11(3):219-229, 1970.
+[16] R. V. Katter. Study of document representations:
+Multidimensional scaling of indexing terms. System
+Development Corporation, Santa Monica, CA, 1967.
+[17] B. Kernighan and S. Lin. An efficient heuristic
+procedure for partitioning graphs. The Bell System
+Technical Journal, 29(2):291-307, 1970.
+[18] T. Kohonen. Self-organizing Maps. Springer, 1995.
+[19] A. Pothen, H. Simon, and K.-P. Liou. Partitioning
+sparse matrices with eigenvectors of graphs. SIAM
+Journal on Matrix Analysis and Applications,
+11(3):430-452, July 1990.
+[20] G. Saiton and M. J. McGill. Introduction to Modern
+Retrieval. McGraw-Hill Book Company, 1983.
+[21] H. Schfitze and C. Silverstein. Projections for efficient
+document clustering. In ACM SIGIR, 1997.
+[22] J. Shi and J. Malik. Normalized cuts and image
+segmentation. IEEE Trans. Pattern Analysis and
+Machine Intelligence, 22(8):888-905, August 2000.
+A. Strehl, J. Ghosh, and R. Mooney. Impact of
+similarity measures on web-page clustering. In AAAI
+2000 Workshop on AI for Web Search, 2000.
+C. J. van Rijsbergen. Information Retrieval.
+Butterworths, London, second edition, 1979.
+E. M. Voorhees. The effectiveness and e~ciency of
+agglomerative hierarchic clustering in document
+retrieval. PhD thesis, Cornell University, 1986.
+[23]
+
+
+[24]
+
+[25]
+
+
+
+
+274
+

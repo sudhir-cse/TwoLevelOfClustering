@@ -1,0 +1,930 @@
+Topic-conditioned Novelty Detection
+
+Yiming Yang, Jian Zhang, Jaime Carbonell, Chun Jin
+Schoolof ComputerScience
+CarnegieMellonUniversity
+Pittsburgh,PA15213-8213,USA
+{yiming,jianzhan j gc,cjin}~cs. cmu.edu
+
+
+
+
+ABSTRACT
+Automated detection of the first document reporting each
+new event in temporally-sequenced streams of documents is
+an open challenge. In this paper we propose a new approach
+which addresses this problem in two stages: 1) using a su-
+pervised learning algorithm to classify the on-line document
+stream into pre-defined broad topic categories, and 2) per-
+forming topic-conditioned novelty detection for documents
+in each topic. We also focus on exploiting named-entities for
+event-level novelty detection and using feature-based heuris-
+tics derived from the topic histories. Evaluating these meth-
+ods using a set of broadcast news stories, our results show
+substantial performance gains over the traditional one-level
+approach to the novelty detection problem.
+
+
+Categories and Subject Descriptors
+1.5.2 [Design Methodology]: Classifier design and eval-
+uation; Feature evaluation and selection; Pattern analysis;;
+H.3.3 [Information Search and Retrieval]: Information
+filtering
+
+
+General Terms
+Design, Experimentation, Algorithm
+
+
+Keywords
+Novelty Detection, Named Entity, Feature Selection, Text
+Classification
+
+
+1.
+INTRODUCTION
+Automated detection of new events from chronologically
+ordered documents (e.g., newswire stories or TV broadcasts)
+is an open challenge in text mining.
+A specific form of
+novelty detection, namely First Story Detection (FSD), is
+the task of online identification of the earliest report for
+each event as soon as that report arrives in the sequence of
+documents. FSD has been recognized as the most difficult
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+notmade or distributedfor profitor commercial advantage and that copies
+bear this notice and the full citation on the first page. Tocopy otherwise,to
+republish, to post on serversor to redistributeto lists, requires prior specific
+permission and/or a fee.
+SIGKDD02 Edmonton, Alberta,Canada
+Copyright2002 ACM 1-58113-567-X/02/0007...$5.00.
+task in the research area of Topic Detection and Tracking
+(TDT), compared to the other tasks like known event track-
+ing and retrospective event detection. Current FSD systems
+are mostly based on comparing a new document to all the
+documents in the past, and thresholding on the similarity
+scores - if all the similarity scores axe below a threshold,
+the new document is predicted as the first story of a novel
+event. Such a simple-minded approach yielded limited per-
+formance in TDT benchmark evaluations.
+A performance
+upper-bound analysis by Allan et al.[2] provided a proba-
+bilistic justification for the observed performance degrada-
+tion in FSD compared to event tracking, and suggested that
+new approaches must be explored in order to significantly
+enhance the current performance level achieved in FSD.
+In this paper, we focus on how to use training data of
+old events to learn useful statistics for the prediction of new
+events.
+More specifically, we investigate a new approach
+consisting of the following components:
+
+1. classifying documents into broad topics each of which
+consists of multiple events;
+
+2. identifying Named Entities (NE's), optimizing their
+weight relative to normal words for each topic, and
+computing a stopword list per topic;
+
+3. measuring the novelty of a new document conditioned
+on the system-predicted topic for that document.
+
+The rationale behind our approach is that events belong-
+ing to the same topic often share a set of keywords.
+For
+example, documents talking about different events in air-
+plane accidents (as a topic) tend to share the words like
+"airplane", "crash" and "accidents".
+Those keywords are
+informative for discriminating on-topic and off-topic docu-
+ments, but, they also make the first story of a new airplane
+crash look just like the documents for another airplane crash
+which has already occurred, and cause FSD systems to miss
+such reports unless the system has the ability to distinguish
+the features (words or phrases) discriminative for topic clas-
+sification and those discriminative for event distinction. To
+obtain such functionality, we propose the approach of topic-
+conditioned FSD in which we use supervised learning algo-
+rithm to classify documents by topic, and topic-conditioned
+feature weights to measure the novelty of documents at event
+level.
+Section 2 describes our method; Section 3 introduces the
+data and performance measures for evaluation, and the sim-
+ilarity matrices illustrating the confusibility among events
+within each topic; Section 4 reports experimental results;
+
+
+
+
+688
+
+and Section 5 summarizes the research findings and discusses
+issues for further research.
+
+2.
+A NEW SCHEME FOR FSD
+To avoid ambiguities in terminology, let us make a distinc-
+tion between the words topic and event. By event we mean
+that some action happened during certain time period and
+at certain location, e.g., the TWA-800 crash; by topic we
+mean a recurring and broader class of events, e.g., airplane
+accidents. An event includes a set of documents, and a topic
+consists of its children events 1
+
+2.1
+The Two-level Scheme
+Figure 1 shows the two-level scheme for FSD conditioned
+on topics.
+The first level is for the classification of docu-
+ments by topic, using a supervised learning algorithm[10].
+The second level consists of several identical copies of an
+FSD algorithm: each is in charge of FSD for a particular
+topic.
+The FSD algorithm is extremely simple: when a new doc-
+ument arrives, it is compared to all the documents in its
+past ("the history"). If its nearest neighbor in the past has
+a cosine similarity score (or any reasonable choice of simi-
+larity measure) below a threshold, then the new document
+is labeled as "NEW", meaning it is the first story of a novel
+event; otherwise, it is labeled as "OLD". After this, the doc-
+ument is added to the history. The threshold is empirically
+set based on cross validation. This approach has been typ-
+ical among current FSD systems in the TDT benchmark
+evaluations, and has been reported in detail in previous pa-
+pers[9, 13]. When using the FSD algorithm in our two-level
+FSD scheme, the only modifications we made are that we
+use one FSD for each topic, and that each FSD keeps its
+local history (and the derived statistics) instead of the global
+history in a traditional FSD system. That is, documents
+are automatically routed to the corresponding topic by the
+classifier at the first level before they axe sent to the second
+level for novelty detection.
+The two-level scheme allows us to treat documents and
+words in different ways at each level. For topic-level clas-
+sification, we would like to give more weight to the topical
+discriminative words, like "airplane", "accident", "tornado",
+"hijacking", etc., while at the novelty detection level,
+we can also generate a stopword list for each topic based
+on how common a word is used in that topic, and give more
+weight to the event-level discriminative terms, like "TWA-
+800" or "September llth", for example.
+
+2.2 Topic-specific Stopword Removal
+Since topical common words cause events in the same
+topic to be mutually confusing, and are a potential cause
+for a FSD system to miss the first story of a new event,
+a natural choice for us is to remove those words. We ob-
+tained a stopword list for each topic by thresholding on the
+training-set document frequency of a word:
+
+n(t, T,)
+n(T,----ff- >/3
+(1)
+
+where n(Ti) is the number of documents on topic Ti; n(t, Ti)
+is the number of documents containing word t and on topic
+
+1Events, not topics, have been the central foci in TDT; how-
+ever, for some historical reason, topic and event have been
+used interchangeably in the TDT literature.
+Wi ,d
+
+
+uj,d
+
+where
+Ti; and parameter/3 is empirically chosen by running the
+two-level scheme FSD system on a validation corpus.
+
+2.3
+Weighted Use of Named Entities
+In this study we used BBN's Hidden Markov Model soft-
+ware [4] which extracts seven types of general-purpose Named
+Entities (NEs), including Person, Organization, Location,
+Date, Time, Money and Percent.
+Intuitively, NEs would
+be informative for differentiating events, although their ef-
+fects in automated FSD have not been examined. Our ques-
+tions here are: which types of NEs are particularly useful
+for topic-conditioned FSD, and how can we effectively use
+them?
+We apply NE identification to every document when it is
+routed to the second level of the FSD system for a specific
+topic, and used these extracted NEs to extend the vocabu-
+lary of that topic 2. The vector representation of a document
+for that topic is defined to be:
+
+d
+=
+(wl.d, w2.~ ....
+,w~vl,~,u~,~,u2,d ....
+,uwl,d)(2)
+
+=
+(log(1 +n(tl,d))). log(n(t~
+)
+(3)
+
+
+=
+ak. (log(1 +n(sj,d))).log(--77~-~)
+(4)
+nts~,l-J 1
+
+
+· N is the total number of documents in the local history
+
+· Wi,d is the within-document weight for word tl in the
+current vocabulary V (which is adaptive over time);
+U~,d is the within-document weight for Named Entity
+si E S, and S is the set of NEs extracted by far;
+
+· n(ti,d) is the within-document term frequency (TF)
+of word ti E V; n(sj, d) is the within-document NE
+frequency of NE s~ ~ S;
+
+· n(tl, D) is the within-collection document frequency of
+term t/and D is the collection of documents processed
+by far; n(sj, D) is the the within-collection document
+frequency of NE s~;
+
+· ak is the weight of the kth type of NEs, empirically
+tuned through validation.
+
+2.4
+Topic-sensitive Feature Weighting
+Here feature means either a term or a named entity. In
+the following experiments, terms are stemmed, and stop-
+words are removed. We aim to use topic-sensitive weights of
+features to improve both the topic classification part of our
+approach and the topic-conditioned novelty detection part.
+For the first part, we want to choose topic-level discrimina-
+tive features, and for the second part, we want a heuristic
+indicator for the usefulness of certain types of NEs.
+We applied the X2 average criterion [12] to feature weights
+conditioned on topics, which we have found consistently out-
+performs other feature selection criteria such as the infor-
+mation gain and document frequency on several benchmark
+collections in text classification evaluations. The X2 statis-
+tics for terms are computed using a training set of documents
+with topic labels from which a contingency table is derived:
+
+2By "extend" we mean that those terms contained in the
+NEs are still kept in the document.
+
+
+
+
+689
+
+Input
+se~que:nce of documents
+
+
+
+
+Loc~
+h.itttt o~tizo
+
+
+
+Fi.rmt Story
+Detectol~
+
+
+
+
+Figure 1: Topic-conditioned First Story Detection (FSD)
+
+
+
+Table 1: A two-by-two contingency table
+# of doc's
+# of doc's
+on topic T
+off topic T
+# of doc's containing f
+A
+B
+# of doc's not containing f
+C
+D
+
+
+
+
+The X2 statistic for a specific feature f with respect to
+topic T is defined to be:
+
+(A + B + C + D) x (AD - CB) 2
+x~(f'T) = (A+C) × (B+D) x (A+B) × (C+D)
+(5)
+
+The average weight for feature f over all the topics is
+computed using
+
+Tr~
+
+X2~vg(f) = E
+Pr(T')x2(f'T')
+(6)
+
+i=l
+
+Ranking features by their cross-topic averaged scores and
+thresholding on the ranks yields a selected subset of features
+for the topic-level classification of documents (the first level
+in Figure 1).
+To estimate the effectiveness of each type of Named En-
+tity, we compute the X2~,~value for each NE and average
+those values over all the NEs in the same type:
+
+1
+X~o(I)
+(7)
+f~s~
+
+where Ek is the effectiveness for the kth type of NEs, and Sk
+is the set of NEs in that type. In the previous section, we
+mentioned empiricallytuning the weight for each type of NE
+.The Ek value enables us to estimate the potential effects of
+different types of NEs without actually running exhaustive
+validation experiments, and thus applying fine tuning only
+to the promising types of NEs. As is shown in Section 4,
+this measure is correlated to the empirical results, and thus
+is a useful indicator for comparing different types of NEs.
+
+
+3.
+DATA AND METRICS
+3.1
+Data
+For empirical examination, ideally, we would like to have
+a document collection with a large number of manually la-
+beled topics and events, and with a reasonable number of
+documents for each event. In reality, such data sets are diffi-
+cult to find. The TDT benchmark collections, for example,
+have over 300 manually defined events but broad topic la-
+bels are not available, unfortunately. We also found that the
+TDT events are often sparsely labeled for a given topic, e.g.,
+only three bombing events were labeled among many bomb-
+ing events actually reported in the TDT corpora. Those
+sparsely labeled events per topic do not allow us to thor-
+oughly examine the power of our method in differentiating
+mutually confusible events. We therefore created our own
+data collection for the evaluation.
+The source data, named Broadcast News and published
+by Primary Source Media, consists of 261,209 transcripts for
+news articles from ABC, CNN, NPR, and MSNBC in the pe-
+riod from 1992 to 1998. Each transcript comes along with a
+record that is composed of several fields, such as title, date,
+source, keywords, abstract and body. We only extracted the
+body field of each record into a "bag of words", and called
+it a document. Human-assigned keywords are informative
+for grouping documents that share a certain topic. For the
+experiments in this paper, we defined four broad topics -
+"Airplane Accidents", "Bombings", "Hijackings" and "Tor-
+nadoes" - and collected the on-topic documents using the
+corresponding keywords of each topic.
+For each topic, we identified a set of events by randomly
+sampling some documents within that topic and manually
+defining the events described in those documents. For each
+event, we created a brief description indicating what it is
+about, where and when it happened, who was involved, etc.
+The event definitions were used by humans to assign event
+labels to documents, but not used by the system. Further,
+we used the sampled documents for each event as the queries
+to retrieve similar documents from the pool of the docu-
+ments in the same topic. The pooled documents were man-
+ually labeled with respect to the defined events.
+Using this procedure, we intended to define 10 different
+events for each topic, but, for topic Hijackings, we only
+found 6 events in the data collection. Finally, by taking
+
+
+
+
+690
+
+I[iidNN;t j
+-
+~,
+·
+'
+'
+oo
+· "
+'
+" T:~
+i:
+" .1
+.. ILl
+':~,L" " .
+,
+'
+
+
+
+
+o .°.~,.
+. ~ . ~ -
+!
+%
+:i:' ~-~".~
+,
+.."
+-~'
+"
+'''"
+I
+Nl¢,ll _
+·
+
+
+
+"b J)l'..!
+
+Ii
+·
+:1, e~)a.t!.lA:._ ~..1~
+
+Figure 2: Similarity Matrices:
+Airplane Accidents,
+Bombings,
+Hijackings and Tornadoes
+
+
+the union of the documents with event labels (defined), we
+get 538 documents, each exclusively belonging to one of 36
+events under 4 topics.
+The documents were streamed back together in the orig-
+inal temporal order. The events happened earlier are used
+as the training set, and the events happened later are used
+as the test set. The training set was used to train the topic-
+level classifier, and to tune parameters (the weights for NEs
+relative to original words) and generate topic-specific stop-
+word lists. The test set was used for evaluating our system
+which was tuned in the training phase. The output of our
+system is a binary decision on each test document in the
+stream about whether or not it is the first story of an un-
+seen event thus far.
+
+3.2
+Similarity Matrices
+Before running experiments on this data set, we would
+like to analyze how difficult the corpus is. That is to say,
+to analyze how confusible the events in this corpus are for
+a system making distinctions. We define a similarity matrix
+for the documents in each topic as below:
+
+
+Sll
+S12
+...
+S1N1
+IS
+11
+S 12
+"''
+s1M1
+s..
+sd
+is.i
+S 22
+s2MI
+s =
+. ...........
+=
+(8)
+
+LSN1SN.... SNNJ
+L~I SM2"'"
+SMM]
+
+where
+
+· N is the number of documents in a particular topic;
+M is the number of events in the topic;
+
+· documents {dl, ~,""
+, ~v} are sorted by event as the
+first key and by the time of arrival as the second key;
+
+· Sis is the cosine similarity between document vectors
+(~ and t~; S kz is the sub-matrix consisting of the inter-
+event similarity scores between events k and l when
+k ¢ l, or the intra-event similarity scores otherwise.
+
+Clearly, S is a symmetric matrix and Sii = 1. Such a ma-
+trix enables us to visualize how difficult it is for a similarity-
+based system to make distinctions among events in the same
+topic. We used Matlab to draw contours on the similarity
+scores, making it clear where the dense parts are in a sim-
+ilarity matrix. Figure 2 demonstrates the similarity matri-
+ces of four topics respectively. From these graphs we can see
+that although the diagonal sub-matrices are more dense than
+off-diagonai sub-matrices, the values in those off-diagonal
+sub-matrices are not negligible, indicating the difficulty in
+separating inter-event stories.
+
+3.3
+Evaluation Measures
+To evaluate the performance of our system, we choose the
+conventional measures for FSD used in the TDT benchmark
+evaluations [1]. Those measures are defined to be:
+
+Cs.d=Cm..'Pm..'P~o,-g~+Csa'P~'.'Pno,~-~or~t (9)
+vs.
+(10)
+(Cf.a) .... =min(Cml.s . Ptarg.,, Cya. P.o.-t.~g.,)
+
+where
+
+· Cmls~ and Ci.
+are the costs of a miss and a false
+alarm, we use C,~i~ = 1.0 and Cfa = 0.1, respectively,
+
+· Pm~
+and P e~ are the conditional probabilities of a
+miss and a false alarm, respectively,
+
+· Pta~a~t and P=on-t~g~t are the a prior target probabil-
+ities (P~o=-t~rg~t = 1 - Pt~a~t). In TDT benchmark
+evaluations, Pt~g¢t was set to 0.02 for all events; here
+we follow the same convention.
+
+If the system classifies a true first story of some event as
+"No", it commits a miss error. If the system classifies a non-
+first story as "Yes", it commits a false alarm error. P~is~ is
+the ratio of the number of miss errors to the number of the
+first stories (= number of events) in the stream. PS~ is the
+ratio of the number of false alarm errors to the total number
+of non-first stories.
+Miss errors are considered as a more
+severe problem than false alarm, as people may miss earliest
+reports on important events. This justifies the higher value
+of the cost C,~i~.
+The normalized cost (Cf~,~)....
+computes the relative
+cost of the system with respect to the minimum of two triv-
+ial systems (one simply makes "Yes" decisions and another
+simply makes "No" decisions without examining the stories).
+Finally, the normalized cost can be either computed for
+the system's decisions over the cross-product of all stories
+and all events (called "story-weighted" or "micro-averaged" ),
+or computed for each event separately, then averaged over
+events (which is called "topic-weighted" or "macro-averaged" ).
+
+
+4.
+EXPERIMENTS
+
+4.1
+Topic-level Classification
+For upper-level part of our system, we chose a Rocchio-
+style classifier which is one of the state-of-the-art systems
+
+
+
+
+691
+
+in the TDT benchmark evaluations for event tracking[5, 11]
+and the TREC evaluations for adaptive filtering[3].
+The
+Rocchio method was originally developed for query expan-
+sion using relevance feedback in text retrieval[6, 7]. Applied
+to text classification, it computes a prototype vector for each
+class as a weighted average of positive and negative training
+examples. The prototype for topic Tj is defined to be:
+
+1
+1
+~j(%'n)= iD(Ty)I ~
+~ -"yl~)..(,~,y){ ~
+(~ (11)
+
+where dis a training document; ~D(Tj) is the set of positive
+training examples of topic Tj; :D,~(Tj) is the "query zone" [8],
+consisting of the n top-ranking documents retrieved from the
+negative training examples when using the positive centroid
+(the first term in the formula) as the query; and 7 is the
+weight of the negative centroid. The use of a query zone is
+an important departure from the original Rocchio algorithm
+and is intended to deal with the larger sets of negative ex-
+amples available in text classification. Detailed description
+about this classifier can be found in [11].
+Applying Rocchio to our experiments, we set the parame-
+ters 7 = 1.0, and n = 400. We also applied freature selection
+before running Rocchio using the X~g criterion, resulting in
+400 selected features. The topic classificaiton performance
+is .85 micro-averaged F1 (the harmonic average of recall and
+precision)[10] and .84 macro-averaged F1.
+
+4.2
+Main Results
+We conducted four experiments under different conditions,
+and summarize their condidions and results in Table 2 3
+
+
+Table 2: Summary of Experimental Results
+
+Cases
+Micro-
+Reduced
+Macro-
+Reduced
+avg Cf,d
+Cost(%)
+avg Cssa
+Cost(%)
+baseline
+0.5498
+0.5353
+simple case
+ideal case
+real case
+0.5332
+-3.02%
+0.5245
+-2.02%
+0.3551
+-35.41%
+0.3786
+-29.27%
+0.4548
+-17.28%
+0.4515
+-15.65%
+
+
+
+For the Baseline, we ran our one-level FSD system on the
+training set to tune the "novelty threshold", and applied the
+tuned FSD method to the test set.
+Simple Case is the same as Baseline except that it is the
+two-level system with perfect topic labels. In other words,
+we used human-assigned topic labels to route each document
+to the corresponding FSD system at the second level, and
+then ran the FSD system conditioned on that topic. From
+the results we can see that there is no big difference between
+results of baseline and simple case, meaning that the topic
+label alone is of little additional value for this corpus.
+For the Ideal Case, we again used perfectly-assigned topic
+labels, but also applied both the NE weighting and removed
+topic-specific stopwords. Assuming perfect topic classifica-
+tion, of course, only gives us the performarme upper-bound
+of the two-level approach; nevertheless, it provides a chance
+to examine the net effect of NEs and feature heuristics in
+our new two-level FSD approach.
+
+3The Cysd we use here and later is the normalized cost in-
+troduced in section 3.
+For the Real Case, we used the Rocchio-style classifier
+(micro-averaged F1 performance = .85) instead of perfectly-
+assigned topic labels, but the condition is otherwise identical
+to the ideal one. We see that we still gain a major perfor-
+mance improvement over the baseline, though not as much
+as the ideal case. Classifier errors account for the difference
+in performance.
+
+4.3
+NE Weighting
+Based on the application of NE discussed above, we first
+calculated the effectiveness (defined in equation 7) of seven
+types of NEs for each topic, and the results are showed in
+Table 3.
+
+
+Table 3: Effectiveness of different types of NEs
+NE Type
+Effectiveness of seven types of ~lEs
+AIR
+BOMB
+HIJ
+TORN
+Location
+Person
+Organization,
+Time
+Date
+Money
+Percent
+2.61
+3.02
+3.77
+2.15
+1.56
+1.78
+1.46
+1.34
+2.02
+1.79
+2.09
+1.36
+1.24
+1.03
+1.13
+1.07
+2.31
+2.27
+1.37
+2.18
+2.43
+2.10
+0.92
+1.11
+1.08
+0.73
+1.01
+0.96
+mean of all fea-
+2.29
+2.12
+1.82
+1.40
+tures
+
+
+
+Using the effectiveness as a indicator, we can safely re-
+duce the parameters' search space. As shown in Table 3,
+"Location" is the most informative type of NEs, we then
+decided to treat that type of NEs as one group, and the re-
+maining six types of NEs as another group. After we tuned
+the weights (a in formula 4) for these two groups using the
+training set, we got a weight of 4.0 for the "Location" type
+of NEs and 1.0 for the other six types of NEs.
+To be more clear regarding how much confusibility has
+been reduced by our approach, we show two similarity ma-
+trices for the topic Airplane Accidents here (each one con-
+talus the five events in the test set), one for baseline and one
+for ideal case (figure 3) a
+From the color graphs we can see that in the ideal case
+matrix, not only do off-diagonal sub-matrices become more
+sparse, but the diagonal sub-matrices also become more
+dense.
+
+
+5.
+CONCLUSIONS AND FUTURE WORK
+By applying a new approach to FSD, we effectively re-
+duced the degree of confusibility between events within each
+topic and gained a substantial performance improvement in
+novelty detection. Our study shows that the topic-conditioned
+novelty detection approach allows better exploitation of named
+entities and feature-based heuristics in representing topic
+histories, indicating clear promise of the approach and invit-
+ing further research.
+
+4The difference between the baseline matrix here and the
+one we showed in section 3 is: we used "perfect" idf (com-
+puted retrospectively from the whole corpus) in section 3;
+while here we didn't take training set as part of the adap-
+tive idf, which is computed as each test document comes in.
+As a result, the matrix in section 3 looks more dense, i.e.
+confusible, than the baseline matrix showed here.
+
+
+
+
+692
+
+doeumml
+m
+
+
+.....
+acau~rl¢~m
+1~_.
+--
+a9--- '~ ._L2. ~.......1~.
+
+I~~~"
+1°~ !
+;;~I~'~'!~~''~ ~=~ 7"*~8,"~'~';'"~~'..~"..~.~=.~:~.~'~":"~:~'._~-~'c~: '"~~.:"'~"." ~.-: I,~~'--~-.~_,°~-.'.~"~
+
+
+
+
+· .~ ~..2~)~],A.
+12;~;5~'.:~¢~¢
+
+
+I
+:!
+:2
+
+
+Figure 3: Similarity Matrices of Airplane Accidents:
+baseline and ideal case
+
+
+Several important areas need to be further studied in the
+future, including:
+
+1. Situated role extraction for NEs: While we have shown
+the usefulness of NEs in topic-conditioned FSD, we
+believe situated NEs would far more powerful.
+By
+"situated" NEs, we mean NEs plus their roles under
+context, e.g., "TWA 800" as the flight number in an
+airplane crash. Automated induction of Finite State
+Transducers for the extraction of "situated" NEs is a
+challenging research topic.
+
+2. Automated hierarchical clustering: Instead of using
+human defined topics at the upper-level in our scheme,
+using system-generated clusters is another challenging
+problem.
+
+3. Adaptive learning at the topic classificationlevel: Sub-
+stantial developments have been made recently in the
+adaptive filtering area of information retrieval[3], and
+investigating those new techniques for novelty detec-
+tion has not been done.
+
+
+6.
+ACKNOWLEDGMENTS
+We thank Charles Wayne from DoD for his guidance in the
+TDT task definition and evaluation. We also thank Fan Li
+who helped to create some runs of the topic-level classifica-
+tion. This research is sponsored in part by National Science
+Foundation (NSF) under the grant number KDI-9873009,
+and in part by NSF under the grant number IIS-9982226.
+However, any opinions or conclusions in this paper are the
+authors' and do not necessarily reflect those of the sponsors.
+
+
+7.
+REFERENCES
+[1] The 2001 topic detection and tracking (tdt2001) task
+definition and evaluation plan. In
+http://www. nist. gov/speech/tests/tdt/tdt2OO1/evalplan. htm,
+2001.
+[2] J. Allan, V. Lavrenko, and H. Jin. First story
+detection in tdt is hard. Washiongton DC, 2000.
+Proceedings of the Ninth International Conference on
+Informaiton and Knowledge Management (CIKM).
+[3] T. Ault and Y. Yang. knn, rocchio and metrics for
+information filtering at trec-10. In Proceedings of
+TREC-IO, 2002 (to appear).
+[4] D. Bikel, S. Miller, R. Schwartz, and R. Weischedel.
+Nymble: a high-performance learning named-finder. In
+In Fifth Conference on Applied Natural Language
+Processing, 1997.
+[5] J. Fiscus, G. Doddington, J. Garofolo, and A. Martin.
+Nist's 1998 topic detection and tracking evaluation
+(tdt2). In Proceedings of the DARPA Broadcast News
+Transcription and Understanding Workshop, pages
+19-26, San Francisco, CA, 1999. Morgan Kaufmann
+Publishers, Inc.
+[6] J. J. Rocchio-Jr. Relevance feedback in information
+retrieval. In G. Salton, editor, The SMART Retrieval
+System: Experiments in Automatic Document
+Processing, pages 313-323. Prentice-Hall, Inc.,
+Englewood Cliffs, New Jersay, 1971.
+[7] G. Salton and C. Buckley. Improving retrieval
+performance by relevance feedback. Journal of
+American Society for Information Sciences,
+41:288-297~ 1990.
+[8] R. E. Schapire, Y. Singer, and A. Singhal. Boosting
+and rocchio applied to text filtering. In Proceedings of
+the Twenty-first Annual International A CM SIGIR
+Conference on Research and Development in
+Information Retrieval pages 215-223, New York,
+1998. The Association for Computing Machinery.
+[9] F. Walls, H. Jin, S. Sista, and R. Schwartz. Topic
+detection in broadcast news. In Proceedings of the
+DARPA Broadcast News Workshop, pages 193-198,
+San Francisco, CA, 1999. Morgan Kaufmann
+Publishers, Inc.
+[10] Y. Yang. An evaluation of statistical approaches to
+text categorization. Journal of Information Retrieval,
+1(1/2):67-88, 1999.
+[11] Y. Yang, T. Ault, and T. Pierce. Combining multiple
+learning strategies for effective cross validation. In The
+Seventeenth International Conference on Machine
+Learning (ICML'O0), pages 1167-1182, 2000.
+[12] Y. Yang and J. Pedersen. A comparative study on
+feature selection in text categorization. In
+J. D. H. Fisher, editor, The Fourteenth International
+Conference on Machine Learning (ICML'97), pages
+412-420. Morgan Kaufmann, 1997.
+[13] Y. Yang, T. Pierce, and J. Carbonell. A study on
+retrospective and on-line event detection. In
+Proceedings of the 21th Ann Int ACM SIGIR
+Conference on Research and Development in
+Information Retrieval (SIGIR'98), pages 28-36, 1998.
+
+
+
+
+693
+

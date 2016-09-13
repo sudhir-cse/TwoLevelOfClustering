@@ -1,0 +1,1036 @@
+Improving Spatial Locality of Programs via Data Mining
+
+
+
+
+
+Karlton Sequeira, Mohammed Zaki, Boleslaw Szymanski, Christopher Carothers
+Computer Science Department, Rensselaer Polytechnic Institute, Troy, NY, USA
+
+{sequek,zaki,szymansk,chrisc}@cs.rpi.edu
+
+
+
+
+ABSTRACT
+In most computer systems, page fault rate is currently min-
+imized by generic page replacement algorithms which try to
+model the temporal locality inherent in programs. In this
+paper, we propose two algorithms, one greedy and the other
+stochastic, designed for program specific code restructuring
+as a means of increasing spatial locality within a program.
+Both algorithms effectively decrease average working set size
+and hence the page fault rate. Our methods are more effec-
+tive than traditional approaches due to use of domain in-
+formation. We illustrate the efficacy of our algorithms on
+actual data mining algorithms.
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications-
+Data Mining
+
+
+Keywords
+Program Locality, Code Restructuring, Page Clustering
+
+
+1. INTRODUCTION
+A computer has fast, relatively small (expensive) main
+memory (RAM), and slow, relatively large secondary mem-
+ory (hard disk). A large program may thus not completely
+fit into RAM. To remedy this, a program is considered to
+be made up of fixed-size blocks of memory called pages. To
+execute an instruction the page containing that instruction
+must reside in RAM. If it does not, a page fault is said to
+occur. If RAM is currently completely occupied, a page may
+be selected from those resident in RAM for replacement and
+sent to disk, and the desired page will occupy its position
+in RAM. The page is then referenced and the instruction is
+executed. The fraction of times a page fault accompanies a
+page reference is called the page fault rate (pfr). Program
+execution time is governed by a number of factors, among
+
+
+This work was supported under NSF NGSP grant EIA-
+0103708. Zaki was also supported by NSF CAREER Award
+IIS-0092978 and DOE Career Award DE-FG02-02ER25538.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA
+Copyright 2003 ACM 1-58113-737-0/03/0008 ...$5.00.
+which pfr plays a prominent role. While pfr can be reduced
+by a number of operating system and hardware techniques,
+specialized software-based techniques, which exploit locality
+specific to a program are yet to be widely used.
+Although the cost of main memory has been continually
+decreasing, the resulting gains have been mitigated by the
+continual rise in program memory requirements (by as large
+a factor as 2 per year [14]). Also, due to fields like sensor net-
+works [2], there remains a need for programs to run in small
+amounts of memory (for energy efficiency). A well-known
+rule of thumb is that a program spends approximately 90%
+of its execution time in 10% of the code [14].
+This is a
+manifestation of the principle of temporal locality.
+Since
+this 10% of code is not necessarily contiguous in memory, a
+program spends that 90% of its execution time requesting
+considerably more than 10% of its total number of pages.
+One of the key program-specific ideas is to utilize the tem-
+poral locality to optimize program spatial locality, i.e., the
+portions of a program's code segment are reordered in the
+pages of the executable to increase spatial locality. In do-
+ing so, a fewer number of pages are requested more often,
+thereby decreasing the average working set size correspond-
+ing to the program and hence decreasing the pfr.
+Program spatial locality optimization is the specific prob-
+lem we seek to solve. It is related to the constrained clus-
+tering problem.
+Several challenges to cope with include:
+determining what data to collect, selecting the data model
+to represent it, dealing with an unknown distribution of in-
+put parameters and making the solution applicable to the
+widest possible range of programs (which means that heuris-
+tics used should not be program-specific).
+
+1.1 Related Work
+The early work done on program restructuring concen-
+trated on sector-level traces. Hatfield and Gerald [8] achieved
+paging performance improvements in the range of 2 to 10
+times by relocating sectors (subroutine and data modules)
+of compilers, editors and assemblers. Johnson [11], provided
+an array of clustering algorithms and inter-sector reference
+models. He also formally analyzed the impact of the struc-
+tural ordering of a program's relocatable sectors on the pro-
+gram's pfr.
+Procedural-level program restructuring targets reduction
+of cache conflict misses rather than page faults. The former
+are easier to avoid if the architecture uses a separate in-
+struction cache. It is also known that compiler optimization-
+invoked code reordering sometimes unintentionally increases
+cache misses [7]. Pettis and Hansen [15] used greedy clus-
+tering algorithms similar to those described by Johnson, but
+with the additional goal of arranging procedures within code
+blocks relative to each other. Gloy and Smith [7] proposed
+
+
+649
+
+using temporal information, in a manner similar to our ap-
+proach, for improving paging and demonstrated its advan-
+tage over the Pettis Hansen procedure placement algorithm.
+Recently, Batchu and Levy [3], showed that an average
+working set containing 20% of the program's functions is
+sufficient to ensure a pfr of less than 2%. Our approach uses
+function-level program restructuring as well.
+To model the data, Hatfield and Gerald [8] (HG model)
+suggested using a transformation of the sector trace into
+a "nearness matrix" to represent inter-sector reference be-
+havior.
+However, they only capture associations between
+adjacent sector references. To counter this deficiency, John-
+son [11], proposed an LRU (least recently used) stack based
+inter-sector model (LRU STACK MODEL). Gloy and Smith
+[7], used a temporal relationship graph (TRG) to represent
+relationships between procedures. Each edge of TRG has
+a weight equal to the number of times that two successive
+references to any procedure are interleaved with at least one
+reference to the other.
+Constrained clustering is a semi-supervised learning tech-
+nique, in which data is partitioned into meaningful sub-
+groups called clusters, based on some similarity measure and
+subject to some a priori known constraints. Considerable
+work has been done in this field [4, 16]. Wagstaff et al. [16]
+have shown that domain-based heuristics contribute signifi-
+cantly to improving the resulting clustering. We utilize this
+idea in our approach.
+
+1.2 Contributions
+Our work introduces a new domain to which data mining
+can be applied. There is currently very little effort to solve
+such system-related problems using data mining.
+We experimentally show that paging performance varies
+with the code structure. We demonstrate the effect of using
+domain information while determining an assignment of pro-
+gram functions to pages. We develop two algorithms to the
+program restructuring problem, by formulating it first as a
+constrained clustering problem and then as a stochastic op-
+timization problem. We compare the resulting assignments
+to select the best assignment of code to pages. We apply
+our techniques on data mining problems.
+We have profiled data mining programs for three reasons.
+Firstly, there is a strong trend towards reducing disk i/o re-
+quirements of data mining systems. Secondly, the predom-
+inantly combinatorial nature of data mining makes these
+programs highly compute-intensive.
+Finally, data mining
+programs often have code segments spanning a number of
+pages. Such programs benefit considerably from lower pfrs.
+
+2. FORMULATION
+We now formally describe the problem. Let the program
+be made up of a set F = {f1, f2, ..., f|F
+|
+} of functions and let
+there exist a mapping Size : F  Z which gives the size of
+each function (note: Z denotes the set of positive integers).
+Consider the virtual address trace V T = a1, . . . , ai, . . . aT
+of virtual addresses invoked during a program execution.
+There are two mappings defined by the memory system for
+each program: f : A  F and p : A  P , where A is the
+set of all virtual addresses of the program and P is the set
+of all program pages. These two mappings define a function
+trace F T = f(V T ) (so F T = f(a1), f(a2), . . . f(aT )) and a
+page trace P T = p(V T ) (which is a sequence of pages, each
+of size P ageSize, referenced during execution).
+We assume that functions fi are constrained to not cross
+page boundaries, so there is a many-to-one mapping from
+functions to the pages of a program.
+Most functions are
+smaller than the default page size and large functions can be
+split up to ensure that they do not cross page boundaries,
+so this assumption does not restrict the generality of our
+approach. Let A denote the set of all mappings Assign :
+F  P . Our goal is to find an assignment Assigno  A,
+such that
+
+· the sum of sizes of functions assigned to a single page
+does not exceed P ageSize (An assignment satisfying
+this condition is called a legitimate assignment), and
+
+· the pfr invoked by Assigno is the smallest among all
+legitimate assignments of functions onto pages.
+
+For each page pi  P , there is an inverse mapping i =
+Assign-
+1
+(pi) of all functions assigned to it. Hence, each le-
+gitimate assignment induces a partitioning  of the function
+set F , into || disjoint clusters. Each cluster (page) i is
+constrained in that the sum of sizes of all its functions does
+not exceed the page size. Thus, the problem is formulated
+as one of constrained clustering.
+We illustrate our solutions using the following program as
+an example (showing function definitions):
+1.
+f2() {
+f1()
+} //means that f2 invokes f1
+2.
+f3() {}
+3.
+f4() {}
+4.
+f5() {
+f1()
+f2()
+}
+5.
+f1() {}
+6.
+main (int i) {
+7.
+if (i  20) f3() else f4()
+9.
+while (i - -) f5()
+10.
+}
+where main, f1, f2, f3, f4, f5 occupy say 3KB, 1KB, 2KB,
+2KB, 2KB, 2KB respectively and the page size is 4KB. The
+default assignment places the functions as per their order
+of definition in the program.
+So, page 1 contains f2, f3,
+page 2 contains f4, f5, and page 3 contains f1, main. This
+legitimate assignment is written as a clustering of functions
+as follows: {(f2, f3), (f4, f5), (f1, main)}.
+Our method involves three stages,
+
+1. Instrumentation: Using the symbol table of the pro-
+gram executable to be optimized, we determine the
+set of functions and the size of each function. Using
+Instrumentation Database IDB [13], we insert instru-
+mentation code at the start of each function to produce
+an instrumented executable.
+This executable is run
+with a variety of input parameters to produce a set of
+function traces, which are partitioned into a training
+set and a test set of function traces. For the sample
+program above, the trace would be:
+< main  (f3  f4)  (f5  f1  f2  f1)i >.
+
+2. Mining: We then use our algorithms GreedyCluster-
+ing and MCA to mine the Assign function assigning
+functions to pages of the code segment using the train-
+ing set. We test the model on the test set.
+
+3. Reordering: Based on the Assign function mined, we
+remove instrumentation code and reorder the functions
+in the executable via an object code editor.
+
+By dealing with the executable at the time of instrumen-
+tation, one can account for compiler optimizations like inlin-
+ing, template instantiations, etc. This paper concentrates on
+the mining stage. As an example for the trace above, one in-
+tuitively better assignment is {(f2, f5), (f4, f3), (f1, main)}.
+If the sample program above, is allocated only 2 pages, a
+
+
+650
+
+simple analysis shows that LRU replacement [14], incurs at
+least (1 + 2i) page faults i.e. pfr  0.5, for the default as-
+signment and no more than 4 page faults for the better one.
+We aim to find good assignments automatically via mining.
+
+
+3. ALGORITHM
+We devised two algorithms. The first is a greedy clustering
+algorithm which uses domain-specific heuristics to give an
+ordering of the functions in memory. The second algorithm
+recasts the problem as one of stochastic optimization.
+To convert temporal locality into spatial locality, it is
+necessary to model the temporal locality first.
+We use a
+weighted graph G = (F, E), to represent the temporal as-
+sociations between the different functions to be ordered.
+Each vertex of G corresponds to a function and the weight
+w(fi, fj) on each edge (fi, fj) in F × F , corresponds to the
+strength of the temporal association between the functions
+connected by the edge. The edge (fi, fj) is akin to an associ-
+ation rule fi  fj with confidence proportional to w(fi, fj).
+The higher the weight, the stronger the temporal associa-
+tion, and the higher the probability of page faults if fi and
+fj are assigned to different pages.
+The graph is created by streaming through the trace, cre-
+ating a node for every new function in the trace and updat-
+ing the weights on edges as described below.
+
+3.1 Weight function
+We now define the weight function w : F × F  Z for
+the trace graph. Johnson [11], suggested the use of a sector
+replacement stack to simulate the overlapping page stack.
+Analogously, we use a function replacement stack to simu-
+late the overlapping page stack. If Kp pages are allocated to
+the program code segment, then it is highly probable that
+at least Kp functions will fit into memory, as most functions
+are smaller than a page. Given a function trace F T of length
+T and a function stack of size Kf = Kp,
+
+
+w(fi, fj) =
+T -1
+ 
+
+
+
+
+t=1
+Iw(fi, fj, t)
+
+
+Accordingly, Iw is defined as:
+
+
+
+Iw(fi, fj, t) =
+¡¢
+
+
+
+
+¢
+
+
+
+
+¢
+
+
+
+
+£
+
+
+
+
+¢
+
+
+
+
+¢
+
+
+
+
+¢¤
+p(fi, fj, t) if (ft
++1
+= fj) 
+(tf (fi)  Lf ) 
+(tf (fj) > Kf)
+0
+otherwise
+(1)
+
+
+
+where tf (fi) gives the height of function fi in the function
+replacement stack at time t, p(fi, fj, t) is the penalty func-
+tion determining the increment to the weight on edge (fi, fj)
+due to a function fault at time t and Lf is the number of
+functions at the top of the stack whose edges with fj are
+incremented.
+The higher the function fi in the replacement stack, the
+more closely temporally associated, it is with the faulting
+function fj. Eq. 1 makes it explicit that the replacement
+algorithm and parameters must be incorporated into the
+function w, unlike the HG-model [8]. For p(fi, fj, t)=1 and
+Lf =1, Iw denotes the number of times fi calls fj. We have
+tested three penalty functions applied to all function stack
+members, i.e. Lf = Kf , to approximate the temporal asso-
+ciations between the functions:
+LRU STACK MODEL(LSM) [11]: Johnson suggested equal
+penalties for all stack members, i.e.,
+
+pLSM (fi, fj, t) = 1
+(2)
+The disadvantage of using this method of weighting the
+graph is that all functions in the function stack are incre-
+mented uniformly for a function fault. Thus each function in
+the stack is equally responsible for assigning the function for
+which the fault occurred, to its page. This model can pro-
+mote pages in which functions having larger inter-reference
+times are equally probably adjacent as those having smaller
+inter-reference times. Thus LSM converts temporal local-
+ity into spatial locality in a manner that we expect would
+perform poorly. In Fig. 1, we show the graph produced for
+sample program in Sec. 2 using the LSM weighting function,
+Kf = 2 and i  20. w(main, f3) = 1 due to the cold start.
+w(f5, f2) = w(f1, f2) = i because f2 is referenced i times
+and each reference results in a fault since f5 and f1 are on
+the stack. Similarly, w(f1, f5) = w(f2, f5) = i - 1 because
+f2 is referenced i - 1 times after stack contents are (f2, f1).
+
+
+
+
+Figure 1: Graph for sample program and pLSM
+
+PENALTY BASED MODEL(PBM): To remedy the prob-
+lem above, we penalize functions in the function stack for
+function faults, with increments proportional to their dis-
+tance in the trace from the function for which the function
+fault occurred. Alternatively, from a stack-based viewpoint,
+we penalize them with increments inversely proportional to
+their probability of replacement from the function stack,
+which depends upon the replacement algorithm. For LRU,
+
+pP
+BM
+(fi, fj, t) = Kf - tf(fi)
+(3)
+
+GDS BASED MODEL(GBM): GDS is a cache replace-
+ment algorithm used for replacing cached files at proxy servers [5].
+To optimize cache hit rate, GDS uses time of last refer-
+ence and the size of the file as input while replacing files.
+Analogously, to better model the associations between the
+functions, we incorporate the size of the function into the
+increments.
+
+pGBM (fi, fj, t) =
+Kf - tf (fi)
+Size(fj)
+(4)
+
+Thus a function suffers a lesser increment if the function
+temporally closely associated with it is large in size, because
+proximity is normalized by function size.
+
+3.2 GreedyClustering
+This algorithm is similar to the greedy fractional knap-
+sack algorithm [10]. In the fractional knapsack problem, we
+greedily choose items based on the expected gain in opti-
+mization per unit quantity of the item. Similarly, we choose
+functions to fill the pages based on the expected contribution
+towards minimization of page faults per unit byte occupied
+by the function in the page. We present the algorithm below:
+
+GreedyClustering(G, P ):
+// G is the graph produced by function traces
+// P is the set of pages to be filled
+// Pl is the current page to be filled
+
+
+651
+
+//F uncList is the list of functions to be assigned
+1. F uncList = V (G), AssignCurrent = 
+2. while(F uncList not empty)
+3.
+ft=pickFunction(G, AssignCurrent, F uncList, P, Pl)
+4.
+update AssignCurrent, F uncList, P
+5. compact AssignCurrent
+
+Initially none of the functions are assigned to pages (line
+1). Until all functions are assigned, we continue to select
+functions from the unassigned list using pickFunction and
+update the assignment. If there exist partially filled pages
+which may be packed together, we use a bin packing algo-
+rithm (line 5), since doing so implies no higher a pfr.
+The pickFunction routine is shown below. It evaluates
+all candidates in F uncList for a fit into the space available
+in the current page Pl. It picks candidates based on their
+CScore (lines 1-3). If no function, which fits in the space on
+the current page, is temporally associated with the functions
+already on this page (line 4), the algorithm starts filling a
+new page (lines 5-8). Thus, it can assign fi to Pl, even if
+fi has a stronger temporal association with fj, not assigned
+to Pl. Thus, this method differs from agglomerative hier-
+archical clustering, since it does not always assign the two
+most temporally associated groups of functions to the same
+page [15].
+
+pickFunction(G, F uncList, P, Pl):
+// Space : P  Z gives the space available in a page
+1. fi  F uncList,
+2.
+compute CScore(fi, Pl)
+3. choose ft  F uncList based on CScore(ft, Pl)
+4. if
+ 
+fi  F uncList such that
+4.
+Size(fi)  Space(Pl) and CScore(fi, Pl) > 0
+5.
+increment Pl
+6.
+fi  FuncList,
+7.
+compute CScore(fi, F uncList)
+8.
+choose ft  F uncList based on CScore(ft, F uncList)
+9. return ft
+
+The algorithm selects the function to place next in the
+current page based on the score computed by Eq. (6).
+
+
+CScore(fi, Pl) 
+ 
+
+
+
+
+fj Pl
+w(fi, fj) + w(fj, fi)
+Size(fi) +
+¡
+fkPl
+Size(fk)
+(5)
+
+
+
+CScore(fi, F uncList) 
+max
+fj F uncList
+w(fi, fj) + w(fj, fi)
+Size(fi) + Size(fj)
+(6)
+Since, the number of functions assignable to Pl is bounded
+above by the page size which is constant, it is easy to see
+that pickFunction has complexity O(|E|). Thus, Greedy-
+Clustering has complexity O(|F ||E|).
+
+3.3 Stochastic Optimization
+For a number of NP-hard problems, stochastic optimiza-
+tion has provided solutions which considerably outperform
+non-heuristic classical algorithms like gradient descent, etc.
+It is our goal to determine if stochastic optimization can use
+the domain-specific knowledge incorporated into the graph
+to outperform GreedyClustering.
+
+Objective Function:
+In stochastic minimization, we pro-
+duce a number of solutions, whose goodness is based on how
+much they minimize the pfr. Estimating the pfr by simula-
+tion on test traces is not practical, as the function traces are
+generally very long. There is a need for an objective function
+that is computationally inexpensive to evaluate, yet accu-
+rate in measuring the pfr due to an assignment Assign  A.
+We define the objective function (also known as the energy
+function) to be the sum of weights over all edges, such that
+the vertices of each such edge are assigned to different par-
+titions, i.e.,
+
+Energy(Assign, G) =
+ 
+
+
+
+
+Assign(fi )=Assign(fj )
+w(fi, fj)
+(7)
+
+
+where w is described in Sec. 3.1. This heuristic approxi-
+mation permits calculation of change in energy caused by a
+system perturbation in time O(F ).
+
+MCA (ConvergeCriterion, G, AssignCurrent, BunchSize):
+// ConvergeCriterion: determines if system has converged
+// G: the weighted directed graph corresponding to {F T }
+// AssignCurrent: current assignment of functions to pages
+// BunchSize: the number of functions reassigned at a time
+1. AssignBest = AssignCurrent
+2. eDemon = 0
+3. while (notConverged(ConvergeCriterion))
+4.
+Shuffle order in which functions are reassigned
+5.
+for each bunch of functions
+6.
+AssignNew = AssignCurrent
+7.
+for all functions in the bunch
+8.
+remove them from the current page
+9.
+for all functions in the bunch
+10.
+for each page visited in random order
+11.
+if function fits in page
+12.
+update AssignNew
+13.
+eDiff = Energy(AssignNew, G)
+- Energy(AssignCurrent,G)
+14.
+if eDemon > eDiff
+15.
+eDemon = eDemon - eDiff
+16.
+AssignCurrent = AssignNew
+17.
+if Energy(AssignCurrent, G) < Energy(AssignBest, G)
+18.
+AssignBest = AssignCurrent
+19.
+eDemon = eDemon  DecayRate
+
+Microcanonical Annealing (MCA): Microcanonical an-
+nealing [6], shown above, is a particle physics-based algo-
+rithm for the simulation of statistical systems. The system
+consists of a large number of particles which are in different
+configurations, i.e., have different position and momentum
+coordinates. The system as a whole is believed to be isolated
+and hence it has a constant total energy. Statistical physics
+states that in such an equilibrium, all states are equally
+likely [9]. A particle which loses kinetic energy by chang-
+ing its momentum coordinates, contributes to the potential
+energy in the system, allowing another particle to use it to
+increase its kinetic energy (line 12). Creutz [6], assumes the
+existence of a demon that is in charge of transferring energy
+from particles giving up energy, to those consuming it. The
+procedure produces a random walk through configurations.
+At the end of each such random walk, the demon decays the
+energy that it holds (line 18), cooling the system and hence
+the system converges (line 3). Decay rate governs the rate
+of convergence (we use a decay rate of 0.99).
+MCA is similar to simulated annealing in that, unlike
+other Markov Chain Monte Carlo simulation algorithms [9],
+transition probabilities change as demon energy decays. It
+differs in that, unlike simulated annealing, we do not have to
+compute the probability of a configuration change being ac-
+cepted or not. We simply see if the demon can accommodate
+the loss in energy (lines 13-14), if any. Hence, it is compu-
+
+
+652
+
+tationally cheaper. Also, we can use a number of demons in
+parallel, each having their own demon energy, to speed up
+convergence. In our formulation, the functions correspond
+to particles, and the position coordinates to their assigned
+pages. Initially, each function is assigned to a unique page,
+i.e., the assignment for the program in Sec. 2 would be
+{(f1),(f2),(f3),(f4),(f5),(main)}. This is a very high en-
+ergy state, resulting in the early transitions contributing to
+the demon energy, thus avoiding local minima. For example,
+consider the transition of f1 from its current page to that of
+f3 to produce legitimate assignment
+{(),(f2),(f3,f1),(f4),(f5),(main)}. A subsequentrandom
+transition is that of f4 to the earlier page of f1 resulting in
+{(f4),(f2),(f3,f1),(),(f5),(main)}. Then, f5 may transi-
+tion to the page of f2 resulting in
+{(f4),(f2,f5),(f3,f1),(),(),(main)} raising the demon en-
+ergy significantly, allowing further transitions. We assume
+convergence when demon energy is less than 100 and after
+500 iterations during which no functions make transitions to
+lower energy states.
+
+
+4. EXPERIMENTS
+We evaluate our algorithms using two metrics:
+
+1. Page Fault Ratio (PFR): If y is the fraction of code
+segment in main memory,
+
+
+P F R(y) =
+pfrAssigndef
+ault
+(y)
+
+pfr optimized(y)
+, y  [0, 1]
+(8)
+
+
+2. Approximate Working Set Size Ratio (AWSSR): Let
+(x) be a function, which returns the minimum num-
+ber of pages, whose cumulative references account for
+(1 - x) of the total references. As x  0, (x) is an
+approximation to the working set size.
+
+AW SSR(x) =
+Assigndef
+ault
+(x)
+optimized(x)
+, x  [0, 1]
+(9)
+
+
+A high PFR implies that the optimized assignment has a
+considerably lower pfr and a high AWSSR implies that the
+optimized assignment has a smaller approximate working set
+than the default assignment. The "amortized" PFR is the
+ratio of the sum of the page faults over all test traces, prior
+to and after optimization.
+In our experiments, we used function traces for two data
+mining algorithms viz. SPADE [17] and K-metis [12]. Both
+programs were compiled using g++ with O3 optimization.
+Table 1 shows the characteristics of the two programs. Out
+of the set of traces from each program, we use 5 for testing
+and the remaining for training.
+
+Table 1: Experimental Program Characteristics
+Characteristic
+SPADE[17]
+K-metis[12]
+Functionality
+Freq Seq Miner
+Graph Partitioning
+Parameters
+data-file minsup
+graph-file #(parts)
+#(functions)
+98
+230
+#(4KB Pages)
+11
+43
+#(Traces)
+20
+20
+µ(Trace length)
+3,227,499
+1,781,648
+(Trace length)
+3,322,530
+2,679,482
+
+Instrumented SPADE was run on data produced by the
+IBM data generator [1]. A number of input files for SPADE
+were generated by varying the parameters determining the
+number of items in each transaction, the length of the pat-
+terns interspersed and the correlation between patterns. These
+files were fed with different minsup parameters to SPADE
+and the corresponding function traces were used as input to
+our program. For K-metis, we created a number of random
+graphs spanning a range of connectivities and types, i.e.,
+weighted, unweighted, with vertex weights, etc., and varied
+the number of partitions to split them into and fed these as
+input to K-metis.
+The output of the instrumented code is a sequence of
+program-specific function identification names/numbers, i.e.,
+F T . The page size is assumed to be 4,096 bytes. By de-
+fault, we use GreedyClustering to produce the assignment
+and weight the edges of the graph using LSM and use three
+demons, i.e. BunchSize = 3, for MCA.
+
+4.1 Effect of domain knowledge on PFR
+
+
+
+
+1
+10
+100
+1000
+10000
+100000
+
+
+
+
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+Amortized
+PFR
+
+
+
+
+Fraction of code segment in main memory
+LSM K-metis
+PBM K-metis
+GBM K-metis
+LSM SPADE
+PBM SPADE
+GBM SPADE
+
+
+
+
+Figure 2: Effect of domain knowledge for K-metis
+
+
+In Fig. 2, we examine the variation of amortized PFR (Y-
+axis) as the amount of main memory available to the code
+segment (X-axis) increases. We examine the effect of the
+weight function for each of the studied programs. We ob-
+serve that the three weight functions are not that different.
+For SPADE, GBM does not have the same peak as the oth-
+ers. Nonetheless, it marginally outperforms LSM and PBM
+for other fractions of the code segment in main memory.
+
+4.2 GreedyClustering versus MCA
+
+
+
+
+0.1
+1
+10
+100
+1000
+10000
+100000
+
+
+
+
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+Amortized
+PFR
+
+
+
+
+Fraction of code segment in main memory
+K-metis: GreedyClustering
+K-metis: MCA
+SPADE: GreedyClustering
+SPADE: MCA
+
+
+
+
+Figure 3: GreedyClustering v/s MCA on PFR
+
+Effect on PFR: In Fig. 3, the amortized PFR obtained
+as a result of using the two algorithms are compared. It
+is evident that GreedyClustering outperforms MCA for
+
+
+653
+
+the K-metis program. In fact, the performance of MCA
+is worse than the default assignment for some fractions of
+the code segment in main memory, as it fails to converge for
+the parameters provided. For the SPADE program, MCA
+and GreedyClustering outperform each other for different
+fractions of the code segment in main memory. Also note
+that the PFR peaks and dips for significantly different frac-
+tions of the code segment in memory for the two programs.
+
+Effect on AWSSR: In Fig. 4, we have plotted the varia-
+tion of AWSSR as a function of the fraction of the total refer-
+ences to pages outside the approximate working set, for the
+different algorithms and programs. For example the bottom-
+most right-most point has coordinates (5 × 10-
+4
+, 1.2). This
+means that the SPADE program, when provided an assign-
+ment by MCA, yields an approximate working set of size 1.2
+times smaller than that of the default assignment, where an
+approximate working set is defined as the minimum number
+of pages which account for (1 - 5 × 10-
+4
+), i.e. 99.95% of the
+total references. It is evident that MCA is outperformed
+by GreedyClustering. AWSSR  1 implies that code re-
+structuring does decrease the approximate working set size.
+Experiments were carried out with the code segments being
+allocated half the number of main memory pages required
+by them to completely fit in main memory.
+
+
+
+
+10
+-6
+10
+-5
+10
+-4
+10
+-3
+1
+1.5
+2
+2.5
+
+
+
+
+fraction of references to pages outside the working set
+AWSSR
+
+
+
+
+K-metis: GreedyClustering
+SPADE: GreedyClustering
+K-metis: MCA
+SPADE: MCA
+
+
+
+
+Figure 4: GreedyClustering v/s MCA on AWSSR
+
+5. DISCUSSION
+The work presented in this paper is conducted under the
+PerfMiner project at RPI which aims at developing the Perf-
+Miner engine for performance mining of large-scale data-
+intensive next generation distributed object applications.
+The problem of improving the spatial locality of programs
+via data mining (and other problems in computer systems)
+opens a new domain for application of data mining tech-
+niques. It has a number of interesting aspects to it. The
+probability distribution of input parameters can evolve, e.g.,
+high compute programs may receive inputs with increasing
+size over time. Also, unlike a number of other domains, the
+optimal objective function for assessing the quality of a clus-
+tering is known viz., the pfr, and hence efficacy of clustering
+algorithms for this problem can be compared. Solutions to
+many optimization problems lie in using a greedy algorithm
+to locate a subspace of interest and then using stochastic
+refinement. The difficulty in accurately and efficiently mod-
+elling pfr (Sec. 3.3) makes application of such an approach
+to this domain hard. Finally, most of the constrained clus-
+tering results that we have seen pertain to inter-instance
+level constraints. However, in our problem, constraints are
+imposed on the cluster characteristics, i.e., P ageSize con-
+strains the sum of the sizes of the functions assigned to a
+cluster.
+Fig. 3 and Fig. 4 imply that the MCA and Greedy-
+Clustering do not have the same relative effect on program
+locality optimization on both SPADE and K-metis data.
+GreedyClustering generally outperforms MCA; the per-
+formance is also program specific.
+In future work, we intend using domain knowledge influ-
+enced techniques to determine better ways to organize sec-
+ondary memory to minimize page fault cost, and new ways
+of prefetching to minimize latency and network traffic using
+proxy servers.
+
+
+6. REFERENCES
+[1] R. Agrawal, R. Srikant. Mining sequential patterns.
+11th Intl. Conf. on Data Engingering, 1995.
+[2] I. F. Akyildiz, W. Su, Y. Sankarasubramaniam, E.
+Cyirci. Wireless Sensor Networks: A Survey.
+Computer Networks, 38(4):393-422, 2002.
+[3] R. Batchu, S. Levy. Working Sets at Function Level.
+Rutgers University, Computer Science Dept.,
+Technical Report (DCS TR-480), 1998.
+[4] P. S. Bradley, K. P. Bennett, A. Demiriz. Constrained
+K-means clustering. Technical Report
+MSR-TR-2000-65, Microsoft Research, 2000.
+[5] P. Cao, S. Irani. Cost-Aware WWW Proxy Caching
+Algs. USENIX Symp. on Internet Tech. and Sys.,
+1997.
+[6] M. Creutz. Microcanonical Monte Carlo Simulation.
+Physical Review Letters, 50(19):1411-1414, 1983.
+[7] N. Gloy, M. D. Smith. Procedure Placement using
+Temporal-Ordering information. ACM Trans. on Prog.
+Languages and Systems, 21(5):977-1027, 1999.
+[8] D. J. Hatfield, J. Gerald. Program Restructuring for
+Virtual Memory. IBM Systems Journal, 10(3):168-192,
+1971.
+[9] L. Herault, R. Horaud. Figure-ground discrimination:
+Combinatorial Optimization Approach. IEEE Trans.
+on Pattern Anal. & Machine Intelligence,
+15(9):899-914, 1993.
+[10] E. Horowitz, S. Sahni, S. Rajasekeran. Computer
+Algorithms. W. H. Freeman. NY 1998.
+[11] J. W. Johnson. Program Restructuring for Virtual
+Memory Systems. Project MAC TR-148, MIT, 1975.
+[12] G. Karypis, V. Kumar. Multilevel k-way Hypergraph
+Partitioning. Design Automation Conference, 1999.
+[13] J. Nesheiwat, B.K. Szymanski. Instrumentation
+Database System for Performance Analysis of Parallel
+Scientific Applications. Parallel Computing,
+28(10):1409-1449, 2002.
+[14] D. Patterson, J. Hennessy. Computer Architecture: A
+Quantitative Approach. Morgan Kaufmann, 1990.
+[15] K. Pettis, R. Hensen. Profile-guided code positioning.
+In Conf. on Programming Language Design and
+Implementation, 1990.
+[16] K. Wagstaff, C. Cardie, S. Rogers, S. Schroedl.
+Constrained K-means clustering with Background
+Knowledge. Int'l Conf. on Machine Learning, 2001.
+[17] M. J. Zaki. SPADE: An Efficient Algorithm for
+Mining Frequent Sequences. Machine Learning
+Journal, 42(1/2):31-60, 2001.
+
+
+
+
+654
+

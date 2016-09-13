@@ -1,0 +1,1180 @@
+Privacy Preserving Regression Modelling Via Distributed
+Computation
+
+
+Ashish P. Sanil, Alan F. Karr and
+Xiaodong Lin
+National Institute of Statistical Sciences
+PO Box 14006
+Research Triangle Park, NC 27709-4006
+
+ashish@niss.org, karr@niss.org,
+linxd@samsi.info
+Jerome P. Reiter
+Duke University
+Durham, NC 27708 USA
+jerry@stat.duke.edu
+
+
+
+
+ABSTRACT
+Reluctance of data owners to share their possibly confi-
+dential or proprietary data with others who own related
+databases is a serious impediment to conducting a mutually
+beneficial data mining analysis. We address the case of verti-
+cally partitioned data ­ multiple data owners/agencies each
+possess a few attributes of every data record. We focus on
+the case of the agencies wanting to conduct a linear regres-
+sion analysis with complete records without disclosing values
+of their own attributes. This paper describes an algorithm
+that enables such agencies to compute the exact regression
+coefficients of the global regression equation and also per-
+form some basic goodness-of-fit diagnostics while protecting
+the confidentiality of their data. In more general settings be-
+yond the privacy scenario, this algorithm can also be viewed
+as method for the distributed computation for regression
+analyses.
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications--
+Data Mining; I.2.6 [Artificial Intelligence]: Learning.
+
+
+General Terms
+Algorithms, Security.
+
+
+Keywords
+Data confidentiality, data integration, secure multi-party
+computation, regression.
+
+
+1. INTRODUCTION
+In numerous contexts immense utility can arise from sta-
+tistical analyses that "integrate" multiple, distributed databases.
+These analyses would be more informative than individual
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD'04 August 22­25, 2004, Seattle, Washington, USA.
+Copyright 2004 ACM 1-58113-888-1/04/0008 ...$5.00.
+analyses, i.e., it would enable us to fit models involving
+more attributes and/or estimate models more accurately
+(with lower standard errors of estimates). At the same time,
+concerns about data confidentiality pose strong legal, regu-
+latory or even physical barriers to literally integrating the
+databases. These concerns are present even if the database
+"owners" are cooperating: they wish to perform the analy-
+sis, and none of them is specifically interested in breaking
+the confidentiality of any of the others' data. This need to
+balance the utility of better combined analyses with the risk
+of privacy violation has received considerable interest lately
+[1, 5]. Specifically, consider two cases
+
+· Vertically partioned data When multiple parties have
+data on certain data subjects but each party only pos-
+seses data on different sets of attributes of those enti-
+tities. E.g., a government agency might have employ-
+ment information, another health data, and a third
+information about education. A regression analysis on
+an integrated database would be more informative and
+powerful than, or at least complementary to, individ-
+ual analyses.
+
+· Horizontally partioned data When the participating
+agencies have databases that contain the same numer-
+ical attributes for disjoint sets of data subjects. E.g.,
+several State Departments of Education might want
+to combine their student data in order to conduct a
+more accurate analysis of student performance for the
+general student population.
+
+The results of such analyses may be either used by the
+database owners themselves or disseminated more widely.
+In this paper, we show how to perform secure linear regres-
+sion for "vertically partitioned data". (The problem of hori-
+zontally partitioned data is addressed in a companion paper
+[9]). Our work is similar in spirit to [12, 13] who describe
+methods for doing cluster analysis and association rule dis-
+covery in vertically partitioned data. The recent work by
+Du, et al [6] for the 2-agency setting also presents a comple-
+mentary approach for conducting secure linear regressions.
+The practical implentation of the algorithm we present is
+simpler since it can be implemented solely as secure data
+transfer among the agencies (it does not rely on circuit rep-
+resentations which implicitly involve a trusted ­ possibly
+software ­ third party), and it also permits some basic model
+
+
+
+677
+Research Track Poster
+
+validation. However, Du, et al's method does permit a much
+better characterization of the degree of private information
+revealed. Their method is also applicable in the two-agency
+setting, whereas ours requires at least three participating
+agencies. A related stream of research concerns the analysis
+of data in distributed databases (unencumbered by privacy
+concerns). There is a fairly extensive literature on this topic
+[8]. Some work has also been done on linear regression in
+distributed data settings [7, 15], and it might be possible to
+extend some of these methods so that privacy is preserved.
+We view a group of government agencies seeking to per-
+form a combined analysis on their data as a setting that
+reflects well the semi-honest data sharing scenario we deal
+with. Hence, we term the participants "agencies" even though
+in some settings they might be corporations or other data
+holders. In Section 2 we outline the privacy preserving re-
+gression problem. This is followed, in Section 3, by a brief
+description of Powell's method for numerical minimization
+and a secure summation protocol that together form build-
+ing blocks of our procedure. Section 4 contains a description
+of the main algorithm and Section 5 discusses what has been
+revealed by using the procedure as well as what the agen-
+cies collectively learn (including possible paths for conduct-
+ing regression analyses). We end with concluding remarks
+in Section 6.
+
+
+2. THE REGRESSION PROBLEM
+Consider the case when we need to fit the standard linear
+regression model [14]
+
+y = X + ,
+(1)
+
+where
+
+
+X = [x1 ... xp] ,
+y =
+
+
+
+y1
+...
+yn
+
+
+,
+(2)
+
+
+with
+
+
+xi =
+
+
+
+xi
+1
+...
+xin
+
+
+,
+(3)
+
+
+and
+
+
+ =
+
+
+
+1
+...
+p
+
+
+,
+ =
+
+
+
+1
+...
+n
+
+
+.
+(4)
+
+
+Under the condition that
+  N(0,2I),
+(5)
+
+The least-squares estimate (which is also the maximum
+likelihood estimate) for  is obtained as the minimizer of
+the the "sum of squared errors" function
+
+E() = (y - X)T(y - X).
+(6)
+
+The function in equation (6) is a quadratic in  and the
+minimizer is well-known and readily calculated as
+
+^
+ = (XTX)-
+1
+XTy.
+(7)
+
+We will assume the following scenario: There are several
+agencies interested in computing this regression equation,
+but each agency only possesses part of the data. K > 2
+agencies, A1,A2,... ,AK, are involved. Agency Aj possesses
+dj columns of the predictor attributes (x's), and Ij denotes
+the index set of Aj's predictors. In addition, we assume
+that all agencies know the "response" attribute, y. (We
+believe this is not strictly necessary; but if this is not so,
+we need to add another layer of security. The details of this
+are quite complex and they also raise some additional subtle
+issues, such as information asymmetry. We will deal with
+these issues in a separate paper.) Also, if u has components
+(u1,...,um), we will use uIj as shorthand for {ui}i
+Ij
+. The
+following example clarifies this notation.
+
+Example 1. If K = 3 agencies are involved, and if agency
+A1 knows x1, x2, x3, A2 knows x4, x5, x6, and A3 knows
+x7,x8,x9. Then d1 = d2 = d3 = 3, I1 = {1,2,3} I2 =
+{4,5,6} and I3 = {7,8,9}. Also,
+
+
+X = [
+XI1
+
+x1 x2 x3
+XI2
+
+x4 x5 x6
+XI3
+
+x7 x8 x9]
+
+and
+
+
+T = (
+I1
+
+1,2,3
+I2
+
+4,5,6
+I3
+
+7,8,9).
+
+We consider the case where agencies A1,A2,...,AK col-
+lectively wish to compute  without sharing their possi-
+bly confidential data (they are also assumed to be unwill-
+ing to share summary statistics that relate their data to
+the other agencies' data, such as correlations between at-
+tributes). Calculation of  using equation (6) requires the
+sharing of at least some summary statistics. We develop a
+strategy for a distributed computation of  using direct nu-
+merical minimization of E(). In our scheme, each agency
+Aj will be able to obtain its component
+^
+Ij of the global
+estimate
+^
+ without revealing its data to any of the other
+agencies. It is assumed that all the agencies will share their
+^
+Ij with the other agencies so that everyone benefits from
+the analysis (and also so that everyone has some incentive
+to participate in this exercise). In addition to
+^
+Ij, all agen-
+cies also learn the vector of residuals, ^
+e = y - X^
+, as a
+by-product of our procedure. They could use ^
+e to conduct
+basic diagnostic tests about the regression model.
+We now note some finer points related to our setup before
+proceeding with the details.
+
+Remark 1: As in other data sharing protocols, we require
+one agency to assume a lead role in initiating and co-
+ordinating the process. This is a purely administrative
+role and doesn't imply any information advantage or
+disadvantage. We will assume that Agency 1 is the
+designated leader.
+
+Remark 2: The databases need to have a common primary
+key that enables the agencies to align the records cor-
+rectly in the same order (possibly under direction from
+Agency 1).
+
+Remark 3: We assume that the attribute sets do not over-
+lap (Ij  Ik = ). If any attributes overlap, i.e., if
+more than one agency posseses the same attribute,
+we can designate one of the owning agencies as the
+designated "owner". This is not a problem since the
+agencies share all the 's at the end of the estimation
+process. On a related note: regression models such
+
+
+
+678
+Research Track Poster
+
+as (1) will typically include a constant or "intercept"
+term. This is equivalent to one of the x's being a col-
+umn of 1's. Without loss of generality, we will assume
+that one of the attributes is xT = (1,1, ..., 1) and that
+it is "owned" by Agency 1.
+
+3. PRELIMNARIES
+We now provide some background on a numerical min-
+imization technique that forms the crux of our proposed
+method, and a protocol to compute secure sums that is an
+essential component of our method.
+
+3.1 Powell's Method for a Quadratic function
+of p variables
+Powell's algorithm [10] for finding the minimizer of a func-
+tion of many variables forms the basis of our proposed pro-
+cedure. We will use it to directly find
+^
+ as a numerical so-
+lution to the problem arg min
+
+p
+E() (from equation (6))
+in a manner such that the agencies are not required to share
+their data. Powell's method is a derivative-free numerical
+minimization method that solves the multidimensional min-
+imization problem by solving a series of 1-dimesional line
+minimization problems. A very high-level description of the
+algorithm is as follows. Start with a set of suitably chosen
+set of p vectors in
+p
+which will serve as "search directions".
+Start at an arbitrary starting point in
+p
+and determine the
+step size  along the first search direction s(1) that will min-
+imize the objective function (this is a 1-dimensional min-
+imization problem). We then move distance  along s(1).
+Then move an optimal step in the second search direction
+s(2), and so on until all the search directions are exhausted.
+After that, appropriate updates are made to the set of search
+directions, and the iterations continue until the minimum is
+obtained. Specifically, the procedure for finding the mini-
+mizer of a function E() consists of an initialization step
+and an iteration block as described below.
+Initialization : Select an arbitrary orthogonal basis1 for
+p
+: s(1),s(1),..., s(1) 
+p
+. Also pick an arbitrary
+starting point
+~
+ 
+p
+.
+
+Iteration : Repeat the following block of steps p times.
+
+· Set  
+~
+.
+· For i = 1,2,...,p:
+­ Find  that minimizes f( + s(i
+)
+).
+­ Set    + s(i
+)
+.
+· For i = 1,2,...,(p - 1): Set s(i
+)
+ s(i
++1)
+.
+· Set s(p
+)
+  -
+~
+.
+· ­ Find  that minimizes f( + s(p
+)
+).
+
+­ Set
+~
+   + s(p
+)
+.
+
+Note that each iteration of the iteration block involves solv-
+ing (p + 1) 1-dimensional line minimization problems (to
+determine the 's). Powell established the remarkable result
+that if f() is a quadratic function, then exactly p itera-
+tions of the iteration block would yield the exact minimizer
+of f()! (This involves solving p(p + 1) line minimization
+problems to obtain the minimizer of a quadratic function.)
+We refer the reader to [3, 10, 11] for proofs and elaborations.
+1
+Powell's original algorithm used the coordinate axis vec-
+tors {e1, e2,..., ep} as the basis. Brent [3] shows that an
+arbitrary orthogonal basis also suffices.
+Note
+
+In our regession case (equation (6)), the  that minimizes
+E( + s(i
+)
+) = (y - X( + s(i
+)
+))T(y - X( + s(i
+)
+)), is
+readily obtained as
+
+
+ =
+(y - X)TXs(i
+)
+
+(Xs(i
+)
+)TXs(i
+)
+.
+(8)
+
+
+3.2 Secure Summation
+Consider K > 2 cooperating, such that Agency j has a
+value vj, and suppose that the agencies wish to calculate
+v =
+K
+j=1
+vj in such a manner that each Agency j can learn
+only the minimum possible about the other agencies' values,
+namely, the value of v(
+-j)
+=
+=j
+v . The secure summa-
+tion protocol [2, 4] can be used to effect this computation.
+Choose m to be a very large number which is known to all
+the agencies such that v is known to lie in the range [0, m).
+Agency 1 is assumed to be the leader. The remaining agen-
+cies are numbered 2, ...,K. Agency 1 generates a random
+number R, chosen uniformly from [0, m). Agency 1 adds R
+to its local value v1, and sends the sum s1 = (R+v1) mod m
+to Agency 2. Since the value R is chosen uniformly from
+[0, m), Agency 2 learns nothing about the actual value of
+v1.
+For the remaining agencies j = 2, ...,k-1, the algorithm
+is as follows. Agency j receives
+
+
+sj
+-1
+= (R +
+j-1
+
+
+s=1
+vs) mod m,
+
+
+from which it can learn nothing about the actual values
+of v1,.. .,vj
+-1
+. Agency j then computes and passes on to
+Agency j + 1
+
+
+sj = (sj
+-1
++ vj) mod m = (R +
+j
+
+
+s=1
+vs) mod m.
+
+
+Finally, agency K adds vK to sK
+-1
+(mod m), and sends
+the result sK to agency 1. Agency 1, which knows R then
+calculates v by subtraction:
+v = (sK - R) mod m
+
+and shares this value with the other agencies. This method
+for secure summation faces an obvious problem if, contrary
+to our assumption, some agencies collude. However, there
+exist collusion-resistant versions of secure summation that
+involve each agency partitioning their constribution to the
+sum and all agencies conducting multiple rounds of the sum-
+mation process to obtain the required sum [4, 9] (the order
+of the agencies could also be permuted to add an extra layer
+of security)2.
+
+4. ALGORITHM FOR THE DISTRIBUTED
+COMPUTATION OF THE REGRESSION
+COEFFICIENTS
+Our algorithm is essentially Powell's algorithm implemented
+in such a manner that each agency Aj updates its own com-
+ponents of the 's and its own components of the search
+directions based on the data attributes it owns and one n-
+dimensional vector common to all agencies that is computed
+using secure summation. The details are as follows.
+2
+We thank two referees for pointing this out.
+
+
+
+679
+Research Track Poster
+
+1. Let s(1),s(2), ..., s(p
+)
+
+p
+be p-dimensional vectors
+that will serve as a set of search directions in
+p
+which
+we will use for finding the optimal estimate
+^
+. The
+s(r
+)
+will be initially chosen and later updated in such
+a manner that Aj knows only the s(r
+)
+Ij
+components of
+each {s(r
+)
+}pr
+=1
+.
+
+2. Initially, s(r
+)
+are chosen as follows. Each Aj picks an
+orthogonal basis for
+dj
+: {v(r
+)
+}r
+Ij
+. Then for r  Ij
+let s(r
+)
+Ij
+= v(r
+)
+, and s(r
+)
+l
+= 0 for l  Ij. Each agency
+should pick its basis at random so that the other agen-
+cies cannot obviously guess it.
+
+Example 2. In the setting of Example 1, if the ini-
+tial search directions were written as columns of a ma-
+trix S = [s(1), s(2),..., s(p
+)
+], then S would have the
+form
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+s(1)
+1
+s(2)
+1
+s(3)
+1
+0
+0
+0
+0
+0
+0
+s(1)
+2
+s(2)
+2
+s(3)
+2
+0
+0
+0
+0
+0
+0
+s(1)
+3
+s(2)
+3
+s(3)
+3
+0
+0
+0
+0
+0
+0
+0
+0
+0
+s(4)
+4
+s(5)
+4
+s(6)
+4
+0
+0
+0
+0
+0
+0
+s(4)
+5
+s(5)
+5
+s(6)
+5
+0
+0
+0
+0
+0
+0
+s(4)
+6
+s(5)
+6
+s(6)
+6
+0
+0
+0
+0
+0
+0
+0
+0
+0
+s(7)
+7
+s(8)
+7
+s(9)
+7
+0
+0
+0
+0
+0
+0
+s(7)
+8
+s(8)
+8
+s(9)
+8
+0
+0
+0
+0
+0
+0
+s(7)
+9
+s(8)
+9
+s(9)
+9
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Where the non-zero diagonal blocks are each orthogo-
+nal bases for
+3
+picked by A1,A2,A3.
+Thus, {s(1), s(2),..., s(p
+)
+} constitutes an orthogonal ba-
+sis for
+p
+.
+
+
+3. Let
+~
+ =
+~
+I1,
+~
+I2,...,
+~
+Ik
+
+p
+be the initial starting
+
+value of  obtained by each Aj picking
+~
+Ij arbirarily.
+
+4. Perform the Basic Iteration Block below p times.
+The final value of
+~
+ will be exactly the optimal esti-
+mate
+^
+.
+
+The Basic Iteration
+1. Each Aj sets Ij 
+~
+Ij.
+
+2. For r = 1, 2,... ,p:
+
+(a) Each Aj computes XIjIj and XIjs(r
+)
+Ij
+.
+
+(b) z = y-X = y-
+k
+j=1
+XIjIj and w = Xs(r
+)
+=
+k
+j=1
+XIjs(r
+)
+Ij
+are computed collectively by A1,A2, ...,Ak
+using the secure summation protocol to compute
+the sums
+k
+j=1
+XIjIj and
+k
+j=1
+XIjs(r
+)
+Ij
+. (Ex-
+cept in the first iteration of this block when, for
+a given r, XIjs(r
+)
+Ij
+is non-zero only for the agency
+who owns xr. Revealing this to all agencies is too
+risky, so only that particular agency, say Ar, will
+compute w, but not reveal it to the others.)
+
+(c) All parties compute  = zTw/wTw. (Except in
+the first iteration, when Ar computes this and
+announces it to the rest.)
+(d) Each Aj updates Ij  Ij +  · s(r
+)
+Ij
+.
+3. For r = 1,2, ..., (p - 1): Each Aj updates s(r
+)
+Ij
+
+s(r
++1)
+Ij
+.
+
+4. Each Aj updates s(p
+)
+Ij
+ Ij -
+~
+Ij.
+
+5. z,w and  are computed as before, and each Aj's up-
+dates Ij  Ij +  · s(p
+)
+Ij
+.
+
+
+5. DISCUSSION
+
+5.1 What is Revealed
+Consider any one step of the iteration, the only common
+information exchanged by the agencies are the z and w vec-
+tors. Since each component of the vectors is computed using
+secure summation, the sources of disclosure threat for each
+component is the same as in using the secure summation
+protocol. However, the actual risk to the data x is less since
+there is some masking with components of the s vectors.
+Specifically, the vulnerability is highest in the first step of
+the iteration since (due to the way we have chosen the initial
+s) only one agency contributes to the sum w at each round
+of the basic iteration block. We avoid risk of disclosure by
+having on the contributing agency compute  privately and
+announcing it to the others. If we assume that the agencies
+select their initial bases completely at random so that it is
+impossible for the others to guess it, and if the summation
+has been properly conducted in a secure manner according to
+the secure-summation protocol, then no private information
+is revealed if only z and w are common knowledge. If each
+iteration were independent, then the procedure is clearly se-
+cure. However, the values that each agency contributes to
+the sum are functionally related from one iteration to the
+next. This relation is complex and difficult to easily express.
+We expect that this complexity combined with the form of
+the secure sum protocol will make it impossible for malicious
+agencies to exploit the iteration-to-iteration dependency of
+the values to compromise data privacy.
+In general we also observe that the data for agencies who
+have a larger number of variables is more secure since the
+components of XIjs(r
+)
+Ij
+involve summing over a larger num-
+ber of s(r
+)
+Ij
+.
+
+5.2 What is Learned
+After the regression coefficients are shared the agencies
+learn at least three useful quantities:
+
+1. The global coefficients,
+^
+. This enables the individ-
+ual agencies to assess the effect of their variables on
+the response variable after accounting for the effects
+of the other agencies' variables. They can also assess
+the size of effects of the other agencies' variables. If
+an agency obtains a complete record for some individ-
+ual, the global regression equation can also be used for
+prediction of the response value. A comparison of the
+globally obtained coefficients with the coefficients of
+the local regression (i.e., the regression of y on XIj)
+could also be informative.
+
+2. The vector of residuals, e = y - X
+^
+ is also known
+(this is equal to final z in our iterative procedure).
+The residuals permit us to perform diagnostic tests
+
+
+
+680
+Research Track Poster
+
+Symmetric distribution
+
+
+
+
+Residuals
+Frequency
+
+
+
+
+-10
+-5
+0
+5
+10
+0
+50
+100
+150
+200
+250
+Skewed distribution
+
+
+
+
+Residuals
+Frequency
+
+
+
+
+-2 0
+2
+4
+6
+8 10
+0
+50
+100
+150
+200
+250
+
+
+
+
+Figure 1: Distributions of the residuals
+
+
+
+
+0
+2
+4
+6
+8
+10
+-10
+-50
+5
+No Pattern
+
+
+
+
+Y
+Residuals
+
+
+
+
+0
+2
+4
+6
+8
+10
+-20
+0
+10
+20
+'Fan-out' Pattern
+
+
+
+
+Y
+Residuals
+
+
+
+
+Figure 2: Scatterplots of the residuals
+
+
+to determine if the linear regression model is appro-
+priate (i.e., if the model assumptions are satisfied).
+One could perform formal statistical tests. Two sim-
+ple visual diagnostics are shown in Figures 1-2. If as-
+sumptions are satified, the distribution of the residuals
+ought to be symmetric. Figure 1 shows histograms of
+two sets of hypothetical residuals. The skewed distri-
+bution indicates a violation of the assumptions. The
+residuals can also be examined for systematic patterns.
+Residuals from a valid model should exhibit no pattern
+when plotted against, for example, y. In Figure 2, the
+top plot shows residuals from a valid regression and
+the bottom one shows a distinct 'fan-out' pattern indi-
+cating a violation of the "equal-variance" assumption
+(other patterns could indicate other violations such as
+violation of a linear relationship assumption).
+
+3. The coefficient of determination, R2. Agencies can
+compute
+
+R2 =
+yTy - eTe
+yTy
+.
+(9)
+
+This R2  [0, 1] is a useful measure of the strength
+of the linear relationship assumed. Low values of R2
+indicate a weak linear relationship and high values in-
+dicate a good linear fit.
+6. CONCLUDING REMARKS
+We have presented a privacy preserving linear regession
+analysis algorithm that permits agencies to obtain the global
+regression equation as well as perform rudimentary goodness-
+of-fit diagnostics without revealing their data.
+The local numerical computations to be conducted by
+each party are simple and efficient. The obvious dominant
+restricting factor in the computational effort required is con-
+ducting the O(np2) secure computations. We need to con-
+duct experiments to evaluate the limits of this method both
+inters of the scale of the data as well as the number of agen-
+cies
+There are some situations that the agencies need to be
+aware of.
+
+· Our method critically relies on semi-honestness. If an
+agency is malicious and participates only to sabotage
+the collective efforts of the others, it can be quite suc-
+cessful by secretly not following protocol.
+
+· The method is susceptible to "unfortunate" data. For
+instance, it might turn out that R2  1 and all j  0
+for j = 3; then x3 is at risk.
+
+· The ownership of certain attributes itself might be a
+sensitive issue. For instance, a agency that provides
+investment advice might possess health-related data
+on their clients that they would like to include in the
+regression, but would not like to reveal that to other
+agencies.
+
+Outside the privacy scenario, our procedure also appears
+to be useful as a method for computing a common regression
+equation when the data reside in distributed databases. This
+application for distributed computation or as a strategy for
+a scalable method for linear regression is worth exploring
+further.
+Our procedure also illustrates a more generally useful strat-
+egy for devising privacy-preserving data mining methods:
+Fitting of most data mining models involves the estima-
+tion of the parameters of the model by solving an optimiza-
+tion problem. Well-established models have well-established
+standard procedures for solving the optimization problem.
+Our approach indicates that exploring other non-standard
+methods for carrying out the optimization might lead to a
+method that is more suitable in the privacy preserving set-
+ting.
+
+
+7. ACKNOWLEDGMENTS
+This research was supported by NSF grant EIA­0131884
+to the National Institute of Statistical Sciences. We wish to
+thank Max Buot, Christine Kohonen and four referees for
+useful discussion and comments.
+
+
+8. REFERENCES
+[1] ACM. SIGKDD Explorations, volume 4, December
+2002.
+[2] J. Benaloh. Secret sharing homomorphisms: Keeping
+shares of a secret sharing. In A. M. Odlyzko, editor,
+CRYPTO86. Springer Verlag, 1987. Lecture Notes in
+Computer Science No. 263.
+[3] R. Brent. Algorithms for minimization without
+derivatives. Prentice-Hall, Englewood Cliffs, NJ, 1973.
+
+
+
+681
+Research Track Poster
+
+[4] C. Clifton, K. M., J. Vaidya, X. Lin, and M. Zhu.
+Tools for privacy preserving data mining.
+ACM-SIGKDD Explorations, 4(2):28­34, December
+2002.
+[5] W. Du and M. J. Atallah. Secure Multi-Party
+Computation Problems and Their Applications: A
+Review and Open Problems. In New Security
+Paradigms Workshop, pages 11­20, Cloudcroft, NM,
+September 2001.
+[6] W. Du, Y. Han, and S. Chen. Privacy-preserving
+multivariate statistical analysis: Linear regression and
+classification. In Proceedings of the 4th SIAM
+International Conference on Data Mining, April 2004.
+[7] D. E. Hershberger and H. Kargupta. Distributed
+Multivariate Regression Using Wavelet-Based
+Collective Data Mining. Journal of Parallel and
+Distributed Computing, 61(3):372­400, 2001.
+[8] H. Kargupta and K. Liu. Distributed data mining
+bibliography.
+[9] A. F. Karr, X. Lin, J. P. Reiter, and A. P. Sanil.
+Secure regression on distributed databases. J.
+Computational and Graphical Statistics, 2004.
+Submitted for publication. Available on-line at
+www.niss.org/dgii/technicalreports.html.
+[10] M. Powell. An efficient method for finding the
+minimum of a function of several variables without
+calculating derivatives. Computer Journal, 7:152­162,
+1964.
+[11] W. H. Press, S. A. Teulosky, W. T. Vetterling, and
+B. P. Flannery. Numerical Recipes in C: The Art of
+Scientific Computing. Cambridge University Press,
+second edition, 1992.
+[12] J. Vaidya and C. Clifton. Privacy preserving
+association rule mining in vertically partitioned data.
+In The Eighth ACM SIGKDD Iternational Conference
+on Knowledge Discovery and Data Mining, pages
+639­644, July 2002.
+[13] J. Vaidya and C. Clifton. Privacy preserving k-means
+clustering over vertically partitioned data. In The
+Ninth ACM SIGKDD Iternational Conference on
+Knowledge Discovery and Data Mining, August 2003.
+[14] S. Weisberg. Applied Linear Regression. Wiley, 1985.
+[15] Y. Xing, M. G. Madden, J. Duggan, and G. J. Lyons.
+Distributed Regression for Heterogeneous Data Sets.
+In M. R. Berthold, H.-J. Lenz, E. Bradley, R. Kruse,
+and C. Borgelt, editors, Proceedings of 5th
+International Symposium on Intelligent Data Analysis
+(IDA2003), LNCS 2810, pages 544­553, Berlin,
+German, August 2003. Springer.
+
+
+
+
+682
+Research Track Poster
+

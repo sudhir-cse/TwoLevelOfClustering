@@ -1,0 +1,1471 @@
+Extracting Semantics from Data Cubes using Cube
+Transversals and Closures
+
+
+Alain Casali, Rosine Cicchetti, Lotfi Lakhal
+LIF - Universit´e de la M´editerran´ee, Marseille, France
+{casali,cicchetti,lakhal}@iut.univ-aix.fr
+
+
+
+
+ABSTRACT
+In this paper we propose a lattice-based approach intended
+for extracting semantics from datacubes: borders of ver-
+sion spaces for supervised classification, closed cube lattice
+to summarize the semantics of datacubes w.r.t. COUNT,
+SUM, and covering graph of the quotient cube as a visual-
+ization tool of minimal multidimensional associations. With
+this intention, we introduce two novel concepts: the cube
+transversals and the cube closures over the cube lattice of a
+categorical database relation. We propose a levelwise merg-
+ing algorithm for mining minimal cube transversals with a
+single database scan. We introduce the cube connection,
+show that it is a Galois connection and derive a closure op-
+erator over the cube lattice. Using cube transversals and
+closures, we define a new characterization of boundary sets
+which provide a condensed representation of version spaces
+used to enhance supervised classification. The algorithm
+designed for computing such borders improves the complex-
+ity of previous proposals. We also introduce the concept of
+closed cube lattice and show that it is isomorph to on one
+hand the Galois lattice and on the other hand the quotient
+cube w.r.t. COUNT, SUM. Proposed in [16], the quotient
+cube is a succinct summary of a datacube preserving the
+Rollup/Drilldown semantics. We show that the quotient
+cube w.r.t. COUNT, SUM and the closed cube lattice have
+a similar expression power but the latter has the smallest
+possible size. Finally we focus on the multidimensional as-
+sociation issue and introduce the covering graph of the quo-
+tient cube which provides the user with a visualization tool
+of minimal multidimensional associations.
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Data Mining
+
+
+Keywords
+Algorithm, Closures, Datacubes, Hypergraph Transversals,
+Lattices, Version Spaces.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA. Copyright 2003
+ACM 1-58113-737-0/03/0008...$5.00.
+1. INTRODUCTION AND MOTIVATIONS
+Hypergraph transversals [2, 8] and Galois closure of a finite
+binary relation [9] have various applications in data mining
+and various kinds of knowledge can be discovered: minimal
+keys and minimal functional dependencies [19, 17], implica-
+tion rules [9], concise representation of frequent patterns [23,
+25, 31], connection between positive and negative borders of
+theories [20], non-redundant association rules [1, 32], classi-
+fication and conceptual clustering [21, 3, 27]. When mining
+minimal transversals and Galois closed sets, the search space
+to be explored is the powerset lattice of the binary attributes
+(values). We show in [4] that such a lattice is not really suit-
+able when extracting semantics from datacubes [10], and
+suggest, as an alternative, an algebraic structure which is
+called cube lattice of a categorical database relation r. Such
+a cube lattice is the set of all possible and semantically valid
+multidimensional patterns and it can be seen as the union
+of the datacubes of r and r (complement of r). The cube
+lattice is a set of tuples representing multidimensional pat-
+terns, provided with a generalization/specialization order
+between tuples. Two operators Product and Sum are de-
+fined as the foundation of the lattice operations Join (Least
+Upper Bound) and Meet (Greatest Lower Bound). A simi-
+lar lattice has been independently proposed by L.V.S. Lak-
+shmanan, J. Pei, and J. Han [16]. Based on the latter struc-
+ture, the authors define the quotient cube lattice, a succinct
+summary of the datacube with the nice property of preserv-
+ing the Rollup/Drilldown semantics of the cube.
+Cube lattice provides a sound basis for defining the search
+space to be explored when extracting semantics from the
+datacube such as Roll-Up dependencies [28], multidimen-
+sional associations [29], decision tables and classification rules
+[18], iceberg cubes [13], multidimensional constrained gradi-
+ents [7], concise representation of hight frequency multidi-
+mensional patterns [6] and reduced cubes [16, 30].
+
+In this paper, following from this semantic trend, we pro-
+pose, within the groundwork of cube lattice, the concepts
+of cube transversals and cube closures. Based on the intro-
+duced concepts, we provide a general and sound approach in-
+tended for extracting semantics from datacubes: borders of
+version spaces for supervised classification, closed cube lat-
+tice to summarize the semantics of datacubes w.r.t. COUNT,
+SUM, and the covering graph of the quotient cube as a vi-
+sualization tool of minimal multidimensional associations.
+More precisely, we make the following contributions.
+
+· We introduce two novel concepts for multidimensional
+data mining problems: the cube transversal and the
+
+
+
+69
+
+cube closure over the cube lattice. Finding cube trans-
+versals is a sub-problem of hypergraph transversal dis-
+covery because it exists an order-embedding from the
+cube lattice to the powerset lattice of binary attributes.
+By using this result, we propose a levelwise merging
+algorithm for mining minimal cube transversals with
+one database scan. Algorithms addressing the simi-
+lar issue but in a binary context (i.e. mining minimal
+hypergraph transversals) require k database scans [19,
+17]. We introduce the concept of cube connection and
+show that it is a Galois connection between the cube
+lattice of r and the powerset lattice of Tid(r) (which
+is the set of tuple identifiers in r). Hence we derive
+from the cube connection a closure operator and ob-
+tain what we call the closed cube lattice of r, which
+is a reduced representation of the original cube. Each
+element of the closed cube lattice is a closed tuple and
+cube keys are minimal generators of closed tuples.
+
+· We characterize and find borders of version spaces
+from two uni-compatible categorical database relations,
+r+ and r-. The version space framework is a general
+approach for concept learning or classification [22]. A
+version space of a categorical database relation (r =
+r+  r-) is a set of consistent multidimensional pat-
+terns where the consistency constraint is a conjunction
+of monotone and anti-monotone constraints w.r.t. gen-
+eralization. A multidimensional pattern is consistent if
+and only if it generalizes all tuples of r+ and no tuples
+of r-. Version space is a convex space [14] and thus
+it is boundary representable by S the most specific
+consistent tuples, and G the most general ones. The
+minimal cube transversals and cube closure are used
+to identify new relationships between on one hand r-
+and G and on the other hand G and S. These results
+improve T. Mitchell's original work [22] on the com-
+putational complexity of boundary set mining and can
+be useful for classification in OLAP databases [12].
+
+· We formalize a closure-based semantics of quotient
+cubes w.r.t. COUNT and SUM. A quotient cube lat-
+tice [16] is the only concise representation of the dat-
+acube preserving the Rollup/Drilldown semantics of
+the cube. It is a set of convex classes provided with
+a new order relation between classes. Using the clo-
+sure operator over the cube lattice, another contribu-
+tion consists in identifying a new relationship between
+closed cube and quotient cube by showing that the
+maximal tuple w.r.t. generalization of each convex
+class is a closed tuple and minimal elements are key
+tuples.
+
+· Finally, we characterize the computation of the cov-
+ering graph of the quotient cube which represents a
+summary of multidimensional associations and pro-
+vides the user with a visualization tool for minimal
+associations.
+
+The remainder of the paper is organized as follows. Cube
+lattice framework [4] is described in section 2.1 as a search
+space for multidimensional data mining and the quotient
+cube approach [16] is presented in section 2.2. In section
+3, we introduce the concept of cube transversal and a level-
+wise merging algorithm for mining minimal cube transver-
+sals from categorical database relations. Cube connection
+and the related closure operator are presented in section 4.
+In section 5, we propose the closed cube lattice and show the
+relationship with the quotient cube. Section 6 characterizes
+the computation of its covering graph. Section 7 describes
+a multidimensional data mining application based on cube
+transversals and connection: discovering boundary sets of
+version spaces for supervised classification. Proofs of propo-
+sitions, lemmas and theorems are given in [5].
+
+2. BACKGROUND
+
+2.1 Cube Lattice Framework
+Throughout the paper, we make the following assumptions
+and use the introduced notations. Let r be a relation over
+the schema R. Attributes of R are divided in two sets (i)
+D the set of dimensions, also called categorical or nominal
+attributes, which correspond to analysis criteria for OLAP,
+classification or concept learning [22] and (ii) M the set
+of measures (for OLAP) or class attributes. Moreover, at-
+tributes of D are totally ordered (the underlying order is
+denoted by <d) and A  D,Dim(A) stands for the projec-
+tion of r over A.
+
+The multidimensional space of the categorical database re-
+lation r groups all the valid combinations built up by con-
+sidering the value sets of attributes in D, which are en-
+riched with the symbolic value ALL. The latter, introduced
+in [10] when defining the operator Cube-By, is a general-
+ization of all the possible values of any dimension. Thus
+A  D,a  Dim(A),{a}  ALL.
+
+The multidimensional space of r is noted and defined as fol-
+lows: Space(r) = {×A
+ D
+(Dim(A) ALL)} {<,..., >}
+where × symbolizes the Cartesian product, and <,..., >
+stands for the combination of empty values. Any combina-
+tion belonging to the multidimensional space is a tuple and
+represents a multidimensional pattern.
+
+Example 1 - Table 1 presents the categorical database re-
+lation used all along the paper to illustrate the introduced
+concepts. In this relation, Sky, AirTemp and Humidity are
+dimensions and EnjoySport is a class [22].
+
+
+Sky
+AirTemp
+Humidity
+EnjoySport
+
+S
+W
+N
+Yes
+S
+W
+H
+Yes
+R
+C
+H
+No
+
+
+Table 1: Relation example r
+
+
+The following tuples t1 = <S,W, ALL>, t2 = <S,W,N>,
+t3 = <S,C,N>, t4 = <S,ALL,N>, t5 = <S,ALL,ALL>,
+t6 = <ALL,W,ALL> and t7 = <ALL,W,H> are elements
+of Space(r).
+
+The multidimensional space of r is structured by the gen-
+eralization/specialization order between tuples. This order
+is originally introduced by T. Mitchell [22] in the context of
+machine learning. Let u, v be two tuples of the multidimen-
+sional space of r:
+
+u g v 
+A  D,v[A]  u[A]
+or v = <,..., >
+
+
+
+70
+
+If u[A] and v[A] = ALL then u[A] and v[A] correspond to
+singletons just encompassing a value of Dim(A). If u g v,
+we say that u is more general than v in Space(r). The
+covering relation of g is noted
+g
+and defined as follows:
+t,t  Space(r),t
+g
+t  t >g t and t  Space(r),t g
+t
+g
+t  t = t . In the multidimensional space of our
+relation example, we have: t5 g t2, i.e. t5 is more general
+than t2 and t2 is more specific than t5 and t1
+g
+t2. More-
+over any tuple generalizes the tuple <, , > and specializes
+the tuple <ALL, ALL, ALL>.
+
+When applied to a set of tuples, the operators min and max
+yield the tuples which are the most general ones in the set
+or the most specific ones respectively. Let T  Space(r) be
+a set of tuples:
+
+· ming(T) = {t  T | u  T : u g t}.
+
+· maxg(T) = {t  T | u  T : t g u}.
+
+The difference of two tuples u and v of Space(r) is defined
+as follows:
+
+t = u\v  A  D,t[A] =
+u[A] if u[A] = v[A]
+ALL elsewhere.
+
+The two basic operators provided for tuple construction are:
+Sum (denoted by +) and Product (noted ·). The Semi-
+Product operator (noted
+) is a constrained product.
+The Sum of two tuples yields the most specific tuple which
+generalizes the two operands. Let u and v be two tuples in
+Space(r).
+
+
+t = u + v  A  D,t[A] =
+u[A] if u[A] = v[A]
+ALL elsewhere.
+
+We say that t is the Sum of the tuples u and v. In our
+example of Space(r), we have t2 + t3 = t4. This means that
+t4 is built up from the tuples t2 and t3.
+
+The Product of two tuples yields the most general tuple
+which specializes the two operands. If it exists, for these
+two tuples, a dimension A having distinct and real world
+values (i.e. existing in the original relation), then the only
+tuple specializing them is the tuple <,..., > (apart from
+it, the tuple sets which can be used to construct them are
+disjoined). Let u and v be two tuples in Space(r). We define
+the tuple z as follows: A  D, z[A] = u[A]  v[A]. Then,
+
+
+t = u · v 
+t = z if
+A  D | z[A] = {}
+< ,..., > elsewhere.
+
+We say that t is the Product of the tuples u and v. In our
+example of Space(r), we have t1 · t4 = t2. This means
+that t1 and t4 generalize t2 and t2 participates to the con-
+struction of t1 and t4 (directly or not). The tuples t1 and t3
+have no common point apart from the tuple of empty values.
+
+In some cases, it is interesting to know the attributes for
+which the values associated with a tuple t are different from
+the value ALL. This is why the function Attribute is intro-
+duced. Let t be a tuple of Space(r), we have Attribute(t) =
+{A  D | t[A] = ALL}. In our example of Space(r), we have
+Attribute(t1) = {Sky, AirTemp}.
+
+The Semi-Product operator is a constrained product oper-
+ator useful for candidate generation in a levelwise approach
+[20]. Provided with multidimensional patterns at the level i,
+we only generate candidates of level i + 1, if they exist (else
+the constrained product yields <,..., >). Moreover, each
+tuple is generated only once. Let u and v be two tuples of
+Space(r), X = Attribute(u) and Y = Attribute(v).
+
+
+t = u v 
+
+
+
+
+t = u · v if X\max<d(X) = Y \max<d(Y )
+and max<d(X) <d max<d(Y )
+<,...,> elsewhere.
+
+where <d is a total order over D. In our example, we have
+t5 t6 = t1 and t5 t7 = <,...,>.
+
+By providing the multidimensional space of r with the gen-
+eralization order between tuples and using the above-defined
+operators Sum and Product, we define an algebraic struc-
+ture which is called cube lattice. Such a structure provides a
+sound foundation for multidimensional data mining issues.
+
+
+Theorem 1 Let r be a categorical database relation over
+D  M. The ordered set CL(r) = Space(r),g is a com-
+plete, graded, atomistic and coatomistic lattice, called cube
+lattice in which Meet ( ) and Join ( ) elements are given
+by:
+
+1.  T  CL(r),
+T = +t
+T
+t
+
+2.  T  CL(r),
+T = ·t
+T
+t
+
+
+Example 2 - Figure 1 exemplifies the cube lattice of our
+relation example. In this diagram, the edges represent the
+generalization or specialization links between tuples.
+
+
+Through the two following propositions, we characterize the
+order-embedding from the cube lattice towards the powerset
+lattice of the whole set of attribute values and analyze the
+number of elements (for a given level or in general) of the
+cube lattice. Each value is prefixed by the name of the
+concerned attribute.
+
+
+Proposition 1 Let L(r) be the powerset lattice of attribute
+value set, i.e. the lattice P(
+AD
+A.a,a  Dim(A)),
+1
+.
+
+Then it exists an order-embedding:  : CL(r)  L(r)
+
+
+
+t 
+AD
+A.a,a  Dim(A) if t = <,...,>
+
+{A.t[A] | A  Attribute(t)} elsewhere.
+
+The rank of a tuple t is the length of the minimal path linking
+the tuple <ALL,..., ALL> and the tuple t.
+
+
+Thus we have: rank(t) =
+|(t)| if t = <,...,>
+|D| + 1 elsewhere.
+
+We denote by:
+
+· At(CL(r)) the atoms of the cube lattice (i.e. {t 
+CL(r) | |(t)| = 1}),
+
+· CAt(CL(r)) the coatoms of the cube lattice (i.e. {t 
+CL(r) | |(t)| = |D|}).
+
+1
+P(X) is the powerset of X.
+
+
+
+71
+
+Figure 1: Hasse diagram of the cube lattice of r ( ? 
+ALL).
+Figure 2: quotient cube lattice for the aggregative
+function COUNT ( ?  ALL).
+
+
+Proposition 2 The height (level number) of the cube lattice
+is |D| + 1. The element number by level i (i  1..|D|) is:
+
+
+
+XD
+|X|=i
+(
+AX
+|Dim(A)|) 
+|D|
+i
+max
+AD
+(|Dim(A)|)i.
+
+
+
+2.2 Quotient Cube Lattices
+A quotient cube is a summary of datacube for aggregative
+functions like COUNT, MIN, MAX, AVG and TOP-k [16].
+Moreover, the quotient cube preserves the semantics of the
+cube operators Rollup and Drilldown.
+
+When introducing quotient cube, the authors use the con-
+cept of convex classes (i.e. sets of tuples) and convex par-
+titions (i.e. sets of classes). A class C is convex iff t,t 
+C if c | c g c g c  c  C. A partition P is convex
+iff all its classes are convex too.
+
+Classes are built as follows. Given an aggregative func-
+tion f, the equivalence relation f is defined as a transi-
+tive and reflexive closure of the following relation R: let
+t,t be two tuples, tRt holds iff (i) f-value(t) = f-value(t')
+and (ii) t is either a parent or a child of t . Moreover,
+the relation f must satisfy the weak congruence property
+which can be expressed as follows: c,c ,d,d  CL(r), if
+c f c ,d f d ,c g d and d g c , thus c f d also holds.
+An equivalent definition of this property can be expressed
+as follows: let P be a partition and A,B two classes of this
+partition (i.e. A,B  P), if a  A,b  B and a g b, thus
+b  B,a  A : b
+g
+a . Equivalence classes for the ag-
+gregative function f can be built by using the property of
+weak congruence and the equivalence relation f. The order
+relation within each equivalence class is the generalization.
+Then it remains to define the order relation between classes.
+
+Definition 3 [Quotient Cube Lattice] Let CL(r) be the
+cube lattice of the relation r and f an equivalence relation
+on Space(r) satisfying the weak congruence property. The
+quotient cube lattice QCL(r,f) = CL(r)/ f,
+encom-
+passes equivalence classes induced by f. For two equiv-
+alence classes A,B  QCL(r,f), we have A
+B if a 
+A,b  B | a g b.
+
+The following theorem ensures that the achieved partition
+P is convex.
+
+
+Theorem 2 Let r be a database relation, CL(r) its cube
+lattice and f an equivalence relation over Space(r). The
+partition P induced by f is convex iff f satisfies the weak
+congruence property.
+
+Thus, given an aggregative function f, a single quotient cube
+lattice for this function can be built. Moreover, each equiv-
+alence class has a single maximal tuple w.r.t. g.
+
+Example 4 - The quotient cube lattice of the relation in ta-
+ble 1 for the aggregative function COUNT is illustrated in
+figure 2.Classes are numbered and provided with the value
+of the COUNT function (e.g. III(2)).
+
+A particular focus is made on the class V I in order to show
+all its elements. Other classes are represented by their min-
+imal and maximal tuples w.r.t. g. This lattice is isomorph
+to the lattice shown in figure 4.
+
+
+
+
+3. CUBE TRANSVERSALS
+We introduce the cube transversal concept, a special case of
+an hypergraph transversal [2, 8], and a levelwise merging al-
+gorithm to find minimal cube transversals from a categorical
+database relation. The strong point of this algorithm is to
+perform a single database scan while algorithms intended for
+meeting a similar objective but in a binary context require
+several database scans [19, 17].
+
+Definition 5 [Cube Transversal] Let t  CL(r) be a tuple,
+t is a cube transversal of r on CL(r) iff t  r,t + t =
+<ALL,...,ALL>. t is a cube transversal of r (complement
+of r, r = CAt(CL(r))\r) iff t  r,t
+g
+t . t is a minimal
+cube transversal iff t is a cube transversal and t  CL(r),t
+is a cube transversal and t g t  t = t . All minimal cube
+transversals of r and r are denoted by cTr(r) and cTr(r)
+respectively and defined as follows:
+
+
+
+72
+
+· cTr(r) = ming({t  CL(r) | t  r,t + t =
+<ALL,...,ALL>})
+
+· cTr(r) = ming({t  CL(r) | t  r,t
+g
+t })
+
+Let A be an anti-chain of CL(r) (all tuples of A are incom-
+parable w.r.t. g), minimal cube transversals of r can be
+constrained using A. The new related definitions are the
+following:
+
+· cTr(r,A) = {t  cTr(r) | u  A : t g u}
+
+· cTr(r,A) = {t  cTr(r) | u  A : t g u}
+
+Let us notice that cTr(r) = cTr(r,<,..., >) and cTr(r) =
+cTr(r,<,...,>).
+
+When the search space is the powerset lattice, the set H =
+{(t) | t  r} is a simple hypergraph on E =
+AD
+A.a,a 
+
+Dim(A) and more precisely a |D|-uniform hypergraph. Min-
+imal transversals of H are Tr(H) = min({X  E | Y 
+H,XY = }) and the ones of H are min({X  E | Y 
+H,X
+Y }). From the order-embedding , it is straight-
+forward that {(t) | t  cTr(r)}  Tr(H) and the problem
+of finding cube transversal has a close relationship with the
+hypergraph transversal discovery.
+
+Example 6 - Considering the multidimensional space of the
+relation example, the tuple <S,C,ALL>  cTr(r) and
+(<S,C,ALL>)  Tr(H). However, the set {Sky.S,Sky.R}
+belongs to Tr(H) but this set cannot be a tuple of Space(r)
+because it encompasses two values of the very same attribute
+Sky.
+
+3.1 Finding Minimal Cube Transversals
+In [11], it is shown that levelwise mining of minimal hyper-
+graph transversals improves complexity results proposed by
+[8]. Following from this result and using the cube lattice
+framework, we propose a levelwise algorithm called CTR
+(Cube TRansversal) algorithm which computes minimal cube
+transversals. Its pseudo code is given in algorithm 1. We
+improve our algorithm by a merging approach.
+A levelwise approach works very well when the underly-
+ing search space is a graded lattice, and the cube lattice
+is graded.
+
+Example 7 - Let us consider the relation example r. The
+CTR algorithm returns the following results: cTr({t[Sky,
+AirTemp,Humidity] | t[Enjoy] = `Yes'}) = {<S, ALL, ALL>,
+<ALL,W,ALL>}.
+
+
+Complexity of CTR. The complexity of a levelwise algo-
+rithm for finding minimal transversals of an hypergraph H
+on a set E is O(2k|E||Tr(H)|) where k = max({|X| | X 
+H}) [11]. Using cube lattice as search space, this complex-
+ity is preserved with E =
+AD
+A.a,aDim(A), k = |D| and
+
+|cTr(r)| < |Tr(H)| since  is an order-embedding but not
+an order isomorphism.
+
+3.2 Merging Minimal Cube Transversals
+When the categorical database relation is disk resident, the
+levelwise algorithm CTR performs k database scans. We
+propose a merging characterization which originates a sim-
+ple algorithm, MCTR, requiring only one database scan for
+discovering minimal cube transversals.
+Alg. 1 CTR Algorithm
+Input: Categorical database relation r over D [and an anti-
+chain A]
+Output: cTr(r[,A])
+1: L1 := {t  At(CL(r))}
+2: T := {t  L1 | t is a cube transversal }
+3: i := 1
+4: L1 := L1\T
+5: while Li =  do
+6:
+cTr := cTr  T
+7:
+Ci
++1
+:= {v = t
+t | t,t  Li,v = <,...,>,[u 
+C : v g u] and u  cTr : u g v}
+8:
+for all t  r do
+9:
+for all unmarked l  Li+1 do
+10:
+if l + t = <ALL,...,ALL> then mark l
+\\l g t for finding cTr(r)
+11:
+end for
+12:
+end for
+13:
+Li
++1
+:= Ci
++1
+\{l  Li
++1
+| l is unmarked }
+14:
+i := i + 1
+15: end while
+16: return cTr
+
+
+
+
+Proposition 3 Let r = r1 r2 be a categorical database re-
+lation, cTr(r1) and cTr(r2) the minimal cube transversals of
+r1 and r2 respectively. If cTr(r1) is empty, we consider that
+cTr(r1) = {<,...,>} (idem for cTr(r2)), thus we have:
+cTr(r) = ming({t · t = <,...,> | t  cTr(r1) and t 
+cTr(r2)}).
+
+
+
+
+Example 8 - Let us consider the relation example r. Then
+cTr({t[Sky,AirTemp,Humidity] | t[Enjoy] = `No'}) =
+{<R,ALL,ALL>,<ALL,C,ALL>,<ALL,ALL,H>}. We
+use proposition 3 for finding cTr(r). cTr = {<S,C,ALL>,
+<S,ALL,H>,<R,W,ALL>,<ALL,W,H>}.
+
+
+
+
+Alg. 2 MCTR Algorithm
+Input: Categorical database relation r = r1  r2  ...  rp
+over D [and an anti-chain A]
+Output: cTr(r)
+1: cTr := <,..., >
+2: for i = 1 to p do
+3:
+T := CTR(ri[,A])
+4:
+if T = {} then
+5:
+cTr := ming({v = t · t | v = <,...,>,t 
+cTr and t  T })
+6:
+end if
+7: end for
+8: return cTr
+
+
+
+
+73
+
+4. CUBE CLOSURES AND CUBE KEYS
+The cube connection is a couple of functions rc = (,),
+such that  is defined from the cube lattice of r to the pow-
+erset lattice of Tid(r) and  is the dual function of . We
+show that rc is a special case of Galois connection between
+two lattices [9]. Hence, we obtain a closure operator over
+CL(r) under r.
+
+Definition 9 [Cube Connection] Let Rowid : r  N
+
+be a
+mapping which associates each tuple with a single positive
+integer and Tid(r) = {Rowid(t) | t  r} (i.e. the set of
+the tuple identifiers of the relation r). Let  and  be two
+functions defined as follows:
+
+ : CL(r)  P(Tid(r)),
+t  {Rowid(t )  Tid(r) | t g t and t  r}
+ : P(Tid(r)),  CL(r)
+P  +{t  r | Rowid(t)  P}
+
+
+Proposition 4 The cube connection rc = (,) is a Galois
+connection between the cube lattice of r and the powerset
+lattice of Tid(r).
+
+
+Definition 10 [Closure Operator] Let us define the oper-
+ator C : CL(r)  CL(r)
+
+
+t 
++t
+r
+t | t g t if t  r
+< ,..., > elsewhere.
+
+
+
+Example 11 - Considering the multidimensional space of the
+relation example we have:
+
+C(<S,ALL,ALL>,r) = <S,W,N> + <S,W,H>
+= <S,W, ALL>
+
+C(<R,ALL,ALL>,r) = <R,C,H>
+
+
+Proposition 5 C is a closure operator over CL(r) under r
+and thus it satisfies the following properties [9]:
+
+1. t g t  C(t,r) g C(t ,r) (monotony)
+
+2. t g C(t,r) (extensity)
+
+3. C(t,r) = C(C(t,r),r) (idempotency).
+
+The closure of each tuple is computed and results are gath-
+ered within a closure system. The minimal tuples w.r.t. g
+originating the very same closure are called cube keys.
+
+Definition 12 [Closure System] Let us assume that C(r)
+= { t  CL(r) | C(t,r) = t}. C(r) is a closure system over
+r and its related closure operator is C. Any tuple belonging
+to C(r) is a closed tuple or a cube closure.
+
+
+Example 13 - Considering our relation example, we have:
+C(r) = {<S,W,N>,<S,W,H>,<R,C,H>,<S,W,ALL>,
+<ALL,ALL,H>,<ALL,ALL,ALL>,<,,>}.
+
+
+Definition 14 [Cube Key] Let t be a closed tuple. Key(t) =
+ming({t  CL(r) | t g t and C(t ,r) = t}) is the set of
+< 0 , 0 , 0 >
+
+
+
+
+< R, C, H >< S, W, N >
+
+
+
+
+< ?, ?, ? >
+< ?, ?, H >< S, W, ? >
+< S, W, H >
+
+
+
+
+Figure 3: Hasse diagramme of the closed cube lattice
+of r ( ?  ALL).
+
+
+
+
+minimal generators of t. Each tuple of Key(t) is a cube key.
+
+
+Considering our relation example (Cf. Table 1), we have:
+Key(<S,W,ALL>) = {<S,ALL,ALL>,<ALL,W,ALL>}.
+
+Remark:
+Let us consider a database relation r over r.
+Minimal cube keys of a closed tuple are similar to minimal
+keys of r. The closure operator is not similar since R is
+closed under a set of functional dependencies over r [19].
+
+
+5. CLOSED CUBE LATTICES
+The closed cube lattice, defined in this section, is a sum-
+mary of datacube w.r.t. SUM, COUNT, but in contrast
+with the quotient cube it does not preserve the semantics
+of Rollup/Drilldown operators. Thus it is specially relevant
+to show that closed cube lattice and quotient cube w.r.t.
+COUNT, SUM have a similar expression power, because we
+can take benefit of the aggregated data loss-less property of
+quotient cubes while providing a sound representation with
+a reduced size. In fact, it is the smallest possible represen-
+tation of a datacube w.r.t. COUNT, SUM. We use Birkhoff
+theorem [9] to construct a lattice associated to our closure
+operator. In contrast with Galois (concept) lattices [9], our
+resulting lattice is not unspecified: it remains coatomistic.
+
+
+Theorem 3 The partially ordered set CCL(r) = C(r),g
+is a complete and coatomistic lattice called closed cube lat-
+tice. Moreover, we have:
+
+1.  T  CCL(r),
+T = +t
+T
+t
+
+2.  T  CCL(r),
+T = C(·t
+T
+t,r)
+
+
+Example 15 - Figure 3 exemplifies the cube closure lattice
+of our relation example (Cf. Table 1).
+
+
+5.1 Lattice-Isomorphism
+Closed set computation has been widely addressed in a bi-
+nary context. Defining the following lattice-isomorphism
+makes it possible to reuse results obtain in a binary con-
+text.
+
+Definition 16 [Lattice-Isomorphism] Let P and Q be two
+lattices. X,Y  P, a mapping m : P  Q is a lattice-
+isomorphism iff it satisfies:
+
+
+
+74
+
+1. m(X
+P
+Y ) = m(X)
+Q
+m(Y ) ( -morphism property)
+
+2. m(X
+P
+Y ) = m(X)
+Q
+m(Y ) ( -morphism property)
+
+3. m is bijective
+
+
+
+Let us assume that Br = {(t) | t  r}, the mapping
+h : L(r)  L(r),X  {Y  I | X  Y } is a clo-
+sure operator on I =
+AD
+A.a,a  Dim(A) over Br [9].
+
+Cl(Br) = {h(X) | X  I} is a closure system and L(Br) =
+Cl(Br),  is a lattice of Br called concept lattice [9].
+
+Theorem 4 The mapping  : CCL(r)  L(Br) is a lattice-
+isomorphism and we have t  CCL(r),X  L(Br) :
+
+· (t) = (t)
+
+·
+
+
+-1(X) =
+
+
+
+
+
+
+
+
+<,...,> if A  D and a1,a2 
+Dim(A) | A.a1 and A.a2  X
+
+t | A  D,t[A] =
+a if A.a  X
+ALL elsewhere.
+
+Consequences of theorem 4 are specially attractive: when
+mining closed (frequent) tuples, we can use either binary
+algorithms like Titanic [27], Charm [31], Closet [25] or algo-
+rithms fitting into the cube lattice framework [16]. Let us
+notice that when finding tuples under conjonction of mono-
+tone and/or anti-monotone constraints in a binary frame-
+work, the former algorithms could return erroneous results
+[4] whereas the latter traverse a search space only encom-
+passing semantically valid patterns.
+
+5.2 Relationships between Closed Cubes and
+Quotient Cubes
+Closed cube is the smallest concise representation of dat-
+acube computed by using the aggregative functions COUNT
+and SUM (when all the values are strictly positive). Never-
+theless this structure does not preserve the Rollup/Drilldown
+semantics of the cube whereas the quotient cube [16] pre-
+serves it. In such a context, it is specially interesting to state
+a sound relationship between the closed cube and the quo-
+tient cube. To meet this objective, we use results presented
+in [27] to construct equivalence classes: we merge within a
+single equivalence class tuples having the very same cube
+closure. Each equivalence class is then represented by its
+closed tuple (i.e. the maximal tuple w.r.t. g) and by the
+cube keys related to this closed tuple (i.e. the minimal tu-
+ples w.r.t. g). The result is a lattice of closed-equivalence
+classes which is a quotient cube. Finally we state a novel link
+between key tuples and closed tuples. Then we show that
+the closed cube lattice has the same expression power than
+the quotient cube lattice for the aggregative functions SUM
+or COUNT but its size is smaller. Thus closed cube lattice is
+a specially good candidate for an optimized representation
+of quotient cube lattice for the aggregative functions SUM
+or COUNT.
+In the remainder of this section, we assume that f is the
+aggregative function COUNT or SUM, and all the values of
+the measure M are strictly positive.
+
+Definition 17 [Lattice of closed-equivalence classes]
+Let  be the following equivalence relation : tt holds iff
+Figure 4: Lattice of closed-equivalence classes ( ? 
+ALL).
+
+
+
+C(t,r) = C(t ,r). The equivalence class of t is given by
+[t] = {t  CL(r) | tt }. Thus we have maxg([t]) = C(t,r)
+and ming([t]) = Key(C(t,r)) (Cf. [27] and theorem 4).
+The set of equivalence classes provided with the generaliza-
+tion order is a lattice (Cf. [27] and theorem 4) called lat-
+tice of closed-equivalence classes. The order relation within
+equivalence classes is also the generalization. Let us under-
+line that this lattice is isomorph to the closed cube lattice
+(Cf. [27] and theorem 4).
+
+
+Example 18 - The lattice of closed-equivalence classes of the
+relation illustrated in table 1 is given in figure 4. In this
+figure, each equivalence class is represented by its maximal
+tuple w.r.t. g and by its minimal elements w.r.t. g.
+
+In the lattice of closed-equivalence classes like in the quo-
+tient cube, each equivalence class has a single maximal el-
+ement and several minimal tuples. Based on the isomor-
+phism between the lattice of closed-equivalence classes and
+the closed cube lattice, we introduce the following theorem
+which states that the latter lattice is isomorph to the quo-
+tient cube.
+
+
+Theorem 5 The lattice of closed-equivalence classes is a
+quotient cube and closed cube lattice is isomorph to quotient
+cube w.r.t. SUM,COUNT.
+
+The closed cube lattice is the smallest representation of dat-
+acube w.r.t. COUNT, SUM (Cf. theorem 4 and [27, 9]). As
+a consequence, the quotient cube has the smallest number
+of equivalence classes (due to theorem 5). For taking ad-
+vantage of the loss-less representation of the quotient cube,
+our aim is to show that the closed cube lattice has a similar
+expression power. In order to meet this objective, it is nec-
+essary to find the cube keys of a closed tuple being provided
+only with the other closed tuples.
+
+
+Lemma 1 Let u be a tuple, v a closed tuple and u g v, we
+have the following equivalence:
+
+Freq(u) = Freq(v)  w  DLB(t) : u g w,
+
+where DLB(t) = {t  CCL(r) | t
+g
+t}.
+
+
+
+75
+
+Theorem 6 t  CCL(r),Key(t) = cTr(DLB(t),{t})
+
+
+Example 19 - In the lattice given in figure 3, for the particu-
+lar tuple <R,C,H>, we have DLB(<R,C,H>) = {< ALL,
+ALL,H >}. The keys of this tuple are <R, ALL, ALL> and
+<ALL,C,ALL>. We obtain results similar to the ones in
+figure 4.
+
+This theorem proves that the quotient cube lattice for the
+aggregative function SUM and COUNT can be obtained
+from the closed cube lattice. Thus the closed cube lattice
+has the same expression power as the quotient cube and
+moreover it is the smallest possible representation.
+
+
+6. COVERING GRAPHS OF QUOTIENT
+CUBES
+The covering graph of the quotient cube (w.r.t. COUNT)
+captures a summary of multidimensional associations by giv-
+ing rules of minimal antecedent and maximal consequent.
+With such a covering graph, the user is provided with a vi-
+sualization tool for minimal multidimensional associations.
+Given the closed-equivalence classes, we propose a novel the-
+orem which is a sound basis for computing the covering
+graph. If two tuples t and t belong to the same class, then
+the rule (t)  (t ) is an exact rule, else the rule is ap-
+proximative. The confidence of a transitive rule is given by
+Conf((t)  (t ))Conf((t )  (u)) = Conf((t) 
+(u)) [32].
+
+
+Lemma 2 Let u,v be two closed tuples and u = <,...,>,
+thus we have: u >g v  v\u is a cube transversal of Key(v)
+on CL(r).
+
+
+Lemma 3 Let v be a closed tuple, if t is a minimal cube
+transversal of Key(v) on CL(r) then v\t is a closed tuple.
+
+The following theorem is in the spirit of J.L. Pfaltz and al
+work about the covering relation of closed sets in a binary
+framework [26] .
+
+
+Theorem 7 Let u,v be two closed tuples and u = <,...,>,
+u
+g
+v  v\u is a minimal cube transversal of Key(v) on
+CL(r).
+
+
+Example 20 - The covering graph for the relation exam-
+ple (Cf. table 1) is given in figure 4. The graph in figure
+5 results from applying the order-embedding on the tuples
+in the equivalence classes of the covering graph. Hence, a
+summary of multidimensional associations is illustrated in
+figure 5, where the full lines stand for approximative rules
+and the dotted lines symbolize exact rules (for uniformity,
+trivial associations are represented and can be removed).
+
+
+
+
+7. VERSION SPACES
+The version space framework is based on a partial ordering
+of the hypotheses in a concept language [22]. Such a partial
+ordering is issued from the relative generality of hypothe-
+ses. In our context, the concept language is the cube lattice
+framework and hypotheses are tuples.
+Figure 5: Covering graph of quotient cube, a sum-
+mary of multidimensional associations.
+
+
+
+7.1 Consistent Tuples
+Let r be a categorical database relation over D{C} where
+Dim(C) = { + , - }, r+ is the set of positive tuples (if r+
+is empty, we consider that r+ = {<,..., >}) and r- is
+the set of negative tuples (if r- is empty, we consider that
+r- = {<ALL,...,ALL>}). A tuple t is consistent if and
+only if it satisfies:
+
+· (C1) t  r+,t g t and
+
+· (C2) t  r-,t g t
+
+C1 and C2 are equivalent to the constraints Freq(t,r+) = 1
+and Freq(t,r-) = 0 respectively. The constraint C1 is an-
+timonotone w.r.t. g (i.e. t g t and t satisfies C1 
+t satisfies C1). The constraint C2 is monotone w.r.t. g
+(i.e. t g t and t satisfies C2  t satisfies C2). The ver-
+sion space is defined as follows: V S(r) = {t  CL(r) |
+t is consistent}.
+
+In RDBMSs provided with OLAP functionalities, such as
+IBM DB2 or Microsoft SQL Server, V S(r) can be computed
+by using the Group By Cube operator [12] as follows:
+SELECT A1, ..., An
+FROM r+
+GROUP BY CUBE (A1, ..., An)
+HAVING COUNT(*) = |r+|
+MINUS
+SELECT A1, ..., An
+FROM r-
+GROUP BY CUBE (A1, ..., An);
+
+We assume that |r+| is a constant given by the user. Due
+to the underlying Cube-By operations, it is obvious that
+this approach is specially time and space consuming, thus
+computing borders can be of great interest.
+
+7.2 Boundary Sets
+The version spaces are usually represented by the boundary
+sets S and G encompassing the most specific and the most
+general consistent tuples respectively. H. Hirsh [14] shows
+that finite sets satisfying the convexity property can be rep-
+resented by boundary sets. The following proposition shows
+that the version space of a categorical database relation is a
+convex space of the cube lattice and therefore preserves the
+representation through the sets S and G.
+
+
+
+76
+
+Proposition 6 The version space V S(r) is a convex space
+of the cube lattice CL(r) with the upper set S = maxg(V S(r))
+and the lower set G = ming(V S(r)).
+
+H. Hirsh shows that if the concept language used is conjonc-
+tive, which is the case of cube lattices, then |S| = 1 [15].
+
+Let us suppose that the relation does not encompass erro-
+neous data. Under such an assumption, the boundary sets S
+and G correctly classify unseen tuples t  CL(r), as follows:
+
+
+t[C] =
+
+
+
+
++ iff s g t.
+- iff  g  G,g
+g
+t.
+unknown otherwise.
+
+7.3 Novel Characterization of Boundary Sets
+In this section, we propose a novel characterization of ver-
+sion space borders. The major interest of those boundary
+sets is that they can be computed more efficiently than pre-
+vious representation of borders [22]. By using the concepts
+of cube transversal and cube closure, we identify relation-
+ships between on one hand negative tuples and G and on
+the other hand S and G.
+
+Since all consistent tuples satisfy the constraint C1 (Freq
+(t,r+) = 1), each tuple of S must generalize the closure of
+the tuple <ALL,..., ALL> over r+. Moreover, consistent
+tuples satisfy the constraint C2 (Freq(t,r-) = 0), thus con-
+sistent tuples must specialize cTr(r-). V S(r) is a convex
+set which has a single specific tuple and each tuple of V S(r)
+has the same frequency over r (t  V S(r),Freq(t,r) =
+|r+|/|r|), thus V S(r) is a closed-equivalence classe (Cf. def-
+inition 17). This result is stated by theorem 8.
+
+
+Theorem 8 Let V S(r) be a version space of a categorical
+database relation r = r+  r-, then:
+
+1. G = cTr(r-, C(<ALL,..., ALL>,r+)) on CL(r+)
+
+2. S = {C(g,r)}, g  G
+
+7.4 Finding Boundary Sets
+The standard algorithm finding boundary sets of version
+space is the Candidate-Elimination Algorithm (CEA) [22].
+It discovers simultaneously S and G. In this section, we in-
+troduce the algorithm VSM (Version Space Mining) which
+is fundamentally different from CEA. It finds sequentially
+G and S using cube transversal and connection. Firstly,
+it computes the closure of the tuple <ALL,..., ALL> over
+r+. Then it finds G by computing the cube transversals of
+the complement of r- on CL(r+). These cube transversals
+are constrained with the previous closed tuple. Finally VSM
+mines S by using the cube connection. Computing the set G
+is critical because when fitting in the classical groundwork
+which is the powerset lattice, its size grows exponentially
+with respect to the number of binary attributes (i.e. the
+number of all possible values, |E|) [14]. The size of G is
+
+bounded by
+|E|
+|E|/2
+, which is asymptotic to
+2|E
+|
+
+|E|
+2
+
+. For-
+
+tunately, when setting the cube lattice as the search space to
+be explored, this bound does not hold because the size of the
+largest level in the cube lattice is bounded by
+|D|
+|D|/2
+which
+
+is asymptotic to
+2|D|
+
+|D|
+2
+
+[4]. Thus, mining boundary sets
+of version spaces in the cube lattice framework is tractable
+because |D| is a constant, and the number of dimensions is
+incomparably smaller than the number of possible values of
+all the dimensions (some attributes vs. several thousands or
+millions of values).
+
+
+Alg. 3 VSM Algorithm
+Input: r+,r-
+Output: S,G
+1: if r+ = {} then r+ := {<,..., >}
+2: if r- = {} then r- := {<ALL,..., ALL>}
+3: S := {C(<ALL,..., ALL>,r+)}
+4: if S = {<ALL,..., ALL>} then exit
+5: if S is a cube transversal of r- on CL(r+) then
+6:
+G := cTr(r-,S ) on CL(r+) \\ use MCTR algorithm
+7:
+if G = {<,...,>} then
+8:
+S = G = {<ALL,...,ALL>} and exit
+9:
+else
+10:
+S := {C(g,r)},g  G
+11:
+end if
+12: else
+13:
+S = G = {<ALL,...,ALL>} and exit
+14: end if
+15: return S,G
+
+
+Theorem 8 proves the correctness of VSM algorithm. Its
+complexity is similar to the one of the CTR algorithm. VSM
+complexity is exactly |D|(|r+|+2|D| |r-|+2|r|) or approx-
+imatively O(2|D||r|  |D|) which improves the complexity of
+Candidate-Elimination Algorithm [22]: O(|S|  |G|  |r| +
+|S|2  |r+| + |G|2  |r-|).
+
+Example 21 - Let us consider the following categorical data-
+base relation: r+ = {t  r | t[EnjoySport] = 'Yes' } and
+r- = {t  r | t[EnjoySport] = 'No' }. The three steps of the
+VSM algorithm are the following:
+
+1. Compute S = {C(<ALL,..., ALL>,r+)} =
+{<S,W,ALL>}
+
+2. identify the minimal cube transversals of r- on CL(r+)
+which generalize S , cTr(r-,S ) = {<S, ALL, ALL>,
+<ALL,W,ALL>};
+
+3. Compute the cube closure of one of the tuples of G on
+r: S = {<S,W,ALL>}
+
+
+8. CONCLUSION
+The presented work is a contribution to the foundation of
+data mining and data warehouse. It is a cross-fertilization
+between the fields of discrete mathematics, databases and
+machine learning. We introduce the concepts of the cube
+transversals and cube closures of a categorical database re-
+lation, and propose a merging algorithm for mining minimal
+cube transversals. These concepts are applied to supervised
+classification using version spaces studied for many years
+in the field of machine learning. However, to the best of
+the author knowledge, it is the first time that the problem
+of mining version spaces of categorical database relations
+has been introduced and characterized using cube transver-
+sals and cube closures. This novel characterization makes it
+possible to improve T. Mitchell work on the computational
+complexity of mining version space borders.
+
+
+
+77
+
+In the spirit of the quotient cube, we propose the new con-
+cept of closed cube lattice which is the most reduced sum-
+mary of datacube w.r.t. COUNT, SUM. We state the iso-
+morphisms on one hand between the closed cube lattice and
+the concept lattice for which many fast algorithms are pro-
+vided, and on the other hand between the closed cube lattice
+and the quotient cube lattice w.r.t COUNT, SUM.
+Finally we characterize the covering graph of the quotient
+cube w.r.t. COUNT by making use of cube transversals.
+Such a covering graph is a succinct summary of multidi-
+mensional associations and can be used as a visualization
+tool.
+Defining set operations on constrained cube lattices (con-
+vex spaces) is an interesting future work. It could be a ba-
+sis for providing a convex space algebra in the cube lattice
+framework (with arbitrary monotone and/or antimonotone
+constraints given in [24]).
+
+Acknowledgments
+We would like to thank Laks V. S. Lakshmanan and Jian
+Pei for their fruitful and quick answers about the Quotient
+Cube .
+
+
+9. REFERENCES
+[1] Y. Bastide, N. Pasquier, R. Taouil, G. Stumme, and
+L. Lakhal. Mining Minimal Non-redundant Association
+Rules Using Frequent Closed Itemsets. In Proceedings of
+the 1st International Conference on Computational Logic,
+CL, pages 972­986, 2000.
+[2] C. Berge. Hypergraphs: combinatorics of finite sets.
+North-Holland, Amsterdam, 1989.
+[3] C. Carpineto and G. Romano. A Lattice Conceptual
+Clustering System and Its Application to Browsing
+Retrieval. In Machine Learning, volume 24(2), pages
+95­122, 1996.
+[4] A. Casali, R. Cicchetti, and L. Lakhal. Cube Lattices: a
+Framework for Multidimensional Data Mining. In
+Proceedings of the 3rd SIAM International Conference on
+Data Mining, SDM, pages 304­308, 2003.
+[5] A. Casali, R. Cicchetti, and L. Lakhal. Lattice-Based
+Discovery of Semantics from Datacubes. Technical report,
+Universit´e de la M´editerran´ee, 2003.
+[6] A. Casali, R. Cicchetti, and L. Lakhal. Mining Concise
+Repr´esentations of Frequent Multidimensional Patterns. In
+Proceedings of the 11th International Conference on
+Conceptual Structures, ICCS, 2003.
+[7] G. Dong, J. Han, J. Lam, J. Pei, and K. Wang.
+Multi-Dimensional Constrained Gradients in Data Cubes.
+In Proceedings of 27th International Conference on Very
+Large Data Bases, VLDB, pages 321­330, Italy, 2001.
+[8] T. Eiter and G. Gottlob. Identifying The Minimal
+Transversals of a Hypergraph and Related Problems. In
+SIAM Journal on Computing, volume 24(6), pages
+1278­1304, 1995.
+[9] B. Ganter and R. Wille. Formal Concept Analysis:
+Mathematical Foundations. Springer, 1999.
+[10] J. Gray, S. Chaudhuri, A. Bosworth, A. Layman,
+D. Reichart, M. Venkatrao, F. Pellow, and H. Pirahesh.
+Data cube: A relational aggregation operator generalizing
+group-by, cross-tab, and sub-totals. In Data Mining and
+Knowledge Discovery, volume 1(1), pages 29­53, 1997.
+[11] D. Gunopulos, H. Mannila, R. Khardon, and H. Toivonen.
+Data mining, hypergraph transversals, and machine
+learning. In Proceedings of the 16th Symposium on
+Principles of Database Systems, PODS, pages 209­216,
+1997.
+[12] J. Han and M. Kamber. Data Mining: Concepts and
+Techniques. Morgan Kaufmann, 2001.
+[13] J. Han, J. Pei, G. Dong, and K. Wang. Efficient
+Computation of Iceberg Cubes with Complex Measures. In
+Proceedings of the International Conference on
+Management of Data, SIGMOD, pages 441­448, 2001.
+[14] H. Hirsh. Theoretical Underpinnings of Version Spaces. In
+Proceedings of the 12th International Joint Conference on
+Artificial Intelligence, IJCAI, pages 665­670, 1991.
+[15] H. Hirsh. The Computational Compexity of the
+Candidate-Elimination Algorithm. Technical report,
+Rutgers Univeristy, 1992.
+[16] L. Lakshmanan, J. Pei, and J. Han. Quotient Cube: How
+to Summarize the Semantics of a Data Cube. In
+Proceedings of the 28th International Conference on Very
+Large Databases, VLDB, pages 778­789, 2002.
+[17] S. Lopes, J. Petit, and L. Lakhal. Efficient Discovery of
+Functional Dependencies and Armstrong Relations. In
+Proceedings of the 7th International Conference on
+Extending Database Technology, EDBT, pages 350­364,
+2000.
+[18] H. Lu and H. Liu. Decision Tables: Scalable Classification
+Exploring RDBMS Capabilities. In Proceedings of the 26th
+International Conference on Very Large Databases, VLDB,
+pages 373­384, 2000.
+[19] H. Mannila and K. R¨aih¨a. The Design of Relational
+Databases. Addison Wesley, 1994.
+[20] H. Mannila and H. Toivonen. Levelwise Search and Borders
+of Theories in Knowledge Discovery. In Data Mining and
+Knowledge Discovery, volume 1(3), pages 241­258, 1997.
+[21] E. Mephu Nguifo and P. Njiwoua. Using Lattice-Based
+Framework as a Tool for Feature Extraction. In Proceedings
+of the 10th European Conference on Machine Learning,
+ECML, pages 304­309, 1998.
+[22] T. M. Mitchell. Machine learning. MacGraw-Hill Series in
+Computer Science, 1997.
+[23] N. Pasquier, Y. Bastide, R. Taouil, and L. Lakhal.
+Discovering frequent closed itemsets for association rules.
+In Proceedings of the 7th International Conference on
+Database Theory, ICDT, pages 398­416, 1999.
+[24] J. Pei and J. Han. Constrained Frequent pattern Mining: A
+Pattern-Growth View. In SIGKDD Explorations, volume
+4(1), pages 31­39, 2002.
+[25] J. Pei, J. Han, and R. Mao. CLOSET: An Efficient
+Algorithm for Mining Frequent Closed Itemsets. In
+Workshop on Research Issues in Data Mining and
+Knowledge Discovery, DMKD, pages 21­30, 2000.
+[26] J. Pfaltz and R. Jamison. Closure systems and their
+structure. In Information Sciences, volume 139(3-4), pages
+275­286, 2001.
+[27] G. Stumme, R. Taouil, Y. Bastide, N. Pasquier, and
+L. Lakhal. Computing Iceberg Concept Lattices with
+Titanic. In Data and Knowledge Engineering, volume
+42(2), pages 189­222, 2002.
+[28] Toon Calders and Raymond T. Ng and Jef Wijsen.
+Searching for Dependencies at Multiple Abstraction Levels.
+In ACM Transactions on Database Systems, ACM TODS,
+volume 27(3), pages 229­260, 2002.
+[29] A. Tung, H. Lu, J. Han, and L. Feng. Efficient Mining of
+Intertransaction Association Rules. In IEEE Transactions
+on Knowledge and Data Engineering, TKDE, volume
+15(1), pages 43­56, 2003.
+[30] W. Wang, H. Lu, J. Feng, and J. Yu. Condensed Cube: An
+Effective Approach to Reducing Data Cube Size. In
+Proceedings of the 18th International Conference on Data
+Engineering, ICDE, pages 213­222, 2002.
+[31] M. Zaki and C. Hsio. CHARM: An Efficient Algorithm for
+Closed Itemset Mining. In Proceedings of the 2nd SIAM
+International Conference on Data mining, 2002.
+[32] M. J. Zaki. Generating non-redundant association rules. In
+Proceedings of the 6th International Conference on
+Knowledge Discovery and Data Mining, KDD, pages
+34­43, 2000.
+
+
+
+
+78
+

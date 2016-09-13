@@ -1,0 +1,1602 @@
+Effective Localized Regression for Damage Detection
+in Large Complex Mechanical Structures
+Aleksandar Lazarevic
+University of Minnesota, United Technologies
+200 Union Street SE, 4-192,
+Minneapolis, MN 55455, USA
+1-612-626-8096
+
+aleks@cs.umn.edu
+Ramdev Kanapady
+University of Minnesota
+111 Church Street, SE 125
+Minneapolis, MN 55455, USA
+1-612-626-8101
+
+ramdev@me.umn.edu
+Chandrika Kamath
+Lawrence Livermore National Lab.
+Box 808, L-561
+Livermore, CA 94551, USA
+1-925-423-3768,
+
+kamath2@llnl.gov
+
+
+
+ABSTRACT
+In this paper, we propose a novel data mining technique for the
+efficient damage detection within the large-scale complex me-
+chanical structures. Every mechanical structure is defined by the
+set of finite elements that are called structure elements. Large-
+scale complex structures may have extremely large number of
+structure elements, and predicting the failure in every single ele-
+ment using the original set of natural frequencies as features is
+exceptionally time-consuming task. Traditional data mining tech-
+niques simply predict failure in each structure element individu-
+ally using global prediction models that are built considering all
+data records. In order to reduce the time complexity of these mod-
+els, we propose a localized clustering-regression based approach
+that consists of two phases: (1) building a local cluster around a
+data record of interest and (2) predicting an intensity of damage
+only in those structure elements that correspond to data records
+from the built cluster. For each test data record, we first build a
+cluster of data records from training data around it. Then, for each
+data record that belongs to discovered cluster, we identify corre-
+sponding structure elements and we build a localized regression
+model for each of these structure elements. These regression mod-
+els for specific structure elements are constructed using only a
+specific set of relevant natural frequencies and merely those data
+records that correspond to the failure of that structure element.
+Experiments performed on the problem of damage prediction in a
+large electric transmission tower frame indicate that the proposed
+localized clustering-regression based approach is significantly
+more accurate and more computationally efficient than our
+previous hierarchical clustering approach, as well as global
+prediction models.
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications (data
+mining, scientific databases, spatial databases)
+General Terms
+Algorithms, Performance, Design, Experimentation.
+
+Keywords
+Clustering, localized regression, structure elements, damage
+detection, mechanical structures.
+
+1. INTRODUCTION
+With the increasing demand for safety and reliability of structures
+and mechanical systems, damage detection by nondestructive
+evaluation methods has attracted considerable attention recently.
+The phenomenon of damage in a material includes localized
+softening or cracks in a certain neighborhood of a structural
+component due to high operational loads, or the presence of flaws
+due to manufacturing defects. Methods that identify the presence,
+the location and the severity of damage in the mechanical
+structure are useful for non-destructive evaluation procedures that
+are typically employed in agile manufacturing and rapid
+prototyping systems. In addition, these techniques will be critical
+for reliable prediction of damage in structural systems such as
+bridges, skyscrapers, aircraft structures, and various structures
+deployed in space. Since every structural system is defined by the
+set of finite elements that are called structure elements, reliable
+structural damage prediction is usually considered in terms of the
+damage detection of structure elements, which results in changes
+in structural responses such as static deformations and dynamic
+characteristics (e.g. natural frequency and the mode shapes).
+Although rigorous damage models exist, in this work we
+primarily focus on the aspect of structural damage that is assumed
+to be associated with structural stiffness as a reduction in Young's
+modulus or modulus of elasticity (E) of the structure elements
+[16]. In these situations, there are three levels of damage
+identification: (i) Recognition - qualitative indication that damage
+might be present in the structure; (ii) Localization - information
+about the probable position of the damage in the structure (which
+structure elements are damaged); (iii) Assessment - estimate of the
+extent of severity of the damage in the structure (intensity of the
+damage for failed structure elements).
+
+A practical damage assessment methodology must be capable of
+predicting changes in the structural stiffness as a function of
+changes in structural response and dynamic characteristics (e.g.
+natural frequency and the mode shapes) [19]. Standard analytical
+techniques employ mathematical models to approximate the
+relationships between specific damage conditions and changes in
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the first page. To copy
+otherwise, or republish, to post on servers or to redistribute to lists,
+requires prior specific permission and/or a fee.
+KDD'04, August 22­25, 2004, Seattle, Washington, USA
+Copyright 2004 ACM 1-58113-888-1/04/0008...$5.00.
+
+
+
+
+450
+Industry/Government Track Paper
+
+the structural response or dynamic properties. Such relationships
+can be computed by solving a class of so-called inverse problems
+[4, 15]. However, the existing approaches for solving these
+problems have several major drawbacks, namely: i) a large
+amount of modal information such as eigen-values and eigen-
+vectors associated with the damaged structure has to be employed
+to identify the damage in the structure accurately; ii) the more
+sophisticated methods involve computationally cumbersome
+system solvers which are typically solved by singular value
+decomposition techniques, non-negative least squares techniques,
+bounded variable least squares techniques, etc.; and, iii) all of
+these computationally intensive procedures need to be repeated
+for any newly available measured test data for a given structure.
+Hence
+there
+is
+a
+need
+to
+explore
+alternative,
+more
+computationally efficient and accurate approaches for the damage
+identification problem. An immediate alternative is to design data
+mining techniques that can enable the real-time prediction and
+identification of damage for newly available test data once a
+sufficiently accurate model is developed from the training data.
+
+Recently, a number of researchers [12, 16, 18-20] have used data
+mining techniques, such as neural networks, to address the
+problem of damage detection in mechanical structures by using
+static displacements and dynamic characteristics. Most of these
+studies , that are categorized as "the direct approach" require the
+prediction of the material property, namely, the Young's modulus,
+of all the structure elements in the domain individually or
+simultaneously. As a consequence, they are restricted to
+prediction of damages in mechanical structures with a small
+number of structure elements (order of ten). The development of a
+predictive model that can correctly identify the location and
+severity of damage in practical large-scale complex structures
+using the "direct approach" can be a considerable challenge.
+Increased geometric complexity of the structure causes increase in
+the number of structure elements (target variables from data
+mining point of view), which also causes an increase in the
+number of prediction models that need to be built. This growth
+will not only increase the time required for training prediction
+models but also the time required for data generation since each
+damage state (data record) requires an eigen solver to generate
+natural frequencies and mode shapes of the structure. All these
+limitations make the "direct approach" not scalable to situations
+in which thousands of elements are present in the complex
+geometry of the structure or when multiple elements in the
+structure have been damaged simultaneously.
+
+In this paper, we propose an effective and scalable data mining
+technique for accurate damage detection in very large-scale
+complex
+mechanical
+structures.
+The
+proposed
+localized
+clustering-regression based approach consists of two phases:
+
+·
+finding the most similar training data records to a test data
+record of interest and creating a cluster from these data
+records; and
+
+·
+predicting damage intensity only in those structure elements
+that correspond to data records from the built cluster,
+assuming that all other structure elements are undamaged.
+
+In the first step, for each test data record, we build a local cluster
+around that specific data record. The cluster contains the most
+similar data records from the training data set. Then, in the second
+step, for all identified similar training data records that belong to
+created cluster, we identify corresponding structure elements
+assuming that the failed element is one of these identified
+structure
+elements.
+More
+specifically,
+by
+identifying
+corresponding structure elements we focus our prediction only at
+the structure elements that are highly possible to be damaged.
+Therefore, instead of predicting an intensity of damage in all
+structure elements, we build a prediction model for each of these
+identified corresponding structure elements in order to determine
+which of these structure elements has really failed. Prediction
+model for a specific structure element is constructed using only
+those data records from the entire training data set that correspond
+to different intensities of its failure and using only a specific set of
+relevant natural frequencies. Experiments performed on the
+problem of damage prediction in a large electric transmission
+tower frame indicate that the proposed localized clustering-
+regression based approach is more accurate than our previously
+proposed hierarchical partitioning approaches [7]. In addition, the
+proposed approach also requires less computational time than our
+hierarchical partitioning approaches.
+
+2. PROBLEM DESCRIPTION
+The problem of predicting damage intensity in structure elements
+conceptually corresponds to the equivalent data mining problem
+of predicting large number of continuous target variables.
+Traditional data mining techniques for addressing this problem
+simply predict each of these target variables simultaneously or
+individually. However in damage detection, due to the nature of
+the problem, there is no need to predict all target variables but
+only those that are of particular interest (damaged structure
+elements). In addition, the characteristics of the domain may
+cause (i) a strong correlation among these target variables
+(structure elements) that need to be predicted, and (ii) an
+existence of high dimensional and heterogeneous data, where
+different prediction models are responsible for different regions.
+In such databases, incorporating this background knowledge into
+learning process may typically produce more efficient and
+accurate prediction models.
+
+It is interesting to observe that the problem of predicting multiple
+target variables is also present in other emerging applications. For
+instance, in a manufacturing process we may want to predict
+various quality aspects of a product from the parameter settings
+used in the manufacturing, while on the other hand, in financial
+markets, given econometric variables as predictors, the goal may
+be to predict changes in the valuations of the stocks in large
+number of industry groups or mutual funds [2].
+
+Significant data mining research work has been done in the area
+of predicting multiple target variables. Some of these approaches
+include multitask learning [3], learning to learn [1], curds and
+whey algorithm [2], clustering learning tasks [17] and learning
+internal representations [6]. However, most of the previous work
+on multiple task learning is based on the idea that the tasks to be
+learnt jointly are somehow ''algorithmically related'', in the sense
+that the results of applying a specific learning algorithm to these
+tasks are assumed to be similar. A key feature that distinguishes
+our work from these existing algorithms is that our approach does
+not learn all target variables, but instead focuses on learning only
+a limited number of target variables of interest by exploring
+problem-specific interrelationships among them. In addition, it
+decomposes the complex problem of predicting multiple target
+
+
+
+
+451
+Industry/Government Track Paper
+
+variables from the global data set into a simpler one where
+particular target variables are predicted using only relevant set of
+data records as well as relevant set of features.
+
+2.1 Problem definition
+Given a high-dimensional heterogeneous data set D with a large
+number of continuous target variables (Table 1), the problem
+consists of effectively and accurately predicting real value of
+target variables of interest. The typical data layout used in
+predicting multiple target variables is shown in Table 1, where
+data set D contains data records d1, d2, ... , dN, i = 1, ..., N. Each
+data record di is described with the pair {f, E}, where f = {f1, f2,
+... , fm} is the feature set, while E = {E1, E2, ... , En} is the set of
+target variables. Each data record di in the data set D pertains to a
+specific state depending on domain-specific knowledge.
+
+
+Table 1. A typical input to data mining model for damage
+detection in mechanical structures.
+
+Features (Frequencies)
+Target variables
+Data
+records
+f1
+f2
+. . .
+fm
+E1
+E2
+. . .
+En
+d1
+72.833 151.67 . . . 213.45 0.5E
+E
+. . .
+E
+d2
+73.45 152.56 . . . 216.65 0.6E
+E
+. . .
+E
+. . .
+. . .
+. . .
+. . .
+. . .
+. . .
+. . .
+. . .
+. . .
+dN
+74.01 153.01 . . . 214.21
+E
+E
+. . . 0.7E
+
+Since mechanical structures may be represented with a certain
+number of structure elements (Figure 1), the problem of
+predicting multiple target variables in damage detection in
+mechanical structures is reduced to predicting the intensity of the
+damage in structure elements {E1, E2, ... , En} using dynamic
+characteristics (e.g. natural frequencies) as features {f1, f2, ... , fm}
+(Table 1).
+
+
+
+
+Figure 1. Each square in the airplane represents the
+individual damage detection zone (element). The intensity of
+the element's damage needs to be predicted by a global
+predictive model.
+
+
+The existing data mining methods that are recently proposed for
+learning multiple target variables [12, 16, 18, 20] are not adequate
+for addressing this specific problem of predicting damages in
+mechanical structures due to the following challenges:
+
+1.
+Large number of target variables that need to be predicted.
+Large-scale complex mechanical structures typically have an
+extremely large number of structure elements (order of
+thousands) that need to be predicted. Current data mining
+techniques for learning multiple target variables are designed
+for predicting relatively small number of them. Increase in
+the number of target variables usually causes increase in the
+number of data records needed for learning prediction
+models, as well as increase in time needed for building
+prediction models. These issues need to be successfully
+addressed when predicting large number of target variables.
+
+2.
+Correlation among target variables. Structure elements in
+mechanical structures are considered related if they are
+spatially close to each other or if they are symmetric
+according to some symmetry axis. For example, structure
+elements Ex and Ey in Figure 1 are correlated since they are
+spatially close, while structure elements Ex and Ez are
+correlated due to symmetry. The fact that the target variables
+are correlated is not properly addressed in many existing
+algorithms for learning multiple tasks. Traditional methods
+for transfer of knowledge [1, 9] or multitask learning [3] are
+usually aimed only at learning a fixed single task.
+
+3.
+High dimensionality of the problem. The number of natural
+frequencies and mode shapes for very large and complex
+mechanical structures may be extremely large (order of
+thousands). Using large number of features when building
+prediction models unnecessarily slows down the learning
+process. Straightforward feature selection is not applicable
+for this type of problem since in most cases prediction of
+individual target variables depends on all features. In
+mechanical structures, damage in two individual structure
+elements that are very close or symmetric in 3D space results
+that two data records that correspond to these two damaged
+elements (see Table 1) have very similar low natural
+frequencies, i.e. frequencies with the lowest values (e.g.
+frequencies f1 to f100), and the only method to determine
+which element actually failed is to consider higher natural
+frequencies (e.g. frequencies f600 to f700). Regardless of
+whether the damaged elements are close or symmetric in 3D
+space, it is reasonable to group these elements in the same
+substructure. In this way, the background knowledge about
+the similarity of spatially close or symmetric elements is
+embedded
+into
+the
+procedure
+for
+sophisticated
+dimensionality reduction.
+
+4.
+Heterogeneous data distribution. Since each data record
+corresponds to a specific damage state of particular structure
+element, it is evident that only those data records are relevant
+for predicting the damage in the particular structure element.
+In such cases, standard global predictive models trained on
+the entire set of data records do not have satisfactory
+prediction performance. In many scenarios involving
+prediction of multiple target variables, only very small
+regions of data sets may be responsible for predicting
+particular target variables or their groups, and building
+standard global models may only harm the overall prediction
+performance.
+
+2.2 Our Previous Work
+To address aforementioned challenges, we have recently proposed
+hierarchical partitioning approach [7, 14] to predict the damage in
+the complex mechanical structures. The hierarchical partitioning
+approach consists of three phases that are applied recursively: (1)
+partitioning of data set (2) localization of groups of interesting
+target variables, and (3) the prediction of target variables. In the
+partitioning step, similar data records are first grouped using
+Ex Ey
+Ez
+
+
+
+
+452
+Industry/Government Track Paper
+
+manual splitting or clustering algorithm and then corresponding
+groups of similar target variables are identified. In the localization
+step, a classification model is used to predict which group of the
+target variables is of particular interest and needs to be further
+investigated. If the identified group of target variables still
+contains large number of target variables, then the partitioning
+and localization steps are repeated recursively and the identified
+group is further split into subgroups with more similar target
+variables. When the number of target variables per identified
+subgroup is sufficiently small, the prediction phase takes place
+and the target variables are predicted using localized prediction
+models that are built not using all data records from entire data
+set, but using only those data records that correspond to the
+particular subgroup.
+
+In the partitioning step of our hierarchical approach [7], we have
+used two approaches, namely manual partitioning and clustering-
+based partitioning. The first and the simplest method for
+partitioning target variables into similar groups is to perform
+manual partitioning of target variables by incorporating heuristics
+describing spatial locality of target variables (e.g. locations of
+target variables) [14]. Figure 2 illustrates manual partitioning of
+the airplane structure.
+
+
+
+
+Figure 2. Localized prediction of damage using hierarchical
+partitioning
+
+
+However, the manual partitioning approach is restricted to using
+only visual characteristics of mechanical structures, and many
+hidden characteristics inherent for the problem may not be
+available for sub-structuring. That was the reason that clustering
+was also employed as an alternative method to group similar
+target variables (structure elements) {E1, E2, ... , En} using
+features (frequencies) {f1, f2, ... , fm} that characterize them [7]. In
+order to group similar target variables, there is a need to first
+define similarity between them using a certain domain specific
+knowledge. In spatial domains, variables may be similar if they
+are spatially close to each other or if they are symmetric
+according to some symmetry axis. In damage detection problem,
+frequencies indirectly provide information about locality and
+symmetry of structure elements, but they also provide information
+about the correlation among structure elements, which is not
+available in the manual partitioning. Therefore, by using
+particular set of features (frequencies), it is possible to group
+similar target variables (structure elements) that are either close or
+symmetric in 3D space. In such a way, data records with similar
+set of features belong to one group of target variables, while data
+records that have different features from a specific set of features
+correspond to different groups. When the identified group needs
+to be further partitioned, different and/or additional set of features
+that bring additional knowledge needs to be considered (e.g.,
+higher frequencies in damage detection problem) in order to
+distinguish among similar target variables already identified. For
+example, clustering algorithm applied only on the low natural
+frequencies may identify the regions that contain structure
+elements that are spatially close or spatially symmetric, since the
+damage in those structure elements results in very similar low
+frequencies. In order to further split these regions, there is a need
+to focus on higher frequencies, since this is the only method to
+distinguish between two spatially close or symmetric structure
+elements.
+
+The proposed hierarchical clustering based approach for
+partitioning groups of target variables and predicting their values
+
+
+
+
+is presented in Figure 3.
+
+Figure 3. Partitioning algorithm for discovering groups of
+similar target variables, identifying the group of interest and
+predicting the values of target variables.
+
+
+As input arguments, the proposed algorithm takes entire data set
+D (Table 1) and the lowest m1 features {f1, f2, ... , fm1} considered
+at that level of partitioning. For more details about the
+Algorithm Partitioning(D, m1)
+· Given: set with data records D ={d1, d2, ... , dN}, where each
+di = {f1, ... , fm, E1, ... , En}, i = 1, ..., N.
+· Select the set of low natural frequencies {f1, f2, ..., fm1},
+where m1 << m.
+· Apply clustering algorithm on the following data set {f1, f2,
+...,
+1
+m
+f
+} and obtain k clusters C1, C2, ...., Ck, where the
+criterion for obtaining optimal clusters was identification of
+well balanced clusters.
+· Identify k substructures S1, S2, ... , Sk such that they
+correspond to identified clusters C1, C2, ...., Ck.
+· For i = 1, ..., k
+o Predict the existence of damage in substructure Si using
+classification model.
+o If there is the damage in the substructure Si,
+If the substructure Si is not sufficiently small:
+· Chose
+the
+set
+of
+low
+natural
+frequencies
+{
+1
+m
+f
+,
+1
+1
++
+m
+f
+, ...,
+2
+m
+f
+}, where m1 < m2 < m.
+· Call algorithm Partitioning (Ci, m2) to discover finer
+substructures in the substructure Si.
+Else (the substructure Si is sufficiently small)
+· Apply localized regression model to predict the
+intensity of the damage for all the elements within
+the identified substructure with the damage.
+
+
+
+
+453
+Industry/Government Track Paper
+
+hierarchical partitioning approach, the reader is referred to our
+recent work [7].
+
+The proposed hierarchical clustering approaches have two main
+advantages over existing data mining techniques for predicting
+large numbers of target variables from high-dimensional and
+heterogeneous databases. First, they are computationally more
+efficient, since they hierarchically approach the problem of
+predicting all target variables and use less number of training data
+records as well as a fewer number of features. Second, the clusters
+obtained at each partitioning level correspond only to small
+subsets of similar target variables and tend to be more
+homogeneous than the entire data set. Therefore, when predicting
+those target variables, more accurate prediction models can be
+constructed more efficiently by using only the local data from
+corresponding clusters instead of the entire global data set.
+However, both hierarchical partitioning based approaches suffer
+from decrease in classification performance at higher level of
+partitioning when predicting which substructures contain
+damaged elements. In addition, predicting an intensity of damage
+for structure elements in specific localized regions also drops at
+the further partitioning levels.
+
+3. METHODOLOGY
+To overcome the problems that appear by using hierarchical
+partitioning approaches, we propose a novel method that is based
+on localized clustering followed by building local regression
+models. The proposed approach consists of two phases: (1)
+building a local cluster around a data record of interest and (2)
+predicting an intensity of damage only in those structure elements
+that correspond to data records from the built cluster.
+
+3.1 Building a local cluster
+When there is a need to predict the existence of the damage in
+large-scale complex mechanical structures in practice, and
+potentially its location and severity, mechanical engineers usually
+measure the natural frequencies of particular mechanical
+structure. This set of frequencies corresponds to a test data record
+used in data mining techniques to predict the target variables, i.e.
+the failure in structure elements.
+
+The first step of our proposed method corresponds to building a
+cluster around every given test data record. The obtained cluster
+contains data records from training data sets that are most similar
+to given test data record. In this step, we use the notion of
+similarity, which resembles one defined in section 2.2. More
+specifically, two data records are considered to be similar if they
+have similar low natural frequencies. The reasoning behind such
+definition of similarity is because similar low natural frequencies
+typically correspond to a failure in spatially close or symmetric
+structure elements. Therefore, only these frequencies are taken
+into consideration when building a cluster around each test data
+record. In our proposed approach, we have used two methods for
+building a cluster around a test data record:
+
+-
+nearest neighbor (NN) approach; and
+
+-
+density based (DB) approach.
+
+In the nearest neighbor approach, the cluster of similar data
+records is simply built from k nearest data records from training
+data set, where the Euclidean distance is computed using only
+pre-specified number m1 of low natural frequencies {f1, f2, ... ,
+fm1}. The number m1 of lowest natural frequencies is typically
+determined heuristically from training data set using expert
+background knowledge. On the other hand, the number k of
+nearest neighbors is determined according to the number of
+training data records available per structure element. For example,
+if there are 20 data records that correspond to different intensity
+of the failure in a particular structure element, then k is set to 20.
+
+In the density based approach, the cluster of similar data records
+is built starting from a test data record with respect to the density
+of its neighborhood. The cluster has to contain at least a specific
+number of data records in a predetermined neighborhood. This
+concept is taken from the DBSCAN clustering algorithm [13],
+where for each point of a cluster, its
+-neighborhood
+for some
+
+given
+>
+0 has to contain at least minimum number of points, i.e.
+
+"the density in the
+-neighborhood
+of points has to exceed some
+
+threshold". The
+-neighborhood
+and the minimum number of
+points are parameters that are determined from training data set
+using the similar procedure that is used in the original DBSCAN
+algorithm. First, for each training data record we compute the k-
+distance (distance to the k-th nearest neighbor) and then we sort
+all the points according to the distance and plot them. The typical
+sorted k-distance plot is shown in Figure 4. Experimental results
+have shown that the threshold value for the
+-neighborhood
+is
+around the point where the sorted distances begin to decrease
+significantly [13]. Although it is difficult to determine this
+threshold automatically, it is very intuitive for a user to observe
+this point (see Figure 4).
+
+
+
+
+0
+50
+100
+150
+200
+250
+300
+
+
+
+
+Data records
+k-di
+st
+anc
+es
+
+
+
+
+Figure 4. Typical plot of sorted k-distances
+
+
+The minimum number of points is specified in the same way as in
+the original DBSCAN algorithm, and it is set to k+1. When both
+parameters (
+
+and minimum number of points) are set, we simply
+
+identify all training data records that are in the
+-neighborhood
+of
+a given test data record and assign these data points to a cluster.
+In the rare cases when there are no points in the
+-neighborhood
+of a given test data record, we switch to the nearest neighbor
+approach and build a cluster using k nearest training data records.
+-threshold
+
+
+
+
+454
+Industry/Government Track Paper
+
+3.2 Building localized regression models
+When the cluster of training data records similar to a given test
+data record is identified, the next step is to associate which
+structure elements correspond to the data records and to predict
+the failure only in those structure elements. To illustrate the
+principle of identifying corresponding target variables (structure
+elements), lets assume that the training data records that are
+similar to a test data record and belong to a cluster discovered in
+the first step are presented in shaded rows in Figure 5. Lets also
+assume that the training data set contains 14 data records
+
+It can be observed from Figure 5, that the training data records
+from a built cluster typically correspond to the failure in more
+than one structure element. For example, in Figure 5, the built
+cluster contains training data records d1, d2, d5, d9, d10 and d14 that
+correspond to the failure in structure elements E1, E3 and En (*
+denotes the damaged structure elements). These corresponding
+structure elements are also presented as shaded columns in Figure
+5. In general, depending on the size and the quality of the cluster,
+the number of corresponding damaged structure elements can
+vary significantly.
+
+Features
+Target Variables
+Data
+records
+f1
+f2
+f3 ... fm
+E1 E2 E3
+...
+En
+d1
+*
+d2
+*
+d3
+*
+d4
+*
+d5
+*
+d6
+*
+d7
+*
+d8
+*
+d9
+*
+d10
+*
+d11
+*
+d12
+*
+d13
+*
+d14
+*
+Figure 5. Typical training data records obtained by building a
+cluster around given test data record
+
+
+Although all structure elements that correspond to data records
+from discovered cluster are of particular interest for predicting
+intensity of damage, we typically choose to predict the failure in
+only a few of them. The number of structure elements for which
+we predict the failure depends on the total number of different
+structure elements within the cluster. For example, in Figure 5,
+there are six training data records that correspond to the failure in
+three structure elements E1, E3 and En. The structure elements that
+will be predicted are determined according to the largest number
+of corresponding data records within the cluster. For example, the
+structure element E1 corresponds to two data records, the structure
+element E3 corresponds to three data records, while the structure
+element En corresponds to only one data record. Therefore, since
+structure elements E1 and E3 have the largest number of
+corresponding data records within the built cluster, we will
+predict the failure only in those two structure elements. In
+general, the number of structure elements that we chose to predict
+should correspond to at least 75% of all training data records that
+belong to a built cluster. In the example from Figure 5, structure
+elements E1 and E3 correspond to 5 training data records, which is
+83% (5/6) of the entire cluster (the size of cluster is 6). Our
+experiments have shown that the failed structure element is
+always among the structure elements that correspond to the
+training data records within the discovered cluster. In the case
+when several structure elements have the same number of
+corresponding data records, the advantage is given to those
+structure elements that correspond to the data records that are
+closer to a given test data record.
+
+When drawing an analogy between the localized regression
+approach proposed in this paper and our previously proposed
+hierarchical partitioning approach, it can be observed that the first
+step of building a cluster in the localized regression approach
+basically corresponds to the first step in the hierarchical
+partitioning approach, when clusters at the first level are
+identified. However, there are two main distinctions: (1) in the
+localized regression approach here, there is only one cluster that
+is built, unlike many clusters in the hierarchical partitioning
+approach; and (2) the cluster that is built in the localized
+regression approach around a test data record is typically
+significantly smaller than the clusters discovered at the first level
+of partitioning in the hierarchical approach.
+
+Identifying structure elements of interest that need to be predicted
+in the second step of the localized regression approach
+corresponds to the further refinement of structure elements
+identified in the previous step. This step essentially corresponds
+to the further levels of partitioning in the hierarchical approach
+and represents further splitting of the cluster identified at the first
+level of the localized regression approach.
+
+When the structure elements of interest are identified, the next
+step is to build localized regression models for predicting the
+failure in these structure elements. These localized models are
+constructed using only the data records that correspond to the
+failure in particular structure element in the entire training data
+set. For example, if we predict the failure in structure element E1
+and E3 then not only data records d1, d2, d9, d10 and d14 will be
+used in constructing the regression model for both of these
+structure elements, but all the data records from the training data
+set that are generated for different intensity of the failure in the
+elements E1 and E3.
+
+In addition, unlike the first step, when only the lowest natural
+frequencies were used to build a cluster around a test data record,
+in this step only the highest natural frequencies are employed to
+build a regression model for predicting the failure in structure
+elements, since low natural frequencies do not provide any useful
+information in distinguishing between similar (spatially close or
+symmetric) structure elements. The number of the highest natural
+frequencies is again determined heuristically according to the
+expert background knowledge.
+
+As local regression models, we have trained 2-layered
+feedforward neural network models with number of hidden
+neurons equal to the number of input attributes. In order to reduce
+the number of input attributes considered in neural network
+model, variance-based dimensionality reduction through principal
+component analysis [8] is also employed, such that newly
+transformed features will retain some predefined part of the
+variance. We have used three neural network learning algorithms:
+
+
+
+
+455
+Industry/Government Track Paper
+
+resilient propagation [11], conjugate gradient backpropagation
+with Powell-Beale restarts [10], and Levenberg-Marquardt [5].
+
+4. EXPERIMENTS
+4.1 Experimental Setup
+Predicting damage in mechanical structures using data mining
+techniques requires the following steps for training data
+generation:
+
+· Feature Construction: To build the right data mining model it
+is important to construct a useful set of features that will
+successfully characterize the damage states, capture the physics
+of the problem at hand, and be independent of operational loads
+for a given structure. Since natural frequencies and mode
+shapes of the mechanical structure meet these criteria, they are
+selected as useful features. This selection is made due to
+following considerations: i) these quantities can be measured
+from the actual physical structures, (ii) the natural frequencies
+represent global behaviors of the structure, while the mode
+vectors represent the local characteristics of the structure, and
+iii) the number of features can be limited to very few low
+natural frequencies and mode shapes compared to the number
+of degrees of freedom in the structure. In this study, however,
+our features are limited to natural frequencies only.
+
+· Data Generation: The data for building prediction models is
+generated by using a typical finite element analysis code. In the
+typical data layout shown in Table 1, the feature set f = {f1, f2,
+... , fm} corresponds to the set of m natural frequencies, while
+the set of target variables E = {E1, E2, ... , En} represents the
+values for
+Youngs's modulus of elasticity for all n finite
+elements. Each data record di in the data set D pertains to a
+failure state, where the failure state is simulated by failing a
+single
+element
+in
+the
+structure
+and
+performing
+the
+eigenanalysis of the finite element model. In more complex
+scenario, data records may correspond to failure of more
+elements, but this analysis is out of scope of this paper. In our
+experiments, the elements are failed in steps (e.g., each element
+is failed by reducing E from the base value of E to E' in steps
+of E where  is a small fraction).
+
+
+
+
+Figure 6. Three-dimensional model of electric transmission
+tower discretized using beam elements
+The electric transmission tower (Figure 6), studied in [14], has
+been chosen to demonstrate the effectiveness of our data mining
+approach in damage detection. The training dataset of 6,241 data
+records, 900 natural frequencies (features) and 312 structure
+elements (target variables) is generated by failing a random single
+element by a random amount. This data set corresponds to the
+scenario of 20 failure states per element (312 elements x 20 =
+6240 and one data record for the non-damaged mechanical
+structure). The testing data sets was obtained using the same
+procedure and it contained 7800 data records, which corresponds
+to 25 different scenarios of failure for each structure element.
+
+4.2 Experimental Results
+We first performed manual partitioning of the electric
+transmission tower into four legs and a head (Figure 6), and
+predict the existence of the damage within these substructures.
+Then, we also applied the hierarchical clustering approach and
+partition the transmission tower into five sub-structures, shown in
+Figure 7. The detailed results about prediction performance of
+these two approaches are available in our previously published
+work [7]. Here, we only provide the comparison of these two
+partitioning approaches to the localized regression method
+proposed in this paper.
+
+
+
+
+Figure 7. Illustrative five sub-structures at the first level of
+clustering employing the algorithm Partitioning. (Figure is
+best viewed in color)
+
+
+It is important to note that the prediction performance for all
+the methods was measured using the coefficient of determination
+defined as R2 = 1 ­ MSE/2, where  is a standard deviation of
+the target variable. R2 value is a measure of the explained
+variability of the target variable, where 1 corresponds to a perfect
+prediction, and 0 to a trivial mean predictor. If the prediction
+model is worse than the mean predictor, it is also possible to
+achieve R2 value that is less than 0. In order to alleviate the effect
+of neural network instability in our experiments, the R2 value for
+each element from substructures is averaged over 10 trials of the
+neural network learning algorithm.
+
+When applying the localized regression method, one of the major
+issues was to select right set of natural frequencies that will be
+used in building a cluster around a test data record. Since natural
+Head
+
+
+
+
+Legs
+
+
+
+
+456
+Industry/Government Track Paper
+
+frequencies that are easy to be measured in practice are usually
+less than 25Hz, higher frequencies are typically eliminated first.
+In order to identify the exact number of frequencies to be used in
+the first step (building a cluster), we use a heuristic approach that
+looks for the largest gap between two natural frequencies in the
+vicinity of some round natural frequency (e.g. the biggest gap
+around 0.5 Hz or 1Hz). Thus, the building of a cluster was
+performed employing the 202 lowest frequencies, since these
+frequencies were smaller than 0.5Hz.
+Both, nearest neighbor and density based approach were
+investigated when building a cluster around a test data record. The
+prediction performance achieved using the density-based
+approach was slightly better due to a better quality of locally built
+clusters around a test data record. The quality of the cluster
+identified using the density based approach was better since the
+training data points around a test data record belong to higher
+density regions, which are typically good indicators of valuable
+clusters. Due to the lack of space, only the results obtained using
+the density based approach are presented in this paper.
+When constructing localized regression models, only the highest
+200 natural frequencies were used. Again, this number was deter-
+mined in a similar way explained for the low natural frequencies.
+The experimental results of predicting the intensity of damage in
+the elements using straightforward direct approach, partitioning
+approaches (after first level of partitioning) as well as using the
+localized regression method are given in Table 2. When
+considering straightforward direct approach, we have also run the
+experiments using standard regression analysis but the results
+were worse or comparable to those obtained by neural networks.
+
+Table 2. Prediction of damage intensity (given in R2 values)
+for those elements within structures for which hierarchical
+clustering approach achieves the worst and the best accuracy.
+Str
+uct
+ure
+Element
+Direct
+(global)
+approach
+Manual
+parti-
+tioning
+Hierarchical
+clustering
+approach
+Localized
+regression
+method
+
+E15 (worst)
+< 0
+ 0
+0.154
+0.610
+E96 (best)
+< 0
+0.385
+0.714
+0.624
+S1
+average*
+0.004
+0.177
+0.415
+0.645
+E241 (worst)
+< 0
+< 0
+0.140
+0.384
+E263 (best)
+< 0
+0.23
+0.411
+0.636
+S2
+average*
+0.03
+0.162
+0.245
+0.523
+E312 (worst)
+< 0
+0.121
+0.148
+0.424
+E209 (best)
+< 0
+ 0
+0.469
+0.725
+S3
+average*
+0.005
+0.04
+0.172
+0.488
+E102 (worst)
+< 0
+ 0
+ 0
+0.642
+E2 (best)
+0.243
+ 0
+0.357
+0.648
+S4
+average*
+0.02
+0.04
+0.225
+0.641
+E207 (worst)
+< 0
+ 0
+ 0
+0.325
+E195 (best)
+< 0
+0.218
+0.299
+0.613
+S5
+average*
+0.007
+0.08
+0.152
+0.532
+
+For each sub-structure identified using the hierarchical clustering
+approach, we first compare the average R2-value of all the
+structure elements within the particular substructure. Then, we
+chose two elements from each substructure such that they had the
+worst and the best prediction performance within the particular
+substructure. In Table 2, we report the R2-value for these two
+structure elements, as well as the average R2-value of all the
+elements within particular structures. Since the R2-value of
+predicting particular elements may be less than 0 in many cases
+(e.g., ­1 or ­2 for extremely poor global regression models in the
+direct approach), the average R2-value for substructures is
+computed such that the R2-value of those models with negative
+R2-value is assigned zero value. Thus, the exceptionally bad
+regression models will not negatively influence the accurate ones.
+This kind of analysis only helps the direct (global) approach and
+the manual partitioning, since very often regression models built
+using these two approaches are exceptionally poor and have very
+high negative R2-values. On the other hand, this happens rarely
+for regression models built using the hierarchical clustering
+approach and never for regression models built using the localized
+regression method.
+It is apparent from Table 2 that both partitioning approaches
+produce localized regression models that are more accurate than
+the global regression models used in the direct approach. In
+addition, the regression models built using hierarchical clustering
+approach are in most cases more accurate then regression models
+obtained by manual partitioning. Only in approximately 2% of the
+total number of elements, are the models obtained from manual
+partitioning Mj , j =
+312,1
+more accurate than the models Rj, j =
+312,1
+constructed in the hierarchical clustering approach. For
+example, the prediction of element E145 that belongs to the
+structure S5 is more accurate when using the localized models
+obtained through manual partitioning (R2 = 0.245) than when
+using the models obtained in hierarchical clustering based
+approach (R2 = 0.165).
+Table 2 also shows that both partitioning based approaches are
+consistently inferior compared to the prediction models
+constructed using the localized regression method. It can be
+observed that even for the structure elements for which the
+hierarchical partitioning approach achieves the best prediction
+performance (except for the structure element E96), the models
+built by the localized regression method are significantly more
+accurate. To illustrate the superior performance of the localized
+regression method, we plot the R2 values for all of 312 structure
+elements that are obtained using the localized regression method
+and both hierarchical partitioning approaches (Figure 8). Again,
+when plotting the R2-values that are less than 0, we assume that
+these negative R2-values are assigned zero values.
+
+
+
+
+0
+50
+100
+150
+200
+250
+300
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+
+
+
+
+StructureElements
+R-squar
+e
+value
+Localizedregressionmethod
+Hierarchicalclusteringapproach
+Manualpartitioningapproach
+
+
+
+
+Figure 8. R2-values for all of 312 structure elements when
+using the localized regression method (full line), the
+hierarchical clustering approach (dashed line) and the manual
+partitioning approach (dotted line)
+
+
+
+
+457
+Industry/Government Track Paper
+
+Analyzing Figure 8, it is apparent that the localized regression
+method is consistently and significantly more accurate than the
+hierarchical clustering approach as well as the manual partitioning
+approach. Only for ten structure elements, the prediction accuracy
+achieved by the hierarchical clustering approach is better than the
+prediction accuracy achieved by the localized regression method.
+When the R2-values for all of 312 structure elements are averaged
+for the localized regression method and for both hierarchical
+partitioning approaches (Table 3), it can be observed that the
+localized regression method is significantly more accurate than
+hierarchical partitioning approaches.
+
+
+Table 3. Averaged R2-values for all of 312 structure elements
+
+Method
+R2-value Standard deviation
+
+Localized regression method
+0.514
+0.108
+Hierarchical clustering approach
+0.298
+0.174
+Manual partitioning
+0.103
+0.090
+
+
+We have also compared the prediction performance of our
+proposed localized regression method to the prediction accuracy
+of both hierarchical partitioning methods after the second level of
+partitioning. Additional details about the results of hierarchical
+partitioning schemes are available in our recent papers [7]. Here,
+we provide only the comparison of the hierarchical clustering
+approach after the first and the second level and the localized
+regression method.
+
+Table 4. Prediction of damage intensity (R2 value) for those
+elements within structures for which hierarchical approach at
+the first level achieves the worst and the best accuracy.
+
+Hierarchical clustering approach
+Struc
+ture
+Element
+First level
+second level
+Localized
+regression
+method
+
+E15
+0.154
+0.264
+0.610
+E96
+0.714
+0.668
+0.624
+S1
+average
+0.415
+0.424
+0.645
+E241
+0.140
+0.477
+0.384
+E263
+0.411
+0.264
+0.636
+S2
+average
+0.245
+0.294
+0.523
+E312
+0.148
+0.243
+0.424
+E209
+0.469
+0.431
+0.725
+S3
+average
+0.172
+0.244
+0.488
+E102
+ 0
+0.145
+0.642
+E2
+0.357
+0.285
+0.648
+S4
+average
+0.225
+0.234
+0.541
+E207
+ 0
+ 0
+0.325
+E195
+0.299
+0.334
+0.613
+S5
+average
+0.152
+0.195
+0.532
+
+
+Table 4 illustrates how the prediction of the modulus of elasticity
+for the same elements investigated within substructures at the first
+level has been changed when these substructures are further
+partitioned and localized regression models are built using fewer
+data records. Table 4 also illustrates the drawbacks of the
+hierarchical clustering approach, since it is apparent that for some
+elements, further localization and the building of more specific
+regression models results in an improved R2-value, while for
+some other elements additional localization hurt the prediction
+accuracy. Therefore, the localized regression method still
+achieves significantly better prediction performance than
+hierarchical clustering approach, since the improvement from the
+first to the second level of partitioning is only minor and often
+turns into deterioration of the performance. There may be several
+reasons for such phenomenon. First, at the second level the
+number of data records that are relevant for the damage in the
+specific element may be smaller than the number of data records
+at the first level of partitioning thus causing a possible loss of
+valuable information. Second, this loss is inevitably caused by an
+imperfect clustering algorithm that does not necessarily assign all
+data records corresponding to the damage of specific element to a
+single cluster.
+
+Finally, we show that both the proposed localized regression
+method and hierarchical partitioning approaches require less
+computational time for making a prediction than the direct
+approach of building global models, since the local regression
+models are trained on smaller data sets than the global ones.
+Figure 9 shows how the time required for training neural networks
+(NN) depends on the number of examples in the training set when
+measured on a Pentium IV processor with 1GB of main memory.
+Training on entire data set (100%) corresponds to the time needed
+for building global regression model, while the training on the
+biggest cluster (see Figure 9) identified at the first level,
+corresponds to the time needed for building a regression model in
+the hierarchical partitioning approach. In addition, in the localized
+regression method, the local cluster is built only once and it is
+usually significantly smaller than the clusters identified at the first
+level of partitioning in the hierarchical approaches, so the total
+computational time of the localized regression method is smaller
+than in the hierarchical partitioning approaches (see Figure 9).
+
+
+
+
+0
+10
+20
+30
+40
+50
+60
+70
+80
+90
+100
+0
+20
+40
+60
+80
+100
+120
+140
+160
+180
+200
+Trainingondatasetwith1560instancesusingLMalgorithm
+
+
+
+
+Percentageofdatapointsincludedindatasetusedforlearningneuralnetwork
+Ti
+m
+e
+(in
+seconds)
+
+
+
+
+Thesizeofthebiggestclusteratthefirstlevel
+
+Timeneededtoperformclustering
+Totaltimeneededforlearning
+globalregressionmodel
+usedinthedirectapproach
+
+
+
+
+Averagetimeneededforclustering,
+buildingneuralnetworkclassificationmodel
+andlearninglocalizedregressionmodel
+
+
+
+
+}
+Additional averagetime
+neededforclusteringand
+buildingaclassificationmodel
+
+
+
+Timeneededforlearning
+localizedregressionmodel
+6241
+
+
+
+
+Tim e needed forlearning
+localized regression m odel
+Tim e needed forlearning regression m odel
+afterthe firs levelofpartitioning
+
+
+
+
+Figure 9. The computational time needed for global direct
+approach, hierarchical clustering approach and localized
+regression method
+
+5. CONCLUSIONS
+The paper presented a novel general framework for the efficient
+prediction of multiple target variables from high dimensional and
+
+
+
+
+458
+Industry/Government Track Paper
+
+heterogeneous data sets using the localized regression method. A
+key desirable feature of this scheme is that it achieves a reduction
+in both data records and the number of used features, which is of
+great importance in applications where it is difficult to find a large
+number of training records, or when learning a monolithic
+prediction model from very large data sets is prohibitively slow.
+The effectiveness of the approach was demonstrated on the
+problem of damage detection in very large and complex
+mechanical structures. Experiments performed on the problem of
+damage prediction in a large electric transmission tower frame
+indicate that the proposed localized regression based approach is
+more accurate than our previous hierarchical clustering-based
+approach as well as slightly better computationally efficient. In
+addition, the proposed method is much more simpler and more
+intuitive than the hierarchical approaches used earlier in our
+research work.
+
+6. ADDITIONAL AUTHORS
+Vipin Kumar, University of Minnesota, 200 Union Street SE, 4-
+192, Minneapolis, MN 55455, USA, 1-612-626-8095, e-
+mail:kumar@cs.umn.edu
+
+Kumar Tamma, University of Minnesota, 111 Church Street, SE
+125, Minneapolis, MN 55455, USA, 1-612-626-8102, e-mail:
+ktamma@tc.umn.edu
+
+7. ACKNOWLEDGMENTS
+The authors are pleased to acknowledge support in part by the
+Department of Energy LLNL B512340 and by the Army High
+Performance Computing Research Center (AHPCRC) under the
+auspices of the Department of the Army, Army Research
+Laboratory (ARL) under contract number DAAD19-01-2-0014.
+The content does not necessarily reflect the position or the policy
+of the government, and no official endorsement should be
+inferred. Additional thanks are also due to S. S. Sandhu and M.
+Steinbach for related technical discussions. Access to computing
+facilities was provided by the AHPCRC and the Minnesota
+Supercomputing Institute (MSI).
+
+8. REFERENCES
+[1] Baxter, J., Theoretical Models of Learning to Learn, in
+Learning to Learn, S. T. T. Mitchell, Ed. Boston: Kluwer,
+1997.
+[2] Breiman, L. F., J. H., Predicting Multivariate Responses in
+Multiple Linear Regression, Journal of the Royal Statistical
+Society, Series B, 59, 3-54, 1997.
+[3] Caruana, R., Multitask Learning, Machine Learning, 28, 41-
+75, 1997.
+[4] Chen, H., Bicanoc, N., Assessment of Damage in Continuum
+Structures
+Based
+in
+Incomplete
+Modal
+Information,
+Computers and Structures, 74, 559-570, 2000.
+[5] Hagan, M., Menhaj, M., Training feedforward networks with
+the Marquardt algorithm, IEEE Transactions on Neural
+Networks, 5, 989-993, 1994.
+[6] Intrator, N., Edelman, S., How to Make a Low-dimensional
+Representation Suitable for Diverse Tasks, Connection
+Science, 8, 1996.
+[7] Lazarevic, A., Kanapady, R., Kamath, C., Tamma, K.,
+Kumar, V., Localized Prediction of Multiple Target
+Variables Using Hierarchical Clustering, In Proceedings of
+the IEEE International Conference on Data Mining, 139-
+146, Melbourne, FL, 2003.
+[8] Liu, L., Motoda, H., Feature Selection for Knowledge
+Discovery and Data Mining. Boston, 1998.
+[9] O'Sullivan, J., Mitchell, T., Thrun, S., Explanation-based
+Neural Network Learning for Mobile Robot Perception, in
+Symbolic Visual Learning, K. Ikeuchi, Veloso, M., Ed.:
+Oxford University Press, 1997.
+[10] Powell, M. J. D., Nonconvex minimization calculations and
+the conjugate gradient method, in Numerical Analysis,
+Lecture Notes in Mathematics, vol. 1066:, G. D. F, Ed.
+Berlin: Springer-Verlag, 1984, pp. 122-141.
+[11] Riedmiller, M., Braun, T., A Direst Adaptive Method for
+Faster Backpropagation Learning: The RPROP Algorithm,
+In Proceedings of the IEEE International Conference on
+Neural Networks, San Francisco, CA, 1993.
+[12] Rix, G. J., Interpretation of Nondestructive Integrity tests
+using artificial neural networks, In Proceedings of the
+Structure Congress 12, ASCE, Reston VA, 1994.
+[13] Sander, J., Ester, M., Kriegel, H. P. Xu, X., Density-Based
+Clustering in Spatial Databases: The Algorithm GDBSCAN
+and Its Applications, Data
+Mining
+and
+Knowledge
+Discovery, 2, 2, 169-194, 1998.
+[14] Sandhu, S. S., Kanapady, R., Tamma, K. K., Kamath, C.,
+Kumar, V., A Sub-Structuring approach Via data Mining for
+damage Prediction and Estimation in Complex Structures, In
+Proceedings of the Workshop on Scientific Data Mining,
+SIAM International Conference on Data Mining, Arlington,
+VA, 2002.
+[15] Santos, J., Soares, C. M. , Soares, C. A., Pina, H., A Damage
+Identification Numerical Model Based on the Sensitivity of
+the Orthogonality Conditions and Least Squares Estimators,
+Computers and Structures, 78, 283-291, 2000.
+[16] Szewczyk, Z. P., Hajela, P., Damage detection in structures
+based on feature sensitive neural networks, Journal of
+Computation in Civil Engineering, ASCE, 8, 2, 163-179,
+1994.
+[17] Thrun, S., O'Sullivan, J., Clustering Learning Tasks and the
+Selective Cross-task Transfer of Knowledge, Technical
+Report CMU-CS-95-209, Carnegie Mellon University,
+Pittsburgh 1995.
+[18] Tsou, P., Shen, M., Structural Damage Detection and
+identification using neural networks, In Proceedings of the
+34th AIAA / ASME / ASCEAHS / ASC, Structural Dynamics
+and Materials Conference, AIAA / ASME Adaptive Structure
+Forum, 1993.
+[19] Wu, X., Ghaboussi, J., Garrett, J. H., Use of neural networks
+in detection of structural damage, Computers and Structures,
+42, 4, 649-659, 1992.
+[20] Zhao, J., Ivan, J. N., DeWolf, J., Structural Damage
+Detection using artificial neural network, 4, 3, 93-101, 1998.
+
+
+
+
+459
+Industry/Government Track Paper
+

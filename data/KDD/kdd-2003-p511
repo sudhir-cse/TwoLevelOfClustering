@@ -1,0 +1,873 @@
+Applications of Sampling and Fractional Factorial Designs
+to Model-Free Data Squashing
+William DuMouchel
+AT&T LABS RESEARCH
+180 Park Avenue
+Florham Park, NJ 07932
+1-973-360-8439
+dumouchel@research.att.com
+Deepak K. Agarwal
+AT&T LABS RESEARCH
+180 Park Avenue
+Florham Park, NJ 07932
+1-973-360-7154
+dagarwal@research.att.com
+
+ABSTRACT
+The concept of "data squashing" was introduced by DuMouchel et
+al [4] as a method of summarizing massive data sets that
+preserves statistical relationships among variables. The idea is to
+create a smaller data set that allows statistical modeling to take
+place using in-memory algorithms, and to preserve the modeling
+results more accurately than would a same-size random sample
+from the massive data set. This research attempts to avoid several
+limitations of previous approaches to data squashing. Our method
+avoids the curse of dimensionality by a double use of principal
+components transformations that makes computing time linear in
+the number of cases and quadratic in the number of variables.
+Categorical and continuous variables are smoothly integrated.
+Because the binning is based on principal components, which are
+uncorrelated, we can use fractional factorial designs that sample
+less than one point per bin. We also investigate various weighting
+schemes for the squashed sample to see whether matching
+moments or matching subregion data counts is more effective.
+Finally, previous work required the specification of a statistical
+model, either to perform the squashing algorithm or to compare
+the worth of different squashing methods.
+Our approach to
+evaluation is model free and does not even require the
+specification of variables as responses or predictors. Instead, we
+develop a chi-squared like measure of accuracy to compare the
+closeness of various discrete densities (the squashed data sets) to
+the discrete massive data set.
+Categories and Subject Descriptors
+Preprocessing, statistical methods
+
+General Terms
+Algorithms, Performance, Design
+Keywords Summary of massive datasets, data squashing,
+fractional factorial design, stratified sampling
+
+1. INTRODUCTION
+One of the chief obstacles to effective data mining is the
+clumsiness of managing and analyzing data in very large files.
+The process of model search and model fitting often require many
+passes over a large dataset, or random access to the elements of a
+large dataset. Many statistical fitting algorithms assume that the
+entire dataset being analyzed fits into computer memory,
+restricting the number of feasible analyses. Here we define "large
+dataset" as one that cannot be analyzed using some particular
+desired combination of hardware and software because of
+computer memory constraints. There are two basic approaches to
+this
+problem:
+either
+switch
+to
+a
+different
+hardware/software/analysis strategy or else substitute a smaller
+dataset for the large one. Here we assume that the former strategy
+is unavailable or undesirable and consider ways of constructing a
+smaller substitute dataset. This latter approach was named data
+squashing by DuMouchel, Volinsky, Johnson, Cortes and
+Pregibon (1999) "Squashing flat files flatter" [4]. Formally, data
+squashing is a form of lossy compression that attempts to preserve
+statistical information. Suppose that the original or "mother"
+dataset is a matrix Y having N rows or entities and n columns or
+variables. The squashed dataset is a matrix X having M rows and
+n+1 columns, where M << N. The extra column in X is a column
+of weights, wi, i = 1... M, where wi > 0 and  wi = N. It is
+assumed that M is small enough so that X can be processed by the
+desired hardware/software, and that the software can make
+appropriate use of the weight variable.
+The n-dimensional
+distribution of the rows of X weighted by the wi is intended to
+approximate the distribution of the rows of Y well enough that
+statistical analysis of X is an acceptable substitute for the desired
+analysis of Y.
+
+There are two trivial forms of data squashing that can often be
+used as comparison or baseline methods. The first is simple
+random sampling, in which X consists of a random sample of M
+rows of Y, each given weight wi = N/M.
+The biggest
+disadvantage of this strategy is the inaccuracy introduced by
+sampling variance. Dividing a sample size by 100 multiplies
+most variances of estimates by 100 as well. With very large
+initial sample sizes, this may not be a problem for simple
+estimates such as overall means or proportions or sample
+correlations. However, for many business purposes, the detection
+of small differences, or the detection of trends in a small subset of
+the overall population, is crucial to the success of the data mining
+project. In such cases the equivalent of throwing away 99% of
+the data will be unacceptable. The second trivially easy data
+squashing method might be called unique row extraction, in
+which X consists of the set of unique rows of Y, and wi is the
+multiplicity of the ith row of X in Y. If the resulting X is small
+enough to fit in memory, then we have what might be called
+perfect or lossless squashing. [One might round each quantitative
+element of Y slightly before extracting the unique rows, so that
+the rounded values are still considered fully informative for the
+purposes of statistical analyses, thereby reducing M, the number
+
+Permission to make digital or hard copies of all or part of this work
+for personal or classroom use is granted without fee provided that
+copies are not made or distributed for profit or commercial advantage
+and that copies bear this notice and the full citation on the first page.
+To copy otherwise, or republish, to post on servers or to redistribute to
+lists, requires prior specific permission and/or a fee. SIGKDD '03,
+August 24-27, 2003, Washington, DC, USA. Copyright 2003 ACM 1-
+58113-737-0/03/0008...$5.00.
+
+
+
+
+511
+
+of unique rows, and thus X.]
+For a nontrivial application of
+squashing, we must have a situation where the X from unique row
+extraction is too large to analyze with the desired hardware and
+software and where also the analysis results from simple random
+samples of size small enough to be so analyzed are deemed to be
+too variable for the purposes of the analyses.
+
+2. PREVIOUS DATA SQUASHING WORK
+The paper [4] presents a theoretical framework and justification
+for data squashing involving a Taylor series representation for the
+likelihood function from an arbitrary modeling problem. The
+Taylor series describes the local behavior of the log likelihood
+function for each fixed parameter value as the continuous
+variables in X vary.
+As such, the theory assumes that each
+column of X must have a restricted range to achieve an accurate
+approximation, leading to a strategy of defining multivariate bins
+in
+every
+dimension
+and
+repeating
+the
+data
+squashing
+independently within each bin. The conclusion is that if a low-
+order Taylor series can approximate the contribution to the log
+likelihood within each bin, then a strategy of choosing X and wi to
+match low-order moments within each bin will allow the
+squashed dataset to approximately duplicate the corresponding
+analysis of Y. See [4] for details of this theoretical justification.
+
+The model likelihood-based method of [5] attempts to build a
+squashed dataset that approximates a specific likelihood function
+directly, rather than rely on the general Taylor series argument for
+approximating all possible likelihood functions. In [5] the authors
+choose logistic regression for a fixed response variable as the
+specific model around which the squashing is structured. The
+resulting squashed dataset may not be as useful as a generically
+squashed dataset for all possible analyses, but may be more
+accurate for analysis models similar to logistic regression, for
+example other classification methods involving the same response
+variable.
+The method of approximation involves matching a
+likelihood profile that is a vector of values of the log likelihood
+function at K values in the p-dimensional parameter space of the
+logistic regression coefficients.
+
+In spite of the use of the word "likelihood", the empirical
+likelihood method of [8] has more in common with the moment
+matching method of [4] than with the model likelihood-based
+method of [5].
+The [8] methodology also directly matches
+moments of the original variables in the Y dataset to moments in
+the X dataset. However, [8] avoids the computationally intensive
+constrained nonlinear optimizations that [4] uses to find solutions.
+Instead, [8] starts out with a simple random sample to get the X-
+values and reweights these sampled points to fit the required
+moments. See [7] and [3] for more discussion and comparison of
+the above three methods of data squashing.
+
+The research reported here differs from the above methods in two
+main ways. First, we present a method that can be applied to
+higher dimensional data sets and to data sets with more
+categorical variables than the methods presented earlier.
+Categorical variables are handled by converting to dichotomous
+dummy variables and including them in the principal components
+analyses. Because the construction of pseudo points would be
+very complicated when many of the variables can only take on
+two values and may also have complicated joint restrictions in the
+mother data set, we abandon that in favor of sampling a random
+point within each bin. We introduce the use of fractional factorial
+designs for data squashing as a way to further reduce the size of
+the squashed data set, and we also introduce new methods and
+theoretical rationales for choosing how to weight the sampled
+points. The second main innovation we present is a model-free
+approach to evaluating the benefits of data squashing compared to
+random sampling. Rather than compare coefficient estimates or
+predictions from models fitted to the squashed and mother data
+sets, we compare the two data sets directly using discrete density
+estimate concepts.
+
+3. SQUASHING METHOD
+Let Yij, i = 1, ..., N;, j = 1, ..., n; be the N x n array of data that is
+to be approximated, and let Xij, i = 1, ..., M, j = 1, ..., n; be the
+squashed data set, where M << N. We assume that both Y and X
+may have row weights, denoted by W1, ..., WN and w1, ..., wM,
+respectively, where i Wi = i wi. The weights Wi arise from ties
+or near ties in the massive data set, whereas the wi arise as part of
+the squashing process and are computed to make the distribution
+of X better emulate the distribution of Y. The n variables include
+the continuous or ordinal variables as well as the dichotomous
+variables that identify categories of nominal scale variables.
+Categories that have probability greater than .5 are not
+represented by a dummy variable.
+Variables are scaled as
+described in Section 5.
+
+A first stage of binning is accomplished by performing a principal
+components analysis (variables are centered but not scaled other
+than described above), choosing an integer K and dividing the
+space into 2K bins according to whether the first K principal
+components are positive or negative. This first level of binning
+could be accomplished by any other quick method of grouping
+into a large number of bins without changing the fundamental
+nature of the algorithm. The points in the mother data set within
+each first level bin are then processed separately from points from
+other first level bins in subsequent passes.
+
+Within each first-level bin, a separate, second-level principal
+components analysis is performed (again centering but not
+rescaling) and the points in each first level bin are partitioned into
+2L sub-bins according to the signs of the first L principal
+components of the second-level PC analysis. The integer L may
+or may not equal K. At the second level of binning, the use of
+principal components to determine the bins is important in order
+to justify the fractional factorial sampling method described
+below.
+
+The simplest form of squashing considered here is to then take
+exactly one point at random from each of the 2L sub-bins in each
+of the 2K first level bins. The ith such point would be given
+weight wi = (sum of Ws within that sub-bin). If every sub-bin
+were occupied by at least one point in the mother data set, the size
+of the squashed data set would be M = 2K+L, but usually M < 2K+L
+due to empty sub-bins.
+
+There is a natural trade-off between choosing larger values of K
+and L in order to achieve more structured variation in the bins and
+sub-bins, and the desire to reduce M by choosing smaller values
+of K and L. We attempt to achieve both ends by the use of
+fractional factorial selection of the points chosen in the full
+factorial method of the previous paragraph. Rather than use all
+the points chosen as above, within each first-level bin only 2L-J of
+these points are chosen, where J is a positive integer such that 2L-
+
+
+
+512
+
+J
+> L. If J = 1, we select a half-fraction, if J = 2 we select a
+quarter-fraction, and so forth. The theory of statistical design of
+experiments (orthogonal arrays [6]) provides ways to choose such
+fractions to achieve optimal balance in each of the L dimensions
+being explored by the full factorial design. The variables in a
+fractional factorial design are uncorrelated because of this
+balance, and this is why the second level bins are based on
+principal components, so that the means and (uncorrelated)
+covariance matrix of the principal components in the mother data
+set will be emulated by the selection of an orthogonal array of
+sub-bins in the squashed data set. The squashing method of [4]
+explicitly constructed pseudo points that matched means and
+covariance matrices of variables, while the present methodology
+attempts to partially achieve such a matching of moments by way
+of the fractional factorial sampling.
+
+For a given level of fractionation determined by J, there will be
+more than one possible fractional factorial sample of points. Our
+approach is to choose that design of a given size that has the
+largest sum of Wi among the selected sub-bins. In the results
+reported here, we do not enumerate all fractional factorial designs
+for fixed J, but we do check 2J different non overlapping designs
+and select the one that contains the most points from the mother
+data set.
+
+It often happens that even for the fractional factorial with greatest
+sum of Wi, some of the sub-bins will be empty (some Wi = 0). In
+order to obtain better balance we prefer to have a full complement
+of 2L-J points. Thus, whenever a selected sub-bin is empty, we
+choose the most populous adjoining sub-bin to replace it. An
+adjoining sub-bin is one that has the same sign for L-1 principal
+components, different in only one of the L-dimensions from the
+empty sub-bin.
+Fractional factorial two level designs never
+include two points that match in all but one dimension, so that
+replacing a sub-bin by an adjoining sub-bin always includes a
+new point. It is possible that when there is more than one empty
+sub-bin in the fractional factorial design, the most highly
+populated adjoining sub-bin of two different empty sub-bins will
+be identical. In that case, we choose the largest adjoining sub-bin
+that has not yet been included in the design. In this way we
+always have a set of 2L-J sub-bins with larger than average sum of
+Wi and that are nearly orthogonally arranged in the L dimensions
+of the principal components.
+
+When not all the nonempty sub-bins are selected, it is not obvious
+how to weight the points within the bins that are selected. The
+bins not in the fractional factorial design are being given weight
+0, and this weight must be made up by increasing the wi within
+the design. We explore two algorithms for weighting points in a
+fractional factorial design: iterative scaling and iterative scaling
+plus mean matching.
+
+Iterative scaling modifies the original weights for each selected
+sub-bin by rescaling the weights of points having the same sign in
+one of the L dimensions so that the proportional weight of
+positive and negative values of that principal component is the
+same as in the mother data set. This process is repeated for each
+of the L dimensions and although, each time the matching balance
+of the previously reweighted dimensions will be disturbed, if the
+cycle of reweighting positives and negatives is repeated many
+times the process of iterative scaling usually converges so that in
+the end all L variables have matching proportions of positive and
+negative values for both W and w. In the statistical literature this
+process is called "iterative scaling in the presence of structural
+zeros" and has been extensively studied. It can occasionally fail
+to converge if m = 2L-J is not much larger than L, but if m > 2L
+this is less likely to happen. A fall-back strategy in case of non
+convergence is to just scale up every wi in the design by the same
+factor so that wi = Wi, summing across the sub-bins within
+each first level bin.
+
+We also explored following up the use of iterative scaling with a
+further modification of the wi intended to adjust for the possibly
+atypical random selection of the points Xij. In the iterative scaling
+scheme described above, the final weights wi depend on the
+values of Wi but not on which points were selected within each
+sub-bin.
+We know that in the mother data set, all L of the
+principal components average to 0, and we could modify the
+weights so that it is true also in the squashed data set. If Uik is the
+value of the kth principal component of the ith point in the
+squashed sample, i = 1, ..., m; k = 1, ..., L; then we can require
+weights wi
+*
+such that wi
+*
+Uik = 0 for every k.
+It might be
+possible to achieve this without disturbing the matching counts of
+positives and negatives achieved by the iterative scaling, but in
+our current investigations we just required weights that satisfied
+wi
+*
+Uik = 0 while keeping the wi
+*
+fairly close to the wi that were
+computed during the iterative scaling step. This was achieved by
+finding the maximum likelihood solutions to the following
+statistical model:
+
+Act as if the wi were observed counts from Poisson distributions
+with respective means wi
+*
+, subject to the constraints wi
+*
+Uik = 0,
+and find the maximum likelihood estimates of the wi
+*
+.
+
+Using Lagrange multipliers the resulting likelihood function can
+be maximized by finding the solutions to L nonlinear equations in
+L unknowns by the Newton-Raphson method. As with iterative
+scaling, the iterative solution to this problem seems to converge
+reliably when m > 2L, but not necessarily when m < 2L. Even
+when the estimates do not converge it seems that the values of
+wi
+*
+Uik are almost always smaller in absolute value than the
+original values of wi Uik after 20 iterations of the Newton
+Raphson method, so those values of wi
+*
+were used in our
+implementation of the mean matching method. This approach to
+mean matching is similar in spirit to the empirical likelihood
+mean matching of [8], which maximizes the product of the w's
+rather than the Poisson likelihood discussed above. The use of
+the Poisson likelihood is more appropriate in our case of stratified
+and fractional factorial sampling, as opposed to the simple
+random sampling used in [8].
+
+Since the distribution of principal components in the first level PC
+analysis may not be symmetric, it often happens that some of the
+2K first level bins contain many more mother data points than
+other bins. Therefore, it may be inefficient to represent each first
+level bin by the same number of points in the squashed data set.
+Accordingly, we explored the use of mixing different degrees of
+fractionation in the same squashed data set.
+The rule for
+allocating different degrees of fractionation was to use J = 1 (half
+fraction) for the most populous first-level bin (the one having the
+largest sum of Wi) and for all first-level bins having sum of Wi
+greater than .5 times the largest sum. First level bins having sum
+of Wi between one half and one fourth of the maximum use J = 2
+(quarter fraction) and so on, but no fractionation is so great to
+prevent M > L. In the examples of Section 6, we only tried
+
+
+
+513
+
+mixing fractional factorials when L = 7, which led to mixtures of
+M = 64, 32, 16, and 8.
+
+4. EVALUATION OF SQUASHING
+In order to compare a squashed data set to the mother data set, we
+develop a chi-squared like discrepancy measure that does not
+require the specification of a statistical model. For each row Yi in
+the mother data set, let Gi(R) and gi(R) (henceforth we suppress R
+from our notation) be the sum of W's and w's attached to points
+contained in the ball of radius R centered at Yi for the mother and
+squashed datasets respectively. Intuitively, Gi and gi are local
+density estimates in the neighborhood of Yi in the mother and
+squashed datasets. Hence, if gi is close to Gi, the squashed data
+preserves local information in the neighborhood of Yi . If this is
+true for every point in the mother dataset, then the squashed
+dataset successfully mimics the mother dataset. Motivated by the
+these observations, we define a measure of discrepancy D(Y, X,
+R) between the mother data Y and squashed data X corresponding
+to radius R as
+D(Y, X, R) = i (Gi ­ gi)2/Gi
+(1)
+
+with smaller values of D indicating better squashing. The quantity
+in (1) is well defined since Gi > 0 for all i for any value of R
+because the neighborhood centered at Yi will always contain Yi .
+Note that as R, Gi = gi and D=0 irrespective of the sample
+chosen. Also, as R0, gi > 0 if and only if Yi is in the squashed
+sample. In fact for a simple random sample of size M drawn
+from the mother dataset, for R very close to zero the expected
+value of D is approximately iWi(N/M ­ 1), which is inversely
+proportional to the sample size M. Thus, a large value of R
+lessens the discriminatory power of the test statistic and a small
+value of R quantifies dissimilarities that are perhaps too local. The
+optimum value of R to use would be somewhere between these
+two extremes. In this paper, we compute the value of D for a
+finite number of R values. Finally, we note that D is roughly
+inversely proportional to the sample size. We verified this
+empirically in the context of our example dataset for 10 different
+values of R by drawing 3 series of random samples for each
+M=256, 512, 977, 1024, 2048, 4096, 11044. Assuming, log(D(R))
+= A(R) - B(R)log(M), , we estimated the value of B(R) for each R
+by regressing the 7 means of log(D(R)) against log(M). The mean
+value of B(R) was .985 with a standard deviation of .009,
+vindicating our claim. Not only is the expected value of D(Y, X,
+R) under simple random sampling inversely proportional to M
+when R is very small, this relationship holds up for all values of R
+that we have examined numerically. This property of D enables
+us to compare datasets in terms of equivalent sample sizes. Thus,
+if the value of D for sample A is 10 times that for sample B, every
+point in B is roughly equivalent to 10 points in A in terms of
+reducing D in (1).
+
+The G's and g's in (1) are computed using efficient nearest
+neighbor search routines recently introduced by Clarkson [2]. The
+routine builds a data structure using the distance function
+(Euclidean in our case, but the routine works for any distance
+function defined on a metric space) as a "black box" and can be
+viewed as an application of a "Kd-tree" approach using Voronoi
+regions of a subset in place of axis-aligned boxes. The data
+structures need linear space and the preprocessing time needed
+per site is observed to match the query time. We didn't use the
+only other publicly available software for this purpose by Arya
+and Mount[1] since their code does not support fixed radius ball
+queries. Computation of G's and g's is carried out by doing a
+fixed radius ball query for each point in the mother dataset against
+the mother and squashed dataset respectively. The computer time
+(on a 2 GHz PC with 1G memory) needed to compute G's for our
+example dataset varied from 6 to 157 minutes as R ranged from
+0.5 to 2.5.
+
+Table 1 helps interpret R for the data introduced in Section 6. For
+each of ten values of R, Table 1 shows what percent of points in
+the mother data set are typically included in a ball of radius R
+centered at points of the data set. For example, for R = 1, the
+median percent of points included in a ball of radius 1 around a
+randomly selected point would be only 0.091%. We see that for a
+radius of 3, 75% of such balls would include at least 3.12% of the
+mass of the mother data set, 50% of such balls would include at
+least 7.88% of the mass, and 25% of the points would include at
+least 15.7% of the mass. Thus values of R in the range of 2 to 4
+seem reasonable for the use of D(Y, X, R) as a criterion for the
+accuracy of data squashing.
+The larger the value of M, the
+smaller the radius R we might expect to be used to evaluate the
+squashing.
+
+Table 1. Quartiles of the percent of Wi enclosed within a ball of
+indicated radius around each point in the mother data set.
+
+Radius R
+25%
+50%
+75%
+1.0
+.030
+.091
+.232
+2.0
+.418
+1.16
+2.35
+3.0
+3.12
+7.88
+15.7
+4.0
+18.1
+36.8
+54.1
+5.0
+61.5
+80.0
+88.9
+We describe a second model based measure which is based on
+comparing the coefficients from logistic regression fitted to
+mother and squashed datasets. Defining one of the n columns in
+our dataset as the response variable (here we assume our response
+variable is binary just for sake of simplicity, for other types of
+response variable one could replace logistic regression with an
+appropriate one) and the remaining n-1 as covariates, we fit a
+logistic regression to the mother data set (with the intercept)
+incorporating the weights. Let  and  denote the vector of
+coefficient and standard error estimates. Let b be the estimated
+coefficient vector obtained by fitting a logistic regression to the
+squashed data. Define
+DL(Y, X) = (1/n) i (bi ­ i)2 / i
+2
+
+
+where n is the number of coefficients in the logistic regression
+(including the constant term), and in our example also equal to the
+number of variables in the data sets. For random sampling, the
+expected value of DL is roughly N/M, again inversely
+proportional to the sample size and once again providing a nice
+interpretation in terms of equivalent sample sizes to compare
+different data squashing algorithms.
+
+5. DATA AND EXPERIMENTAL DESIGN
+Our example data consist of descriptions of customer behavior in
+telecommunications activity. There are 11 variables, 5 of which
+are dichotomous and 6 ordinal, although integer valued. The
+sample size in the mother data set is Wi = 744,963 but there are
+only N = 310,540 distinct rows in the data set. We use the values
+K = L = 5 and K = L = 7 in our examples. The six ordinal
+variables were scaled to have (weighted) standard deviation 1,
+
+
+
+514
+
+while the 5 dichotomous variable were scaled to have standard
+deviation [4p(1-p)]1/4, where p and 1-p are the proportions of the
+sums of Wi in the two categories (different for each variable).
+
+As discussed in Section 4, two levels of weighted principal
+components analysis partitioned the data space into 2K+L bins, for
+potentially 1,024 bins when K = L = 5, and 16,384 bins when K =
+L = 7. However, in fact only 977 bins in the first case and 11,044
+bins in the second case were populated with these data.
+
+We denote as a stratified sample the result of drawing one point
+from each of the 977 or 11,044 bins, and weighting each point so
+drawn by the sum of the Wi within its bin.
+
+We denote as a cluster sample the result of drawing M points
+from the 310,540 unique points with equal probability, and
+weighting each drawn point by Awi, where wi = Wi. for points
+that are drawn, but 0 for other points, and A = Wi/wi. We drew
+cluster samples of size M = 977 and 11,044 for comparison with
+the stratified samples.
+
+We denote as a simple random sample the result of drawing M of
+the N points with probabilities proportional to Wi, and weighting
+each point equally, with weight Wi / M.
+We drew simple
+random samples of 11,044, 8,160, 4,096, 3,296, 2,048, 1,024, 977,
+512 and 256 for comparison with all the other types of sampling.
+
+For the K = L = 5 situation, we experimented with taking a half-
+fraction (16 from the 32 second-level bins within each first level
+bin) and a quarter fraction (8 out of 32). For the K = L = 7
+situation, we experimented with taking a half-fraction (64 from
+the 128 second-level bins within each first-level bin) as well as
+quarter fractions (32 out of 128), eighth fraction (16) and
+sixteenth fraction (8). For each of these fractional samples, we
+tried two methods of weighting, corresponding to use of iterative
+scaling alone, as discussed in Section 4, and secondarily, the use
+of iterative scaling followed by weighting to make the means of
+the principal components equal to 0.
+
+We drew three separate samples from each scenario and averaged
+the results.
+
+6. RESULTS
+Table 2 presents the results of the experiments. Each row of the
+table presents results for a different sampling scenario.
+The
+column headed "PCs" shows the number of principal components
+that were used at each level of sampling. The column headed
+"M" shows the sample size of the squashed samples described in
+that row. The sampling type column shows the various sampling
+strategies as described in Sections 4 and 6. The sampling types
+ending in ".fr" used only the iterative scaling step to determine
+the weights to attach to the fractional factorial points, while the
+sampling types ending in ".mn" also adjusted the weights to make
+the principal components average to 0.
+
+The numbers in the columns of the table headed R=1, ..., R=5 are
+the measured efficiencies of each squashed sampling type for
+discrete density estimation, compared to the use of simple random
+samples. The logs of D(X, Y, R) for all the simple random
+samples were smoothed using a linear regression with different
+intercepts for each R and a single slope for log(M). The resulting
+slope for log(M) was -0.998 with standard error of 0.01,
+confirming that for each R and for simple random sampling the
+value of D(X, Y, R) has expectation inversely proportional to M.
+If we exponentiate the fitted value from this regression and denote
+it by D0(M, R), then the efficiency is defined as
+Efficiency = 100 D0(M, R) / D(X, Y, R)
+(3)
+
+Thus, Efficiency = 100 means that the distribution of X emulates
+the distribution of Y as well as a simple random sample of size M,
+whereas an efficiency of 200 would mean that X emulates the
+distribution of Y as well as a random sample of size 2M. The
+efficiencies depend on R, with larger R interpreted as a smoother
+approximation to the density of the massive data set.
+
+Table 2. Efficiencies of various squashed data sets of size M
+compared to simple random samples of the same size M.
+Sampling PCs
+M R=1 R=2 R=3 R=4 R=5 L.R
+clust.sm
+0
+977 34 26 24 23 26
+10
+clust.sm
+0 11044 38 24 19 15 15
+7
+strat.sm
+5
+977 70 113 135 142 138 182
+strat.sm
+7 11044 61 108 131 138 132 216
+half.fr
+5
+512 74 114 136 137 130 232
+qrtr.fr
+5
+256 81 112 128 134 142 147
+half.fr
+7 8060 66 112 136 149 136 210
+qrtr.fr
+7 4096 63 101 129 151 151 197
+8th.fr
+7 2048 58 96 120 110 94 131
+16th.fr
+7 1024 58 75 91 89 77
+65
+mixed.fr
+7 3296 81 141 176 205 197 182
+half.mn
+5
+512 71 114 138 126 114 177
+qrtr.mn
+5
+256 68 99 124 123 122
+93
+half.mn
+7 8060 67 125 157 171 164 561
+qrtr.mn
+7 4096 63 119 155 172 160 455
+8th.mn
+7 2048 56 93 128 132 124 241
+16th.mn
+7 1024 61 99 128 138 127 136
+mixed.mn
+7 3296 82 156 207 236 222 709
+
+The first two rows of Table 2 show that cluster sampling was very
+inefficient, being only about 25% as efficient as a simple random
+sample. There is evidently too great a chance of missing large
+clusters (large Wi).
+The remaining rows of the Table show the various sampling types
+involving binning by the use of principal components. Although
+for the values of R at least 2 most of these efficiencies are greater
+than 100%, they are not much greater, with only the two rows
+describing the mixture of different fractional factorial even
+reaching higher than 200% for any values of R. Note that the half
+fraction rows where K = L = 7 has M = 8,060 rather than 8,192 as
+would be expected from the formula 2K+L-1. This is because some
+of the 128 first level bins had fewer than 64 second level bins
+occupied.
+
+The sampling types where the weights were adjusted to fit the
+means of the principal components (the last seven rows) have
+higher efficiencies than when only iterative scaling is used in the
+case K = L = 7, but not when K = L = 5. In fact, when K = L = 5,
+Table 2 shows that the stratified sampling strategy of taking one
+point at random from every bin is just as efficient as taking
+fractional factorial samples. But when K = L = 7 and there are
+more (and hence smaller) bins, the fractional factorial designs do
+increase efficiency, perhaps because then the tighter bin
+boundaries keep the sampled points more nearly orthogonal. The
+most efficient methodology among those tried is that reported in
+the last row of Table 2, using a mixture of fractional factorial
+designs with K = L = 7, and weighting to make the sampled
+principal components average to 0.
+
+The last column of Table 2 gives the efficiencies as calculated
+
+
+515
+
+from the coefficients from logistic regression. For a random
+sample of size M from a mother data with N rows, expected value
+of DL is roughly N/M. In this case, we define efficiency as
+
+Efficiency = 100(N/M)/HDL(X,Y)
+
+Where HDL(X,Y) is the harmonic mean of DL(X,Y) computed in
+our experiments from 3 replications of the squashed data. As
+before, cluster sampling turns out to be very inefficient compared
+to random sampling with the efficiency dropping down to almost
+10%. The best efficiency of roughly 700% is obtained on the
+mixture of fractional factorial designs with K = L = 7 followed by
+efficiencies of roughly 500% for half and quarter sampling
+weighted to correct means with K = L = 7. The efficiencies drop
+down to below 100% for 16th factorial and quarter mean with K =
+L =7. All other designs are only slightly better than random
+sampling. The fact that moment matching has greater efficiency
+compared to random sampling when evaluation is in terms of
+model coefficient estimation as opposed to discrete density
+estimation agrees with the Taylor series argument for matching
+moments presented in [4], which applied to likelihood estimation
+of a smooth model, but not necessarily to evaluation according to
+D(Y, X, R) in (1).
+
+7. DISCUSSION
+Although we were able to achieve efficiencies of over 200% for
+one sampling strategy as measured by discrete density
+comparisons, and over 700% as measured by accuracy of logistic
+regression coefficients, these results are disappointing compared
+to earlier squashing work, where efficiency percents in the
+thousands and tens of thousands was achieved when evaluation
+was based on logistic regression coefficient estimation. The goal
+of the present research was to see whether clever sampling alone
+can greatly improve efficiency over simple random sampling. If
+so, we can only admit that we haven't found clever enough tricks
+yet. Our results are better but in the same ball park as those found
+by Owen using the conceptually very similar empirical likelihood
+data squashing method [8], which takes a single simple random
+sample from the entire population and then reweights the selected
+points to match selected global moments.
+The strategy of
+sampling points and then reweighting them may be inherently
+limited in the amount of squashing efficiency that can be
+achieved.
+
+This is a shame, because if we could find such clever ways to
+sample, the extension to very many categorical and ordinal
+variables would be easy. The methods of this paper scale as
+O(Nn2)in computation time, which is determined by the needs of
+the principal components analyses.
+Actually adjusting the X
+values, as opposed to adjusting the weights, is quite problematical
+when
+there
+are
+very
+many
+variables
+because
+of
+the
+combinatorially exploding mixed discrete and continuous values
+that must be negotiated.
+When creating pseudo points with
+categorical
+variables,
+it
+is
+easy
+to
+accidentally
+create
+combinations of values that never occur in the mother data set and
+might stand out as impossible if they occur in the squashed data
+set, for example diagnosis = prostrate cancer, gender = female.
+Yet, if there are dozens of dichotomous variables, it is impossible
+to cover all combinations that occur in the mother dataset while
+restricting the squashed data set to size M. We will report later on
+new methodology that selects a preliminary sample several times
+the size of M, and then reduces to M by dropping points, using a
+technique analogous to backwards stepwise regression, that most
+interfere with choosing weights that allow moment matching.
+
+On the plus side, we are encouraged by the discrete density
+comparison, D(Y, X, R) described in Section 5, as a model-free
+way to evaluate the degree of approximation of Y by X. One
+disadvantage is the fact that different radii R need to be examined.
+The choice of R to use for squashing comparisons is similar to
+many other bandwidth choices that are the bane of much
+approximation theory and practice.
+The nearest neighbor
+calculations that are needed to compute D(Y, X, R) are expensive
+but not prohibitive, given recent algorithmic advances in the use
+of Kd trees for such calculations. A truly massive dataset, having
+billions of points, could first be rounded or even sampled to yield
+a few million points that would be amenable to construction of the
+Kd tree for performing evaluations of even smaller squashed data
+sets. Our theory predicted that the chi-squared distance measure
+would have expectation inversely proportional to M, the size of
+the squashed or random sample, and this prediction was borne out
+in the data example. Such behavior makes interpretation of D(X,
+Y, R) especially fruitful for making comparisons and computing
+the efficiency of squashing compared to random sampling.
+
+8. REFERENCES
+[1] Arya S, Mount D. Ann: Library for approximate nearest
+neighbor searching. http://www.cs.umd.edu/~mount/ANN
+
+[2] Clarkson K. Msb: Nearest neighbor search in metric spaces.
+http://cm.belllabs.com/who/clarkson/Msb/readme.html
+
+[3] DuMouchel W (2001) Data Squashing: Constructing
+summary data sets in Handbook of Massive Data Sets, ed. by
+James Abello, Kluwer Academic Publishers
+
+[4] DuMouchel W, Volinsky C, Johnson T, Cortes C, Pregibon
+D (1999) Squashing flat files flatter. In Proc. Fifth ACM
+Conf. on Knowledge Discovery and Data Mining, 6-15.
+
+[5] Madigan D, Raghavan N, DuMouchel W, Nason M, Posse C,
+Ridgeway G (2000) Likelihood based data squashing: a
+modeling approach to instance construction. J Data Mining
+& Knowledge Disc[http://citeseer.nj.nec.com/469828.html.]
+
+[6] Montgomery D (2001) Design and Analysis of Experiments,
+5th ed., New York: John Wiley & Sons
+
+[7] Owen A (1990) Empirical likelihood ratio confidence
+regions. The Annals of Statistics 18, 90-120.
+
+[8] Owen, A (2000) Data squashing by empirical likelihood.
+www-stat.stanford.edu/~owen/reports/squash.ps
+
+
+
+
+516
+

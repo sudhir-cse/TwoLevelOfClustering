@@ -1,0 +1,978 @@
+CARPENTER: Finding Closed Patterns in Long Biological
+Datasets
+
+
+Feng Pan, Gao Cong,
+Anthony K. H. Tung
+
+
+Natl. University of Singapore
+{panfeng,conggao,atung}
+@comp.nus.edu.sg
+Jiong Yang
+University of Illinois, Urbana
+Champaign
+
+jioyang@cs.uiuc.edu
+Mohammed J. Zaki
+
+
+Rensselaer Polytechnic
+Institute
+zaki@cs.rpi.edu
+
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications-
+Data Mining
+
+
+Keywords
+frequent pattern, closed pattern, row enumeration
+
+
+ABSTRACT
+The growth of bioinformatics has resulted in datasets with
+new characteristics. These datasets typically contain a large
+number of columns and a small number of rows. For ex-
+ample, many gene expression datasets may contain 10,000-
+100,000 columns but only 100-1000 rows.
+Such datasets pose a great challenge for existing (closed)
+frequent pattern discovery algorithms, since they have an
+exponential dependence on the average row length. In this
+paper, we describe a new algorithm called CARPENTER
+that is specially designed to handle datasets having a large
+number of attributes and relatively small number of rows.
+Several experiments on real bioinformatics datasets show
+that CARPENTER is orders of magnitude better than pre-
+vious closed pattern mining algorithms like CLOSET and
+CHARM.
+
+
+1. INTRODUCTION
+The growth of bioinformatics has resulted in datasets with
+new characteristics. These datasets typically contain a large
+number of columns and a small number of rows. For ex-
+ample, many gene expression datasets may contain 10,000-
+100,000 columns or items but usually have only 100-1000
+rows or transactions. Such datasets pose a great challenge
+
+
+Contact Author
+
+This work was supported in part by NUS ARF grant R252-
+000-121-112 and R252-000-142-112.
+
+This work was supported in part by NSF CAREER Award
+IIS-0092978, DOE Career Award DE-FG02-02ER25538, and
+NSF grant EIA-0103708.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for pro£t or commercial advantage and that copies
+bear this notice and the full citation on the £rst page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior speci£c
+permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA
+Copyright 2003 ACM 1-58113-737-0/03/0008 ...$5.00.
+for existing frequent pattern discovery algorithms. While
+there are a large number of algorithms that had been de-
+veloped for frequent pattern mining [1, 5, 11], their run-
+ning time increases exponentially with increasing average
+row length, thus such high-dimensional data renders most
+current algorithms impractical. This also holds for extant
+methods for mining closed patterns [6, 2, 7, 10].
+Previous (closed) frequent pattern mining methods work
+well for datasets with small average row length, since if i is
+the maximum row size, there could be 2i potential frequent
+itemsets; usually i < 100. However, for the gene expresion
+datasets in bioinformatics domain i can be in the range of
+tens of thousands. As a result, search over the itemset space
+is impractical. Since these datasets have a small number of
+rows (say m) usually in the range of a hundred or a thousand
+(i.e., m
+i), it appears reasonable to design an algorithm
+that searches the row set space instead of the usual itemset
+space.
+In this paper, we describe a new algorithm called CAR-
+PENTER
+1
+, that is specially designed to handle datasets
+having a large number of items and relatively small number
+of rows. CARPENTER is a novel algorithm which discov-
+ers frequent closed patterns by performing depth-first row-
+wise enumeration instead of the usual itemset enumeration,
+combined with efficient search pruning techniques, to yield a
+highly optimized algorithm. Our experiments show that this
+unconventional approach produces good results when min-
+ing long biological datasets and outperforms current meth-
+ods like CHARM[10] and CLOSET[7] by more than an order
+of magnitude.
+
+
+2. PRELIMINARIES
+Let F = {f1,f2,..,fm} be a set of items, also called fea-
+tures. Our dataset D consists of a set of rows R = {r1,..,rn},
+where each row ri is a set of features, i.e., ri  F. Figure
+1(a) shows an example dataset in which the features are rep-
+resented using alphabets a through t. There are altogether
+5 rows, r1,...,r5. The first row r1 contains the feature set
+{a,b,c,l,o,s}. For convenience, in the sequel, we drop set
+notation and denote a set of features {a,c,f} as acf, and
+we denote a row set {r2,r3,r5} as 235.
+Given a set of features F
+ F, we define the feature
+support set, denoted R(F )  R, as the maximal set of
+rows that contain F . Likewise, given a set of rows R  R,
+we define the row support set, denoted F(R )  F, as
+the maximal set of features common to all the rows in R .
+
+1
+CARPENTER stands for Closed Pattern Discovery by
+Transposing Tables that are Extremely Long; the "ar" in
+the name is gratuitous.
+
+637
+
+i
+ri
+1 a,b,c,l,o,s
+2 a,d,e,h,p,l,r
+3 a,c,e,h,o,q,t
+4 a,e,f,h,p,r
+5 b,d,f,g,l,q,s,t
+(a) Example Table
+fj
+R(fj)
+a
+1,2,3,4
+b
+1,5
+c
+1,3
+d
+2,5
+e
+2,3,4
+f
+4,5
+g
+5
+h
+2,3,4
+l
+1,2,5
+o
+1,3
+p
+2,4
+q
+3,5
+r
+2,4
+s
+1,5
+t
+3,5
+(b) Transposed Table, TT
+
+
+Figure 1: Running Example
+
+fj
+R(fj)
+a
+4
+e
+4
+h
+4
+
+Figure 2: T T |{2,
+3}
+
+
+
+
+As an exmaple consider Figure 1(a). Let F
+= aeh, then
+R(F ) = 234 since these are all the rows that contain F .
+Also let R = 23, then F(R ) = aeh since it is the maximal
+set of features common to both r2 and r3.
+Given a set of features F , the number of rows in the
+dataset that contain F
+is called the support of F . By
+definition, the support of F
+is given as |R(F )|. A set of
+features F  F is called a closed pattern if there exists no
+F
+such that F  F
+and |R(F )| = |R(F )|, i.e., there is
+no superset of F
+with the same support. Put another way,
+the row set that contains superset F
+must not be exactly
+the same as the row set of F . A feature set F is called a fre-
+quent closed pattern, if it is i) closed, ii) |R(F )| minsup,
+where minsup is a user specified lower support threshold.
+For example, given minsup = 2, the feature set aeh is a
+frequent closed pattern in Figure 1(a) since it occurs three
+times. ae, on the other hand, is not a frequent closed pat-
+tern, since it is not closed (|R(aeh)| = |R(ae)|), although
+its support is more than minsup.
+Given a dataset D which contains records that are subset
+of a set of features F, our problem is to discover all fre-
+quent closed patterns with respect to a user support thresh-
+old minsup. In addition we assume that the dataset satisfies
+the condition |R| |F|.
+
+
+3. THE CARPENTER ALGORITHM
+To illustrate CARPENTER , we will use the tables in
+Figure 1 as a running example. Table 1(b) is a transposed
+version of Table 1(a), denoted TT. In TT, each tuple lists a
+feature, along with the row ids where that feature occurs in
+the original table. As an example 15 is the set of rows that
+contain feature b, which produces the second tuple in TT.
+In the sequel we always refer to entries of the transposed
+table as tuples, and entries of the original table as rows.
+Unlike existing algorithms which perform their search by
+enumeration of feature sets [6, 7], CARPENTER performs
+search by enumeration of row sets. Figure 3 illustrates the
+{bls}
+15
+{l}
+125
+{a}
+124
+{a}
+123
+
+{al}
+
+
+
+
+{aco}
+{abclos}
+
+
+
+
+{}
+13
+12
+
+
+
+
+1
+134
+
+
+
+
+{f}
+{}
+
+
+
+
+{}
+{}
+{}
+{a}
+
+
+
+
+1245
+
+
+
+
+1345
+1235
+1234
+
+
+
+
+{}
+345
+12345
+
+
+
+
+{aeh}
+34
+
+
+35
+
+
+45
+{q}
+{acehoqt}
+3
+{}
+245
+{a}
+
+
+
+
+2345
+
+
+
+
+{bdfglqst}
+5
+{aefhpr}
+4
+{adehplr}
+2
+
+
+
+
+{dl}
+25
+{aehpr}
+24
+{aeh}
+23
+
+
+{}
+235
+{aeh}
+234
+{}
+135
+
+
+{}
+145
+{a}
+14
+
+
+
+
+{}
+
+
+
+
+Figure 3: The Row Enumeration Tree.
+
+
+complete row set enumeration tree without application of
+any pruning strategies. Each node in the tree represents a
+row set R ; also shown is F(R ). For example, the node
+12 represents the row set {r1,r2}, along with it supporting
+feature set F(12) = al.
+To find frequent closed patterns, CARPENTER performs
+a depth first search (DFS) of the row set enumeration tree.
+By imposing a total order, such as lexicographic order on
+the row sets, we are able to perform a systematic search for
+closed patterns. For example, DFS on the row enumeration
+tree in Figure 3 will be {1, 12, 123, 1234, 12345, 1235,...,45,
+5} (in absence of any optimization and pruning strategies).
+
+Lemma 3.1. Let F be a closed pattern and R(F ) be the set
+of rows that contain F, then R(F) is unique. In other words,
+there does not exist a closed pattern F , F = F, that satis-
+fies R(F) = R(F ).
+Proof: We prove by contradiction. Assume there exists a
+closed pattern F
+that satisfies R(F) = R(F ) but F
+= F.
+Let pattern CF = F  F. Then R(CF) = R(F) = R(F ).
+Since F
+ CF, this contradicts the fact that F
+is closed.
+2
+
+By Lemma 3.1, each closed patterncorrespondsto aunique
+set of rows. By enumerating all combinations of rows as
+shown in Figure 3, we ensure that all closed patterns in
+the datasets are enumerated. It is obvious that a complete
+traversal of the row enumeration tree is not efficient and
+pruning techniques must be introduced to prune off unnec-
+essary searches.
+Let X be a subset of rows. Given the transposed table TT,
+a X-conditional transposed table, denoted as TT|X, is
+a subset of tuples from TT such that: 1) For each tuple x
+in TT, there exist a corresponding tuple x in TT|X. 2) x
+contains all rows in x with row ids larger than any row in
+X. As an example, let the transposed table in Figure 1(b)
+be TT and let X = 23. The X-conditional transposed table,
+T T |X is as shown in Figure 2.
+Our formal algorithm is shown in Figure 4. For clarity, we
+assume that the database is already transposed with infre-
+quent features removed. This pre-processing step is trivial
+
+638
+
+Algorithm CARPENTER
+Input: Transposed table T T , features set F and support level
+minsup
+Output: Complete set of frequent closed patterns, F CP
+Method:
+
+1. Initialization. F CP = . Let R be the (numerically sorted)
+set of rows in the original table;
+
+2. Mine Frequent Closed Pattern.
+MinePattern(T T |,R,
+F CP );
+
+Subroutine: MinePattern(T T |X,R , F CP ).
+Parameters:
+
+· TT |X: A X-conditional transposed table;
+· R : A subset of rows which have not been considered in the
+enumeration;
+
+· FCP: The set of frequent closed patterns that have been
+found;
+
+Method:
+
+1. Scan T T |X and count the frequency of occurrences for each
+row, ri  R . Y = .
+2. Pruning 1: Let U  R
+be the set of rows in R
+which
+occur in at least one tuple of T T |X . If |U|+|X|  minsup,
+then return; else R = U;
+
+3. Pruning 2: Let Y
+be the set of rows which are found
+in every tuple of the X-conditional transposed table. Let
+R = R - Y and remove all rows of Y from T T |X ;
+4. Pruning 3: If F(X)  F CP , then return;
+
+5. If |X| + |Y |  minsup, add F(X) into F CP ;
+
+6. For each ri  R ,
+R = R -{ri}
+MinePattern(T T |X |ri , R , F CP );
+
+
+Figure 4: The CARPENTER Algorithm
+
+
+and take negligible time since our datasets usually fit in
+main memory. CARPENTER does recursive generation
+of conditional transposed tables, performing a depth-first
+traversal of the row enumeration tree. Each computed con-
+ditional table represents a node in the enumeration tree of
+Figure 3. For example, the 23-conditional table represents
+the node 23. After initializing FCP, the set of frequent
+closed pattern, to be empty and letting R to be the set
+of rows in the original table, CARPENTER calls the sub-
+routine MinePattern to recursively generate X-conditional
+tables.
+The subroutine MinePattern takes in three parameters
+T T |X, R
+and FCP. TTX is a X-conditional table. R
+contains the set of rows that will be used to enumerate the
+next level of conditional transposed table while FCP con-
+tains the frequent closed patterns that have been discovered
+so far.
+Steps 1 to 4 in the subroutine perform the counting and
+pruning. They are extremely important for efficiency of
+CARPENTER . Before we explain these 4 steps, we will
+first show that the MinePattern subroutine will only out-
+put a pattern if and only if it is a frequent closed patterns (in
+the absence of these 4 steps). This is done at Step 5 which
+checks whether F(X) is a frequent closed pattern before in-
+serting F(X) into FCP, and at Step 6 which continues the
+next level of enumeration in the search tree. We prove the
+correctness of the two steps by two lemmas as follows:
+
+Lemma 3.2. Let X be a subset of rows from the original
+table, then F(X) must be a closed pattern (not necessarily
+frequent).
+Proof: We will prove by contradiction. Assuming F(X) is
+not a closed pattern, then there exists a feature fi such that
+R(F(X)) = R(F(X)fi). Since X contains all features
+of F(X), then X  R(F(X)). This means that fi belongs
+to in every row in X, which contradicts the definition that
+F(X) is the maximal set of features common to rows of X.
+2
+
+Lemma 3.2 ensures that Step 5 only inserts closed patterns
+that are frequent into FCP. The main observation used in
+the proof is that F(X) cannot be a maximal feature set that
+is common in all rows of X unless it is a closed pattern. A
+check on |X| + |Y | is needed to ensure that the minimum
+support threshold is satisfied (Note that Y is an empty set
+if the Steps 1 to 4 of MinePattern are not executed). To-
+gether with Lemma 3.1, we know that the complete and
+correct set of frequent closed patterns will be in FCP.
+
+Lemma 3.3. T T |X|ri = T T |X
+ri
+2
+
+Lemma 3.3 is useful for explaining Step 6. It simply states
+that a X ri conditional transposed table can be computed
+from a X conditional transposed table, TT |X, by selecting
+those tuples that contain ri in TT |X. This is utilized in
+Step 6 where a recursive call on MinePattern is called with
+T T |X|ri as the conditional transposed table. This is in fact
+generating the X + ri conditional transposed table that is
+needed to represent the next level of row set enumeration.
+Note that Step 6 implicitly represents a form of pruning
+too since it is possible to have R = . It can be observed
+from the enumeration tree that there exist some combina-
+tions of rows, X, such that F(X) =  (an example is node
+"134"). This implies that there is no feature which exists in
+all the rows in X. When this occurs, R will be empty and
+no further enumeration will be performed.
+We next look at the pruning techniques that are used in
+CARPENTER to enhance its efficiency. Our emphasis here
+is to show that our pruning steps do not prune off any fre-
+quent closed patterns, while preventing unnecessary traver-
+sal of the enumeration tree. This guarantees correctness.
+Thefirstpruningstep is executed in Step 2ofMinePattern.
+The pruningisessentially aimed at removing searchbranches
+whichcan neveryield closed patternsthat satisfy the minsup
+threshold. The following lemma is applied in the pruning.
+
+Lemma 3.4. Let T T |X be a X conditional transposed table.
+Let U be a set of rows which occur in at least one tuple of
+T T |X. If |U| + |X| < minsup, then it is not possible that
+for any U  U, F(X  U ) is a frequent closed pattern.
+Proof: By definition, any row not in T T |X cannot be com-
+bined with X to produce a non-empty closed pattern. Thus
+X can only be combined with some U  U in order to con-
+tinue the enumeration. It is clear that the maximum support
+is bounded by |U|+|X|. If |U|+|X| < minsup, we can safely
+conclude that all the patterns in further enumeration will not
+be frequent.
+2
+
+In Step 3 of MinePattern, our second pruning strategy
+is applied. This pruning deals with rows that occur in all
+tuples of the X conditional transposed table. Such rows are
+immediately removed from TT |X because of the following
+lemma
+
+Lemma 3.5. Let T T |X be a X conditional transposed table
+and Y be a set of rows which occur in every tuple of TT |X.
+Given any subset R  R, we have F(X  R ) = F(X  Y 
+R ).
+Proof: By definition, F(X  R ) contains a set of features
+which occur in every row of XR . Since the rows in Y occur
+
+639
+
+in every tuple of TT |X, this means that these rows also
+occur in every tuples of TT |(X
+R )
+(Note: TT |(X
+R )
+
+T T |X). Thus, the set of tuples in T T |(X
+R )
+is exactly the
+set of tuples in TT |(X
+R Y )
+. From this, we can conclude
+that F(X  R ) = F(X  Y  R ).
+2
+
+As an example to illustrate Lemma 3.5, let us consider
+the 23 conditional transposed table in Figure 2. Since row
+4 occurs in every tuple of TT|23, we can conclude that
+F(23)=F(234) =aeh. Thus, we need not create TT|234 in
+our search and row 4 need not be considered for further
+enumeration down that branch of the enumeration tree.
+Our final and most complex pruning strategy is shown
+in Step 4 of MinePattern. This step will prune off any
+further search down the branch of node X if it is found that
+F(X) was already discovered previously in the enumeration
+tree. The inituitive reasoning which we will prove later is as
+follows: the set of closed patterns that will be enumerated
+from the descendants of node X must have been enumerated
+previously.
+Unlike feature-based mining algorithms, such as CHARM
+and CLOSET, we need not perform detection of superset-
+subset relationship among the patterns since Lemma 3.2 al-
+ready shows that only closed patterns will be enumerated in
+our search tree. For example, in Figure 3, it is not possible
+for the pattern {a,c} to be enumerated although both {a}
+and {a,c,o} are closed patterns with support of 80% and
+40% respectively. This is unlike CHARM and CLOSET,
+both of which will enumerate {a,c} and check that it has
+the same support as a superset {a,c,o} before discarding it
+as a non-closed pattern.
+Another important thing to note here is that the correct-
+ness of the third pruning strategy (Step 3) is dependent
+on the second pruning criteria. This is essential because
+of the following lemma.
+
+Lemma 3.6. Let X be the set of rows in the current search
+node and X be the set of rows that result in F(X) (which is
+the same as F(X')) being inserted into FCP in earlier enu-
+meration. If pruning strategy 2 is applied consistently in the
+algorithm, then the node representing X in the enumeration
+tree will not be the descendent of the node representing X
+in the enumeration tree.
+Proof: Assume otherwise, then X  X. Let Z = X - X .
+Since F(X) = F(X ), all rows in Z must be contained in
+all tuples of the X
+conditional transposed table. Based on
+pruning strategy 2, the rows in Z would be added to X
+and
+will be removed from subsequent transposed table down that
+search branch. Thus the node representing X will not be
+visited, which contradicts the fact that node X is currently
+being processed in the enumeration tree.
+2
+
+Consider the node 23 in Figure 3. As mentioned earlier,
+its descendant node 234 will not be visited since row 4 occurs
+in every tuple of 23-conditional transposed table. Without
+pruning strategy 2, this will not be the case.
+We next try to prove that all branches from a node X in
+the enumeration tree can be pruned off if F(X) is already
+in FCP. We have the following lemma.
+
+Lemma 3.7. Let T T |X be the conditional transposed table
+in the current search node. Let X
+be the set of rows which
+result in F(X) (which equals to F(X ) ) being inserted into
+F CP in earlier enumeration. Let xfi and xfi be the two
+tuples that represent feature fi in TT |X and TT |X
+respec-
+tively. We will have xfi  xfi for all fi F(X).
+Proof: We know that F(X) = F(X ) which implies that the
+set of features represented by tuples in both the conditional
+transposed tables are the same.
+Let the maximal set of rows that contains the feature set
+F(X ) be Rmax = {r1,...,rn} which is sorted in numerical
+order. Let X = {r1,...,rm} be the first row set that causes
+F(X ) to be inserted into FCP and X ={r1,...,rm} is also
+sorted in numerical order.
+Based on Lemma 3.6, X cannot be a descendent of X
+in
+the enumeration tree. Thus, X must be of the form (X -
+A)  B where A  X
+and B  Rmax - X , A = , B = .
+By lexicographic row set search, we can conclude from here
+that there exists a row ri such that i > m and ri  X.
+By definition of a conditional transposed table, we know
+that all rows which occur before rm will be removed in TT |X .
+Likewise, all rows occurring before ri will be removed in
+T TX. Since i > m, a tuple xfi representing feature fi in
+T T |X
+will have less rows being removed than the corre-
+sponding tuple xfi representing feature fi in TT |X. Hence
+the proof.
+2
+
+In a less formal term, Lemma 3.7 shows that if X is the
+first combination of rows that cause F(X ) to be inserted
+into FCP, then the conditional transposed table TT |X will
+be more "general" than any other conditional transposed
+table TT |X in which F(X) = F(X ). "General" in this
+case, refers to the fact that each tuple in TT |X
+is in fact a
+superset of the corresponding tuple in TT |X. We will now
+formalize our third pruning strategy as a theorem.
+
+Theorem 3.1. Given a node representing a set of rows X
+in the enumeration tree, if F(X) is already in FCP, then
+all enumeration down that node can be pruned off.
+Proof Let X
+be the combination of rows that first cause
+F(X) to be inserted into FCP. From Lemma 3.7, we know
+that any tuple xfi in the X conditional table will be a super-
+set of a corresponding tuple xfi in the X conditional table
+and X conditional table has the same number of tuples with
+X conditional table.
+Since we know that the next level of search at node X in
+the enumeration tree is based on the set of rows in the X
+conditional transposed table, it is easy to conclude that the
+possible enumeration at the node X is a subset of the possible
+enumeration at node X . Since X had been visited, it is thus
+not necessary to perform any enumeration from the node X
+onwards.
+2
+
+Consider the node 23 in Figure 3 which is the first node
+that results in the insertion of aeh based on the enumeration
+order. Thus, Rmin = 23. Next look at node 34. We have
+F(34) = F(23) = aeh. It can be seen that node 34 is not
+a descendant of node 23 and that 34 satisfies the formula
+(Rmin - A)  B, A = 2, B = 4. In this case, pruning
+strategy 3 can be applied and no further enumeration will
+be done from node 34.
+CARPENTERis implemented byadopting the in-memory,
+pointer-based approach in BUC [3]
+2
+. With the in-memory
+pointer, CARPENTERdoes not constructconditional trans-
+posed table physically, thus saving space. Due to space lim-
+itation, we will not give details on the implementation of
+CARPENTER .
+
+2
+We note also that there are other alternatives for imple-
+mentation including building a FP-tree [4] on the trans-
+posed table and adopting the vertical data representation
+in the row-wise manner [10]. However, our central theme of
+row enumeration is independant of these techniques and we
+leave it to interested readers to explore them during their
+own implementation.
+
+640
+
+4. PERFORMANCE STUDIES
+In this section, we compare the performance of CARPEN-
+TER against other algorithms. All experiments were per-
+formed on a PC with a Pentium III 1.4 Ghz CPU, 1GB
+RAM and a 80GB hard-disk. Algorithms were coded in
+Standard C.
+
+Algorithms: We compare CARPENTER against two other
+closed patterndiscovery algorithms, CHARM[10] andCLOSET
+[7] Experiments in [7, 10] have shown that depth-first mining
+algorithms like CHARM and CLOSET are substantially bet-
+ter than levelwise mining algorithms like Close[6] and Pascal
+[2]. To make a fair comparison, CHARM and CLOSET are
+also run in the main memory after one disk scan is done to
+load the datasets. The run time for CARPENTER includes
+the time for transposing the datasets.
+
+Datasets: We choose 3 real-life gene/protein expression
+datasets to analyze the performance of CARPENTER . The
+Lung Cancer (LC) dataset
+3
+is a gene expression dataset.
+The rows in the dataset represent sample tissues and these
+tissues can come from either malignant pleural mesothe-
+lioma (MPM) oradenocarcinoma (ADCA)ofthe lung. There
+are 181 tissue samples and each sample is described by the
+activity level of 12533 genes or features. The Acute Lym-
+phoblastic Leukemia (ALL) dataset
+4
+is also a gene
+expression dataset containing tissues from cancerous/non-
+cancerous cells. There are 215 tissue samples described by
+activity level of 12533 genes. The Ovarian Cancer (OC)
+dataset
+5
+is for identifying proteomic patterns in serum that
+distinguish ovarian cancer from non-cancer cases. There are
+253 samples each described by activity level of 15154 pro-
+teins. These expression datasets have real valued entries,
+which have to be discretized to obtain binary features; we
+do an equal-depth partition for each attribute using 20 buck-
+ets.
+6
+
+
+
+Parameters: Twoparameters arevaried in ourexperiment,
+minimum support (minsup) and length ratio (l). We use a
+default value of minsup = 4%. The parameter length ra-
+tio, l, has a value between 0 and 1. It is used to generate
+new datasets with different average row size from the orig-
+inal datasets. A dataset with a length ratio of l retains
+on average l  100% of the columns in the original dataset.
+Columns to be retained are randomly selected for each row.
+The default value used is l = 0.6, unless otherwise stated.
+
+4.1 Varying Minimum Support
+Figure 5 shows how CARPENTER compares against
+CHARM and CLOSET as minsup is varied with l = 0.6.
+Note that the y-axis is in logarithmic scale. There is a
+large variation in the running time for both CHARM and
+CLOSET even though the variation in absolute minsup is
+small. This is because the average length of each row af-
+ter removing the infrequent features can increase (decrease)
+substantially due to a small decrease (increase) in minsup
+value. This increases (decreases) the search space of both
+CHARM and CLOSET substantially, resulting in a large
+difference in running time.
+Among the three algorithms, we find that CLOSET is the
+slowest and has the steepest increases in run time as minsup
+
+3
+available from http://www.chestsurg.org
+4
+http://www.stjuderesearch.org/data/ALL1/
+5
+http://clinicalproteomics.steem.com/
+6
+Fewer buckets results in a extremely high running time (up
+to a few days) for CHARM and CLOSET.
+is decreased. CHARM on the other hand is generally 2 to
+3 orders of magnitude slower than CARPENTER and only
+outperforms CARPENTER at higher support level, where
+the difference in time is under 10 seconds.
+
+4.2 Varying Length Ratio
+Figure 6 shows the performance comparison of the meth-
+ods as we vary l, with minsup = 4. The growth in run
+time of all the algorithms is exponential with respect to the
+length ratio (note the log scaled y-axes). CARPENTER is
+however substantially faster than CHARM and CLOSET.
+While CHARM outperforms CLOSET, CARPENTER can
+be up to a 100 times faster than CHARM and 1000 times
+faster than CLOSET.
+As we can see, in all the experiments we conducted, CAR-
+PENTERoutperformsCHARMandCLOSETin most cases.
+These results clearly demonstrate that CARPENTER is
+very efficient in finding frequent closed patterns on datasets
+with small number of rows and large number of features.
+
+
+5. RELATED WORK
+Frequent pattern mining [1, 5, 11, 8] as a vital topic has
+received a significant amount of attention during the past
+decade. The number of frequent patterns in a large data
+set can be very large and many of these frequent patterns
+may be redundant. To reduce the frequent patterns to a
+compact size, mining frequent closed patterns has been pro-
+posed. The followings are some new advances for mining
+closed frequent patterns.
+Close [6] and Pascal [2] are two algorithms which discover
+closed patterns by performing breadth-first, column enumer-
+ation. Close [6] is an Apriori-like algorithm to determine a
+closed itemset. Due to the level-wise approach of Close and
+Pascal, the number of feature sets enumerated will be ex-
+tremely large when they are run on long biological datasets.
+In [7], the CLOSET algorithm was proposed for mining
+closed frequent patterns. Unlike Close and Pascal, CLOSET
+performs depth first, column enumeration. CLOSET uses a
+novel frequent pattern tree (FP-structure) for a compressed
+representation of the datasets. It then performs recursive
+computation of conditional tables to simulate the search on
+the column enumeration tree. CLOSET is unable to handle
+long biological datasets because of two reasons. First, the
+FP-tree is unable to give good compression for long rows.
+Second, there are too many combinations when performing
+column enumerations. CLOSET+ [9] is a recent improve-
+ment on CLOSET. Our study show that CARPENTER
+still outperforms CLOSET+ on average by around 500-600
+times.
+7
+
+Another algorithm for mining frequent closed pattern is
+CHARM [10]. Like CLOSET, CHARM performs depth-
+first, column enumeration. However, unlike CLOSET,CHARM
+stores the dataset in a vertical format where a list of row ids
+is stored for each feature. These row id lists are then merged
+during the column enumeration to generate new rows id lists
+that represent nodes in the enumeration tree. In addition,
+a technique called diffset is used to reduce the size of the
+row id lists and the computational complexity for merg-
+ing them. Although performance studies in [10] shows that
+CHARM is substantially faster than all other algorithm on
+most datasets, CHARM is still unable to handle long biolog-
+
+7
+We will like to thank Jianyong Wang and Jiawei Han for
+making the executable code of CLOSET+ available to us.
+They have indicated that the version of CLOSET+ that they
+pass to us at press time is not optimized for our datasets and
+an optimized version will be released in the future.
+
+641
+
+Figure 5: Varying minsup with l=0.6: a) LC, b) ALL, c) OC
+
+
+
+
+Figure 6: Varying l with minsup = 4%: a) LC, b) ALL, c) OC
+
+
+ical dataset efficiently because it performs feature enumera-
+tion.
+
+6. CONCLUSION
+In this paper, we proposed an algorithm called CARPEN-
+TER for finding frequent closed patterns in long biological
+datasets. CARPENTER makes use of the special charater-
+istic of biological datasets to enhance its efficiency. It adopts
+the novel approach of performing row enumeration instead of
+the conventional column enumeration so as to overcome the
+extremely high dimensionality of many biological datasets.
+Experiments show that this bold approach yields good pay-
+off as CARPENTER outperforms exisiting closed pattern
+discovery algorithms like CHARM and CLOSET by a large
+order of magnitude when they are running on long biological
+datasets. In the future, we will look at how CARPENTER
+can be extended to work on other datasets by using a com-
+bination of column and row enumerations.
+
+7. REFERENCES
+[1] R. Agrawal and R. Srikant. Fast algorithms for mining
+association rules. In Proc. 1994 Int. Conf. Very Large
+Data Bases (VLDB'94), pages 487­499, Santiago,
+Chile, Sept. 1994.
+[2] Y. Bastide, R. Taouil, N. Pasquier, G. Stumme, and
+L. Lakhal. Mining frequent closed itemsets with
+counting inference. In SIGKDD Explorations, 2(2),
+Dec. 2000.
+[3] K. Beyer and R. Ramakrishnan. Bottom-up
+computation of sparse and iceberg cubes. In Proc.
+1999 ACM-SIGMOD Int. Conf. Management of Data
+(SIGMOD'99), pages 359­370, Philadelphia, PA, June
+1999.
+[4] J. Han, J. Pei, and Y. Yin. Mining partial periodicity
+using frequent pattern trees. In Computing Science
+Techniqcal Report TR-99-10, Simon Fraser University,
+July 1999.
+[5] H. Mannila, H. Toivonen, and A. I. Verkamo. Efficient
+algorithms for discovering association rules. In Proc.
+AAAI'94 Workshop Knowledge Discovery in Databases
+(KDD'94), pages 181­192, Seattle, WA, July 1994.
+[6] N. Pasquier, Y. Bastide, R. Taouil, and L. Lakhal.
+Discovering frequent closed itemsets for association
+rules. In Proc. 7th Int. Conf. Database Theory
+(ICDT'99), pages 398­416, Jerusalem, Israel, Jan.
+1999.
+[7] J. Pei, J. Han, and R. Mao. CLOSET: An efficient
+algorithm for mining frequent closed itemsets. In Proc.
+2000 ACM-SIGMOD Int. Workshop Data Mining and
+Knowledge Discovery (DMKD'00), pages 11­20,
+Dallas, TX, May 2000.
+[8] P. Shenoy, J. Haritsa, S. Sudarshan, G. Bhalotia,
+M. Bawa, and D. Shah. Turbo-charging vertical
+mining of large databases. In Proc. 2000
+ACM-SIGMOD Int. Conf. Management of Data
+(SIGMOD'00), pages 22­23, Dallas, TX, May 2000.
+[9] J. Wang, J. Han, and J. Pei. Closet+: Searching for
+the best strategies for mining frequent closed itemsets.
+In Proc. 2003 ACM SIGKDD Int. Conf. on
+Knowledge Discovery and Data Mining (KDD'03),
+Washington, D.C., Aug 2003.
+[10] M. Zaki and C. Hsiao. Charm: An efficient algorithm
+for closed association rule mining. In Proc. of SDM
+2002, 2002.
+[11] M. J. Zaki, S. Parthasarathy, M. Ogihara, and W. Li.
+New algorithms for fast discovery of association rules.
+In Proc. 1997 Int. Conf. Knowledge Discovery and
+Data Mining (KDD'97), pages 283­286, Newport
+Beach, CA, Aug. 1997.
+
+
+
+642
+

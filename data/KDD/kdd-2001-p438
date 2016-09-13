@@ -1,0 +1,617 @@
+Data Mining Techniques to Improve Forecast Accuracy in
+Airline Business
+ChristophHueglin
+Atraxis AG
+P.O. Box
+CH-8058 Zurich Airport
++41 1 893 09 66
+
+chueglin@atraxis.com
+Francesco Vannotti
+Atraxis AG
+P.O. Box
+CH-8058 Zurich Airport
++41 1 812 24 89
+
+fvannott@atraxis.com
+
+
+
+ABSTRACT
+Predictive models developed by applying Data Mining techniques
+are used to improve forecasting accuracy in the airline business.
+In order to maximize the revenue on a flight, the number of seats
+available for sale is typically higher than the physical seat
+capacity (overbooking). To optimize the overbooking rate, an
+accurate estimation of the number of no-show passengers
+(passengers who hold a valid booking but do not appear at the
+gate to board for the flight) is essential. Currently~ no-shows on
+future flights are estimated from the number of no-shows on
+historical flights averaged on booking class level. In this work,
+classification trees and logistic regression models are applied to
+estimate the probability that an individual passenger turns out to
+be a no-show. Passenger information stored in the reservation
+system of the airline is either directly used as explanatory variable
+or used to create attributes that have an impact on the probability
+of a passenger to be a no-show. The total number of no-shows in
+each booking class or on the total flight is then obtained by
+accumulating the individual no-show probabilities over the entity
+of interest. We show that this forecasting approach is more
+accurate than the currently used method. In addition, the selected
+models lead to a deepened insight into passenger behavior.
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Applications]: Data Mining.
+
+
+General Terms
+Algorithms, Measurement, Performance.
+
+
+Keywords
+Decision tree, CART, logistic regression, predictive model.
+
+
+Permission to make digital or hard copies of all or part e,~this work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the first page. To copy
+otherwise, to republish, to post on servers or to redistribute to lists,
+requires prior specific pemaissionand/or a fee.
+KDD 0l San Francisco CA USA
+Copyright ACM 2001 1-58113-391-x/01/08...$5.00
+1. INTRODUCTION
+Optimization of the expected net revenue on future flights is one
+of the main issues in the airline business. The net revenue is here
+defined as the revenue generated from sold seats minus the costs
+of denied boardings and excess capacity like empty seats. In order
+to maximize the revenue from sold seats, a variety of fares
+(differentiated in terms of service amenities and travel restric-
+tions) are grouped in booking classes. Statistical models are
+applied to historical booking data (data from previous departures
+of the same flights) to estimate the seat demand for each booking
+class on future flights. The demand forecast is used to determine
+the number of seats in each booking class that is made available
+for sale. The lower priced seats have to be limited and more
+expensive seats have to be protected for briefly before departure
+booking passengers. This enables the airline to avoid that low
+priced booking classes are purchased by passengers who are
+willing to pay a higher price, and to ensure that seats that are
+expected to go out unsold are available at a lower price to
+passengers who would otherwise not travel.
+For optimization of the expected net revenue, an accurate forecast
+of cancellations and so-called no-show passengers is essential.
+No-shows are passengers who hold a valid booking, but do not
+appear at the gate to board for the flight. In contrast to
+cancellations, no-shows give no notice that they will not occupy a
+seat on the aircraft. To reduce the risk of unnecessarily empty
+seats, the flights are typically overbooked (number of seats
+available for sale is higher than the physical capacity of the
+aircraft). An optimized overbooking rate leads to reduced
+expenses due to denied boardings and to reduced revenue loss due
+to seats that are not sold although there is a demand for those
+seats.
+
+2. CURRENT FORECAST METHOD
+The current forecast method is in the following called 'standard
+method'. The average show-up rate s for each booking class b is
+determined as
+
+s(b)= 1 ~,Bi(b)
+n'i~
+Si (b)"
+
+B(b) is the observed number of boarded passengers in booking
+class b on the applicable historical flights, and S(b) is the
+according number of seats sold (observed number of valid
+bookings a few hours prior to departure) on the considered
+historical flights. At any time during the booking period (from
+331 days to -1 day before departure), the number of passengers
+
+
+
+
+438
+
+that are expected to show-up at a future flight t3(b, t) can then be
+expressed as
+
+t3(b,t) = s(b). S(b,t),
+
+where S(b,t) is an estimate for the seat demand (estimate for the
+number of seats that will be sold) in booking class b at time t.
+Moreover, the standard forecast of the number of no-shows
+
+(fistand) in each booking class is given by
+
+fistand (b, t) = S(b,t) - t3(b, t) = S(b,t). (1- s(b)).
+
+
+3. PNR-BASED FORECAST
+The aim of this project is to improve the accuracy of the no-show
+forecast. It is easy to imagine that the no-show probability is not
+identical for all passengers in a booking class but depends on
+individual behavior and
+characteristics. Information about
+individual passengers is available from the airlines reservation
+system in the form of so-called passenger name records (PNRs).
+The idea of our work is to develop a passenger based forecast
+model, i.e. to use data on passenger level and apply data mining
+techniques to estimate the probability of each passenger to turn
+out as a no-show. The total number of no-shows in a booking
+class, service class (economy, business, first) or on the total flight
+is then obtained by accumulating the individual no-show
+probability over the entity of interest.
+
+As described in section 2, an accurate estimation of the expected
+number of no-shows is necessary at any time during the booking
+period. A forecast model that is entirely PNR-based cannot fulfill
+this requirement, because it can only be applied to the passengers
+that have booked at the time of interest. There is no information
+about the passengers that will book for the flight in the remaining
+time of the booking period. Moreover, passengers who have
+booked for a flight might cancel the flight at any time before
+departure. In order to estimate the number of no-shows among the
+booked passengers, a PNR-based model to predict cancellation
+probabilities is needed, too. Then, the number of no-shows that
+
+are expected from N booked passengers (fibkgs) is expressed as
+
+
+N
+fibkgs(b,t) = ~-'~Pnsi ·(1 - Pcanci )
+i=l
+
+with 13nsi and Peanei the estimated no-show and cancellation
+
+probability of an individual passenger. Finally, a combination
+(blending model) of the passenger-based approach and the
+currently used standard method is used to estimate the number of
+no-show passengers at any time during the booking period
+
+fi(b, t) = fibkgs(b, t) + w(b, t). fistand(b, t)
+
+w(b,t) is a weighting factor that can be expressed as
+
+N
+S(b,t)- ~(1-Peanei )
+w(b,t) =
+i=l
+S(b,t)
+
+The weighting factor w(h,t), and therefore the influence of the
+standard method, decreases with increasing number of bookings.
+It is w(b,t) = 0 when the predicted number of retaining bookings
+is equal to the estimated seat demand, and w(b,0 is negative when
+the predicted number of retaining bookings is larger than the
+estimated seat demand.
+
+
+4. DATA AND PREPROCESSING
+Whenever a customer books a flight, a PNR is generated. The
+PNR can contain more than one flight, as well as more than one
+passenger. A sequence of flights that build an itinerary is stored in
+the same PNR. Each time a customer contacts the airline in order
+to change the state of the booking (confirmation, cancellation,
+etc.), an additional transaction record is written into the PNR and
+stored in the reservation system. Every transaction record can be
+identified by its creation time. If one of the passengers in a PNR
+decides to change the itinerary, then the PNR is split, i.e. a new
+PNR is generated for those passengers who changed minds. The
+information stored in a PNR gives a detailed overview of the
+booking history and allows to extract a variety of information on
+the passenger characteristics and the travel purpose (see Table 1).
+When a passenger holding a valid booking does not show up at
+the gate to board for the flight, a post departure transaction record
+is also written into the PNR, stating that the passenger is a no-
+show. This post departure record is transformed in a binary
+variable that is used as the target for modeling the noshow
+probability. Similarly, a binary attribute that reflects whether a
+passenger has cancelled the flight or not, is used as the target
+variable for modeling the cancellation probability of a passenger.
+
+The PNR data is transferred from the reservation system to a data
+warehouse from where it can be accessed. In this study, two
+random samples of PNRs were used as training and test data. The
+PNRs of both data samples were created in the time period
+between 28.09.98 and 08.11.00, the departure date of the
+corresponding segments1 is from 01.10.98 to 18.09.01. All
+transaction records are preprocessed in order to create meaningful
+attributes. Together with attributes that are directly available from
+the PNRs, the generated attributes serve as explanatory variables
+for modeling no-show as well as cancellation probabilities
+(Table 1). The preprocessed data include only the latest
+transaction record for each booked segment in a PNR, and a
+variety of attributes to characterize the passenger behavior.
+Preprocessed training and test data samples consist of a total of
+251 '000 and 141 '000 records, respectively.
+
+Figure 1 gives an example of the univariate visualization of the
+influence of one of the available attributes (booking time) on the
+observed no-show frequency.
+
+
+
+
+1 The connection between two cities that can be booked on the
+same aircraft (one flight number) is called a segment.
+
+
+
+
+439
+
+Table 1: Attributes used for modeling the no-show probability of individual passengers.
+
+Attributes available from PNR (variable type)
+Generated Attributes (variable type)
+Booking time prior to departure (count)
+Booking class (categorical)
+Service class (categorical.)
+Number of passengers in PNR (counO
+Origin City (categorical)
+Destination airport (categorical)
+Board point airport (categorical)
+Off point airport (categorical)
+Weekday of departure (categorical)
+Was PNR split during booking history? (binary)
+Origin region (categorical)
+Destination region (categorical)
+Board point region (categorical)
+Off point region (categorical)
+Grouped Board point airports (categorical)
+Number of segments in OD 1 (counO
+Position of segment within OD (counO
+Total travel time for OD (continuous)
+Total flight time for OD (continuous)
+Flight time (segment) / Flight time (OD) (continuous)
+Connection time between segments in OD (continuous)
+More than one airline used in OD? (binary)
+Total time for trip (continuous)2
+Purpose of trip (business, leisure, or mixed) (categorical)
+Does segment belong to return portion of trip? (binary)
+Is segment part of return trip? (binary)
+Number of regions in trip (counO
+Grouped booking cities (categorical)
+Grouped booking countries (categorical)
+Number of scheduled flights per week 3 (count)
+
+1 The route from origin airport to destination airport is called an origin-destinaton (OD). An OD can therefore consist of more than one
+segment.
+2 The entire itinerary is called a trip. A trip can therefore consist of more than one OD.
+3 Derived from the schedule of the airline.
+
+
+
+5. METHODS
+Classification trees [1] and logistic regression models [2] are used
+to predict the probability of a passenger to turn out as a no-show
+as well as to estimate the probability that a passenger will cancel
+the booking prior to departure. Because model selection is very
+similar for both cases, at this point only the models for no-show
+probabilitiesare discussed.
+
+For modeling no-show probabilities, all records that correspond to
+cancellations are removed from the training and test data sets. The
+target variable is the binary attribute stating whether the passenger
+(or passengers) on the considered segment turned out as a no-
+show (ns=l) or not (ns=0). Applied to our problem, classification
+trees partition the space of classes (ns=0 or ns=l) in the training
+sample into sub-regions given by the terminal nodes of the tree.
+Growth of classification trees includes automated selection of
+features and of splitting rules leading to homogeneous classes.
+
+No-show passengers account for about 7.7% of all records in the
+training data sample. In order to over-represent no-show
+passengers, the training data sample is balanced. All records with
+ns=l are selected (N 1 segments), from the records with ns=0 a
+random sample of the same size N 1 is extracted and added to the
+no-show records, leading to a balanced data sample of size 2. N 1.
+Using the balanced training data sample, a large classification tree
+was grown by allowing small sized terminal nodes. In a next step,
+the derived classification tree is pruned backwards in order to
+account for over-fitting, i.e. the possibility that the splitting rules
+are adapted to well to the training sample. Backward pruning is
+done by cross-validation. The training sample is split into 2
+equally sized parts. One part is used to grow the tree, the second
+part is used to test it, and vice versa. This is done ten times, and
+the results are averaged. Backward pruning by cross-validation
+suggest, that a classification tree with six terminal nodes is
+sufficient. However, larger trees are still interpretable from the
+business point of view. The classification tree was therefore only
+pruned back to size 15.
+
+The probability that a passenger in a record of the balanced
+training sample turns out to be a no-show (Pl) can be estimated
+from the number of records with ns= 1 and the number of records
+with ns=0 in the corresponding terminal node. It is given by
+
+nit
+Pl =
+NI^
+not ·~
++ nlt
+&
+
+
+where not and nlt are the number of records with ns=0 and ns=l
+in terminal node t, respectively. NO and N 1 are the numbers of
+records with ns=0 and ns=l in the unbalanced data sample.
+
+
+
+
+440
+
+o
+
+
+
+
+o
+
+293
+173
+114
+82
+59
+40
+26
+17
+10
+5
+3
+2
+1
+0
+
+days before departure
+
+Figure 1: Observed no-show frequency vs. booking time in
+days before departure. Late bookings have on average a
+higher no-show probability. Two days prior to departure, the
+no-show probability is highest. A passenger who books a
+segment at the day of departure is an unlikely no-show
+candidate. The average no-show frequency in the training
+data sample is 7.7%.
+
+
+From the derived classification tree, classification rules are
+deduced and applied to the test data set. According to the
+classification rules, each record in the test data set is assigned to
+the corresponding terminal node. The probability that a passenger
+turns out as a no-show is estimated by the probability associated
+with the corresponding terminal node. Figures 2 shows the
+comparison between the observed no-show frequency in the test
+data sample and predicted no-show probability derived with the
+classification tree. The probability estimations are grouped into
+probability classes, and the observed no-show frequency of all
+segments in each probability class is determined and plotted for
+all probability classes.
+
+The variables used and the order of splits that occurs in a
+classification tree gives a deepened insight into the behavior of
+passengers, i.e. to understand the main criteria that have an impact
+on the no-show probability. Some of the categorical variables
+listed in Table 1 have a large number of levels. Splits occurring at
+categorical variables can be used to recode those variables, i.e. to
+define new attributes with a reduced number of values. Recoding
+of variables can be very helpful for application of techniques like
+regression modeling. Due to the hierarchical structure of
+classification trees, interactions between variables are treated
+automatically. Therefore, classification trees can be helpful to
+identify interactions between variables that are likely to be
+important in a regression model.
+
+In this work, the passenger understanding that was gained from
+classification trees was used to set up logistic regression models
+as an additional method to estimate the no-show probability of a
+passenger. The regression models were specified using the
+unbalanced data set and by applying backward and forward
+variable selection. Similar to Figure 2, Figure 3 shows the
+comparison between the observed no-show frequency in the test
+data set and predicted no-show probability derived with a logistic
+regression model that includes only main effects. A logistic
+regression model that includes interaction effects was also
+specified, the results are very similar to the main effect model.
+
+The comparison between observed no-show frequencies and
+estimated probabilities agrees well for both methods. However,
+the logistic regression model covers a much wider range of
+probabilities than the classification tree. In contrast to the derived
+classification tree, the logistic regression model allows to identify
+groups of passengers that have very high no-show probabilities
+(_>20%). The same situation is also found when classification
+trees and logistic regression are applied to estimate cancellation
+probabilities. We therefore prefer the logistic regression approach
+to build the final predictive models.
+
+
+
+
+e,
+
+
+
+
+o
+
+
+o
+
+
+
+
+o
+
+0-2
+2-4
+4-6
+6-8
+8-10
+10-12
+12-14
+14-16
+16-18
+>18
+
+probabilityclass (%)
+
+Figure 2: Individual no-show probabilities estimated by
+application of the derived classification rules on the test data
+sample were grouped into probability classes. Shown is the
+average observed no-show frequency of the passengers in each
+probability class.
+
+
+
+
+441
+
+o~
+
+
+
+O
+
+
+=o o
+
+
+
+
+o
+
+
+o-2
+4.6
+8-1o
+12.14
+16.18
+20-25
+3o-3~-[
+40-50
+
+probability class (%)
+
+Figure 3: Individual no-show probabilities estimated by
+application of a logistic regression model (main effect model).
+Shown is the average observed no-show frequency of the
+passengers in each probability class.
+
+
+
+
+2
+
+
+
+
+d
+"
+
+
+
+
+I
+I
+~
+I
+m
+I
+
+10
+20
+30
+40
+50
+60
+
+
+DBD
+
+
+Figure 4: Comparison of no-show forecast using the standard
+method and the blending model of this work. For a total of
+N=42 flights on two different long distance segments, the
+average improvement is plotted versus the time point when
+the forecast is made (in days before departure).
+
+6. RESULTS
+According to section 3, PNR-based logistic regression models for
+no-show and cancellation forecast as well as standard method
+
+forecast and estimates for the seat demand S(b,t) are used to
+build the blending model. For a number of test flights on two long
+distance segments, the blending model is compared to the no-
+show forecast obtained by the standard method. In this
+comparison, the forecast is done on flight level rather than on
+booking class level. Figure 4 shows the result of the model
+comparison in terms of a measure denoted as the average
+improvement. The average improvement for a number of N test
+flights is defined as
+
+
+imp=l ~ [~standi -rli -[Tli-'qi[
+
+n i=l
+Bi
+
+with rli the observed number of no-shows for flight i. A positive
+average improvement means, that the average deviation of model
+and observation is smaller for the blending model than for the
+standard method. The average difference of the forecast accuracy
+of the two methods is expressed as the number of more accurately
+predicted no-shows per 100 passengers. As shown in Figure 4, the
+average improvement for the test flights (N=42) is positive for
+forecasts made during the time between 60 and 1 days before
+departure. The no-show forecasts with the blending model are
+therefore superior to the forecasts using the standard method. It
+can also be seen that the average improvement is increasing for
+short-term forecasts. Long time before departure the number of
+bookings is small and the blending model is therefore dominated
+by the standard method (see section 3). As a consequence, the
+average improvement is close to zero. For short-term forecasts,
+the number of bookings is approaching the estimated seat
+demand, and the influence of the standard method in the blending
+model is decreasing. For the considered test flights, the PNR-
+based blending model leads to an average improvement of the
+short-term forecast (1 to 14 days before departure) that can be
+expressed as about 1 no-show per 100 passengers. This means
+that for every 100 passengers on fully booked flights, on average
+either one extra seat can be sold or one denied boarding can be
+avoided by replacing the standard method by the more accurate
+blending model.
+
+7. CONCLUSIONS
+The accuracy of no-show forecasts can be improved when
+individual passenger information extracted from passenger name
+records (PNRs) is used as input. For a certain segment, the
+improvement of the PNR-based approach depends on the flight to
+flight variation of the characteristics of the booked passengers. If
+the passenger composition is not varying at all, predictive models
+on PNR level should be equivalent to averaging over historical
+flights on booking class level (standard method). The difference
+in forecast accuracy between blending model and standard
+method is expected to increase with the variation of the passenger
+composition on the considered segment.
+
+In a next step, no-show and cancellation forecast for individual
+PNRs will be implemented as new metrics in the booking data
+warehouse, in order to use them for reporting and to gain further
+experience with the accuracy of the predictive models.
+
+8. REFERENCES
+[1] Ripley, B.D. (1996). Pattern Recognition and Neural
+Networks. Cambridge University Press, Cambridge UK.
+
+[2] Agresti, A. (1996). Introduction to categorical data analysis.
+Wiley Series in Probability & Math. Statistics, Wiley, New
+York.
+
+
+
+
+442
+

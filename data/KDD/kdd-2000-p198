@@ -1,0 +1,1575 @@
+Explicitly Representing Expected Cost:
+An Alternative to ROC Representation
+
+
+Chris Drummond
+School of Information Technology
+and Engineering
+University of Ottawa, Ottawa,
+Ontario, Canada, K1N 6N5
+cdrummon@site.uottawa.ca
+Robert C. Holte
+School of Information Technology
+and Engineering
+University of Ottawa, Ottawa,
+Ontario, Canada, K1N 6N5
+holte@site.uottawa.ca
+
+
+ABSTRACT
+This paper proposes an alternative to ROC representation,
+in which the expected cost of a classi er is represented ex-
+plicitly. This expected cost representation maintains many
+of the advantagesof R OCrepresen tation,but is easier to
+understand. It allows the experimenter to immediately see
+the range of costs and class frequencies where a particu-
+lar classi er is the best and quantitatively how much better
+it is than other classi ers. This paper demonstrates there
+is a point/line duality between the two represen tations.A
+point in ROC space representing a classi er becomes a line
+segment spanning the full range of costs and class frequen-
+cies. This duality produces equivalent operations in the two
+spaces, allowing most techniques used in ROC analysis to
+be readily reproduced in the cost space.
+
+Categories and Subject Descriptors
+I.2.6 Arti cial Intelligence]: Learning|Concept learn-
+ing,Induction
+
+General Terms
+R OC Analysis, Cost Sensitive Learning
+
+1. INTRODUCTION
+Provost and Fawcett 9]have argued persuasively that ac-
+curacy is often not an appropriate measure of classi er per-
+formance. This is certainly apparent in classi cation prob-
+lemswith heavilyimbalancedclasses (oneclass occurs much
+more often than the other). It is also apparent when there
+are asymmetricmisclassi cation costs (the cost of misclassi-
+fyinganexamplefromoneclass ismuchlarger thanthecost
+ofmisclassifying anexamplefromtheotherclass). Classim-
+balanceandasymmetricmisclassi cationcostsarerelatedto
+one another. One way to correct for imbalance is to train a
+cost sensitiv e classi er with the misclassi cation cost of the
+minority class greater than that of the majority class, and
+one way to make an algorithm cost sensitive is to intention-
+ally imbalance the training set. As an alternative to accu-
+racy,ProvostandFawcettadv ocatetheuseofROCanalysis,
+whic h measures classi er performance over the full range of
+possible costs and class frequencies. They also proposed the
+convex hull as away to determine the best classi erfor a
+particular combination of costs and class frequencies.
+Decisiontheorycanbeusedtoselectthebestclassi erifthe
+costs andclass frequenciesare knownaheadof time. Butof-
+ten they are not xed until the time of application making
+R OCanalysis important. The relationship between deci-
+sion theory and ROC analysis is discussed in Lusted's book
+7]. In Fawcett and Provost's 4, 5] work on cellular fraud
+detection, they noted that the cost and amount of fraud
+varies over time and location. This was one motivation for
+their research into R OC analysis.Our own experience with
+im balanced classes 6] dealt with the detection of oil spills
+and the number of non-spills far outweighed the number of
+spills. Not only were the classes imbalanced, the distribu-
+tion of spills versus non-spills in our experimental batches
+was unlik ely to be the one arising in practice.We also felt
+that the trade-o between detecting spills and false alarms
+wasbetterlefttoeachenduserof thesystem. These consid-
+erations led to our adoption of ROC analysis. Asymmetric
+misclassi cation costs and highly imbalanced classes often
+arise in Knowledge Discovery and Data Mining (KDD) and
+Machine Learning (ML) and therefore ROC analysis is a
+valuable tool in these communities.
+In this paper we focus on the use of ROC analysis for the
+visual analysis of results during experimentation, and the
+interactive KDD process, and the presentation of those re-
+sults inreports. For thispurposedespiteall of thestrengths
+of the ROC representation, we found the graphs produced
+werenot alw ayseasy to interpret. Although it is easy to
+see which curve is betterin gure 1, it is m uch harder to
+determine by how m uch.It is also not immediately clear
+for what costs and class distributions classi er A is better
+than classi er B. Nor is it easy to \read-o " the expected
+cost of a classi er for a xed cost and class distribution. In
+gure2onecurveisbetterthantheotherforsomecostsand
+class distributions, but the range is not determined by the
+crossover point of the curves so is not immediately obvious.
+This information can be extracted as it is implicit in the
+graph, but our alternative represen tation makes it explicit.
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+198
+
+A
+B
+
+
+
+
+Figure 1: Comparing Performance
+
+
+
+
+Figure 2: Performance Ranges
+
+
+2. TWO DUAL REPRESENTATIONS
+In this section we brie y review ROC analysis and how
+it is used in evaluating or comparing a classi er's perfor-
+mance. We then introduce our alternative dual represen-
+tation, which maintains these advantages but by making
+explicit the expected cost is much easier to understand. In
+both representations, the analysis is restricted to two class
+problems which are referred to as the positive and negative
+class.
+2.1 The ROC Representation
+Provost and Fawcett 9] are largely responsible for introduc-
+ing ROC analysis to the KDD and ML communities. It had
+been used extensively in signal detection, where it earned
+its name \Receiver Operating Characteristics" abbreviated
+to ROC. Swets 12] showed that it had a much broader ap-
+plicability, by demonstrating its advantages in evaluating
+diagnostic systems. In ROC analysis instead of just a single
+value of accuracy, a pair of values is recorded for di erent
+costs and class frequencies. In signal detection these were
+called the hit rate and false alarm rate. In the KDD and
+ML communities they are called the true positive rate (the
+fraction of positives correctly classi ed) and false positive
+rate (the fraction of negatives misclassi ed). This pair of
+values produces a point in ROC space: the false positive
+rate being the x-coordinate, the true positive rate being the
+y-coordinate.
+Some classi ers have parameters for which di erent settings
+producedi erentROCpoints. Forexample, aclassi er that
+produces probabilities of an example being in each class,
+suchasaNaiveBayesclassi er, canhaveathresholdparam-
+eter biasing the nal class selection 3, 8]. Plotting all the
+ROC points that can be produced by varying these param-
+eters produces an ROC curve for the classi er. Typically
+this is a discrete set of points, including (0,0) and (1,1),
+which are connected by line segments. If such a parame-
+ter does not exist, algorithms such as decision trees can be
+modi ed to include costs to produce the di erent points 2].
+Alternatively the class frequencies in the training set can be
+changed by under or over sampling to simulate a change in
+class priors or misclassi cation costs 3].
+One point in an ROC diagram dominates another if it is
+above and to the left, i.e. has a higher true positive rate
+(
+T P
+) and a lower false positive rate (
+F P
+). If point A dom-
+inates point B, A it will have a lower expected cost than B
+for all possible costratios andclass distributions. Onesetof
+points A is dominatedbyanother B when each point in Ais
+dominated by some point B and no point in B is dominated
+by a point in A. The normal assumption in ROC analy-
+sis is that these points are samples of a continuous curve
+and therefore normal curve tting techniques can be used.
+In Swets's work 12] smooth curves are tted to typically
+a small number of points, say four or ve. Alternatively a
+non-parametric approach is to use a piece-wise linear func-
+tion, joining adjacent points bystraight lines. Dominanceis
+then de ned for all points on the curve.
+Traditional ROCanalysishasasitsprimaryfocusdetermin-
+ing which diagnostic systemor classi er has thebest perfor-
+mance independent of cost or class frequency. But there is
+also an important secondary role of selecting the set of sys-
+tem parameters (or individual classi er) that gives the best
+performance for a particular cost or class frequency. This
+canbedonebymeansoftheupperconvexhullofthepoints,
+which has been shown to dominate all points under the hull
+9]. It has further been shown that dominance implies su-
+perior performance for a variety of commonly-used perfor-
+mancemeasures 10]. The dashedline in gure3 is a typical
+ROC convexhull. The slope of a segment of the convex hull
+connecting the two vertices (
+F P
+1
+T P
+1) and (F
+P
+2
+T P
+2) is
+given by equation 1.
+
+
+
+199
+
+0
+0.5
+1
+0
+0.5
+1
+
+
+
+
+False Positive Rate
+True
+Positive
+Rate
+
+
+
+
+2.4
+1.5
+
+
+
+2.2
+
+
+
+
+C
+A
+B
+
+
+
+
+Figure 3: Comparing Two ROC curves
+
+
+T P
+1 ;T
+P
+2
+F P
+1 ;F
+P
+2
+=
+p
+(;)
+C
+(+j;)
+p
+(+)
+C
+(;j+)
+(1)
+
+where
+p
+(
+a
+) is the probability of a given example being in
+class
+a
+, and
+C
+(
+a
+j
+b
+)isthecostincurredifanexampleinclass
+b
+is misclassi ed as being in class
+a
+. Equation 1 de nes the
+gradient of an iso-performance line 9]. Classi ers sharing a
+line have the same expected cost for the ratio of priors and
+misclassi cation costs given by the gradient.
+Even a single classi er can form an ROC curve. The solid
+line in gure 3 is produced by simply combining classi er B
+with the trivial classi ers: point (0,0) represents classifying
+all examples as negative point (1,1) represents classifying
+all points as positive. The slopes of the lines connecting
+classi er B to (0,0) and to (1,1) de nethe range of the ratio
+of priors and misclassi cation costs for which classi er B is
+potentially useful, its operating range. For probability-cost
+ratiosoutsidethisrange,classi erBwillbeoutperformedby
+atrivialclassi er. Aswiththesingleclassi er, theoperating
+range of anyvertexonan ROCconvexhullis de nedbythe
+slopes of the two line segments connected to it.
+Thus the ROC representation allows an experimenterto see
+quickly if one classi er dominates another. Using the con-
+vex hull, potentially optimal classi ers and their operating
+ranges can be identi ed.
+
+2.2 The Dual Representation
+One of the questions posed in the introduction is how to
+determinethe di erence inperformance of two ROC curves.
+For instance, in gure 3 the dashed curve is certainly better
+than the solid one. To measure how muchbetter, one might
+be tempted to take the Euclidean distance normal to the
+lowercurve. Butthiswouldbewrongontwocounts. Firstly,
+0
+0.5
+1
+0
+0.25
+0.5
+
+
+
+
+Probability Cost Function
+Normalised
+Expected
+Cost
+
+
+
+
+Figure 4: Comparing Misclassi cation Costs
+
+the di erence in expected cost is the weighted Manhattan
+distance between two classi ers, given by equation 2, not
+the Euclidean distance.
+
+
+E C
+1];E
+C
+2] = (T
+P
+1 ;T
+P
+2)p(+)C(;j+)
+| {z }
+w
++
+(2)
+
++ (
+F P
+1 ;F
+P
+2)p(;)C(+j;)
+| {z }
+w
+;
+
+Secondly,theperformancedi erenceshouldbemeasuredbe-
+tween the appropriate classi ers on each ROC curve. When
+using the convex hull these are the best classi ers for the
+particular cost and class frequency de ned by the weights
+w
++ and
+w
+; in equation 2. In gure 3 for a probability-cost
+ratio of say 2.1 the classi er marked A on the dashed curve
+should becomparedto theone markedB onthesolid curve.
+But if theratio was 2.3, it should be comparedto the trivial
+classi er marked C on the dashed curve at the origin. This
+is the classi er that always labels instances negative.
+To directly compare the performance of two classi ers we
+transform an ROC curve into a cost curve. Figure 4 shows
+the cost curves corresponding to the ROC curves in gure
+3. The x-axis in a cost curve is the probability-cost func-
+tionforpositiveexamples,
+P CF
+(+)=
+w
++=(w++w;)where
+w
++ and
+w
+; are the weights in equation 2. This is simply
+p
+(+), the probability of a positive example, when the costs
+are equal. The y-axis is expected cost normalised with re-
+spect to thecost incurred when everyexampleis incorrectly
+classi ed. Thedashedandsolidcostcurvesin gure4corre-
+spond to the dashed and solid ROC curves in gure 3. The
+horizontal line atop the solid cost curve corresponds to the
+classi er marked B. The end points of the line indicate the
+classi er's operating range (0
+:
+3
+P CF
+(+) 0
+:
+7), where it
+
+
+
+200
+
+0
+0.5
+1
+0
+0.5
+1
+
+
+
+
+False Positive Rate
+True
+Positive
+Rate
+A
+
+
+
+
+Figure 5: ROC Space Crossover
+
+outperforms the trivial classi ers. It is horizontal because
+F P
+= 1;
+T P
+for this classi er (see below). At the limit of
+its operating range this classi er's cost curve joins the cost
+curve for the majority classi er. Each line segment in the
+dashedcostcurvecorrespondstooneofthepoints(vertices)
+de ning the dashed ROC curve.
+The distance between cost curves for two classi ers directly
+indicates the performance di erence between them. The
+dashed classi er outperforms the solid one { has a lower
+or equal expected cost { for all values of
+P CF
+(+). The
+maximum di erence is about 20% (0.25 compared to 0.3),
+which occurs when
+P CF
+(+) is about 0
+:
+3 (or 0
+:
+7). Their
+performance di erence is negligible when
+P CF
+(+) is near
+0
+:
+5, less than 0
+:
+2 or greater than 0
+:
+8.
+It is certainly possible to get all this information from the
+ROCcurves, butitis nottrivial. Thegradients of lines inci-
+denttoapointmustbedeterminedtoestablishitsoperating
+range. To calculate the di erence in expected cost, an iso-
+performance line must be brought into contact with each
+convex hull to determine which points must be compared.
+To nd the actual costs the weighted Manhattan distance
+between them must be calculated. All this information is
+explicit in the alternative representation.
+The second question posed in the introduction was for what
+range of cost and class distribution is one classi er better
+than another. Suppose we have thetwo hulls inROC space,
+the dotted and dashed curves of gure 5. The solid lines in-
+dicate iso-performance lines. The line designated A touches
+the convex hull indicated by the dotted curve. A line with
+the same slope touching the other hull would be lower and
+to the right and therefore of higher expected cost. If we roll
+this line around the hulls until it touches both of them we
+nd points on each hull of equal expected cost, for a par-
+ticular cost or class frequency. Continuing to roll the line
+0
+0.5
+1
+0
+0.25
+0.5
+
+
+
+
+Probability Cost Function
+Normalised
+Expected
+Cost
+
+
+
+
+Figure 6: Cost Space Crossover
+
+showsthatthehullindicatedbythedashedlinebecomesthe
+better classi er. It is noteworthy that the crossover point
+of the two hulls says little about where one curve outper-
+forms the other. It only denotes where both curves have
+a classi cation performance that is the same but subopti-
+mal for any costs or class frequencies. Figure 6 shows the
+cost graph that is the dual of the ROC graph of gure 5.
+Here it can immediately be seen that the dotted line has a
+lower expected cost and therefore outperforms the dashed
+line to the left of the crossover point and vice versa. This
+crossover point when converted to ROC space becomes the
+line touching both hulls shown in gure 5.
+
+
+2.2.1 Constructing the Dual Representation
+To construct the alternative representation we use the nor-
+malised expected cost. The expected cost of a classi er is
+given by equation 3.
+
+
+
+E C
+] =(1;
+T P
+)
+p
+(+)
+C
+(;j+)+
+F P p
+(;)
+C
+(+j;) (3)
+
+The worst possible classi er is one that labels all instances
+incorrectly so
+T P
+= 0 and
+F P
+= 1 and its expected cost is
+given by equation 4.
+
+
+
+E C
+] =
+p
+(+)
+C
+(;j+)+
+p
+(;)
+C
+(+j;)
+(4)
+
+The normalised expected cost is then produced by dividing
+therighthandsideofequation3bythatofequation4giving
+equation 5.
+
+
+
+201
+
+NE C
+] =
+(1;
+T P
+)
+p
+(+)
+C
+(;j+)+
+F P p
+(;)
+C
+(+j;)
+p
+(+)
+C
+(;j+)+
+p
+(;)
+C
+(+j;)
+(5)
+
+Then replacing the normalised probability-cost terms with
+the probability-cost function
+P CF
+(
+a
+) as in equation 6 re-
+sults in equation 7.
+
+
+P CF
+(
+a
+)=
+p
+(
+a
+)
+C
+(
+a
+j
+a
+)
+p
+(+)
+C
+(;j+)+
+p
+(;)
+C
+(+j;)
+(6)
+
+
+
+NE C
+] =(1;
+T P
+)
+P CF
+(+)+
+F P
+P CF
+(;) (7)
+
+Because
+P CF
+(+)+
+P CF
+(;)=1, wecanrewrite equation7
+to produceequation8 which is thestraight line representing
+the classi er.
+
+
+NE C
+] =(1;
+T P
+;
+F P
+)
+P CF
+(+)+
+F P
+(8)
+
+A point (
+T P F P
+) representing a classi er in ROC space is
+converted by equation 8 into a line in cost space. A line
+in ROC space is converted to a point in cost space, using
+equation 9, where
+S
+is the slope and
+T P
+o
+the intersection
+with the true positive rate axis. Both these operations are
+invertible. So there is also a mapping from points (lines) in
+cost space to lines (points) in ROC space. Therefore there
+is a bidirectional point/line duality between the ROC and
+cost representations.
+
+
+P CF
+(+) =
+1
+1+
+S
+(9)
+
+NE C
+] = (1;
+T P
+o
+)
+P CF
+(+)
+
+Figure 7 shows lines representing four extreme classi ers in
+the cost space. At the top is the worst classi er, it is always
+wrong and has a constant normalised expected cost of 1.
+At the bottom is the best classi er, it is always right and
+has a constant cost of 0. The classi er that always chooses
+negative has zero cost when
+P CF
+(+) = 0 and a cost of 1
+when
+P CF
+(+)= 1. The classi er that always chooses pos-
+itive has cost of 1 when
+P CF
+(+)=0 and a zero cost when
+P CF
+(+)=1. Within this framework it is apparent that we
+should neveruse a classi er outside the shadedregion of g-
+ure 7 as a lower expected cost can be achieved by using the
+majority classi er which chooses one or other of the trivial
+classi ers depending on
+P CF
+(+).
+At the limits of the normal range of the probability-cost
+function equation 8 simpli es to equation 10. To plot a
+classi er onthecostgraph, we setthepointonthelefthand
+side y-axisto FPandthepointontherighthandsidey-axis
+to (1;
+T P
+) and connect them by a straight line. Figure 8
+shows a classi er with
+F P
+= 0
+:
+09 and
+T P
+=0
+:
+36. The line
+represents the expected cost of the classi er over the full
+range of possible costs and class frequencies.
+0
+0.5
+1
+0
+0.5
+1
+
+
+
+
+Normalised
+Expected
+Cost
+
+
+
+
+Probability Cost Function
+Always Pick Positive
+
+Always Right
+Always Wrong
+
+
+Always Pick Negative
+
+
+
+
+Figure 7: Extreme Classi ers
+
+
+
+
+0
+0.5
+1
+0
+0.5
+1
+
+
+
+
+Probability Cost Function
+False
+Positive
+Rate
+
+
+
+
+1
+-
+True
+Positive
+Rate
+
+
+
+
+Figure 8: A Single Classi er
+
+
+
+NE C
+] =
+(
+F P
+when
+P CF
+(+)=0
+(1;
+T P
+) when
+P CF
+(+)=1
+(10)
+
+This procedure can be repeated for a set of classi ers, as
+shown in gure 9. We can now compare the di erence in
+expected cost between any two classi ers. There is no need
+for the calculations required in the ROC space, we can di-
+rectly measure the vertical height di erence at some par-
+ticular probability-cost value. Dominance is explicit in the
+
+
+
+202
+
+0
+0.5
+1
+0
+0.5
+1
+
+
+
+
+Normalised
+Expected
+Cost
+
+
+
+
+Probability Cost Function
+
+Figure 9: A Set of Classi ers
+
+cost space. If one classi er is lower in expected cost across
+the whole range of the probability-cost function, it domi-
+nates the other. Each classi er delimits a half-space. The
+intersection of the half-spaces of the set of classi ers gives
+the lower envelope indicated by the dashed line in gure 9.
+This e ectively chooses the classi er that has the minimum
+cost for a particular operating range. This is equivalent to
+the upper convex hull in the ROC space. This equivalence
+arises from the duality of the two representations.
+
+
+2.2.2 Representing Other Performance Criteria
+Inthissectionwelookathowtheotherperformancecriteria
+discussed byProvost and Fawcett 10] are dealt with in cost
+space. They are as follows: error rate, area underthe curve,
+Neyman-Pearson criterion and workforce utilisation.
+As error rate is produced by setting all the costs in equa-
+tion 5 to one, the cost graph is easily turned into an ac-
+curacy graph. The vertical distance between curves would
+then represent the di erence in accuracy. There is no di-
+rect mapping of area under the curve in ROC space to cost
+space. But we can measure area under the curve in cost
+space and it has an intuitive meaning. Let us assume we
+do not know the probability-cost value used in practice, but
+we will use the appropriate classi er on the lower envelope
+when it is known. The area under the curve is the expected
+cost, assuming a uniform distribution
+p
+(
+x
+) where
+x
+is the
+probability-cost value (the x-axis in the cost graph). Indeed
+if the probability distribution
+p
+(
+x
+) is known the expected
+cost can be determined using equation 11. This also allows
+a comparison of two classi ers, or lower envelopes, where
+one does not strictly dominate the other. The di erence in
+area under the two curves gives the expected advantage of
+using one classi er over another.
+0
+0.5
+1
+0
+0.25
+0.5
+
+
+
+
+Normalised
+Expected
+Cost
+
+
+
+
+Probability Cost Function
+
+Figure 10: The Weighted Sum of Two Classi ers
+
+
+
+T EC
+=
+Z
+1
+
+o
+NE C
+(
+x
+)]
+p
+(
+x
+)
+dx
+(11)
+
+A point on an edge of the ROC convex hull is not one of
+the original classi ers, but it can be realised by combining
+the two classi ers incident to it in a probabilistic way 10].
+The probabilistic weighting is determined by the distance
+of the point to each classi er. As the cost graph is a dual
+representation to the ROC graph, there are also duals to
+operations, such as averaging two classi ers. In the cost
+graph, the combined classi er is a line, shown as the dotted
+line in gure 10. This is just the weighted sum of the two
+classi ers onthelower envelope, indicatedbythesolid lines,
+that intersect at a given vertex.
+This becomes important when considering criteria such as
+Neyman-Pearson and workforce utilisation. The Neyman-
+Pearson criterion comes from statistical hypothesis testing
+andminimisesthe probabilityof a typetwo error for a max-
+imum allowable probability of a type one error. For our
+purposes, this determines the maximum false positive rate
+and the aim is then to nd the classi er with the largest
+true positive rate. This can be readily found on an ROC
+hull by drawing a vertical line for the particular value of
+F P
+, as shown by the dashed line in gure 11. The maxi-
+mum value of
+T P
+(the minimum probability of a type two
+error) is where the line intersects the hull.
+The procedure is very similar in the cost space. Remem-
+bering that the intersection of a classi er with the y-axis
+gives the false positive rate, then a point can be placed on
+the axis representing the criterion. This is marked FP in
+gure 12. Immediately on either side of this point are the
+equivalentpointsoftwooftheclassi ers formingsidesofthe
+lower envelope. Connecting the new point to where the two
+
+
+
+203
+
+0
+0.5
+1
+0
+0.5
+1
+
+
+
+
+True
+Positive
+Rate
+
+
+
+
+FP
+False Positive Rate
+
+Figure 11: ROC Curve: Neyman-Pearson Criterion
+
+
+
+
+0
+0.5
+1
+0
+0.5
+1
+
+
+
+
+FP
+
+
+
+
+Probability Cost Function
+Normalised
+Expected
+Cost
+
+
+
+
+Figure 12: Cost Curve: Neyman-Pearson Criterion
+
+classi ers intersectautomaticallygivestheclassi ermeeting
+the Neyman-Pearson criterion.
+Unfortunately, although the workforce utilisation criterion
+can be dealt with in cost space, it does not have the simple
+visual impact apparent in ROC space. The workforce util-
+isation criterion is based on the idea that a workforce can
+handle a xed number of cases, factor
+C
+in equation 12. To
+keep the workforce maximally busy we want to select the
+best
+C
+cases, achieved bymaximising the true positive rate.
+This is realised bythe equality condition of equation 12 and
+0
+0.5
+1
+0
+0.5
+1
+
+
+
+
+True
+Positive
+Rate
+
+
+B
+
+
+
+
+A
+
+
+
+
+False Positive Rate
+C
+
+
+
+
+Figure 13: ROC Curve: Workforce Utilisation
+
+is the line given by equation 13, such as the dashed line in
+gure13. Thislinewillbetransformedtoapointinthecost
+graph using equation 9 and is shown as the small circle on
+the left hand side of gure 14. The line's slope is negative,
+resulting in a
+P CF
+(+) outside the normal interval of zero
+to one. We might consider it a virtual point, but strictly
+there is no constraint
+P CF
+(
+a
+) 0 and so this represents a
+valid point on the line representing the classi er.
+
+
+T P
+P
++
+F P
+N
+C
+(12)
+
+
+
+T P
+=;
+N
+
+P
+F P
++
+C
+
+P
+(13)
+
+The Neyman-Pearson criterion can be considered a special
+case of workforce utilisation, when the constraint only in-
+volves false positives. So for workforce utilisation a similar
+procedure to theone discussed abovecould be usedfor nd-
+ing the appropriate classi er. All that would be required
+is to extend the original classi ers out until they have the
+same
+P CF
+(+) value as the virtual point. Unfortunately
+this point may be arbitrarily far outside the normal range,
+which militates against easy visualisation. So instead below
+we give a simple algorithmic solution.
+To solve the problem algorithmically in ROC space, a walk
+along the sides A, B, C of the convex hull, shown in gure
+13, would be used to nd the intersection point with the
+constraint. At each step, the edge is extended into a line
+and its intersection point with the constraint is tested to
+see if is between the two vertices, representing classi ers,
+that de ne the side. Equivalently in cost space we walk a
+line connected to the virtual point along the vertices A, B,
+
+
+
+204
+
+-0.75
+-0.5
+0
+0.5
+1
+0
+0.25
+0.5
+
+
+
+
+A
+B
+C
+
+
+
+
+Normalised
+Expected
+Cost
+
+
+
+
+Probability Cost Function
+
+Figure 14: Cost Curve: Workforce Utilisation
+
+C of the lower envelope, shown in gure 14. At each step,
+the slope of the line is tested to see if is between the two
+lines, representing classi ers, sharing the same vertex. In
+both spaces the appropriate classi er is found when the test
+is successful. In cost space, virtual points can be avoided
+if we rearrange the terms of equation 13 and substitute for
+the gradient of equation 8 resulting in equation 14. This
+can be solved for each point on the lower envelope. So a
+walk along vertices A, B, C of the lower envelope would
+producetheclassi ers representedbythesolidlinesin gure
+14, spanning just the normal probability-cost values.
+
+
+NE C
+] = 1;
+C
+
+P
++(
+N
+
+P
+;1)
+F P
+P CF
+(+)+
+F P
+(14)
+
+In this section we have shown that the cost graph, can rep-
+resent most of the alternative metrics discussed by Provost
+and Fawcett 10]. This is not surprising given the duality
+between the two spaces. But the di erent representations
+have di erent intuitive appeal. Certainly for the direct rep-
+resentation of costs, the cost graph seems the most intu-
+itive. However we have also seen that for some metrics like
+the workforce utilisation criterion the ROC graph provides
+better visualisation.
+
+2.2.3 Averaging Multiple Curves
+Figure 15 shows two ROC curves, in fact convex hulls, rep-
+resented bythe dashed lines. If these are the result of train-
+ing a classi er on di erent random samples, or some other
+cause of random uctuation in the performance of a single
+classi er, their average can be used as an estimate of the
+classi er's expected performance. There is no universally
+agreed-upon method of averaging ROC curves. Swets and
+Pickett 13] suggest two methods, pooling and \averaging",
+and Provost et al. 11] propose an alternative averaging
+0
+0.5
+1
+0
+0.5
+1
+
+
+
+
+False Positive Rate
+True
+Positive
+Rate
+A
+
+
+
+
+Figure 15: Average ROC Curves
+
+
+
+
+0
+0.5
+1
+0
+0.25
+0.5
+
+
+
+
+Probability Cost Function
+Normalised
+Expected
+Cost
+
+
+
+
+Figure 16: Average Cost Curves
+
+method.
+TheProvost etal. methodis toregard
+y
+, herethetrueposi-
+tive rate, as a function
+x
+, here the false positive rate, and to
+compute the average
+y
+value for each
+x
+value. This average
+is shown as a solid line in gure 15, with each vertex corre-
+spondingto avertexfromoneor otherof thedashedcurves.
+Figure 16 shows the equivalent two cost curves, lower en-
+velopes, represented by the dashed lines. The solid line is
+the result of the same averaging procedure but
+y
+and
+x
+are
+now the cost space axes. If the average curve in ROC space
+
+
+
+205
+
+is transformed to cost space the dotted line results. Simi-
+larly, thedottedlinein gure15istheresultoftransforming
+the average cost curve into ROC space. The curves are not
+the same.
+The reason these averaging methods do not produce the
+same result is that they di er in how points on one curve
+are put into correspondence with points on the other curve.
+FortheROCcurvespointscorrespondif theyhavethesame
+F P
+value. Forthecostcurvespointscorrespondiftheyhave
+thesame
+P CF
+(+)value, i.e. when
+P CF
+(+)is inboththeir
+operating ranges. It is illuminating to look at the dotted
+line in the top right hand corner of gure 15. The vertex
+labelled \A" is the result of averaging a non-trivial classi er
+ontheuppercurvewithatrivialclassi eronthelowercurve.
+This average takes into account the operating ranges of the
+classi ers andissigni cantly di erentfromasimpleaverage
+of the curves.
+The cost graph average has a very clear meaning, it is the
+average normalised expected cost assuming that the clas-
+si er used for a given
+P CF
+(+) value is the best available
+one. Notably the Provost et al. ROC averaging method,
+indicated by the dotted curve in gure 16, gives higher nor-
+malised expected costs for many
+P CF
+(+) values. This is
+due to the average including at least some suboptimal clas-
+si ers. Pooling, or other methods of averaging ROC curves
+(e.g. choosing classi ers based on
+T P
+), will all produce dif-
+ferent results, and all give higher normalised expected costs
+compared to the cost graph averaging method.
+When estimating the expected performance of a classi er
+the average should be based on the selection procedure i.e.
+how the curve will ultimately be used to select an individ-
+ual classi er. So far, we have compared curves without ex-
+plicitly mentioning a selection procedure, but implicitly we
+are assuming the selection procedure inherent in using the
+lower envelope of the cost graph and the ROC convex hull:
+the point selected is the one that is optimal for the given
+P CF
+(+) value. In this case the average based on the nor-
+malised expected cost is appropriate. This does not mean
+however that other averages are incorrect. Each is based
+on a di erent selection procedure which will be appropriate
+for di erent performance criteria. Provost et al.'s averaging
+method is appropriate when the performance criterion calls
+for classi er selection based on
+F P
+, such as the Neyman-
+Pearson criterion.
+
+2.3 A Suboptimal Selection Procedure
+We have just seen that di erent averages of two curves re-
+sult from di erent selection procedures, due to the di erent
+waysofdecidingwhichpointononecurvewillcorrespondto
+which point on another curve. A selection procedure is also
+necessary to compare two curves quantitatively, since by its
+very nature quantitative comparison involves summing the
+di erence in performance of corresponding points.
+The selection method that is most commonly used in com-
+paringlearningalgorithmsisparameter-based. Forexample,
+suppose one wishes to compare two learning algorithms and
+thatanROCcurveisgeneratedforeachalgorithmbyunder-
+samplingoroversamplingtocreatevariousclassratiosinthe
+training set. Typically, one would compare the performance
+0
+0.5
+1
+0
+0.5
+1
+
+
+
+
+False Positive Rate
+True
+Positive
+Rate
+
+
+
+
+60
+11
+5.1
+1.8
+0.82
+0.35
+0.2
+0.089
+0.017
+
+
+
+
+A
+B
+
+
+
+
+Figure 17: ROC for Sonar Data
+
+of the classi ers produced on the same training sets: this
+is choosing which points on each curve correspond based on
+the underlying parameter that generated them rather than
+on their operating range. It mighthappenthat algorithm A
+trained with a 5:1 ratio produces a classi er with the same
+operating range as the classi er produced by algorithm B
+with a 10:1 ratio. This could only be determined bylooking
+at the convex hull or the lower envelope in their respective
+spaces.
+The factthattheoptimalclassi er for a particular
+P CF
+(+)
+value is not necessarily the one produced by a training set
+withthesame
+P CF
+(+)characteristicsisillustratedin gure
+17, which shows ROCcurves for thesonar data set from the
+UCI collection 1]. The points represented by circles, and
+connected by solid lines, were generated using C4.5 (release
+7 using information gain) modi ed to account for costs (by
+altering the values inside C4.5 representing priors). Each
+point is marked with the probability-cost ratio used to pro-
+duce it. If the probability-cost ratio is 11 at the time of
+application, for example, parameter-based selection would
+select classi er A, since it was produced by a training set
+with a 11:1 ratio.
+Using the convex hull selection method, the dashed line in
+gure17, classi ers would beselected according to theslope
+of its sides. This would result intheexpectedcost shown by
+the lower envelope, the dashed line in gure 18. If instead,
+the classi ers are chosen according to the probability-cost
+ratio input to the classi er, the solid line is produced. A
+probability-cost ratio
+R
+is converted to a
+P CF
+(+) value
+using the
+P CF
+(+) = 1
+=
+(1 +
+R
+). In cost space, classi er
+A will be chosen when
+P CF
+(+) = 1
+=
+(1 + 11) and classi-
+er B when
+P CF
+(+) = 1
+=
+(1+5
+:
+1), as shown in gure 18.
+Changing from classi er A to classi er B we assume occurs
+at the mid-point of these two probability-cost values. The
+area between this curveand the lower envelope is a measure
+
+
+
+206
+
+0
+0.5
+1
+0
+0.25
+0.5
+
+
+
+
+6.1
+A
+B
+
+
+
+
+1
+12
+1
+
+Probability Cost Function
+Normalised
+Expected
+Cost
+
+
+
+
+Figure 18: Cost for Sonar Data
+
+of the additional cost of using this selection procedure over
+the optimal one. The large di erence at the left hand and
+right hand sides is due to not using the majority classi er
+at the appropriate time. This shows the clear disadvantage
+of using a classi er outside its operating range.
+
+3. LIMITATIONS AND FUTURE WORK
+One limitation of this work, which is common to that of
+ROCanalysis, is thatwe havenot investigated thesituation
+of more than two classes. Although the ideas should read-
+ily extend to three or more classes, the main advantage of
+this approach is it ease of human understandability. Higher
+dimensional functions are notoriously di cult to visualise
+and the number of dimensions increases quadratically with
+the number of classes. Due to the duality between the two
+representations there might be little merit in using one over
+the other inthis situation. However, if the high dimensional
+space can be projected into a two dimensional space, the
+improved understandability would again be an advantage.
+Another limitation is that we have not investigated other
+commonlyusedmetricsforevaluatingclassi er performance
+such as lift. One interesting avenue of future research is
+whether or not there are alternative dualities based on such
+metrics.
+
+4. CONCLUSIONS
+This paper has demonstrated an alternative to ROC analy-
+sis,whichrepresentsthecostexplicitly. Ithasshownthereis
+a point/line duality between the two representations. This
+allows thecostrepresentation tomaintainmanyof theROC
+representation's advantages, while making notions such as
+operating range visually clearer. It also allows the easy cal-
+culation of the quantitative di erence between classi ers.
+The fact that the two representations are dual representa-
+tions makes it unnecessary to choose one over the other, as
+we have shown it is easy to switch between the two.
+5. ACKNOWLEDGEMENTS
+We would like to thank the reviewers for their valuable sug-
+gestions andtheNaturalSciencesandEngineeringResearch
+Council of Canada for nancial support.
+
+6. REFERENCES
+1] C. L. Blake and C. J. Merz. UCI repository of
+machine learning databases, University of California,
+Irvine, CA
+.
+www.ics.uci.edu/ mlearn/MLRepository.html, 1998.
+2] L. Breiman, J. H. Friedman, R. A. Olshen, and C. J.
+Stone. Classi cation and Regression Trees.
+Wadsworth, Belmont, CA, 1984.
+3] P. Domingos. Metacost: A general method for making
+classi ers cost-sensitive. In Proceedings of the Fifth
+International Conference on Knowledge Discovery and
+Data Mining, pages 155{164, Menlo Park, CA, 1999.
+AAAI Press.
+4] T. Fawcett and F. Provost. Combining data mining
+and machine learning for e ective user pro ling. In
+Proceedings of the Second International Conference on
+Knowledge Discovery and Data Mining, pages 8{13,
+Menlo Park, CA, 1996. AAAI Press.
+5] T. Fawcett and F. Provost. Adaptive fraud detection.
+Journal of Data Mining and Knowledge Discovery,
+1:195{215, 1997.
+6] M. Kubat, R. C. Holte, and S. Matwin. Machine
+learning for the detection of oil spills in satellite radar
+images. Machine Learning, 30:195{215, 1998.
+7] L. B. Lusted. Introduction to Medical Decision
+Making. Charles C. Thomas, Spring led, Illinois, 1968.
+8] M. Pazzani, C. Merz, P. Murphy, K. Ali, T. Hume,
+and C. Brunk. Reducing misclassi cation costs. In
+Proceedings of the Eleventh International Conference
+on Machine Learning, pages 217{225, San Francisco,
+1997. Morgan Kaufmann.
+9] F. Provost and T. Fawcett. Analysis and visualization
+of classi er performance: Comparison under imprecise
+class and cost distributions. In Proceedings of the
+Third International Conference on Knowledge
+Discovery and Data Mining, pages 43{48, Menlo Park,
+CA, 1997. AAAI Press.
+10] F. Provost and T. Fawcett. Robust classi cation
+systems for imprecise environments. In Proceedings of
+the Fifteenth National Conference on Arti cial
+Intelligence, pages 706{713, Menlo Park, CA, 1998.
+AAAI Press.
+11] F. Provost, T. Fawcett, and R. Kohavi. The case
+against accuracy estimation for comparing induction
+algorithms. In Proceedings of the Fifteenth
+International Conference on Machine Learning, pages
+43{48, San Francisco, 1998. Morgan Kaufmann.
+12] J. A. Swets. Measuring the accuracy of diagnostic
+systems. Science, 240:1285{1293, 1988.
+13] J. A. Swets and R. M. Pickett. Evaluation of
+diagnostic systems : methods from signal detection
+theory. Academic Press, New York, 1982.
+
+
+
+207
+

@@ -1,0 +1,383 @@
+WAPS, a Data Mining Support Environment
+for the Planning of
+Warranty
+and Goodwill Costs in the Automobile Industry
+
+E. Hotz and G.Nakhaeizadeh
+DaimlerChrysler
+AG
+Research & Technology
+3
+P.O.Box 2360,89013
+Ulm
+49-0731-5052860
+
+{edgar.hotz,rheza.nakhaeizadeh)Qdaimlerchlysler.com
+
+
+ABSTRACT
+WAPS (WArranty Planning System) is a Data Mining support
+environment which is developed within a cooperation between
+DaimlerChrysler Research& Technology, Ulm andthe Salesand
+ServicesDirection, Stuttgart.DataMining modelling is performed
+in WAPS by using an innovative approachbasedon regression
+analysistaking into accountthe structural changeof warranty and
+goodwill costs data. In this paper, we describe the different
+developmentphasesof WAPS.
+KEYWORDS
+DataMining, regressionanalysis,structuralchange
+
+1. IMPORTANCE
+OF WARRANTY
+AND
+GOODWILL
+COST PREDICTION
+The warranty planning in the automobileindustry is characterized
+by severalby problems:
+the needto calculateplanning figures for cashreserveswithin
+the balance causedby legal or voluntary obIigations in the
+contextof warranty andgoodwill
+a growing number of actually manufacturedvehicles and a
+growing number of production plants all over the world,
+resulting into a more complex and mulitlayered production
+structure
+a different warranty and goodwill policy for different sales
+markets.
+The systemWAPS, that is the result of a joint project between
+DaimlerChrysler Research & Technology and the Sales and
+ServicesDirection, should masterthe businessneedsdescribed
+above.It coversthe warranty cost forecastfor nine passengercar
+serieswhich areactually under production andfour passengercar
+serieswhose production has run out. However, thesefour series
+still causewarranty and goodwill costs.To have a picture about
+the complexity of theproblem,it should bementionedthat in each
+planning period (3 times for each budget year) WAPS delivers
+
+
+Permission to make digital or hard copies of all or part of this work fol
+personal or classroom use is granted without fee provided that copies
+are not made or distributed Ibr profit or commercial advantage and that
+copies hear this notice and the full citation on the lirst page. To copy
+otherwise, to republish, to post on scrvcrs or to redistribute to lists,
+requires prior specific permission and/or a fee.
+KDD-!W San Diego CA USA
+Copyright ACM 1999 l-58113-l43-7/99/08...$5.00
+B. Petzsche and H. Spiegelberger
+DaimlerChtysler
+AG
+Sales and Services Direction, Stuttgart
+70546 Stuttgart
+49-071 l-l 722272
+
+(bernd.petzsche,hans.spiegelberger}@daimlerchrysler.com
+
+
+prediction costsfor totally 520 separatesegmentscausedby the
+following factors:
+
+l
+13 passengercar series(5 seriesfor the S-Class,2 for the E-
+Class,4 for the C-Class, 1 for the A-Class and 1 for the M-
+Class
+l
+5 vehicle body versions (limousine, station wagon, coupe,
+cabriolet,roadster)
+l
+2 typesof engine(petrol andDiesel engine)
+l
+4 sales markets for the series (Germany, Europe, USA,
+Restof World)
+
+Up to now the warrantycostprediction hasbeenrealizedby using
+a conventional planning methodbasedon the amountof warranty
+andgoodwill costsobservedin the last budgetyear.This amount
+is modified by information available aboutthe expectedinflation,
+aboutthe quality index of the vehicles andaboutthe development
+of the salesfigures for the different vehicle series.Someof this
+information is rather qualitative than quantitative requiring the
+additional expertknowledgeto estimatethe effectson the amount
+of the budget. This is a complicatedprocedurethat takesabout
+four weeks for each planning period and requires involving
+different expertsfrom severaldepartments.
+Regardingthe fact that an enormousdatastock storedabout the
+vehicles and their behaviour in the context of warranty and
+goodwill costsis available,the questioncomingup waswhetherit
+is possible to use Data Mining technology and construct an
+automaticprediction tool basedonly on historical datawhich are
+available for the warranty andgoodwill costs.This has led to the
+systemWAPSthat will bedescribedin the next sections.
+After some discussion with the end users, it was decided to
+implement a systemthat, in contrastto the traditional approach,
+should use as input only the historical data on warranty costs.
+Furthermore,the systemshouldhavethe following properties:
+
+l
+it shouldreducetheplanning time
+l
+standardizationof the planning processfor eachvehicle series
+l
+high scale of automation for the warranty and goodwill
+planning process
+l
+providing information about the general quality of vehicle
+series,their body versions and their motor variants in the
+different salesmarketsaroundthe world
+
+
+
+
+417
+
+2. STRUCTURE
+OF
+THE
+AVAILABLE
+DATA
+In this section we discuss the structure and source of the data
+relevant for the analysisand prediction of warranty and goodwill
+costs.The available historical dataabout warranty costsis a part
+of the databaseQUIS (Quality and Information System)that can
+be consideredasakind of datawarehousecontaining information
+on producedvehicles andtheir damages.The fundamentof QUIS
+is a normalized databasemodel including more than fifty tables
+with morethan 400fields. Themostextensivetable containsmore
+than 110 million rows. Figure 1 describesthe processenviron-
+mentof datagenerationanddatacollection for QUIS.
+
+production plant
+n
+repairworkshops
+lF3
+vehicle dam
+technical data
+1
+damageparts
+
+
+f-l
+l
+Parts
+
+n
+testing
+WCllTanty
+andgood-
+will claims
+
+commercialdata
+
+
+
+Warrant)
+data
+rclaims
+claim processing
+
+
+Figure 1. process environment of data generation for QUIS
+
+
+3. DATA PREPROCESSING
+TheDataMining task neededto implementWAFS is aprediction
+task. To implement the appropriate prediction model, it was
+necessaryto selectin a first stepthe right input attributes.Thereis
+ahugenumberof possiblevariableswhich could beconsideredas
+appropriate attributes for the Data Mining model. The classical
+statistical approacheslike correlation analysis or factor analysis
+were not applicable in a reasonable time. To reduce the
+complexity of the searchspace,we had extensivediscussionswith
+the end users resulting in choosing the so-called warrun@ and
+goodwill rate (WG-Rate)asa basefor model attributes.The WG-
+Rate describesthe averagecost per vehicle sold within a certain
+salesmarket.This rate is generally calculated for eachmonth of
+production andcomprisesall realizedcostscausedby the repair or
+replacement of failed or damagedvehicle parts. Each rate is
+related to a certain operating time of the vehicle. The operating
+time is divided into specific operating intervals. The used
+intervals in WAPShavethe lengths of 3,6,9, 12,15 etc.months.
+Figure 2 gives an example for the developmentof warranty and
+goodwill ratesover 3 production years.
+The secondstepwas to extract the neededattributes of QUIS by
+using appropriatedatabasequeriesin order to calculatethe WG-
+Ratesin a further step.Each vehicle seriesrequirestwo different
+queries, one for the general vehicle data and one for the
+commercialdatageneratedin the systemVEGA accordingto the
+warranty andgoodwill claims of the repair workshops(seeFigure
+1).
+
+
+
+
+Figure 2. development of a WG-Rate over 3 production years
+The raw datageneratedin the secondstep are usedto calculate
+WG-Ratesasattributevaluesfor the prediction model. In addition
+to this raw data we need other input data as well which are
+processedin athird stepby alargeVisual Basic module within an
+ACCESS-database:
+> handling of missingvaluesandbadquality data
+> updateof the product structureof passengercars,the structure
+of manufacturingplantsandthe structureof salesmarkets
+p integration of the latest planned production figures for the
+different vehicle seriesand their structuredescribedin section
+1
+> actualizing tables that contain the exchange rates USDiDM
+andUSD/EUROin dealingwith the neededforeign currencies
+> calculation of the numerous different WG-Rates for the
+product structure described in section 1 by considering the
+distribution of the car registration numbersfor eachmonth of
+production
+> calculation of correctionfactorsfor the WG-Rates
+> call of a Visual Basic module within Microsoft EXCEL that
+containsthe implementationof the chosenprediction model
+After someinitial trials we have distinguished that somespecial
+refinements of the input data for the prediction models would
+increasethe prediction performance:
+1. Replacement of the production date by the date of car
+registrationto calculatethe WG-Rates
+2. Construction of correction factors for the WG-Rates to
+eliminate the effect of the time lag betweenthe dateof repair
+andrecorddateof the damageandcostdatain QUIS
+
+4. PREDICTION
+MODELS
+Besides the statistical approaches like regression analysis,
+regressionand model trees, SMART, Naive Bayes etc. one can
+use also alternative approachesbasedon neural networks. After
+someinitial trials we have selectedthe regressionanalysis as a
+representative for the statistical approaches and a Back-
+propagation network as a representativefor neural approaches.
+
+
+
+
+418
+
+The selectionof the regressionapproachwassupportedby the fact
+that earlier investigations have shown that methods like time
+series analysis lead to very poor prediction quality for the
+warranty andgoodwill costbudget,asdescribedin [2].
+The next step was to design an evaluation plan to comparethe
+both alternatives and to select the best one. The following
+measureswere chosen as criteria for the evaluation of the
+prediction performanceof thesetwo models:
+
+l
+Mean Absolute PercentageError (MAPE)
+l
+StandardDeviation (STDV)
+l
+Theil's U
+The input variables for both modelswere WG-Ratesin the early
+andthe targetvariableswereWG-Ratesin the later operatingtime
+of vehicles.
+The evaluation in the testing time has shown that there is no
+significant difference betweenthe prediction performanceof two
+alternative approaches if we use STDV and Theil's U as
+comparison criteria. Using of MAPE (one example of the
+performanceof the two approachesis given in figure 3), however,
+hasled to the fact that almostfor all vehicle seriesthe regression
+analysisis the favorite model.
+
+
+
+
++
+MAPE-REG
+
+
+
+
+I
+WG-Rates for different vehicle operating times
+
+
+Figure 3. prediction
+performance
+for WG-Rates comparing
+the regression
+analysis
+model with
+the neural
+network approach by use of the MAPE criterion
+Concerning theseresults and the fact that regressionanalysis is
+easierto implement in comparisonto a neural network approach
+we have decided to select the regression model for further
+consideration. This model was however refined in further steps.
+Especially, we have tried to capture the dynamic aspectsand
+structural changesof the WG-Ratesby refining the regression
+model. This can be consideredas an innovative approachin the
+implementation of WAPS. For details of the implementation of
+structural changeswithin a regressionanalysismodel, we refer to
+VI.
+WAPScantestnow if astructuralchangehasoccurredin thepast.
+If it is the case,insteadto fit a unique regressionmodel over the
+whole time, the system switches to a piecewise regression
+approach taking into account the structural changeby dividing
+the whole time spaceinto severalsubspaces.
+
+5. DEPLOYMENT
+OF WAPS
+During its developmentin the past two years, WAPS has been
+usedbesidesthe conventional planning methodin orderto testits
+practicability in prediction of the total annualbudgetfor warranty
+and goodwill in the passengercar section. The results were very
+promising.Theneededplanning time is 75% shorterthan the time
+usingthe conventionalmethod.Figure 4 showsan exampleof the
+performanceof the two approachesfor the planning years 1997
+and 1998.It can be seenthat the absolutepercentagedeviation
+betweenthe predictedand realized warranty costsis lower using
+WAPS.
+
+
+Absolute percentagedeviation of realized expenses
+from planned budget for warranty and goodwill
+costsfor onepassengercar serie
+
+
+
+1
+WAPS
+H conventional method 1
+
+
+
+
+6 planning datesfor the years 1997and 1998
+
+
+
+Figure 4. comparison of WAPS with the conventional planning
+method for one passenger car series
+During its development,we could convince the usersthat WAPS
+is not only ableto supportthe planning processfor warranty and
+goodwill costs and to provide additional security for the
+calculated planning figures, but it is able also to support the
+calculation of the amount of balancecash reservesfor warranty
+and goodwill obligations in considerable shorter time. In this
+connection,the fmal version of WAPS which is implementedin
+Visual Basic for PC, is in use in the Sales and Services
+Departmentof DaimlerChryslerin Stuttgart.
+WAPS has an open architecture which allows to implement
+further prediction models, e.g. models that can perform the
+reliability analysis of vehicle parts with high warranty and
+goodwill costs.
+
+6. ACKNOWLEDGEMENTS
+We would like to expressour deepgratitude to the colleaguesof
+the departmentVSE/PG within the Salesand ServicesDirection
+of DaimlerChrysler in Stuttgart for the generous and trustful
+cooperationduring the developmentof WAPS.
+
+7. REFERENCES
+[l]
+Chatterjee and Price. Regression Analysis in Practice,
+OldenbourgVerlag, 1995.
+[2] Legner, C. Prediction of Warranty and Goodwill costs,
+Institute for Statistics and Mathematical Economic Theory,
+University of Karlsruhe, 1995.30-61
+
+
+
+
+419
+

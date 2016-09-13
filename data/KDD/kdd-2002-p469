@@ -1,0 +1,1035 @@
+CVS: A Correlation-Verification Based Smoothing
+Technique on Information Retrieval and Term Clustering
+
+
+Christina Yip Chung
+Verity,Inc.
+892 RossDr, Sunnyvale,CA 94087
+U.S.A.
+cchung @verity.com
+Bin Chen
+Exelixis,Inc.
+170 HarborWay,S. San Francisco,CA 94083
+U.S.A.
+bchen @exelixis.com
+
+
+ABSTRACT
+As information volume in enterprise systems and in the Web
+grows rapidly, how to accurately retrieve information is an
+important research area. Several corpus based smoothing
+techniques have been proposed to address the data spar-
+sity and synonym problems faced by information retrieval
+systems.
+Such smoothing techniques are often unable to
+discover and utilizethe correlations among terms.
+We propose CVS, a Correlation-Verificationbased Smooth-
+ing method, that considersco-occurrence information in smooth-
+ing. Strongly correlated terms in a document are identi-
+fied by their co-occurrence frequencies in the document. To
+avoid missing correlated terms with low co-occurrence fre-
+quencies but specificto the theme of the document, the joint
+distributions of terms in the document are compared with
+those in the corpus for statisticalsignificance.
+A common
+approach to apply corpus based smoothing
+techniques to information retrievalis by refining the vector
+representations of documents.
+This paper investigates the
+effects of corpus based smoothing on information retrieval
+by query expansion using term clusters generated from a
+term clustering process. The results can also be viewed in
+light of the effectsof smoothing on clustering.
+Empirical studies show that our approach outperforms
+previous corpus based smoothing techniques. It improves
+retrieval effectiveness by 14.6%.
+The results demonstrate
+that corpus based smoothing can be used for query expan-
+sion by term clustering.
+
+
+
+
+Categories and Subject Descriptors
+H.3.1 [Information
+Storage
+and
+Retrieval]:
+Content
+Keywords
+Text mining, smoothing, query expansion, term clustering,
+information retrieval
+
+1. INTRODUCTION
+Information volume in enterprise systems and in the Web
+is growing rapidly.
+Text mining research facilitates users
+to effectively mine valuable information from huge amount
+of data by scoring documents relevant to user queries ([1]).
+One of the widely used approaches employs a unigram model
+to represent documents. Other methods include the use of
+a vector space model, in which a document and a query are
+modelled as vectors of terms. The dot product of the vectors
+measures the relevancy of the document to the query.
+These models suffer from the data sparsity problem --
+the dimension of terms is huge such that the vectors of doc-
+uments and queries are sparse.
+The problem is escalated
+by the synonym problem where documents containing syn-
+onyms to terms in a query are often not assigned high scores
+by the dot product approach.
+Smoothing techniques overcome these problems by associ-
+ating feature terms in a given document with related terms
+that do not appear in the document.
+A feature terra of a
+document isa term with non-zero occurrence frequency and
+is relevent to the theme of the document.
+A related terra
+does not occur in the document but is related to its theme.
+The term smoothing refers to the adjustment of the maxi-
+mum
+likelihood estimator of a language model ([26]). Con-
+sequently, a document can be represented more accurately
+with both the feature terms and related terms.
+This paper proposes CVS, a Correlation-Verificationbased
+Smoothing method that is based on corpus statistics.CVS
+considers joint distributions of terms to identify significant
+
+Analysis and Indexing; H.3.3 [Information Storage and
+correlations.We study the effectsof CVS and severalcorpus
+Retrieval]:Information Search and Retrieval;G. 1.1 [Numerical based smoothing techniques on query expansion and term
+Analysis]: Interpolation--Smoothing
+clustering. Several variants of CVS
+willalso be described.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD 2002, Edminton, Canada
+Copyright 2002 ACM ACM 1-58113-567-X/02/0007 ...$5.00.
+Most smoothing techniques rely on corpus statistics,rel-
+evance feedback and lexicalreferences. Prior corpus based
+smoothing techniques refinedocument vectors with the dis-
+tribution of individual terms in a corpus. CVS
+uses co-
+occurrence information of terms to smooth a document. Terms
+that co-occur frequently in documents are regarded as strongly
+correlated. To avoid missing terms with low co-occurrence
+frequencies in a document but related to itstheme, the joint
+distributions of the terms in the document and the corpus
+are compared for statisticalsignificance.
+We alsostudy how corpus based smoothing techniques can
+
+
+
+
+469
+
+be applied to enhance recall in information retrieval. Infor-
+mation retrieval can be improved by adjusting weights of
+related terms in document vectors for more accurate repre-
+sentation or by expanding a query to include related terms.
+Query expansion is a more transparent process because it al-
+lows users to view and modify terms in an expanded query.
+Smoothing techniques based on lexical references and rele-
+vance feedback typically lend themselves naturally to query
+expansion. Prior work on corpus based smoothing meth-
+ods applies smoothing to refine document vectors.
+CVS
+combines corpus based smoothing method with query ex-
+pansion.
+A class of query expansion methods identify correlated
+terms by their joint distributions and expand a query di-
+rectly with correlated terms. These methods do not consider
+the correlation of term pairs in light of the relationship with
+other term pairs in the corpus.
+Our approach augments
+these methods by selecting better terms for query expan-
+sion by clustering. As opposed to document clustering ([9,
+19]), we consider term clustering ([22, 15, 23, 3]). Term
+clustering groups related terms into a hierarchy of clusters
+by minimizingintra-cluster distances and maximizing inter-
+cluster distances. User queries are expanded by terms in
+the clusters that contain the terms in the query. A hierar-
+chy of clusters gives a user guidance in adjusting the degree
+of query expansion based on depths of clusters.
+Empirical studies show that our approach outperforms
+two representative corpus based smoothing techniques. It
+improves retrieval effectiveness by 14.6% as compared to
+6.8% and 10.8% by other methods. The studies also demon-
+strate that corpus based smoothing can be applied to im-
+prove information retrieval by term clustering and query ex-
+pansion.
+This paper is organized as follows, Section 2 introduces
+prior work; Section 3 discusses CVS; Section 4 applies cor-
+pus based smoothing techniques to query expansion by term
+clustering; Section 5 presents results of empirical studies;
+Section 6 comments on CVS method and discusses several
+variants; and finally, Section 7 concludes the paper.
+
+
+2.
+PRIOR WORK
+Various smoothing techniques have been proposed in the
+literature. One class of techniques use purely corpus statis-
+tics to refine term distributions in documents ([26, 6, 10]).
+Our approach belongs to this category, but differs from them
+by considering correlations among terms in addition to the
+distributions of individual terms. Another class of smooth-
+ing techniques uses lexical references to expand a query with
+additional, lexically related terms ([24, 16]). A drawback
+of this approach is that a lexical reference cannot capture
+idiosyncrasies of a corpus. Prior results of using lexical ref-
+erences for query expansion are not encouraging. The third
+class of techniques use relevance feedback to expand a query
+([18, 25]). Relevance feedback is effective only if accurate
+relevance feedback information is available, which requires
+user intervention.
+Most traditional work on comparing term distributions in
+two corpora applies statistical tests, such as X2 test, to com-
+pare the distributions of terms in the corpora ([12, 13, 8, 11,
+20]). Kilgarriff ([11]) finds that X2 test identifies too many
+common terms as distributed differently in the corpora. He
+proposes to use Mann-Whitney rank test to unveil the sta-
+tistical significance in term distributions. Such rank tests
+require sufficiently big corpora. But since most documents
+are short, 1 rank tests are almost inapplicablewithout major
+modifications.
+A class of query expansion techniques directly expand a
+query with correlated terms ([2, 5, 4, 7]). A drawback is that
+the affinity between a pair of terms is not viewed in light of
+relationships among other term pairs in the corpus. For ex-
+ample, the terra "insurance" is strongly correlated with the
+terms "business directory" and "instant insurance quote",
+but "business directory" may be correlated with terms not
+related to "insurance". Expanding "insurance" with "in-
+stant insurance quote" is better than with "business direc-
+tory". This paper addresses this shortcoming by using term
+clusters obtained from term clustering to expand a query.
+The correlations among all term pairs are captured in the
+clustering process.
+
+
+3.
+APPROACH
+In this section, we describe two smoothing methods that
+are representative of corpus based smoothing techniques.
+We also formulate the proposed method, CVS.
+
+3.1
+Language Model
+In this papex, we make the naive Bayes Assumption --
+a term's occurrence in a document is independent of any
+other term. We use the multinomial model -- a document
+is represented by its terms and occurrence frequencies ([17]).
+Statistics of terms in a given document are used to decide
+whether the document is relevant to a query or whether
+it belongs to a certain cluster. Therefore, it is critical to
+calculate such statistics accurately. Smoothing can improve
+the accuracy on estimating such statistics.
+Let C be a corpus of documents, d a document in the cor-
+pus, and T the; set of terms selected to model documents in
+the corpus. Let f(tld ) be the observed occurrence frequency
+of the term t in document d.
+The conditional probability of having the term t in the
+document d, denoted as p(tld), is estimated by:
+
+p(t]d) =
+f(t[d)
+E,~a f(sld)
+
+The probability of having the term t in the corpus C, de-
+noted as p(tlC), is given by:
+
+Easef(tld)
+p(tlC) = E~er EdeC f(xld)
+
+3.2
+Prior Smoothing methods
+We choose to study the Jelinek-Mercer method and the
+Dirichlet method ([26, 10]) because of their simplicity and
+yet being representative of various corpus based smoothing
+techniques.
+The Jelinek-Mercer method adjusts the probability of a
+term in a document by a linear interpolationon the observed
+probabilities of the term in the document and in the corpus:
+
+p'(tld) =/3((1 - A)p(tld ) + Ap(tlC))
+
+where A is a smoothing parameter,/3 is a scaling factor to
+ensure that all probabilities sum to 1.2
+
+1The average web page size is only 1-2KB.
+1
+2To ensure ~',,edP'(sld) = 1, we have/3 = E,eav'(,Id)"
+
+
+
+
+470
+
+The Dirichlet method is a general formulation for the
+Laplace method.
+It adjusts the probability of a term in
+a document using the multinomial distribution to model a
+document:
+
+p'(tld) = t~(f(tld) + AP(tlC)~
+~X EteT
+f(tld) + A '
+
+where A is a smoothing parameter, ~ is a scaling factor to
+ensure that all probabilities sum to 1.
+
+3.3
+cvs
+
+Previous corpus based methods consider only the distri-
+butions of individual terms. We propose CVS, Correlation-
+Verification Based Smoothing, that considers the co-occurrence
+information as well as distributions of individual terms.
+The probability of a term t in the document d can be ad-
+justed by its correlation to terms observed in the document.
+
+p'(tld ) = f3(p(tld) + A
+~
+p(sld)p(tls, C)) (1)
+sEd,lsCorrelate(s,t)
+()
+
+
+
+
+Figure 1: A cluster hierarchy on Reuters corpus gener-
+ated by term clustering. An example of clusters of depth
+1 is {export, exporter}.
+
+
+
+s, t in the mega-document C is:
+
+E(s, tiC ) = Nc(f(s, rid) + f(s, tiC))
+Nd+No
+where A is a smoothing parameter, j3 is a scaling factor to en-
+.
+.
+.
+.
+.
+Because text documents are dichotomous, while the chi-
+sure that all probabilities sum to 1, the predicate lsC'orrelate(s, t) square values are based on a continuous distribution, Yate's
+is true if the terms s, t are strongly correlated. The second
+continuity correction (subtracting 0.5 from the observed and
+component is the contribution by smoothing based on cor-
+relation information.
+By Bayes rule, we can estimate p(s, tiC ) as:
+
+p(tls,c) =
+e~2
+
+=
+Ed~C f(s,tJd)
+E=¢T Ed~C f(xJd)
+Euer ~=er EdeC -f(z'YJd)
+~deC f(sld)
+
+
+where f(s, rid) is the co-occurrence frequency of the terms
+s, t in document d and is defined as min{f(sld), Y(tld)}.
+To avoid over-smoothing (terms irrelevant to the theme
+of a document are assigned non-zero weights), a term pair
+is used to adjust a document vector or~ if its co-occurrence
+frequency in the entire corpus exceeds a threshold. While
+fixing the threshold to a predefined value by trial-and-error
+can efficiently sift some correlated terms, terms that are
+strongly correlated to the specific theme of a document but
+with relatively low co-occurrence frequencies can be missed.
+Therefore, we complement the approach with a statistical
+test of significance. Following Klas and Fuhr ([14]), we treat
+a corpus as a mega-document which is a concatenation of
+all documents. We use the same symbol C to represent the
+mega-document of the corpus C. We employ X2 test to mea-
+sure the statistical difference in joint distributions of terms
+s, t in the document d and C to identify relevant terms to
+the document with low frequencies. This provides a sound
+statistical framework to select a threshold for identifying
+strongly correlated term pairs in a particular document.
+Let Na and Nc be the total frequencies of all terms in
+the document d and C respectively. Only terms s, t with
+observed co-occurrence frequency exceeding their expected
+co-occurrence frequency (in the document d), Nd 1L~2, are
+considered in the Xz test.
+The expected co-occurrence frequency of the terms s, t in
+the document d can be computed as:
+
+E(s, rid) = Nd(f(s, t[d) + f(s, tiC))
+Nd+Nc
+
+Similarly, the expected co-occurrence frequency of the terms
+expected frequencies before squaring) is applied. Yate's cor-
+rection may be too conservative in lowering the chi-square
+values. However, since data with lower confidence could in-
+troduce noise, we believe that it is better to be conservative.
+
+x2 =
+(f(s,tld)--E(s,tJd)--0.5} 2 +
+(1(s, tiC) -- E(m, tiC) -- 0.5)2 +.
+E(a,tld)
+E(s, tic )
+
+('¢(='~[d)--E(='UId)--0"5~2 4-
+(1(=, ulC) -- E(=, ulC) -- 0.5)2
+E(x'~la)
+~(=, ~lc)
+
+where x, y ¢ s, t.
+Define the null hypothesis as the two
+distributions being the same.
+Given a desired confidence
+level, the critical value can be looked up from the critical
+value table of X2 test with degree of freedom equal to 1.
+A term pair with X2 value higher than the critical value is
+regarded as strongly correlated in the document.
+
+
+4.
+APPLYING SMOOTHING TO QUERY EX-
+PANSION BY TERM CLUSTERING
+In this section, we describe how we can apply corpus based
+smoothing techniques to improve the effectiveness of infor-
+mation retrieval by query expansion and term clustering.
+A similarity measure is first used to measure the correla-
+tion between a pair of terms. Typical statistical similarity
+measures can be used, one of which is the mutual informa-
+tion:
+
+sim(s, t) = ~
+"s t'd" lo
+p(s, rid)
+, I
+g p
+d)
+
+where sire(s, t) is the similarity measure between the terms
+s, t. A term clustering application takes inputs the similarity
+measures between two terms and generates a hierarchy of
+clusters in which similar terms are grouped into the same
+cluster.
+The methodology of the experiment is as follows: (1) Top
+k nouns / noun phrases are extracted from documents in the
+Reuters collection ([21]) (2) Different smoothing techniques
+are used to refine vector representations of documents. (3)
+Top k terms are clustered into a hierarchy using an agglom-
+erative clustering method.
+(4) A pre-defined topic in the
+
+
+
+
+471
+
+Reuters collection is mapped to a cluster of depth Depth in
+the cluster hierarchy if the cluster consists of terms of the
+topic description. A topic may correspond to more than one
+cluster. (5)A query for a topic consists of terms in the topic
+description and terms in the clusters to which the topics are
+mapped. (6) Relevant documents for each topic query are
+retrieved. (7) Different smoothing techniques are compared
+using the corresponding best smoothing parameters which
+are manually fine tuned.
+
+
+5.
+EXPERIMENT RESULTS
+Top 2000 terms are selected for clustering. Relaxing the
+condition to select the top 6000 terms for clustering does
+not significantly increase the number of terms that can be
+clustered. Many of the 135 topics enlisted are not suitable
+for evaluation (e.g., the 27 currency codes) or do not have
+enough sample documents (e.g., the 78 commodity codes).
+Around 35 topics can be mapped to clusters in cluster hi-
+erarchies. Topics with less than 30 documents are elimi-
+nated. For fair comparison, only topics that are common to
+all evaluation cases are used. This results in 13, 15, 15 topics
+used for evaluation for clusters at depth 1, 2, 3, respectively.
+Nouns / noun phrases can be extracted from 7858 out of the
+9603 documents.
+The results are shown in Figures 2, 3, 4 and 5. The overall
+improvements in average precision for the Dirichlet method,
+the Jelinek-Mercer method and the CVS method are 10.8%,
+6.8% and 14.6% respectively. The results demonstrate the
+use of corpus based smoothing techniques in improving re-
+trieval effectiveness. The results can also be viewed in light
+of the improvements of clustering by smoothing.
+Since clustering is unsupervised learning, one should ex-
+pect better performance using supervised learning methods.
+If training data are not always available, clustering can be
+used for query expansion.
+
+
+Depth
+NoSmooth
+1
+0.67
+2
+0.47
+3
+0.45
+Avg
+0.53
+% Change
+Dirichlet
+0.73
+0.50
+0.54
+0.59
+10.8%
+Jelinek-
+Mercer
+CVS
+0.72
+U.74
+0.51
+0.60
+0.48
+0.49
+0.57
+0.61
+6.8%
+14.6%
+
+Figure 2: Effects of smoothing on retrieval effectiveness
+by query expansion and clustering.
+This table shows
+average precision with query expanded by clusters of
+various depths in cluster hierarchies refined by differ-
+ent smoothing methods· The CVS method outperforms
+the Dirichlet method and the Jelinek-Mercer method.
+
+Precision degrades as one uses clusters of depth greater
+than 1 to expand a query. The average precision for clusters
+of depth 2 and 3 are more similar than those for clusters
+of depth 1. A cluster contains approximately 4 children
+clusters in the cluster hierarchies. This observation implies
+that 4 terms out of 2000 terms are appropriate to augment
+the description for a topic.
+There is a benefit of expanding a query with deeper clus-
+ters that are not reflected in the results: While most topics
+cannot reach 100% recall level, expanding terms with clus-
+ters of depth 2 and 3 can give 100% recall level for most
+topics.
+Smoothing improves the retrieval performance of base clus-
+Depth81
+
+
+
+
+'
+o.1~ ............................................................
+i
+
+
+
+0.7
+...................
+~-r.~_~
+....~
+.........................
+i
+
+
+O.e
+........................................
+L,i
+·.
+............
+i
+.............. iiiiiiiiiiiiiii!i!!
+-i!
+.....
+
+O.4
+...................................................................
+
+
+0.a
+................................................................
+i
+
+
+
+
+o.I
+..............................................................
+i
+
+
+
+°'°o.o
+o2
+o.4
+o.s
+o.e
+1.o
+
+Re.Ill
+
+Figure 3: Recall-Precision curve with queries expanded
+with clusters of depth 1.
+
+
+
+
+Oepml,2
+
+· ~
+.NoSmooth
+--41,~CV8
+~
+Jeli~l(-Memor
+~
+Oldchlet
+
+1.o
+
+
+o.o
+..................................................................
+
+
+o.e
+.............................................................
+
+
+o.7
+..........................................
+
+
+
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+
+
+
+o.a
+............
+
+
+
+
+o.1
+......................................................................
+
+
+o.o
+o.o
+o.1
+o.2
+o.a
+0.4
+o.s
+o.e
+o.7
+o.s
+o.o
+1.o
+
+R~II
+
+Figure 41 Recall-Precision curve with queries expanded
+with clusters ,of depth 2.
+
+
+
+ters (clusters of depth 1) by addressing the data sparsity
+problem. The similarity measure is refined, which results in
+more overlapping between distributions of terms. The im-
+provement in base clusters is propagated to clusters higher
+up in the hierarchy.
+Another interesting observation relates to the structure of
+the cluster hierarchy. Without smoothing, only 826 terms
+out of 2000 terms are successfully clustered.
+Only CVS
+significantly improves the number of terms clustered. The
+smoothing parameter A is fine tuned to optimize retrieval
+effectiveness.
+There is a potential risk of over-smoothing.
+We conjecture that one can be more liberal in setting the
+smoothing parameter for a better smoothing method. This
+significant improvement in CVS further confirms the supe-
+riority of CVS over the other methods.
+
+
+6.
+CVS VARIANTS
+In this section, we discuss the shortcomings and variants
+of CVS. Fast CVS improves the speed whereas Voting CVS
+and Iterative CVS concern the quality of smoothing.
+
+6.1
+Fast CVS
+CVS requires O([ T 12) memory overhead for storing the
+co-occurrence information between term pairs as compared
+with O([ T l) required by the Dirichlet method and the
+
+
+
+
+472
+
+Delpth~
+·-*-.
+NoSmo~h
+--~--CVS
+--1~'-- JelinokoMerowr
+~
+D[r~hl~t
+1.0
+
+
+O.e ..................................................................
+
+
+
+
+o.e°r°e
+......... :........................................."
+i:ii:
+
+o 4
+...............................-:'~
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+
+
+
+a3
+""~,
+
+
+O,2
+
+
+0.1
+...................................................................
+
+
+O0
+.
+.
+.
+.
+on
+o.2
+0.4
+o.e
+oe
+1o
+
+Recall
+
+Figure 5: Recall-Precision curve with queries expanded
+with clusters of depth 3.
+
+
+Num. of clusters
+NoSmooth
+Dirichlet
+Jelinek-Mercer
+CVS
+361
+375
+372
+442
+Num. of terms
+826
+823
+841
+1001
+
+Figure 6: CVS improves the number of terms clustered
+significantly by addressing the data sparsity problem,
+which results in better similarity measure.
+
+
+
+Jelinek-Mercer method. For 2000 terms, 2000 * 2000 * 4
+bytes / 2 = 8MB is required to store the co-occurrence in-
+formation which is reasonable given that most computer sys-
+tems are equipped with 256MB main memory.
+All methods scan the corpus twice, once for gathering cor-
+pus statistics, and once for smoothing each document. CVS
+is more computationally expensive than the other two meth-
+ods in smoothing a document because the weight of a term
+in the corpus is adjusted by co-occurrence information with
+all terms in the document.
+Typically smoothing can be applied once to all documents
+as a back-end process and hence time is not a critical issue.
+But if there is a hard constraint on time, CVS can be refined
+to trade in effectiveness for efficiency. The joint probability
+between a term pair computed from the original distribu-
+tions in the corpus can be directly modified by smoothing.
+This in turn adjusts the similarity matrix (e.g., mutual in-
+formation) used for clustering. The joint probability of the
+terms s, t can be adjusted by:
+
+p'(s, tiC) =
+~(p(s, tiC)
+
+"FA(~tET,IsC .... late(s,t) p(tiC)p(s[t,
+C)
+
+Jr E,er,z~c .... tat,(,,t) p( slC)p( tls, C)))
+
+6.2
+Voting CVS
+In a smoothing algorithm that checks the co-occurrence
+frequencies for strong correlation, a term t not in a docu-
+ment is assigned a weight which reflects its correlation with
+all terms in the document observed over the entire corpus.
+This may not be desirable because a term in the document
+is likely to be related to terms of different themes. For ex-
+ample, consider smoothing a document on car insurance.
+"insurance" may be strongly correlated with "pre-existing
+condition" in documents on medical insurance in the cor-
+pus. Smoothing may then add "pre-existing condition" to
+the document incorrectly, which introduces "noise". One so-
+lution is to enforce voting. Only when enough terms in the
+document are strongly correlated with a term do we add this
+term to the document.
+
+6.3
+Iterative CVS
+We conjecture that if the smoothed probabilities are input
+to formulae (1), we may be able to get even more accurate
+estimators. Such iterations can continue until an optimal
+stage is achieved. Simulated annealing, genetic algorithm
+and other optimization approaches can help refine the itera-
+tions so that (1) can converge faster and local optimality can
+be avoided. We call this approach Iterative CVS. We evalu-
+ated Iterative CVS in some preliminary experiment with the
+number of iterations ranging from 1 to 100. Except in a few
+cases, Iterative CVS almost always under-performed CVS.
+We conjecture that some promoted related terms may be ir-
+relevant to a document. Iterative CVS carries and amplifies
+this error from one iteration to the next. One solution is to
+limit the number of related terms as well as their weights.
+Further research is necessary to conclude whether iterations
+and optimization algorithms can be combined with smooth-
+ing.
+
+
+7.
+CONCLUSION
+We introduced CVS, a corpus based smoothing technique
+that considers co-occurrence information of strongly corre-
+lated terms. We illustrated a sound statistical framework to
+determine whether terms with low co-occurrence frequencies
+are specific to the theme of a document. We demonstrated
+how corpus based smoothing techniques can be applied to
+information retrieval by query expansion and term cluster-
+ing. We also discussed the shortcomings of CVS and how
+they can be addressed by some variants. Empirical studies
+showed that corpus based smoothing can improve retrieval
+effectiveness and the quality of hierarchical clustering. CVS
+improves retrieval effectiveness by 14.6% which outperforms
+previous corpus based smoothing techniques.
+There are several questions that remain to be answered.
+Further research is needed to differentiate noise from corre-
+lated terms with low co-occurrence frequency. The effects of
+smoothing on terms other than noun / noun phrases remain
+open. Intuition suggests that verbs could be good candi-
+dates to link related nouns together.
+The correlation in-
+formation used in the smoothing method proposed is based
+purely on corpus statistics. The framework, however, is gen-
+eral enough to capture correlation information from domain
+knowledge such as relevance feedback and lexical references.
+Given the computation overhead of smoothing, it is impor-
+tant to address the issue of handling data streams effectively.
+
+
+8.
+ACKNOWLEDGMENTS
+The authors would like to thank Jianchang Mao for his
+support of this study and for providing valuable feedback on
+an early draft of the manuscript.
+
+
+9.
+REFERENCES
+[1] R. A. Baeza-Yates and B. A. Ribeiro-Neto. Modern
+Information Retrieval. ACM Press / Addison-Wesley,
+1999.
+
+
+
+
+473
+
+[2] C. Carpineto, R. de Mori, and G. Romano.
+Information term selection for automatic query
+expansion. In The Seventh Text REtrieval Conference
+(TREC-7), pages 308-314. National Institute of
+Standards and Technology (NIST), 1998.
+http://trec.nist.gov/pubs/trec7/tT_proceedings.html.
+[3] R. Fowler, W. Fowler, and B. Wilson. Integrating
+query, thesaurus, and documents through a common
+visual representation. In International Conference on
+Research and Development in Information Retrieval
+(SIGIR 1991), pages 142-151, 1991.
+[4] M. Franz and S. Roukos. A method for scoring
+correlated features in query expansion. In Proceedings
+of the 21st Annual International ACM SIGIR
+Conference on Research and Development in
+Information Retrieval (SIGIR'98), pages 337-338.
+ACM, August 24-28 1998.
+[5] S. Gauch and J. Wang. A corpus analysis approach for
+automatic query expansion. In Proceedings of the Sixth
+International Conference on Information and
+Knowledge Management (CIKM'97), pages 278-284,
+Las Vegas, Nevada, November 10-14 1997. ACM.
+[6] I. J. Good. The population frequencies of species and
+the estimation of population parameters. In
+Biometrika, number 40 in 3,4, pages 237-264, 1953.
+[7] K. Hoashi, K. Matsumoto, N. Inoue, and
+K. Hashimoto. Trec-7 experiments: Query expansion
+method based on word contribution. In The Seventh
+Text REtrieval Conference (TREC-7), pages 373-381.
+National Institute of Standards and Technology
+(NIST), 1998.
+http://trec.nist.gov/pubs/trecT/tT_proceedings.html.
+[8] K. Hofland and S. Johausson. Word frequencies in
+british and american english. In The Norwegian
+Computing Center for the Humanities, pages 43-53,
+Norway, 1982.
+[9] T. Honkela, S. Kaski, K. Lagus, and T. Kohonen.
+WebSOM - self-organizing maps of document
+collections. In Proceedings of Workshop on
+Self-Organizing Maps (WSOM97), pages 310-315,
+Espoo. Finland, 1997.
+[10] F. Jelinek and R. Mercer. Interpolated estimation of
+markov source parameters from sparse data. In
+Pattern Recogition in Practice, pages 381-402, North
+Holland, Amsterdam, 1980.
+[11] A. Kilgarriff. Comparing word frequencies across
+corpora: Why chi-square doesn't work, and an
+improved lob-brown comparison. In ALLC-ACH
+Conference, 1996.
+http://www.hit .uib.no/allc/kilgarny.pdf.
+[12] A. Kilgarriff. Using word frequency lists to measure
+corpus homogeneity and similarity between corpora.
+In Proceedings of 5th ACL workshop on very large
+corpora, Beijing and Hongkong, August 1997.
+[13] A. Kilgarriff and T. Rose. Measures for corpus
+similarity and homogeneity. In Proceedings of 3rd
+conference on empirical methods in natural language
+processing, pages 46-52, 1998.
+[14] C. P. Klas and N. Fuhr. A new effective approach for
+categorizing web documents. In Proceedings of the
+22th BCS-IRSG Colloquium on IR Research, 2000.
+[15] D. Lawrie, W. B. Croft, and A. Rosenberg. Finding
+topic words for hierarchical summarization. In
+International Conference on Research and
+Development in Information Retrieval (SIGIR POOl),
+pages 349--357, 2001.
+[16] R. Mandala, T. Tokunaga, and H. Tanaka. Combining
+multiple evidence from different types of thesaurus for
+query expansion. In Proceedings of the 22nd Annual
+International ACM SIGIR Conference on Research
+and Development in Information Retrieval
+(SIGIR'99), pages 191-197, Berkeley, CA, USA,
+August 15--19 1999. ACM.
+[17] A. McCalhtm and K. Nigam. A comparison of event
+models for naive bayes text classification. In AAAI-98
+Workshop on Learning for Text Categorization, pages
+41-48, Maxlison, WI, 1998.
+[18] M. Mitra, A. Singhal, and C. Buckley. Improving
+automatic query expansion. In Proceedings of the 21st
+Annual International ACM SIGIR Conference on
+Research and Development in Information Retrieval
+(SIGIR1998), pages 206-214, Melbourne, Austrailia,
+August 24--28 1998.
+[19] A. Rauber. LabelSOM: On the labeling of
+self-organizing maps.
+http://www.ifs.tuwien.ac.at/andi, July 10-16 1999.
+[20] P. Rayson and R. Garside. Comparing corpora using
+frequency profiling. In proceedings of the workshop on
+Comparing Corpora, pages 1-6, 2000.
+[21] Reuters Research and Standards Group. Retuers
+corpus.
+htt p://ab out.reuters, corn/researchandstandards/corpus/.
+[22] M. Sanderson and B. Croft. Deriving concept
+hierarchies from text. In International Conference on
+Research and Development in Information Retrieval
+(SIGIR 1999), pages 206-213, 1999.
+[23] A. E. Smith. Machine mapping of document
+collections: the leximancer. In Proceedings of the 5th
+Australasian Document Computing Symposium,
+Sunshine Coast, Australia, December 1 2000.
+[24] E. M. Voorhees. Query expansion using
+lexicM-semantic relations. In Proceedings of the 17th
+Annual International ACM-SIGIR Conference on
+Research and Development in Information Retrieval.
+(SIGIR'94), pages 61-69, Dublin, Ireland, July 3---6
+1994. ACM/Springer.
+[25] J. Xu and W. B. Croft. Query expansion using local
+and global document anMysis. In Proceedings of the
+19th Annual International ACM SIGIR Conference on
+Research and Development in Information Retrieval
+(SIGIR'96), pages 4-11, August 18-22 1996.
+[26] C. Zhai and J. Lafferty. A study of smoothing
+methods for language models applied to ad hoc
+iformation retrieval. In Proceedings of the $~th Annual
+International ACM SIGIR Conference on Research
+and Development in Information Retrieval
+(SIGIR2001), pages 334-342, New Orleans, Louisiana,
+USA, September 9-13 2001.
+
+
+
+
+474
+

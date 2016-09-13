@@ -1,0 +1,1174 @@
+Estimating
+Campaign
+Benefits
+and Modeling
+Lift
+Gregory Piatetsky-Shapiro
+Knowledge Stream Partners
+Boston, MA 02109
+go@ kstream.com
+
+
+
+
+Abstract
+In assessingthe potential of data mining based marlceting
+campaigns one needs to estimate the payoff of applying
+modeling to the problem of predicting behavior of sometarget
+population (e.g.attriters,peoplelikely to buy product X, people
+likely to default on a loan, etc). This assessmenthas two
+components: a) the financial estimate of the campaign
+profitability, basedon cost/benefitanalysis andb) estimationof
+model accuracyin the targetedpopulation using measuressuch
+aslift.
+
+We presenta methodology for initial cost/benefit analysis and
+present surprising empirical results, basedon actual business
+datafrom severaldomains,on achievablemodel accuracy. We
+conjecture that lift at T (where T is the target frequency) is
+usually about sqrt(llT ) for a good model. We also present
+formulae for estimating the entire lift curve and estimating
+expectedprofits.
+
+Keywords: databasemarketing,estimation,lift
+
+1. INTRODUCTION
+
+Direct marketingis a commonareafor applying datamining [1,
+4,5]. The goal is to predict a specific behavior of the customer,
+such as buying a product, attriting (churning) from a service,
+defaulting on a loan, etc. If a companycan identify a group of
+customerswhere the target behavior is more likely, (e.g. group
+morelikely to chum), then the companycanconduct marketing
+campaignsto changethe behavior in the desireddirection (e.g.
+decreasechurn). If targeting criteria arewell chosenfor a direct
+mail campaign,the companycan mail to a much smaller group
+of people to get the samenumber of responses.The increased
+concentrationof the `right targets' (e.g.churnersor responders)
+in suchtargetedcampaignsenablesincreasedROI.
+
+
+Permission to make digital or hard copies of all or part of this work fat
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies hear this notice and the full citation on the lirst page. To copy
+othcrwisc, to rcpuhlish, to post on scrvcrs or to redistribute to lists,
+requires prior specific permission andior a fee.
+KDD-99 SanDiego CA USA
+Copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+Brij Masand
+GTE Laboratories
+Waltham, MA 02451-I 128
+brij@gte.com
+
+
+
+
+In assessingthe potential of such campaignsone may want to
+estimate certain financial parameterssuch as profitability or
+relative increasein the concentration of the targets(lift) in the
+targetedgroup. In this paper we ask whether and when it is
+possibleto quickly estimateparameterssuchaslift basedon the
+problem features before attempting the complex task of
+modeling. We define guidelines for when one might consider
+deploying marketing campaigns and propose estimation
+formulae for lift at an important fixed point and over the entire
+lift curve.
+
+In sections 2 and 3 we define the basic terminology and
+guidelines for conducting such an assessment.In section4 we
+investigate the relationship between lift
+and the target
+frequency. In section 5 we analyze how the lift decreaseswith
+respectto increasing subsetsof population and in section 6 we
+usethe lift curve and cost estimatesto derive an estimatefor
+expectedmaximum profit. We concludewith adiscussionof the
+limits of theseheuristics and possible directions for extending
+this inquiry.
+
+2. ESTIMATING
+CAMPAIGN
+PAYOFF
+
+The key parametersfor the assessmentof a targetedmarketing
+campaignare:
+N -- the total numberof customers(e.g. 1,OOO,OOO)
+T -- the fraction of target customers,(e.g. 0.02) who have
+the desiredbehavior (e.g.responseto mail offers)
+B -- Benefit of an acceptedoffer A by a customercorrectly
+identified asatarget(e.g.$50)
+C -- Cost of making an offer A to a customer,whether a
+targetor not, e.g.$5)
+
+
+Let Profit(P) be the profit of making offer to P percent of all
+customers(where 0 < P < 1). The profit for making an offer to
+all customeris
+(1) Profit(l.O)=NTB-NC=N(TB-C)
+
+
+Using values for N, T, B, and C as above, the offer has an
+estimatedprofit of -$400,000,i.e. making an offer to everybody
+is unprofitable.
+
+
+
+
+185
+
+Of course, costs and especially benefits are not uniform, see [9],
+but this method is useful for an initial estimate. Also there may
+be a probabilistic aspect to the offer (whether it is accepted or
+not) which can be folded into the estimated benefit or cost
+values for simplicity.
+
+
+Note that whether the profit is positive does not depend on N, B,
+or C but only on whether TB - C > 0 or
+
+(2)
+TBIC>I
+
+i.e. only on the benefit/cost ratio and the target frequency.
+
+
+We also note that even when contacting everybody is profitable,
+it may not be the most profitable course. One could improve the
+profit by selecting a subset of customers, as examined in the
+next section.
+
+
+The Promised Land
+
+The promise of data mining is that it can find a subset Pz (of
+size N Pz, of the population where the fraction of targets T,, is
+ficiently higher than in the overall population so that making an
+offer to P2 is rn~re profitable than making an offer to all.
+
+We can use the formula (1) to estimate the profit of making an
+offer A to P2
+
+
+(3) Projit(P,, TJ = NP, ( TzB - C)
+
+
+The standard measure for comparing the target frequency of a
+subset with the target frequency in the entire population is the
+lift, defined asLift (P,) = T/T.
+
+We can rewrite (3) as
+
+(4) Projit(P2,Tu) = NP, (T* Lift(Pd B - C)
+
+
+Again we note that whether making an offer to a subset P2 is
+profitable depends only on whether T* Lift(PJ B > C. We can
+formulate it as
+
+
+Campaign Profitability
+Condition:
+
+
+(5) Lijii(PJ > UBT
+
+
+This gives us a rule of thumb for estimating the lift we need to
+achieve to make the campaigns profitable.
+
+
+For example, if T is 0.02, B is $50, and C is $5, then we need to
+select a subset with lift > 5 to achieve profit.
+
+
+We should also note that condition
+(5) is the minimum
+condition of profitability,
+which defines the largest subset which
+is still profitable.
+It does not define the optimal subset with the
+highest profit -- such a bset is the one that maximizes equation
+(4).
+The following sections discuss estimating of lift and selection of
+optimal subset.
+
+
+3. ESTIMATING
+LIFT
+
+To compute the actual lift data miners go through the lengthy
+process of examining
+the data available,
+selecting the data,
+obtaining permissions, transferring the data, obtaining the meta-
+data, cleaning the data, modeling etc. The initial steps of data
+preprocessing and cleaning is often very time consuming [2]
+and may take a couple of months before even the first model
+appears.
+
+
+Can we say something about the expected lift for typical
+business problems such as attrition and cross-sell before we do
+the modeling?
+
+
+In general, the answer is no, since every problem is different
+and has different underlying patterns.
+Furthermore, different
+modeling algorithms generally produced different results [6].
+However, we examined a number of actual business from the
+financial and telecommunications
+arena and found a surprising
+result - it appears that there is a heuristic formula for estimating
+the lift.
+
+4. LIFT CONJECTURE
+FOR LIFT AT T
+
+In this section we present an empirical observation about the
+typical lift one can see in campaign-type data mining problems,
+where we need to classify customers into two types: target and
+non-target population.
+We are not claiming that every model
+will have a lift similar to the formula below - one can easily
+come up with a poor or random model with worse results. What
+we are proposing is that for a certain class of target marketing
+problems there is a rough estimate for the best lift one can
+expect.
+
+4.1 Lift vs accuracy
+First we address the question: Why do we focus on lift and not
+overall accuracy?
+
+A modeling method, such as neural network or a decision tree
+typically
+build a model on a training set to predict the target
+probability and is further evaluated on a separate validation set.
+The validation
+set is then sorted in descending order by the
+target probability.
+The frequencies of actual and predicted
+target values are then measured at some set intervals, usually in
+5% increments. Generally speaking, if the modeling method is
+successful, we should find a higher concentration of targets at
+the top of the list and this higher proportion of targets can be
+measured in terms of "lift" to see how much better than random
+the model-based targeting is. While accuracy measures correct
+predictions for the whole population, lift measures the increased
+accuracy for a targeted subset, e.g. the top part of a model-score
+ranked list. Therefore it is very possible [5] that a modeling
+method with lower accuracy can result in higher lift at the top of
+
+
+
+
+186
+
+the list. To produce a better lift, one doesn't need to have
+higher accuracyover all targetsbut only over asufficiently large
+subset.
+
+Since the goal of the target marketing is not to predict the
+customerbehavior for everybody, but find a good subset of
+customerswhere the targetbehavior hasahigher proportion, we
+are interestedin models that maximize lift and not the overall
+accuracy. Analyzing the lift curve and lift values is thus very
+important for targetmarketingapplications.
+
+
+4.2 Definition
+of lift for a subscriber list
+ranked by model-score
+
+Let Lift(P,Z) be the lift obtainedby selectingthe top P percent
+of the customerlist sortedby amodel score.For exampleif T is
+0.02 there are2% targetsin the overall population. Then if the
+top 5% of the list hasa 10%concentrationof targets(or 0.1 asa
+fraction) then Lift(S%) is 0.1/0.02= 5. Alternately lift can also
+becalculatedby looking atthe cumulative targetscapturedup to
+PO/oas a percentage of all targets and dividing by PO/o.For
+example if the top 5% of the list captures20% of all targets
+then lift is 20/5 = 4. Lift is a common measureof how well
+modelselectiondoescomparedto arandomselection.
+Note: If we don't usepercentageafterP, then we areusingP as
+afraction. So Lift(S%,T) is the sameasLift(O.OS,T)
+
+
+Table 1showsarepresentativelift table from theKDD-Cup 97
+[7], generatedby co-winner BNB [3]
+
+
+For example,the secondline in this table meansthat at 10%of
+the model-scoresorted list, there are 15062 records,of which
+708 are "hits" - targets correctly identified. The cumulative
+accuracy in the first 10% is 708/15062= 4.70%. 708 hits are
+also 34.6 percentof all targets,giving a lift of 34.6/10 = 3.46.
+HereN= 150616,targets=2046, T=1.36%.
+
+
+4.3 Relationship
+between Lift and T
+
+By definition lift at 100%is always 1, i.e. Lift( lOO%,T) = 1.
+We alsoobservethat the maximum possiblelift is l/T.
+
+Since the data mining problems are all different it is very
+difficult to make general statements about the lift curve
+behavior.
+However, based on our experience in several
+businessdomains and observations of similar results obtained
+by others,we can makeseveralheuristic observationsaboutthe
+lift curve in targetedmarketingproblems.
+
+(1) As P increasesfrom 0 to 100, lift is usually monotically
+decreasingwith increasingP
+Lift(P,,T)
+> Lift(PDT),
+for P, < Pz
+Table 1. Kdd-Cup 97 data for BNB program
+
+
+This is truer for neural net models, and is less so for decision
+treemodels,especiallyatthe top (first 5-I 0%) of the lift curve.
+
+
+(2) As P increasesfrom 0 to 1OO%,lift is decreasingat aslower
+than linear rate,i.e.
+Lift(P,T) c 2 Lift(2P,T)
+(3) We also observe comparing lift at a fixed point for two
+problemswith different T, we usually find that the lift is higher
+for problemswith smaller T.
+
+
+Usually if T, c:T2, thenLift(P, T,) > Li#(p, z'J
+
+
+Typically, in literature lift is reportedin 5% increments. Since
+we previously observedthat lift at a fixed percentagelike 5%
+dependsheavily on T, we decided to neutralize the effect of
+varying T by measuringlift at T %. If the model was perfect,
+than all the TN targetswould be concentratedin the initial T%
+of the list, giving this segmentthe lift of 1/T. In practicethe lift
+at T is usually much lower than that. We have collected data
+from a number of problems from our actual experience in
+building modelsin telecommunicationsandfinancial.
+
+
+
+
+187
+
+4.4 Analysis of Lift
+from Real Data
+
+Table 2 shows a few examples from our recent practice.
+In
+these cases, lift is computed on a separate validation (2540% of
+all data) set that was not used in any way for training and which
+has the same proportion of the targets as the full data set.
+
+
+Since T is usually not a round number, precise lift at T % was
+usually not available and was estimated by linear interpolation
+of lifts at lower and higher percentages,
+
+i.e. if
+P, < T < P2,and lift at P, is L, and lift at Pzis L,, then
+lift at T is estimated as
+
+4 + w,-L,) (T-P,) / (P*-P,)
+
+
+For almost all of the problems below the lift was computed in
+1% increments, which reduces lift interpolation error.
+
+
+We have experimented with neural net packages (Predict from
+Aspen Technology),
+decision trees (C4.8, (X.0, and CART),
+and several version of Bayesian methods.
+In general, lifts are
+comparable within the rough guidelines we are looking, but for
+decision trees and bayesian models the lifts at the top of the list
+are usually smaller than for neural nets. We explain this by
+decision trees being less sensitive to precise patterns with
+smaller support, which neural nets can pick up and which can
+influence lift at the top of the list.
+
+
+Since the lift curve is decreasing at less than the linear rate, we
+looked at the relationship between Y = loglO(Lift)
+and X =
+loglO(l/T)
+(or 1og10(100/2%)
+if 2% is expressed as a
+percentage) and computed a regression between these terms.
+
+
+The regression produced a formula (with R *= 0.86)
+(6) loglO(Lift(Z',Z')) = -0.0496 + 0.518 loglO(l/T)
+
+
+
+
+1.2
+=:
+2
+1
+z
+0.8
+2
+0.6
+g
+0.4
+:
+0.2
+0
+
+
+
+
+Fig 1. log(l/T) vs log(Lift(T,T)
+Figure
+1 shows the actual and estimated (using
+formula 6 above) values of loglO(Lift(Z',T))
+for the cases in
+table 2. The log-log regression shows a good fit, especially for
+smaller values of lift.
+
+
+
+
+Table 2: Lift Statistics from actual Targeted Marketing
+Problems
+
+
+A simplification
+of this formula is
+loglO(Lift((T,T)) = 0.5 loglO(l/T)
+or
+(7) LijqT,T)
+= sqrt(l/T)
+
+
+We tested the simplified formula on the same cases, with results
+shown in Table 2b. Where
+
+
+Estimated lift at T = sqrt (l/T) = sqrt( 100/Z%)
+
+
+
+
+188
+
+Error = Actual - Estimated Lift
+
+Relative error = (Error/Actual Lift), in %.
+
+
+Overall, we see a very good fit, with correlation of actual lift to
+sqrt( l/T) of 0.918. We also observe that the simplified formula
+is usually within 20% of the actual lift. This led us to
+
+
+GPS Lift Rule of Thumb:
+
+
+For targeted marketing campaigns, a good model lift
+at T, where T is the target rate in the overall
+population,
+is usually sqrt(l/T)
++/- 20%.
+
+
+
+
+Figure 2 shows a graph of actual lift at T vs. estimated by the
+sqrt( l/T) formula.
+
+
+
+
+/ . Actual lift(T) B Est. lift(T) 1
+14
+12
+
+
+g `i
+J
+6
+4
+2
+0
+0
+5
+10
+15
+20
+25
+
+T
+
+
+Figure 2. Actual
+lift at T vs Estimated
+
+4.5 Discussions of possible sources of
+Exceptions
+
+The exceptions to these rules fall into at least four categories.
+
+First, there are poor modeling methods that produce bad results
+and lower lifts.
+
+Second, there are classes of problems where either target
+behavior is too random (e.g. predicting lottery numbers) or good
+data is not available.
+Almost all of our examples deal with
+predicting customer behavior using previous examples of same
+or related customer behavior, e.g. predicting
+attrition
+using
+previous examples of attrition.
+We also had experience with
+models that try to predict customer behavior using purely
+external demographic data that is not related to targeted product
+or service and is not frequently updated. In such cases lift is
+typically less than the GPS lift of sqrt (l/T).
+/
+I
+Third, we sometimes find a lift that is much higher. A frequent
+cause of very high lift is having information leakers. Those are
+fields that are functionally dependent on the target behavior but
+reflect customer behavior that happens after or at the same time
+as the target behavior.
+For example, suppose we are predicting
+which customers are likely to stop paying the mortgage. A field
+which records non-payment of insurance would be a leaker,
+since insurance and mortgage are frequently paid on the same
+bill.
+
+
+
+
+Table 2b: Actual and Estimated Lift Statistics
+
+
+
+
+189
+
+We found that such leakers are especially prevalent in cross-sell
+or cloning problems, when one tries to model look-alikes of
+customers with product X to find potential new customers for X.
+Frequently, having product X is related to several other fields in
+data, and those fields manifest themselves by contributing
+to
+very high lifts,
+
+
+Finally, there are examples of truly predictable outcomes.
+A
+very strong rule like
+
+if bill is not paid for 90 days,
+then service is terminated with probability
+100%
+For the KDD-CUP-97 data (Table I), log log regression gives
+
+a = 0.027, b =0.489, and R2= 0.988.
+
+
+Fig. 3 shows a plot of actual and estimated CumPHits for the
+KDD-CUP-97 data.
+
+
+7
+
+/+
+Actual hits% -.-)-
+Estimate 1 j
+
+
+is likely to represent the company policy to terminate service for
+non-paying customers. Since such rules are usually known, data
+satisfying them should be excluded from modeling.
+
+5. ESTIMATING
+THE LIFT CURVE
+
+Here we extend the previous results from a point estimate for a
+lift curve to an approximate formula for the entire curve. The
+analysis
+is simplified
+by
+looking
+at CumPHits(P),
+an
+intermediate measure related to lift, but with nicer mathematical
+properties.
+CumPHits(P)
+is
+defined
+as the
+cumulative
+percentage of hits (targets correctly identified) in the first P
+percent of the model-sorted list and is related to lift by
+
+Lift(P)
+= CumPHits(P) I P
+
+
+Note: in the rest of this paper P denotes the percentage of the
+list expressed as a fraction (between 0 and I). From the
+definition of CumPHits, we observe that
+
+
+CumPHits(0) = 0
+
+CumPHits( 1) = I
+
+
+From the observation that Lift(P) is decreasing monotonically
+with P increasing, but at a slower rate than P, we infer that
+
+For P increasing from 0 to I, CumPHits(P) is usually
+monotonically increasing with P
+
+Finally, based on the previous section, we are looking for a
+formula consistent with
+
+Lift(T)
+z sqrt(l/Z') = T".*
+
+which is equivalent to
+
+CumPHits(T) = T * Lift(T)
+2 T *T-o.5 = sqrt(l")
+
+We examined a number of lift tables used in the previous
+section and compared regression of P vs CumPHits,
+P vs
+log(CumPHits),
+log(P) vs log(CumPHits).
+Again, the best
+results were obtained from the log vs log regression.
+
+Here are the results from performing regression on 15 of the
+problems above (for some problems we were unable to do the
+regression since we did not have the full lift table).
+We were
+looking for the regression
+
+
+(8)
+loglO(CumPHits)
+= a + 6 loglO
+/ 100
+I
+I 60
+I
+I 60
+
+40
+
+20
+
+0
+m
+s
+3
+3
+s
+s
+23 2
+z
+23 A
+
+Fig. 3 Actual Cum hits% vs. Estimate
+
+
+
+
+Table 3: Coefficients
+for regression of loglO(CumPHits)
+vs
+log1 O(P%)
+
+
+
+
+190
+
+(15)
+P -o.4i Lift(P) i P a6
+Next, we performed a similar regressionfor all 16 cases. The
+resultsaresummarizedin table 3.
+
+
+Averaging the coefficients over 16 caseswe get averageR* =
+0.97,averagea = 0.041andaverageb = 0.533.
+
+
+We also did a further regressionanalysis of a and b versus T.
+We do not have enough spaceto presentthe details,but we did
+not find a significant relationship betweena and T. We did find
+somecorrelation between b and T , with R2= 0.66
+(9) b = l.l3T+ 0.467
+substituting this and (I = 0.04 into eq.(8) we get
+
+
+(10) loglO(CumPHits(P,T))
+= 0.041+(1.13T+O.467)loglO(P)
+or
+
+(11)
+CumPHits(P,T)
+= 1.1P o.467+`.`3T
+
+and
+rift=
+1,1
+p0.467+l.13T
+,p=
+1,1
+p-0.533+1.13T
+
+
+
+
+However, for the purpose of getting approximate bounds we
+will
+usesimpler estimatesof a = 0 andb = 0.5, giving us
+log10 (CumPHits(P)) = 0.5 loglO
+or
+
+(12)
+CumPHits(P)
+= sqrt(P)
+and
+
+Lift(P)
+= l!sqrt(P) = P -O.'
+
+
+5.1 Ranges on lift curve
+
+While the estimateLift(P)
+- l!sqrt(P) producesa reasonably
+close fit, we are also interestedin getting a range for the lift.
+From Table 3, we seethat the standarddeviation on 6 is about
+0.09 and b is between 0.4 and 0.6 most of the time. The
+constantterm (I is small and can be ignored for the purposeof
+initial approximation. Hencewe canestimate
+
+
+(13) 0.4 loglO
+< log10 (CumPHits(P)) < 0.6 loglO
+SinceP < 1,all logs abovearenegative,andwe cansimplify to
+
+(14)
+P `A <:CumPHits(P) c P `A
+or, dividing the aboveequationby P
+Fig 4 shows the rangesthe actual CumPHits curve for KDD-
+CUP-97 dataand upper and lower bounds obtained from (15).
+We seethat the actualcurve generally falls betweenthe bounds.
+
+
+
+i---1
+
+
+
+
+I
+O
+I
+In
+8o
+2
+2
+60
+
+a
+40
+
+20
+
+
+
+
+Fig 4. CumPHits for KDD-CUP-97 Data
+
+
+6. ESTIMATING
+OPTIMAL
+PROFIT
+
+In section 3 we derived a formula for estimating a profit of a
+campaign. We apply it to estimate the profit of selecting a
+subsetof sizeN2= NP, with lift T2= T * Lift(P) andget
+
+
+(I 6) Profit(P) = NP (TB*Lift(P)
+- C)
+
+
+Next, we substitutethe estimatefor lift
+Lift(P) = 1lsqrt(P)
+derived in previous section,andget an estimatefor the profit of
+selectingfirst P percentof the list:
+
+
+(17) Profit(P) z NP((TB/sqrt(P))
+- C) =
+
+= NC((TB/C)
+* sqrt(P) - P)
+
+
+Let K = TB/C. This profit is maximized when
+
+(18)
+F(K,P) = K* sqrt(P) - P
+is maximized, for 05 P 5 1.
+
+
+
+
+191
+
+1
+
+Fig 5. F(l,P)=(sqrt(P)
+- P) vs P
+
+
+Figure 5 shows the curve of K*sqrt(P) -P for K = 1
+
+
+We can find the maximum
+of F(K,P) by finding when its
+derivative
+is zero.
+Since a!x"ldu = fix"-`, the equation for
+derivative of F(K,P) equal to zero is
+
+d F(K,P)/dP = 0.5 K P -W- 1= 0
+
+or
+p -o.5= 2fK
+
+or
+
+(19)
+P = (K/2)2
+
+
+Indeed, in figure 5 we see that the maximum value of the curve
+for K=I is achieved when P = (K/2)2= 0.25.
+
+
+When K = TB/C 1 2, maximum profit is achieved for P > 1,
+meaning that the best selection is the entire list.
+In this case
+modeling to select a subset of the list will not be useful.
+However, when K = TB/C < 2 , maximum profit is achieved
+for P < 1, meaning that it is useful to perform modeling to select
+a subset of the population.
+We can state this condition as:
+
+
+Data Mining Sweet Spot:
+
+Selecting a subset to contact can increase profit
+whenK=TB/CcZ
+
+
+We can rewrite the Profit formula (17) as
+
+
+(20) Profit(P) = NC(K* sqrt(P) - P)
+
+
+By substituting P = (K/2)' we get the maximum value
+
+
+(2 1) MaxProfit(N,
+T,B, C) z NC(K*A% - (Kn,`) =NCK' /4
+This formula gives an expected value of campaign MaxProfit.
+We can also estimate the variability
+in the profit value by using
+a range estimate for lift, based on (11)
+
+Lift(P) = P -' , where 0.4 < d < 0.6
+
+
+Then the profit from selecting a subset P to contact can be
+written as
+
+(22)
+Profit(P) = NP (TBP -' -C)
+
+or, substituting K = TBX
+
+
+(23)
+Projit(P)=NCP(KP-d-l)=NC(K*P(`md)-P)
+
+
+By a similar reasoning,
+
+F(I<,P,d) = K*P (1-d)-P , where O< d ~1
+
+is maximized when
+
+(l-d)KPmd=
+1 orPr=
+(I-d)K
+or
+
+(24)
+Pmx(d) = (( 1-W )"d
+
+
+For example, when d=0.4, PhlAX(d) = 0.279K `S ; for d=0.5,
+P,,(d)
+= 0.25 K2 and for d=0.6, PhlAX(d)= 0.217KL.67.
+
+
+Substituting (24) into formula for MaxProfit,
+we see that the
+estimated maximum profit is
+
+(25) MuxProfi(N,T,B,C)
+=NC (K P,,(d)
+(led)- P,,(d))
+=
+
+NCP,,(d)
+(K ( ((l-d)K)"d)-d-
+l)=
+
+NC PhlAx(d) (K/(1-d)K
+- 1) =
+
+NCP,,(d)
+(1/(1-d)-
+l)=
+
+NC P,,(d)
+d 4 l-4
+
+
+The table below shows the range of PM&d)
+and MaxProfit for
+different values of d.
+
+
+d
+Pt"fAx(4
+Max Profit
+
+0.4
+0.28 K2.5
+0.186 NCK=.'
+
+0.5
+0.25 K2
+0.250 NCK 2
+
+0.6
+0.22 K `A'
+0.326 NCK `A
+
+
+Table 4. Variation
+of Maxprofit
+and P,,(d)
+with d
+
+
+While these are only estimates, we hope that they will be useful
+in providing initial ranges of profit values for different settings.
+
+
+7. RELATED
+WORK
+Paper [4] provides an overview
+of typical
+issues related to
+modeling for direct marketing. In [5] there is a discussion of
+maximizing
+payoffs using different modeling approaches. [l]
+
+
+
+
+192
+
+investigates how to maximize
+lift for a specific decile or
+percentage (e.g. mailing depth for a campaign) of the sorted list.
+[9] investigates comparison of classifiers when dealing with
+skewed class distributions and non-uniform costs, which is the
+case with most applications of targeted marketing.
+
+
+8. DISCUSSION
+We present heuristics for deciding when to consider applying
+data mining, how to estimate lift, how to model the lift curve
+itself and how to estimate expected profits.
+
+While we find that the heuristic formulae give a reasonable
+agreement
+(see section 5.4 for a discussion of exceptions),
+with the data we looked at from telecom and financial domains
+we need to expand our set of cases. Even though these
+approximations
+may be valid only for specific domains and
+applications similar to attrition and cross-sell , they may still be
+useful as rule of thumb estimates.
+
+In our discussion we have assumed a sorted, ranked list of
+subscribers where the subsetting may happen by choosing a
+cutoff of model score or choosing a fixed percentage of the list.
+However with methods such as induced rules from a decision
+tree one can consider subsets independent of order, to which the
+rules in section 2 and 3 can still be applied.
+
+
+9. FURTHER
+WORK
+
+Apart from expanding the data from different domains and
+evaluating
+the robustness of the proposed
+formulae
+for
+estimating lift, the lift curve and expected profits, another
+direction can be to model the distribution of the target class in
+the whole population and in sub-populations
+(may be ordered)
+selected by a model.
+
+Other interesting
+avenues include examining
+the empirical
+distribution
+of target
+density
+function,
+from
+which
+the
+cumulative density function could be obtained by integrating
+and testing these results on additional data.
+
+
+
+
+10. REFERENCES
+
+[i] Bhattacharya, S., Direct Marketing Response models using
+Genetic Algorithms,
+Proceedings
+of the KDD-98:
+Fourth
+International
+Conference on Knowledge
+Discovery and Data
+Mining,
+AAAI Press, Menlo Park, CA, pp 144-148.
+[2] Brachman R. and Anand T., The Process of Knowledge
+Discovery
+in Databases: A Human centered approach, In
+Fayyad, U. M., Piatetsky-Shapiro, G., Smyth, P. & Uthurusamy,
+R. (Eds.), 1996. Advances in Knowledge discovery and data
+mining. AAAI Press, Menlo Park.
+
+
+[3] Elkan, C. Boosting and Naive Bayesian Learning. Technical
+Report No. CS97-557, September 1997, UCSD.
+May 1997.
+
+
+[4] Ling, C.X., and Li, C, Data Mining for Direct Marketing:
+Problems and solutions, In Proceedings of KDD-98:
+Fourth
+International Conference on Knowledge
+Discovery
+and Data
+Mining,
+AAAI Press, Menlo Park, CA, pp 73-79.
+
+
+[5] Masand B. and Piatetsky-Shapiro
+G., A comparison of
+different
+approaches
+for
+maximizing
+business payoff
+of
+prediction
+models,
+Proceedings of KDD-96:
+the Second
+International Conference on Knowledge
+Discovery
+and Data
+Mining, AAAVMIT
+press, pp 19.5-201.
+
+
+[6] Michie, D., Spiegelhalter, D.J. and Taylor, C.C., (eds.),
+Machine Learning, Neural and Statistical Classification
+,ElIis
+Horwood, 1994.
+
+
+[71
+Parsa,
+I.
+KDD-CUP-97
+www.epsiion.com/KDDCUP/index.htm
+.
+results..
+
+
+
+[8] Piatetsky-Shapiro,
+G., et al, An Overview
+of Issues in
+Developing Industrial Data Mining and Knowledge Discovery
+Applications
+Proceedings
+of
+the
+Second
+International
+Conference on Knowledge Discovery and Data Mining,
+(KDD-
+96), p. 89, AAAI Press, 1996.
+
+[9] Provost, F. and Fawcett, T., Analysis and visualization
+of
+Classifier performance: Comparison under Imprecise Class and
+Cost distributions,
+In KDD-97:
+Proceedings
+of the third
+International Conference on Knowledge
+Discovery
+and Data
+Mining
+of KDD-97, Newport Beach, CA, AAAI-Press, Menlo
+Park, Ca, pp 43-48.
+
+
+
+
+193
+

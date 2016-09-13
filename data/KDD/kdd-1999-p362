@@ -1,0 +1,1074 @@
+The Application of AdaBoost for Distributed, Scalable and On-line Learning
+
+Wei Fan
+Salvatore J. Stolfo
+Columbia University
+Columbia University
+wfan@cs.columbia.edu
+sal@cs.columbia.edu
+Junxin Zhang
+Columbia University
+jzhang@cs.columbia.edu
+
+
+
+
+Abstract
+We propose to use AdaBoost
+to efficiently
+learn classifiers
+over very large and possibly
+distributed
+data sets that
+cannot fit into main memory,
+as well as on-line learning
+where new data become available
+periodically.
+Empirical
+studies
+on four real world
+and artifical
+data sets have
+shown results that are either comparable
+to or better than
+learning
+classifiers over the complete
+training
+set and, in
+some cases, are comparable
+to boosting on the complete data
+set. However, our algorithms
+use much smaller samples of
+the training
+set and require much less memory.
+
+1
+Introduction
+Learning
+from very large and distributed
+databases
+imposes major performance challenges for data mining.
+Freund and Schapire's AdaBoost
+[2] learns a highly
+accurate weighted
+voting
+ensemble of many
+"weak"
+hypotheses whose accuracy is only moderate.
+Most
+prior
+work on AdaBoost
+focuses on improving
+the
+accuracy of a weak classifier on the same single chunk
+of data at a central site that is small enough to fit
+into main memory.
+There hasn't been much research
+on using AdaBoost
+for scalable,
+distributed
+or on-
+line learning.
+The major difference of our work from
+previous
+research is that each weak classifier is not
+trained from the same data set at each round but only
+a small portion of the training
+set.
+
+2
+Scalable
+and Distributed
+Learning
+In AdaBoost,
+the weak learner is treated as a "black-
+box".
+We don't have much control over it except for
+observing its accuracy and providing it with a different
+training
+sample at each round according to its accu-
+racy in previous rounds. Each weak learner may freely
+choose examples in the sample given to it. Conversely,
+
+Permission to make digital or hard copies of all or part of this work fol
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies hear this notice and the full citation on the tirst page. To copy
+otherwise, to republish, to post on servers or to redistribute to lists,
+requires prior specific permission and/or a fee.
+KDD-99
+San Diego CA USA
+Copyright ACM 1999 l-58113-143-7/99/08...$5.00
+l
+Given:
+s
+=
+((21,Y1),...,(Tm,l/m));li
+E
+X,Yi
+E
+
+l
+nltialize
+Dl(z
+(such as 01(i) = $)
+f--l,, +l}
+and,rle
+size n.
+
+l
+Fort=l,...,
+.
+1. Randomly
+choose n examples
+from S without
+replace
+ment .
+2. Re-normalize
+their weights
+into a distribution,
+0;.
+3. Train weak learner using distribution
+0; for the chosen
+rz examples.
+4. Compute
+weak hypothesis
+ht : X 4 P.
+5. Update
+Dt+l(i)
+= Dt(i)exp(
+- atYiht(ri))
+
+-5
+I
+for the complete
+training
+set S.
+. Output
+the final hypothesis:,
+T
+\
+H(x)=sign(z wht(x))
+
+Figure 1: r-sampling
+AdaBoost
+
+
+we can also give the weak learner a sample which is just
+a small "portion"
+of the complete training
+set.
+The
+weak classifier produced from the small portion
+of the
+training
+set is very likely "weaker" than one generated
+from the entire weighted training
+set, but the overall
+accuracy
+of the voted ensemble
+can still
+be boosted.
+In
+order
+to
+increase
+accuracy,
+the
+small
+portion
+should not be a highly skewed sample of the complete
+training
+set. We propose two methods.
+The presenta-
+tion of both algorithms
+follow that of AdaBoost in [4].
+In r-sampling
+(Figure 1, T is random),
+a fixed number
+(n) of examples are randomly picked from the weighted
+training
+set (without
+replacement)
+together with their
+assigned weights.
+All examples have equal chance of
+being selected, and Dt is not taken into account in this
+selection. At different rounds, a new r-sample is picked.
+In d-sampling
+(Figure 2, d is disjoint),
+the weighted
+training
+set is partitioned
+into p disjoint subsets. Each
+subset is a d-sample.
+At each round,
+a different
+d-
+sample is given to the weak learner.
+The weights of
+the chosen examples of both T- and d-sampling
+are re-
+normalized to make them a distribution,
+0:.
+A weak
+classifier is generated from these examples with distri-
+bution 0:. The update of weights and calculation
+of ot
+
+
+
+
+362
+
+are performed on the entire data set with distribution
+Dt. Details on the choice and the calculation
+of a! can
+be found in
+[4]. Both methods can be used for learn-
+ing over very large data sets, but d-sampling is more
+suitable for distributed
+learning where data at each site
+cannot be culled together to a single site. The data at
+each site are taken as a d-sample.
+Weak learning at
+each round is carried out independently
+of all the local
+data of each site. On the other hand, r-sampling would
+choose data from different sites and transfer them to a
+single site. This is not possible for some applications
+and inefficient in general.
+When all data are available at a local site, both the
+distribution
+Dt and classifier weight ot are calculated
+exactly
+as in AdaBoost.
+We use all the locally
+available training
+data in the computation.
+However,
+for distributed
+learning
+over many sites, in order to
+calculate crt, it requires either the predictions
+by the
+weak classifiers at all sites be brought to a single site
+or possibly several distributed
+computations
+of 2: (for
+a candidate of at) among different sites. We use the
+second approach since the load on network traffic is
+much less.
+The extra storage to run both r-sampling
+and d-
+sampling is a floating point vector Dt (i)(i
+: 1, . . . ,m)
+to record the weight of each training example. The size
+of the vector is linear in the size of the training set, fixed
+before run time and can be pre-allocated.
+The memory
+required to hold this vector is usually much smaller than
+that of the data set. If main memory is unavailable, this
+vector can be disk resident.
+This is still efficient since
+the access patterns to Dt are strictly sequential to both
+update weights and calculate at.
+The extra computing
+power is to label the entire
+data set at each round of boosting, update weights and
+calculate cut. All these can be done efficiently
+in main
+memory. Predicting the data set is sequential and linear
+in the size of the data set. In network implementations,
+the extra network traffic to send partial values of 2; is
+nominal.
+
+3
+On-line
+Learning
+In on-line
+learning,
+there is a steady flow of new
+instances generated periodically
+or in real-time
+that
+ought to be incorporated
+to correct or update the
+model previously
+learned.
+We propose an on-line
+learning scheme using AdaBoost as a means to re-weight
+classifiers in an ensemble, and thus to reuse previously
+computed classifiers along with new classifier computed
+on a new increment of data.
+The basic idea is to reuse previously
+learned weak
+classifiers {hr , . . . , hT-1) and learn a new classifier from
+the weighted new data (Figure 3). When the increment
+ST arrives, we use the weight updating rule to both "re-
+weight" previous classifiers based on their accuracy on
+1. Re-normalizethe weight of partition St modp to make
+it a distribution, 0:.
+2. Train weaklearnerusing distribution 0:.
+3. Computeweakhypothesisht : X --) R.
+4. Update
+
+
+for the completetraining set S.
+
+
+
+
+Figure 2: d-sampling AdaBoost
+
+
+ST and generate a weighted training
+set. Data items
+that are not accurately predicted by these hypotheses
+receive higher weights.
+A new classifier hT is trained
+from this weighted
+increment.
+At the end of this
+procedure, we have al,. . . ,oT-1
+for hl, . . . , hT-1,
+a
+new classifier hT and its weight oT calculated from the
+weighted training
+set ST during successive updates of
+the distribution.
+The interesting
+observation
+is that
+AdaBoost
+provides a means of assigning weights to
+classifiers based on a validation
+set that these classifiers
+are not necessarily trained
+from.
+It also identifies
+data items that these classifiers perform poorly on and
+generates a weighted increment accordingly.
+One problem with the above on-line learning method
+is that we are forced to retain all the classifiers previ-
+ously learned. This naturally
+increases our memory re-
+quirements and slows the learning and classifying procs
+dures. We may use Margineantu
+and Dietterich's
+prun-
+ing method [3] to prune the voted ensemble to speed
+up classification.
+We propose to use a "window"
+of a
+fixed number of classifiers to solve this problem. Instead
+of retaining all classifiers, we only use and store the k
+most recent classifiers that reflect the most recent on-
+line data. The value of Ic can either be fixed or change
+according to the amount of resource and accuracy re-
+quirement. The number of new data items accumulated
+on-line before on-line learning starts can either be fixed
+or change at runtime as well.
+This on-line learning scheme with a window size of k
+is efficient. The extra overhead involves k classifications
+of the increment
+with
+weight
+updating
+and k + 1
+computations of Q. The predicting and weight updating
+procedure is linear in the size of the data increment.
+The computation
+of cyhas a bounded number of linear
+computations
+(to calculate 2').
+
+4
+Experiment
+We compare the error rate of r- and d-sampling
+to
+the error rate over learning and boosted learning from
+
+
+
+363
+
+l
+Given:
+{hi,...
+, hT-1)
+and
+S
+l
+Initialize
+01(i)
+(such as Dl(ir=
+;;;;;)
+Cls~l
+=
+mT).
+
+. Fort=l,...,T-1:
+1. Choose crt E Iw.
+2. Update
+Dt+l(i)
+= D&)=w(
+- wdtbi))
+zt
+for the new increment
+ST.
+. Train weak learner using distribution
+DT.
+othesis.hT
+: X ---) R.
+
+
+
+
+Figure 3: On-line AdaBoost
+
+
+
+
+Table 1: Data Set Summary
+
+
+the entire data set, and calculate the change in error
+rate over each boosting
+round
+and the amount
+of
+computation.
+It is also important
+to see if we can
+obtain the same level of error by simply AdaBoost on
+the same randomly chosen small sample with equal size
+and number of rounds as used by d- and r- sampling.
+For on-line learning, it is interesting
+to know if the on-
+line algorithm
+actually
+performs better than a simple
+classifier learned over the new increment or the global
+classifier learned over all the training data including the
+new increment.
+
+4.1
+Experimental
+Set up
+Four data sets (summarized in Table 1) are used in this
+study.
+The sample sizes for both d- and r- sampling
+are chosen to range from + = 4, $ to &
+of the original
+training
+set and the rounds of boosting range over 4,8
+to 512.
+We don't have any real on-line data set on hand.
+Instead, we have used a simulated on-line flow of data
+similar to d-sampling.
+Each d-sample is taken as an
+increment.
+The size of the window
+k is arbitrarily
+selected to be 10 and the size of the increment is chosen
+from 4 = & to &
+of the entire training
+set.
+At
+the start of the flow of on-line data, we don't have k
+classifiers. In this case, we reuse all available classifiers.
+We used Cohen's RIPPER
+[l] as the "weak" learner.
+We used the Laplace estimate to generate the confidence
+for each rule.
+We carefully
+engineered the bisection
+search algorithm
+to calculate cx't.
+
+4.2
+Results
+for CGand r- Sampling
+The results for & and r-sampling
+are summarized in
+Table 2. The detailed plots (Figure 4 for BOOLEAN
+and
+-
+-
+1.
+8
+2
+4
+8
+16
+32
+64
+128
+256
+-
+-
+2
+4
+8
+16
+32
+64
+128
+256
+-
+-
+2
+4
+8
+16
+32
+64
+128
+256
+-
+
+2
+4
+8
+16
+32
+64
+128
+256
+-
+ADULT
+Base
+Boosted
+Error
+Base
+Boosted
+d
+Sample
+r
+
+14.8
+14.7
+14.8
+14.7
+14.7
+14.8
+14.7
+15.5
+14.8
+14.7
+14.8
+14.7
+14.9
+14.7
+14.6
+14.8
+14.7
+15.4
+14.7
+14.6
+14.8
+14.7
+16.6
+14.8
+14.8
+14.8
+14.7
+18.6
+14.8
+14.9
+14.8
+14.7
+19.2
+14.8
+14.8
+14.8
+1
+14.7
+1
+20.8
+11 14.9
+1 15.1
+WHIRL
+
+0.270
+0.246
+0.579
+1.10
+2.13
+2.48
+0.183
+0.294
+0.421
+0.674
+0.762
+0.823
+0.153
+0.294
+0.381
+0.579
+0.674
+0.762
+4.52
+11 0.786
+1 0.786
+OOLEAN
+/ 8.55
+8.47
+8.26
+7.67
+7.47
+6.84
+7.72
+6.49
+7.07
+9.14
+7.05
+7.49
+10.0
+6.68
+7.89
+10.4
+7.60
+8.37
+11.2
+7.58
+8.07
+11.1
+7.26
+7.83
+u-
+CHASE
+10.7
+5.98
+10.7
+5.98
+10.7
+5.98
+10.7
+5.98
+10.7
+5.98
+10.7
+5.98
+10.7
+5.98
+10.7
+5.98
+
+11.6
+11.6
+11.6
+11.6
+11.6
+11.6
+11.6
+11.3
+11.3
+11.3
+11.3
+11.3
+11.3
+11.3
+11.2
+11.2
+11.2
+11.1
+11.2
+11.2
+11.6
+11.1
+11.0
+11.7
+11.6
+11.6
+13.5
+12.5
+11.8
+12.4
+11.9
+12.1
+15.1
+12.6
+12.7
+11.6
+1
+11.3
+1
+14.1
+12.4
+1 12.4
+
+Table 2: d- and r- Sampling
+AdaBoost
+Error Rate
+Summary (%)
+
+
+I
+q
+11Baseline
+1 Sample
+1 Avg
+11 Perfect
+I Good
+I Bad
+
+
+
+
+WHIRL
+32
+1.2
+2.45
+1.22
+53.1
+43.8
+3.13
+64
+1.2
+4.1
+1.30
+56.3
+43.8
+0
+128
+1.2
+4.6
+2.04
+11.7
+86.7
+1.56
+256
+1.2
+6.5
+3.00
+6.25
+92.2
+1.56
+BOOLEAN
+1 10.0 11 81.3
+1 18.8
+1
+0
+
+
+
+
+Table 3: On-line
+AdaBoost
+with
+window
+size k=lO
+Error Rate Summary (%)
+
+
+
+
+364
+
+others
+are available
+from
+cs .columbia.
+edu/"wf an)
+show the change in error rate with respect to sample
+size and boosting rounds.
+For each data set and each
+chosen sample size, the last two columns of Table 2
+(under "d" and "r")
+lists the error rate for d- and T-
+sampling. As a comparison, the table also lists, from the
+first to third columns, the baseline error rate of a single
+RIPPER classifier learned from all the available data (
+under "Baseline Error"),
+the boosted baseline error rate
+of 10 rounds AdaBoost
+RIPPER on all available data
+(under "Boosted Base") and the boosted sample error
+rate of running AdaBoost RIPPER on the "same" small
+randomly chosen sample with equal size and number of
+rounds as used by d- and r- sampling (under column
+"Boosted Sample").
+In each detailed plot, the x-axis
+is the rounds of boosting and the y-axis is the error
+rate. For all data sets, we draw a plot for every chosen
+sample size. There are five curves in each detailed plot.
+Two horizontal
+lines are the baseline error rate and
+the boosted baseline error rate (lower one). The other
+three lines display the results for d-sampling
+(drawn
+with lines points), r-sampling and boosted sample (both
+drawn with lines). In most cases, the curves of d- and
+r-sampling
+are twisted together and hard to separate.
+The boosted sample curve is mostly high above d- and
+r sampling lines and becomes very flat with increasing
+boosting rounds.
+From the curves and the summary table, we can
+see that d- and r-sampling
+AdaBoost reduce the error
+rate significantly.
+We observe that the error rates
+achieved by d- and r-sampling
+are either comparable
+to or even much lower than the baseline error rate of
+the global classifier.
+In many cases, their error rates
+are comparable to that of AdaBoost
+RIPPER on the
+complete training set. In Table 2, the results lower than
+the baseline are highlighted
+in bold font.
+This result
+applies to all data sets with all sample sizes (3 to &)
+under study. The error rates achieved by the different
+sample sizes for the same data set are in comparable
+levels, but bigger sample sizes exhibit
+slightly
+lower
+error rates.
+These observations suggest that both d-
+and r- sampling are quite robust to the change in sample
+size. In real world applications,
+we are mainly memory-
+constrained.
+These results show that we can overcome
+these constraints and use AdaBoost d- and r- sampling
+to compute accurate classifiers.
+We compare the performance of d- and r-sampling
+with simply applying
+AdaBoost
+RIPPER to the same
+sample.
+From the curves, we can see that when the
+sample size is "big" (4 to &), boosting the same sample
+can reduce the error rate for BOOLEAN and WHIRL.
+However the level of reduction is not as much as either d-
+or r-sampling.
+For ADULT and CHASE, simply boosting
+the same sample increases the error rate for bigger
+sample sizes. The possible reason for reducing the error
+rate for "big" samples is that the sample is big enough
+for effective learning. When the sample size is small (A
+to A),
+we observe a trend in error reduction early but
+it quickly flattens, yet the final resultant
+error rate is
+still significantly
+higher than the error rates attained by
+d- and r- sampling.
+The speed of error reduction is very fast. By looking
+at the curves in Figure 4 and our web-page, we find that
+the quickest error reduction usually happens in the first
+5% to 40% of the total number of boosting rounds. This
+is especially true when the sample sizes are small.
+In
+practice, it means that we can stop the learning process
+quite early without
+losing much accuracy. We also see
+that the error rate is still slowly decreasing at the last
+rounds of boosting.
+If we had allowed more time to
+compute, we could have obtained even lower error rates.
+There isn't much difference in performance between
+d-sampling
+and r-sampling
+for the data sets under
+study. The curves are mostly "twisted"
+with each other.
+In training
+sets with highly skewed distributions,
+we
+may see some difference between these two methods.
+For WHIRL and CHASE with sampling
+sizes of i
+and i, the error rate of the classifier learned from the
+sample before boosting is even lower than that of the
+global classifier. This is probably because i and i are
+large enough for effective learning, and overfitting
+easily
+occurs with more data.
+
+4.3
+Results
+for On-line
+Learning
+The results are summarized
+in Table 3.
+Detailed
+scatter plots are shown in Figure
+5 and our web-
+page.
+In each scatter plot,
+we draw two lines for
+comparison:
+baseline error rate of the global classifier
+learned over all available data and average sample error
+rate.
+Sample error is the error of the single classifier
+learned on the increment
+itself.
+For each data set
+under study, Table 3 shows the baseline error rate
+(under "Baseline"),
+average sample error rate (under
+"Sample"),
+average error rate (under
+"Avg")
+of on-
+line AdaBoost
+for the flow of increments,
+and three
+categories to distinguish on-line AdaBoost performance.
+An on-line AdaBoost error rate is perfect if it is lower or
+equal to the baseline error rate. It is bud if it is higher
+than the error rate of the monolithic
+classifier learned
+on the on-line increment.
+Otherwise,
+it is in the good
+category.
+In most of the cases (96 + % for WHIRL and CHASE,
+80 + % for ADULT and BOOLEAN ), the on-line error
+rate are in either good or perfect categories, implying
+that in an overwhelming
+majority
+of the cases, on-line
+learning has better performance than learning a single
+classifier from the on-line increment.
+In many cases
+(from 20% to SO%), the on-line error rate is even lower
+than the error rate of a global classifier learned over all
+available training
+data. For the CHASE data set, there
+
+
+
+365
+
+Figure 4: BOOLEAN d- and r- sampling Results
+
+
+
+
+Figure 5: BOOLEAN On-line Results
+
+
+are many points where the error rate is much lower than
+the boosted base line error rate.
+Comparing
+the change in performance for the same
+data set with different sample sizes (& to &),
+we find
+that the results are quite insensitive to the size of the
+sample.
+Except for WHIRL,
+there is an insignificant
+increase in average error rate when the size decreases.
+The percentage of results in the bad category remains
+almost the same for all experiments.
+
+
+5
+Conclusion
+
+We have given two new ways to apply AdaBoost.
+In
+the first case, we only choose samples from the complete
+weighted training
+set. This approach allows us to use
+AdaBoost for scalable and distributed
+learning.
+In the
+second case, we regard the AdaBoost weight updating
+formula as a way of assigning weights to classifiers in
+a weighted voting
+ensemble.
+We have experimented
+with d- and r-sampling
+as two alternatives
+for scalable
+and distributed
+learning.
+We tested them on four real
+world and artificial
+data sets. The results are in most
+cases comparable to or better than learning a global
+classifier from the complete training
+set and in many
+cases comparable to boosting the global classifier on the
+complete data set. However, the cost of learning and the
+requirements
+for memory are significantly
+lower.
+We
+also tested an on-line AdaBoost with window size of 10
+on the same data sets. The results suggest significant
+improvement
+from learning
+a single classifier on the
+new increment of data itself and in many cases even
+better than learning the global classifier where all data
+participates
+in learning.
+But its cost is similar
+to
+learning over the new increment
+data.
+The storage
+overhead for all these methods is bounded
+and can
+be pm-allocated
+before runtime.
+The computation
+overhead is also limited.
+Our full paper (available from cs . Columbia. edu/"wf
+an)
+compares our approach with other methods for scalable,
+distributed
+and on-line learning
+and discusses future
+work directions.
+
+References
+[l] W. Cohen. Fast Effective Rule Induction.
+In Proc.
+Twelfthh
+Intenatioanl
+Conference
+on Machine
+Leaning,
+pp. 115-123,
+Morgan Kaufman.
+
+[z] Y. Freund and R. Schapire. A decision-theoretic generalization
+of on-line learning and an application to boosting. Journal
+of
+Computer
+and System
+Sciences,
+55(1):119-139,1997.
+
+[3] D, Margineantu and T. Dietterich. Pruning Adaptive Boosting.
+In Proc
+of ICML-97.
+
+[4] R. Schapire and Y. Singer. Improved boosting algorithms using
+confidence-rated predictions.
+In Proceedings
+of the
+Eleventh
+Annual
+Conference
+on Computational
+Learning
+Theorey,
+1998.
+
+
+
+
+366
+

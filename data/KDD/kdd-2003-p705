@@ -1,0 +1,854 @@
+Data Quality through Knowledge Engineering
+
+
+Tamraparni Dasu
+AT&T Labs - Research
+180 Park Avenue
+Florham Park, NJ 07932
+tamr@research.att.com
+Gregg T. Vesonder
+AT&T Labs - Research
+180 Park Avenue
+Florham Park, NJ 07932
+gtv@research.att.com
+Jon R. Wright
+AT&T Labs - Research
+180 Park Avenue
+Florham Park, NJ 07932
+jrw@research.att.com
+
+
+
+ABSTRACT
+Traditionally, data quality programs have acted as a pre-
+processing stage to make data suitable for a data mining
+or analysis operation. Recently, data quality concepts have
+been applied to databases that support business operations
+such as provisioning and billing.
+Incorporating business
+rules that drive operations and their associated data pro-
+cesses is critically important to the success of such projects.
+However, there are many practical complications. For exam-
+ple, documentation on business rules is often meager. Rules
+change frequently. Domain knowledge is often fragmented
+across experts, and those experts do not always agree. Typ-
+ically, rules have to be gathered from subject matter experts
+iteratively, and are discovered out of logical or procedural
+sequence, like a jigsaw puzzle. Our approach is to imple-
+ment business rules as constraints on data in a classical ex-
+pert system formalism sometimes called production rules.
+Our system works by allowing good data to pass through
+a system of constraints unchecked. Bad data violate con-
+straints and are flagged, and then fed back after correction.
+Constraints are added incrementally as better understand-
+ing of the business rules is gained. We include a real-life
+case study.
+
+
+Categories and Subject Descriptors
+I.2.6 [KDD Framework and Process]:
+
+
+Keywords
+Data quality; Business Operations Databases; Static and
+Dynamic Constraints
+
+
+1. INTRODUCTION
+Data audits are necessitated by increasingly complex and
+opaque business operations. Databases and data warehouses
+that support them are equally intricate, designed originally
+to reflect the business rules that govern the operations. With
+the passage of time, modifications and additions in response
+to changing business needs make these systems to grow in
+complexity. Such changes are too often undocumented. Very
+often, the only way to understand these impenetrable, patched-
+up legacy systems is by empirically analyzing and auditing
+the data that the systems produce and matching them up
+with the intended outcomes. Serious data quality errors oc-
+cur when the data no longer reflect the real-life processes and
+the databases cannot serve the purpose they were designed
+for. For example, if the inventory databases are not accu-
+rate, the sales personnel are either selling things that do not
+exist, or turning away customers under the mistaken impres-
+sion that the product is not available. Similarly, inaccurate
+billing systems have severe consequences for corporations.
+
+Data quality errors associated with the discord between busi-
+ness operations and their database counterparts occur in two
+significant ways. First, during the design of the data pro-
+cesses, the business rules that govern the operations may not
+be interpreted properly. Business rules determine the type
+of machine, for example, "If the machine has a red handle,
+use it for internal purposes. If the machine has a green han-
+dle, sell it to outsiders". A misrepresentation of this rule
+while creating an inventory database for sales can lead to
+serious problems. Second, when the business rules change,
+the data processes may fail to keep up with the changes.
+
+The business operations databases of a company affect its
+performance in many ways--its ability to offer new, com-
+petitive services; to provide reliable products and services;
+to keep provisioning and billing processes working smoothly;
+and, in general, to stay competitive and profitable. It is not
+uncommon for operations databases to have 60% to 90%
+bad data. As a consequence, much energy has been focused
+on maintaining the integrity of operations databases through
+data audits. With our knowledge engineering and rule based
+programming approach, we reduce cycle times by preventing
+errors by applying the knowledge to earlier stages of data
+capture.
+
+A major source of data quality issues in this context is the
+lack of accurate and complete documentation of the rules
+of business operations (business rules) and the conventions
+used in representing and storing the data. Gathering and
+representing business rules and subject matter expertise that
+drive the business operations and documenting the data con-
+ventions by which the rules are implemented in the associ-
+ated data processes is probably the most critical as well
+as the most challenging part of a data quality program for
+business operations. (The rectangular box in the center of
+
+
+
+
+704
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA
+Copyright 2003 ACM 1-58113-737-0/03/0008 ...$5.00.
+
+
+
+
+705
+
+Figure 1).
+
+However, aggressive project schedules take a toll on com-
+prehensive documentation, which is often given a low pri-
+ority. As people change jobs, the data-related and process-
+related expertise that resides with them is lost, making the
+data opaque and unusable. While data exploration and data
+browsing reveal some characteristics of the data (missing val-
+ues, attribute distributions and interactions, violations of
+declared schema specifications), domain specific rules can
+only be learnt from subject matter experts. Unusual schema
+specifications and application-driven business rules cannot
+be inferred from the data. Without these, the data will have
+hidden pitfalls (data glitches) caused by incomplete data in-
+terpretation (misinterpretation) leading to misleading and
+incorrect results and decisions.
+
+Gathering and representing highly domain specific knowl-
+edge from subject matter experts, whether related to busi-
+ness operations or data processes, is a challenging task, for
+several reasons: (1) the knowledge is available in a fragmen-
+tary way, often out of logical or operational sequence. (2)
+the expertise is split across organizations, with little incen-
+tive for people to cooperate. (3) the business rules change
+frequently (4) there is no consistency. i.e. the experts do
+not agree on the business rules and (5) frequent project and
+personnel transitions with no accountability.
+
+We were impressed by the similarity between the activities
+required to implement successful data quality projects and
+the activities involved in implementing knowledge-based sys-
+tems. We consider business rules and data conventions to
+be essentially constraints that data have to meet. Some con-
+straints are static and are applied to the data as it is. They
+are schema related and entail validating the data specifica-
+tions against the instantiation of the data. Other constraints
+are dynamic in that they relate to data flows as they pass
+through a process built to record and monitor the associ-
+ated business operations.
+These are often business rules
+that shape the processes.
+
+In this paper, we report on our efforts to apply knowl-
+edge engineering methodology and tools to the problems of
+data quality and to develop a technology that supports that
+methodology. In doing so, we provide a powerful technique
+to accurately represent, update and maintain the constraints
+(business rules, conventions for data processing) that define
+the data processes supporting the business operations, en-
+suring the usability and reliability of the data, two major
+components of data quality metrics.
+
+The IF-THEN semantics of the static and dynamic con-
+straints, the frequently changing requirements as the un-
+derlying operational processes change or are better under-
+stood, the large number of possible scenarios that need to be
+considered and other characteristics of data quality control,
+make the knowledge engineering and rule-based approach far
+more suitable for implementing and monitoring data qual-
+ity than a conventional requirements approach supported
+by a procedural language. We will discuss this in detail in
+Section 5.
+
+
+2. DATA QUALITY (DQ)
+Data quality is a difficult concept to define, measure and
+implement. It is closely tied to the problem domain, the
+data itself, and how it is used. A general solution that fits
+all problems is difficult because data quality problems are
+application specific. In addition, problems arise at all stages
+of the data life cycle, from the data gathering and data mod-
+eling stage to the very last stage of choice of analysis and
+interpretation of results. Each stage requires a different set
+of tools and techniques to detect and repair data glitches.
+Finally, the nature of the data itself (federated, streaming
+data, web server logs) and the type of attributes (numeric,
+descriptive, text, image, audio/video) determine the kind of
+techniques that are appropriate for dealing with data qual-
+ity issues. A detailed discussion of the various aspects of
+data quality in the context of modern data paradigms can
+be found in [2].
+
+
+
+2.1 The Data Quality Implementation Process
+Figure 1 depicts a high level view of a data quality imple-
+mentation process. Data should be validated by putting it
+through the DQ implementation process, ensuring a level
+of quality reflected in the data metrics. Only after the data
+have been validated to the required degree of quality, should
+it be allowed to be used for various business and analytical
+purposes.
+
+Just as problems arise at different stages, the tools em-
+ployed too vary. Data gathering and data delivery glitches
+are primarily corrected through process management tech-
+niques such as implementation of checks and bounds, and
+end-to-end, continuous data audits.
+Data quality during
+data loading, storage and retrieval can be managed through
+ETL tools, metadata management and other database tech-
+niques. The latter can also help with duplicate elimination.
+See [7]. Data exploration based on techniques such as EDA
+(Exploratory Data Analysis) [17], missing value imputation
+[10] and outlier detection [9], [1] can be used to detect and
+repair damaged data. Alternately, the data to be validated
+can be compared to a gold standard using set comparison
+methods [8].
+
+The solutions offered above are general and work on different
+aspects of the data quality issues. However, the hardest part
+of a data quality implementation program for business oper-
+ations is capturing a complete and accurate set of business
+rules that are specific to the business problem. (Depicted
+inside the box in Figure 1) Such expertise is often frag-
+mented across many individuals and seldom documented in
+writing. Gathering these rules requires extensive interaction
+with subject matter experts. Furthermore, it is an iterative
+process requiring numerous experts to arrive at a consen-
+sus. As a consequence, the rules have to be put together in
+a piecemeal fashion, out of sequence.
+
+Once the business rules have reached a critical mass for im-
+plementation, we can start building the data audit tool using
+rule based programming. The data should then be passed
+through the DQ audit tool. The findings from the data au-
+dit pass are used to update the data quality metrics (we
+will discuss them briefly in subsection ??). Unacceptable
+data is sent for further investigation and repair, and recy-
+cled through the data audit.
+
+
+
+705
+706
+
+Data Gathering
+Data L o ad ing ( E T L )
+
+Data S c ru b ­ d ata p ro f il ing, v al id ate d ata c o ns traints
+
+Data I ntegratio n ­ f u nc tio nal d ep end enc ies
+
+
+Dev el o p B u s ines s R u l es and M etric s
+V al id ate b u s ines s ru l es
+
+
+S tab il iz e B iz R u l es
+V erif y B iz R u l es
+
+
+
+
+Data Q u al ity C hec k
+R ec o m m end atio ns
+U p d ate DQ
+M etric s
+S u m m ariz e L earning
+
+Figure 1: Major steps in the data quality process.
+
+
+
+Metrics for Data Quality An important goal in data
+quality for business operations is to quantify the quality of
+the data and ensure that the data audit has a positive ef-
+fect on the data processes and the business operations they
+support. Conventional data quality metrics require that the
+data satisfy rigid but static constraints such as accuracy,
+completeness, uniqueness, consistency and timeliness. See
+[14] and [15] for details.
+However, given that the types
+of data are evolving constantly, as well as the expectations
+about what the data can yield, we need more dynamic and
+flexible ways of measuring data quality.
+
+In addition to the conventional metrics mentioned above, we
+can consider metrics that address the usability of the data,
+accessibility,interpretability,the increase in automation,and
+the reduction of duplication.The incomplete list of metrics
+illustrates the nuances in measuring data quality. See [2] for
+details of updated defintions of DQ metrics.
+
+
+3. DQ: CONSTRAINT SPECIFICATION
+The main lesson learned in recent years is that data quality
+problems and their solutions tend to be domain specific. The
+importance of understanding the application domain makes
+the role of the domain expert central to the success of a data
+quality project.
+
+Implementers and domain experts require a common lan-
+guage within which data quality requirements and imple-
+mentations can be discussed and debated. Our experience
+has been that typical data quality projects require the par-
+ticipation of more than one domain expert. Domain experts
+themselves sometimes struggle to find a way of talking about
+the problem that is meaningful to all concerned.
+
+The notion of constraints, although remaining an informal
+concept in our work so far, has provided us a useful way
+of discussing data quality among both experts and imple-
+menters.
+Constraints have long provided a means of es-
+tablishing and maintaining data integrity ([13]). While it
+is not necessary that all the practical problems associated
+with data quality fit within the notion of constraining rela-
+tionships,a majority of data quality tasks, particularly those
+associated with gathering subject matter expertise typically
+fit well.
+
+Our experience tells us that constraints in a data quality
+project are dynamic and must be flexible. Constraints apply
+Conflict Set
+( Ca nd id a te R u les )
+Selected R u le
+D a ta b a s e
+M od ifica tions
+Rule Base
+( B u s . R u les / D a ta Sp ecs )
+W o r k i n g M em o r y
+( B u s . O p s D a ta b a s e)
+
+
+
+
+M at c h
+
+
+
+
+C o n f li c t
+Reso lut i o n
+( A s s ig n P r ior ity )
+A c t
+D a ta
+R ecor d s
+
+
+
+
+I n t er p r et er
+
+Figure 2: Rules and Knowledge Engineering.
+
+
+
+at different stages of the data flow. Some are more important
+than others. And we often find that success in a practical
+sense requires constraints to be relaxed, or perhaps even
+ignored in some cases, but not in others.
+
+
+
+4. RULE BASED PROGRAMMING
+Rule based programming is not a new paradigm ­ with fun-
+damental research on the topic extending over the past 30
+years ([12]). It consists of transforming requirements into
+discrete units called rules that have the form "if this is the
+situation then do this action." As we will see, these units are
+independent making it easier to add, delete or change them
+without affecting the entire system. However rule based pro-
+gramming is applicable to a wider range of tasks ([18]) such
+as data quality implementation.
+
+A rule base has three parts (see Figure 2): (1) Working
+Memory, functioning similar to a data base that represents
+the current state of the system (2) Rule Memory, a set of
+rules each of the form, if this is the situation in Working
+Memory then do these actions, some of the actions usually
+entail a change to Working Memory (3) Interpreter, serv-
+ing as an inference mechanism matching Working Memory
+to the situations represented in Rule Memory, selecting the
+rule(s) to execute and then doing the prescribed actions.
+
+The interaction of these components provides interesting
+properties that can be exploited by the system builder. The
+first is separation of control from the program. Control is
+provided by the information in Working Memory and the op-
+eration of the interpreter, not by the ordering and placement
+of the rules. This separation of control from the program
+provides independence of each of the rules making it easier
+to change aspects of the programming without disastrous
+consequences to the system.
+
+Developing a rule based system consists of encoding the
+knowledge from the system requirements into rules. An ex-
+ample of a rule is "If machine X has red handle AND order
+is internal AND location is internal THEN ship and install
+machine".
+The Working Memory for such an application
+would consist of a record or Working Memory element that
+would represent a machine, the color of its handle, its or-
+der type and location type. The inference mechanism would
+determine whether any of the Working Memory elements
+satisfies a rule situation and, if so, selects one to execute.
+
+
+
+706
+707
+
+There are several public domain and commercial rule based
+systems available.
+Many are based on the OPS work of
+Charles Forgy (e.g., [4]) at Carnegie-Mellon University. CLIPS
+is a rule based system built by NASA ([11], [6]). Jess, from
+the US Department of Energy, is derived from CLIPS and
+written in JAVA ([5]).
+Commercial version of OPS and
+CLIPS can be found at http://www.pst.com.
+We use a
+variant of OPS ([16]).
+
+
+5. DQ: KNOWLEDGE ENGINEERING
+Our assertion that data quality benefits from using the rule
+based methodology is based on the commonality between the
+activities associated with engineering a Knowledge-based
+Systems and a data quality process.
+
+This is particularly true of data processes that support busi-
+ness operations where a particular set of business functions
+depictedin the data. Further, our experience suggests that
+multiple iterations are required to incorporate faithfully all
+of the knowledge of subject matter experts. Experts rarely
+are able to express themselves fully on a single pass, and
+need feedback from a partially working system to bring out
+important aspects of their knowledge.
+
+Attempts at discovering rules that govern business opera-
+tions without consulting experts have been largely unsuc-
+cessful.
+Business rules typically cannot be inferred sim-
+ply by examining structure and relationships in the data
+that evolve over long time periods and cross-organizational
+boundaries. In fact, they frequently reflect human practices
+and policies related to the business and social context of
+the data (e.g., taking into account cost-benefit analysis). A
+good example is the role of expense and revenue calculation
+in business decisions.
+
+Furthermore, inference from data is a very hard problem,
+and one that is not likely to be solved in the near term.
+It is not likely that we will be able to infer the business
+rules associated with an obscure piece of machine equipment
+without the help of engineers that specialize in the design
+and use of such equipment.
+
+While tools for recording and managing data generated by
+the processes might be abundant (schema specifications and
+constraint satisfaction features in DBMS, XML tools), we
+are not aware of tools that are designed for capturing knowl-
+edge from experts to support business operations and vali-
+dating the data processes against the knowledge.
+
+Rule based programming is an ideal technology that sup-
+ports this task well. Informal If-Then rules are easily un-
+derstood by domain experts, and provide the basis for com-
+munication between the implementer and the expert. This
+is important not only for the expert to communicate to the
+implementer, but also in making relevant details of the im-
+plementation accessible to experts, who can then validate or
+modify it easily. See example in Section 6.
+
+Furthermore, control is data driven and therefore control
+does not need to be expressed in source-code. This permits
+business rules to be expressed and changed indepen-
+dently from other units of knowledge. This expressive-
+ness makes it easier to initially encode the knowledge in the
+software, easier to verify, and easier to validate and debug.
+
+As things stand today, business operations databases are
+immensely daunting, primarily due to the economics driven
+desire to scale and to automate. Taskforces to implement
+data quality programs spend a majority of their time (80%
+to 90%) on just gathering information to understand the
+business and data processes.
+When the existing process
+is not understood, making changes is even more difficult.
+Testing minor changes takes inordinate time and resources.
+Faced with tight deadlines, any testing is often cursory, re-
+sulting in catastrophic data quality errors down the road.
+This is why rule based programming is still a pow-
+erful tool for expert systems and why it will be a
+powerful tool for Data Quality.
+
+
+6. A CASE STUDY
+The case study involves assessing and remediating the qual-
+ity of a moderately large facilities inventory system of about
+100,000 entries with each entry containing on average 140
+characters. The data itself is a result of merges through a
+minimum of 3 systems and dropouts are manually patched.
+The parts listed in the inventory database were used to build
+over 70 types of entities. This data is derived from a case
+study in Dasu and Johnson [2] known as the Holy Cow study.
+
+The Holy Cow company knew that they had quality prob-
+lems and established a task force of 20-30 individuals to work
+out the issues. Initial meetings uncovered the fact that the
+schema were not accurate and there was true disagreement
+among experts about how the schema should be interpreted
+and how the data should be scrubbed. The technical team
+assigned to this task force recognized this situation as a case
+of Knowledge Engineering (see [6] for a good overview).
+
+Knowledge Engineering:
+The Knowledge Engineering
+process consists of four steps.
+The initial step is for the
+Knowledge Engineer to become familiar with the domain by
+understanding the architecture and operation of the inven-
+tory system and the current schema.
+The second step is
+that the Knowledge Engineer, participates in sessions with
+the experts to obtain a deeper understanding of the opera-
+tions and the issues. It is ideal to have one, or at most, 3
+experts for this stage, the fact that the task force consisted
+of over 20 experts added to the challenge. The third step
+begins once a sufficient and consistent body of knowledge is
+obtained. The technical team uses the knowledge to build
+a system and runs the system on data. The Knowledge En-
+gineers in the fourth step bring the results to the experts
+and the experts and the Knowledge Engineers critique the
+results, modify the knowledge and then return to step 3,
+altering the code so that the system reflects the new, im-
+proved knowledge. This process occurs until a satisfactory
+conclusion is reached.
+
+Results:
+It took over a month for the initial stages of
+knowledge engineering to occur. Three major iterations and
+many minor iterations later, the system came to a success-
+ful conclusion.
+It took over three months to get to that
+point, with many participants during the final stages spend-
+ing 16-18 hour days verifying the operation.
+The results
+were impressive, the task force had improved the quality of
+over 70% of the data in some way.
+
+
+
+707
+708
+
+The technical team was not satisfied. The process had been
+difficult. Although they had used a traditional Knowledge
+Engineering approach to gather the knowledge, they had
+not used it to represent the knowledge in the system. In-
+stead they had used a powerful procedural language, SAS
+[3], which was wonderful in handling large amounts of data.
+The issue was that the procedural methodology of SAS made
+it difficult to represent the knowledge in convenient chunks
+in the code. This was especially nettlesome when changes
+in control were addressed.
+
+The team decided that they would try a rule based ap-
+proach, shortening the interval between knowledge capture
+and knowledge testing and easing the task for developers
+maintaining the knowledge. In particular they thought the
+ability to represent complex patterns in rules would make
+it easier to map expert's knowledge to particular units of
+code. In addition the data driven aspects of rule based pro-
+gramming meant that they did not need to focus so much on
+the control of the system. The system simply halted when
+there was no more knowledge to apply to the code. The
+next section details how the knowledge was represented.
+
+Converting to rules:
+The team started with the inven-
+tory domain and the structure of the data feeds and then
+referred to the code to uncover specific, detailed informa-
+tion.
+One of the more difficult parts of the process was
+taming these details and restoring them to a form that was
+closer to the form of the original knowledge.
+
+Although this work is still in progress, an example illustrates
+our success to date. We used a variant of the rule based
+language OPS5 ([4]) C5 to encode the rules. A 72 clause if
+statement was translated to two rules of 5 and 7 conditional
+clauses each. More importantly these rules more faithfully
+represent the knowledge as stated by the experts. The team
+also is free to represent this knowledge without sensitivity to
+order effects. Since the control of execution is data driven,
+the team can add or delete rules without concern about how
+this modification affects the remainder of the system.
+
+DQ rule examples:
+
+Table 1 shows two C5 rules derived directly from the 74
+rules implemented for the case study with modified attribute
+names.
+
+
+
+(p Bad_NotInA_NotInB
+(Record ^ID <id> ^S_IND Green
+^C_IND DBMS1
+^L_IND DBMS2
+^CL_IND nil
+^A_IND nil
+^B_IND nil)
+-->
+(make Error ^ID <id>
+^Q_IND "Error: Record not found in A or B"
+^P_IND NotFlowingToDBMS3)
+)
+
+Table 1. Two Rules from the case study.
+We allow domain experts to work out meaningful naming
+conventions for rules and attributes. Our point is not really
+to explain C5 and how it works, but to show how closely
+domain knowledge and program can be related in a rule-
+based program. Bad NotInA NotInB has only one so-called
+condition element. C5 allows as many condition elements as
+needed to express the domain knowledge. The expression
+^ID <id> binds the value of the ID field to <id>. The sub-
+sequent fields (C IND, L IND, and so on) are required to
+have the values as indicated in Table 1. The conditions re-
+quired for matching (the IF part of the rule) and the actions
+associated with the rule (the THEN part) are separated in
+C5 notation by the --> symbol.
+
+Just as a rule can have compound left hand side (the IF part,
+sometimes called the LHS), it can also have a compound
+right hand side (the actions following the -->, often abbre-
+viated as RHS). However, Bad NotInA NotInB has only one
+action that adds a single element to working memory. An
+error message is produced (specified by the domain experts),
+and a classification or tag indicating the problem associated
+with the record. The record ID allows us to associate the
+data record with the result. Also Bad NotInA NotInB flags
+a record instance with bad data that cannot be automati-
+cally repaired. It must be fed back to humans who actually
+repair the bad data. But their job is made easier by the
+fact that there is specific output that tells them what the
+problem is. Individual rules are quite simple but an accu-
+mulation of simple rules such as these can be complex to
+manage.
+
+C5 is capable of generating debugging output known as
+a rule trace.
+The rule trace shows the sequence of rules
+that fired during execution and the modifications those rules
+made to working memory. Table 2 shows a portion of a rule
+trace for our case study.
+
+
+
+...
+1. INPUT
+=>wm 1: (Record ID 56151
+C_IND DBMS1
+L_IND DBMS2
+S_IND Green
+CL_IND nil
+A_IND nil
+B_IND nil)
+. . .)
+
+2. Bad_NotInA_NotInB
+=>wm 2: (Error ID 56151
+Q_IND Error: Record not found in A or B
+P_IND NotFlowingToDBMS3)
+
+3. Usage_Sell_NotAssigned
+<=wm 1: (Record ID 56151
+S_IND Green
+U_IND nil
+. . .
+)
+
+=>wm 3: (Record ID 56151
+S_IND Green
+
+
+
+708
+709
+
+U_IND Sell
+. . .)
+...
+
+Table 2. A C5 rule trace (case study).
+
+
+
+
+The rule trace in Table 2 shows that the INPUT rule fired
+first, bringing into working memory data record # 56151.
+This is indicated by the =>wm 1 symbol in the trace. The
+data record was assigned values for four attributes, ID, C IND,
+L IND, S IND. Attributes CL IND, A IND and B IND have
+null values (called nil in C5). In reality, each data record
+had 40 attributes. To simplify Table 2, we have removed
+all but the relevant attributes (replaced by the ellipses) to
+make the trace easier to understand. In principle, the code
+can be modified easily to print only those attributes that
+are relevant to the rule that was fired.
+
+The second rule that fires is Bad NotInA NotInB. This indi-
+cates that the constraint represented by the rule was violated
+and an error message is generated in the form of a working
+memory element. Note that the rule trace itself provides a
+form of explanation for the Error message. We know that
+record # 56161 was bad and the reason it is bad is because
+the conditions that cause rule Bad NotInA NotInB to fire
+were present. No hard coded error messages are required
+for us to know this.
+
+The third rule appearing in the trace is Usage Sell NotAssigned.
+The action on the RHS of Usage Sell NotAssigned is a mod-
+ify. Modifications in C5 are accomplished by removing the
+old working memory element, the one bound to the condi-
+tion element on the LHS, and adding a new element with
+the changed values. This is indicated in the trace by the <=
+symbol (remove) and the => symbol (add).
+
+The trace generated by C5 is a powerful diagnostic tool. It
+allows us to identify bad records and the associated rules
+that identified that data. The rules are localized and closely
+mimic the knowledge of the subject matter experts.
+
+
+7. CONCLUSION
+In this paper, we have demonstrated that business rules, un-
+conventional schema specifications, and subject matter ex-
+pertise were the key to success for our data quality project.
+We have shown that the combination of Knowledge engineer-
+ing and rule based techniques is very effective for uncovering
+and applying knowledge intensive scrubs to data that may
+have multiple flaws that are represented in single records.
+
+We believe that this system only scratches the surface of the
+potential for using Knowledge Engineering methods and rule
+based techniques for Data Quality. The trend in enterprises
+is to capture more data from more diverse and less controlled
+sources As this data accrues there will be quality problems
+and the resolution of such problems will be knowledge inten-
+sive and will involve multiple records and multiple tables.
+Furthermore, as the data repositories become increasingly
+large, heterogeneous and complex, the need to use empir-
+ical and data driven methods to understand the processes
+and audit them for data quality "at scale" (i.e., sustaining
+speed and performance even as the data systems balloon in
+size) will increase. The Data Quality engineer of the present
+and future will need techniques to capture, vet and deploy
+this knowledge in such a dynamic environment. These more
+complex scenarios along with further tuning the current sin-
+gle record scenario will be the focus of our future work in
+this area.
+
+8. REFERENCES
+[1] M. M. Breunig, H.-P. Kriegel, R. T. Ng, and J. Sander.
+LOF: Identifying density-based local outliers. In Proc.
+ACM SIGMOD Conf., pages 93­104, 2000.
+
+[2] T. Dasu. and T. Johnson. Exploratory Data Mining and
+Data Cleaning. John Wiley, New York, 2003.
+
+[3] L. D. Delwiche. and S. J. Slaughter. The little sas
+book-a primer, 1998. Second edition.
+
+[4] C. L. Forgy. Ops5 user's manual, 1981. Technical
+Report CMU-CS-81-135.
+
+[5] E. J. Friedman-Hill. Jess.
+http://herzberg.ca.sandia.gov/jess, 1997. Sandia
+National Laboratories.
+
+[6] J. C. Giarratano. Expert Systems: Principals and
+Programming. BrooksCole Publishing Co., 1998.
+
+[7] M. Hernandez and S. Stolfo. Real-world data is dirty:
+Data cleansing and the merge/purge problem. Data
+Mining and Knowledge Discovery, 2(1):9­37, 1998.
+
+[8] T. Johnson and T. Dasu. Comparing massive
+high-dimensional data sets. In Knowledge Discovery
+and Data Mining, pages 229­233, 1998.
+
+[9] E. Knorr and R. Ng. Algorithms for mining
+distance-based outliers in large datasets. In Proc. Intl.
+Conf. Very Large Data Bases, pages 392­403, 1998.
+
+[10] R. J. A. Little and D. B. Rubin. Statistical Analysis
+with Missing Data. Wiley, New York, 1987.
+
+[11] NASA. Clips. http://siliconvalleynone.com/clips.html.
+NASA Johnson Space Center.
+
+[12] A. Newell. Production Systems: Models of Control
+Structures in Visual Information Processing. New York:
+Academic Press, 1973.
+
+[13] R. Ramakrishnan. and P. J. S. (Ed). Constraints and
+Databases. Kluwer Academic, 1998.
+
+[14] T. Redman. Data Quality: Management and
+Technology. Bantam Books, New York, 1992.
+
+[15] T. Redman. Data Quality: The Field Guide. Dgital
+Press (Elsevier), 2001.
+
+[16] J. R. Rowland. and G. T. Vesonder. The c5 user
+manual release 1.0, 1987.
+
+[17] J. Tukey. Exploratory Data Analysis. Addison-Wesley,
+Reading, 1977.
+
+[18] G. T. Vesonder. Rule-based programming in the unix
+system. AT&T Technical Journal, pages 69­80,
+January 1988.
+
+
+
+709
+710
+

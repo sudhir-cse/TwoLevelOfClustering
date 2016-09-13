@@ -1,0 +1,1839 @@
+Generative Model-based Clustering of Directional Data
+
+Arindam Banerjee
+Dept of ECE
+University of Texas
+Austin, TX, USA
+abanerje@ece.utexas.edu
+Inderjit Dhillon
+Dept of CS
+University of Texas
+Austin, TX, USA
+inderjit@cs.utexas.edu
+Joydeep Ghosh
+Dept of ECE
+University of Texas
+Austin, TX, USA
+ghosh@ece.utexas.edu
+Suvrit Sra
+Dept of CS
+University of Texas
+Austin, TX, USA
+suvrit@cs.utexas.edu
+
+
+
+ABSTRACT
+High dimensional directional data is becoming increasingly
+important in contemporary applications such as analysis of
+text and gene-expression data. A natural model for multi-
+variate directional data is provided by the von Mises-Fisher
+(vMF) distribution on the unit hypersphere that is anal-
+ogous to the multi-variate Gaussian distribution in Rd. In
+this paper, we propose modeling complex directional data as
+a mixture of vMF distributions. We derive and analyze two
+variants of the Expectation Maximization (EM) framework
+for estimating the parameters of this mixture. We also pro-
+pose two clustering algorithms corresponding to these vari-
+ants. An interesting aspect of our methodology is that the
+spherical kmeans algorithm (kmeans with cosine similarity)
+can be shown to be a special case of both our algorithms.
+Thus, modeling text data by vMF distributions lends theo-
+retical validity to the use of cosine similarity which has been
+widely used by the information retrieval community. As part
+of experimental validation, we present results on modeling
+high-dimensional text and gene-expression data as a mix-
+ture of vMF distributions. The results indicate that our
+approach yields superior clusterings especially for difficult
+clustering tasks in high-dimensional spaces.
+
+Categories and Subject Descriptors
+H.3.3 [Information Storage and Retrieval]: Informa-
+tion Search and Retrieval; I.5.3 [Pattern Recognition]:
+Clustering
+Keywords
+Clustering, directional data, mixtures, von Mises-Fisher, EM
+
+1. INTRODUCTION
+Clustering or segmentation of data is a fundamental data
+analysis step that has been widely studied across various dis-
+ciplines [19]. However, several large datasets that are being
+acquired from scientific domains, as well as the world wide
+web, have a variety of complex characteristics that severely
+challenge traditional methods for clustering [15]. This ar-
+ticle is concerned with the clustering of high-dimensional
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee. SIGKDD '03, August 24-27, 2003, Washington,
+DC, USA. Copyright 2003 ACM 1-58113-737-0/03/0008...$5.00.
+directional data that is becoming increasingly common in
+several application domains.
+
+One can broadly categorize clustering approaches into gener-
+ative (parametric) [29, 18] and discriminative (non-parametric)
+[17, 27] ones. The performance of an approach (and of a spe-
+cific method within that approach) is quite data dependent;
+there is no clustering method that works the best across
+all types of data. Generative models, however, often pro-
+vide better insight into the nature of the clusters. From an
+application point of view, a lot of domain knowledge can
+be incorporated into generative models so that clustering of
+data uncovers specific desirable patterns that one is look-
+ing for. Clustering algorithms using the generative model
+framework, often involve an appropriate application of the
+Expectation Maximization (EM) algorithm [8, 5] on a prop-
+erly chosen statistical generative model for the data under
+consideration. For vector data, there are well studied clus-
+tering algorithms for popular generative models such as a
+mixture of Gaussians, whose effect is analogous to the use
+of Euclidean or Mahalanobis type distances from the dis-
+criminative perspective.
+
+1.1 Motivation and Related Work
+There are several application domains where clustering based
+on minimizing Euclidean distortions yields poor results [30].
+For example, empirical studies in information retrieval ap-
+plications show that cosine similarity is a far more effective
+measure of similarity for analyzing and clustering text docu-
+ments. Such domains require the use of directional data [22]
+-- data that deals only with the directions of unit vectors.
+Thus, there is a need for generative models that are more ap-
+propriate for the analysis and clustering of directional data.
+In this article, we propose a generative mixture model for
+directional data on the unit hypersphere and derive two clus-
+tering algorithms using this mixture model. We show the
+connection between the proposed algorithms and a class of
+existing algorithms for clustering high-dimensional, direc-
+tional data and present detailed experimental comparisons
+among them.
+
+As already mentioed, one important domain where direc-
+tional data is encountered is text analysis, and text clus-
+tering in particular. It has been experimentally shown that
+in order to remove the bias arising due to the length of a
+document, it often helps to normalize the data vectors [11].
+Further, the spkmeans algorithm [11], that performs kmeans
+using cosine similarity instead of Euclidean distortion, has
+been found to empirically outperform several other schemes.
+
+
+19
+
+There are quite a few other domains such as bioinformat-
+ics [13], collaborative filtering [26] etc., in which directional
+data is encountered. A similarity measure that has been
+found to be useful in these domains is the Pearson corre-
+lation coefficient. Given x, y  Rd, the Pearson product
+moment correlation between them is given by (x, y) =
+Pd
+i=1
+(xi-¯
+x)(yi-¯
+y)
+Pdi
+=1
+(xi-¯
+x)2×
+Pdi
+=1
+(yi-¯
+y)2
+, where ¯
+x =
+1
+d
+Pdi
+=1
+xi, ¯
+y =
+
+1
+d
+Pdi
+=1
+yi. Considering the mapping x  ~
+x such that ~
+xi =
+xi-¯
+x
+Pdi
+=1
+(xi-¯
+x)2
+, we have (x, y) = ~
+xT ~
+y. Further, ~
+x
+2
+= 1.
+
+Thus, the Pearson correlation is exactly the cosine similarity
+between ~
+x and ~
+y Hence, analysis and clustering of data us-
+ing Pearson correlations is essentially a clustering problem
+for directional data.
+
+The application domains described above share another char-
+acteristic, namely that the objects to be clustered reside in a
+very high dimensional space, with d sometimes in the thou-
+sands or more. Clustering of such high-dimensional data has
+been of great interest lately [9], with most of the proposed
+methods following a density-based heuristic or a discrimi-
+natory approach [15, 1, 16]. Perhaps the most noteworthy
+generative approach for clustering high-dimensional data is
+to use mixtures of Gaussians [7]. Certain other works such
+as [24] use a generative model from the exponential fam-
+ily and have been explicitly developed for modeling text.
+The spkmeans algorithm for clustering normalized data was
+proposed in [11], while the connection between a genera-
+tive model involving vMF distributions and the spkmeans
+algorithm was first observed in [3]. An online competitive
+learning scheme using vMF distributions for minimizing a
+KL-divergence based distortion was proposed in [28]. How-
+ever, these approaches do not cluster directional data using
+explicit probabilistic generative models. In this work, the
+directional nature of the data is used explicitly resulting
+in significantly better clustering performances over certain
+standard techniques, (such as kmeans with cosine similar-
+ity) especially for difficult clustering tasks: when clusters
+overlap, when cluster sizes are skewed, and when cluster
+sizes are small relative to the dimensionality of the data.
+Interestingly, as we shall see later on, one of our proposed
+approaches has an implicit simulated annealing type behav-
+ior that seems to alleviate some of the problems associated
+with high-dimensionality.
+
+Before proceeding further, we give a brief outline of the pa-
+per. We first present the vMF distribution on the sphere in
+section 2. In section 3, we introduce the generative model
+for a mixture of vMF distributions and analyze the max-
+imum likelihood parameter estimate of the mixture model
+from a given dataset using the EM framework. Based on
+the analysis of section 3, two clustering algorithms using
+soft and hard-assignments respectively are proposed in sec-
+tion 4. We present detailed experimental results on the pro-
+posed algorithms in section 5. Some interesting aspects of
+the proposed algorithms are discussed in section 6. Section 7
+presents concluding remarks and directions for future work.
+
+A word about the notation: bold faced variables, e.g., x, µ,
+etc., represent vectors;
+· denotes the L2 norm; sets are
+represented by calligraphic upper-case letters, e.g., X, Z,
+etc.; R denotes the set of reals, Sd-1 denotes the (d - 1)-
+dimensional sphere embedded in Rd. Probability density
+functions are denoted by lower case alphabets, e.g., f(·),
+p(·), etc.; probability of a set of events is denoted by P. If
+a random variable z is distributed as p(·), expectations of
+functions of z are denoted by Ep[·].
+2. THE VON MISES-FISHER (VMF) DIS-
+TRIBUTION
+A d-dimensional unit random vector x (i.e., x = 1) is said
+to have d-variate von Mises-Fisher (vMF) distribution if its
+probability density function is given by:
+
+f(x|µ, ) = cd()e
+µT x
+,
+(1)
+
+where µ = 1,   0. Thus, x, µ  Sd
+-1
+. The normalizing
+constant cd() is given by:
+
+
+cd() =
+d/
+2-1
+
+(2)d/
+2
+Id/
+2-1
+()
+,
+(2)
+
+where Ir(·) represents the modified Bessel function of the
+first kind of order r, see [22] and [12] for more details on
+vMF distributions. The density f(x|µ, ) is parameterized
+by the mean direction, µ, and the concentration parameter,
+, so-called because it characterizes how strongly the unit
+vectors drawn according to f(x|µ, ) are concentrated about
+the mean direction µ. Larger values of  imply stronger
+concentration about the mean direction. In particular when
+ = 0, f(x|µ, ) reduces to the uniform density on Sd
+-1
+,
+and as   , f(x|µ, ) tends to a point density.
+
+The von Mises-Fisher distribution is natural for directional
+data and has properties analogous to those of the multi-
+variate Gaussian distribution for multi-variate data in Rd.
+For example, the maximum entropy density on Sd
+-1
+subject
+to the constraint that E[x] is fixed is a vMF density (see [25]
+and [21] for details).
+
+3. EM ON MIXTURE OF VMFS
+In this section, we introduce a mixture of k vMF (movMF)
+distributions as a generative model for directional data, and
+then derive the mixture-density parameter estimation up-
+date equations from a given data set using the expectation
+maximization (EM) framework.
+The probability density
+function of the movMF generative model is given by
+
+
+f(x|) =
+k
+X
+h=1
+hfh(x|h),
+(3)
+
+
+where  = {1, ··· , k, 1, ··· , k} with
+Pkh
+=1
+h = 1,
+h  0, and fh(x|h) is a single vMF distribution with pa-
+rameters h = (µh, h). In order to sample a point from
+the generative model perspective, the h-th vMF is chosen
+at random with probability h, and then a point is sam-
+pled from Sd
+-1
+following fh(x|h). Let X = {x1, ··· , xn}
+be a data set generated by sampling independently following
+this generative model. Let Z = {z1, ··· , zn} be the corre-
+sponding set of the so-called hidden random variables such
+that zi = h when xi has been generated following fh(x|h).
+Then, with the knowledge of the values of the hidden vari-
+ables, the log-likelihood of the observed data is given by
+
+
+ln P(X, Z|) =
+n
+X
+i=1
+ln (zifzi(xi|zi)) ,
+(4)
+
+
+
+20
+
+from which maximum likelihood parameter estimates can be
+obtained. However, the values of the hidden variables are
+not known and so (4) is really a random variable dependent
+on the distribution of Z, and will be called the complete data
+log-likelihood. Now, for a given (X, ), it is possible to es-
+timate the most likely conditional distribution of Z|(X, ),
+and this forms the E-step of the EM framework. The exact
+details of how this estimation is done will be deferred for
+the moment. In fact we will discuss two ways of estimating
+the hidden variable distributions that lead to significantly
+different algorithms. For now, we will assume that the dis-
+tribution p(h|xi, ) = p(zi = h|x = xi, ), h, is known for
+all the data points.
+3.1 The M-step: Parameter Estimation
+Suppose the posterior distribution, p(h|xi, ), h, i, of the
+hidden variables Z|(X, ) is known. Unless otherwise spec-
+ified, henceforth all expectations will be taken over the dis-
+tribution of the (set of) random variable(s) Z|(X, ). Now,
+expectation of the complete data log-likelihood, given by
+(4), over the given distribution p is
+
+
+Ep[ln P(X, Z|)] =
+k
+X
+h=1
+n
+X
+i=1
+(ln h) p(h|xi, )
+
+
++
+k
+X
+h=1
+n
+X
+i=1
+(ln fh(xi|h)) p(h|xi, ).
+(5)
+
+
+In the parameter estimation or M-step,  is re-estimated
+such that the above expression is maximized. Note that in
+order to maximize this expression, we can maximize the term
+containing h and the term containing h separately since
+they have no functional dependencies (note that p(h|xi, )
+is fixed).
+
+To find the expression for h, we introduce the Lagrangian
+multiplier  with the constraint that
+Pkh
+=1
+h = 1. Tak-
+ing partial derivatives of the Lagrangian objective function
+w.r.t. each h and solving, we get
+
+
+^
+h =
+1
+n
+n
+X
+i=1
+p(h|xi, ).
+(6)
+
+
+Next we concentrate on the terms containing h = (µh, h)
+under the set of constraints µTh µh = 1, h  0, h. Then, us-
+ing Lagrange multipliers 1, ··· , k corresponding to these
+constraints1, the Lagrangian is given by
+
+
+L({µh, h, h}kh
+=1
+) =
+k
+X
+h=1
+"
+n
+X
+i=1
+(ln cd(h)) p(h|xi, )
+
+
++
+n
+X
+i=1
+hµTh xi p(h|xi, ) + h(1 - µTh µh)# .
+(7)
+
+
+Taking partial derivatives of (7) with respect to {µh, h, h}kh
+=1
+and setting them to zero, for h = 1, 2, . . . , k we get:
+
+^
+µh =
+Pn
+i=1
+xip(h|xi,)
+Pn
+i=1
+xip(h|xi,)
+,
+(8)
+
+
+Ad(^
+h) =
+Pn
+i=1
+xip(h|xi,)
+Pn
+i=1
+p(h|xi, )
+.
+(9)
+
+1
+analysis using the KKT conditions is skipped for brevity.
+h  0 is accounted for by taking positive square roots. The
+final estimates come out to be the same [2].
+where Ad() =
+Id/2()
+Id/
+2-1
+()
+. A closed form solution of (9) is
+not possible and one can use numerical techniques to solve
+for ^
+h. A reasonable approximation to the solution is ob-
+tained by setting
+
+^
+h =
+¯
+rhd - ¯
+r3h
+1 - ¯
+r2h
+,
+(10)
+
+where ¯rh = Ad(^
+h) [2].
+
+3.2 The E-step: Distribution estimation
+From the standard setting of the EM algorithm [8, 5], (6),
+(8), and (9) give the update equations for the parameters in-
+volved. Given this set of parameters, in this section we out-
+line two schemes for updating the distributions of Z|(X, )
+so that the likelihood of the data is maximized.
+
+The first update scheme exactly follows the soft-assignment
+scheme for learning mixture models using EM. From the
+standard EM framework, the distribution of the hidden vari-
+ables [23] is given by:
+
+p(h|xi, ) =
+h fh(xi|)
+Pkl
+=1
+l fl(xi|)
+.
+(11)
+
+
+Our second update scheme is based on the widely used hard-
+assignment heuristic for unsupervised learning. In this case,
+the distribution of the hidden variables is given by
+
+
+q(h|xi, ) =
+8
+<
+:
+1,
+if h = argmax
+h
+p(h |xi, ),
+0,
+otherwise.
+(12)
+
+
+Though soft-assignments are theoretically very well moti-
+vated [5, 23], hard-assignments have not received much the-
+oretical attention (though some discussion can be found
+in [20]). In the rest of this section, we formally study the
+connection between soft and hard-assignments in the EM
+framework. Note that this analysis is applicable to general
+mixture model learning in the EM framework.
+
+At first, following the arguments in [23], we introduce the
+function F(~
+p, ) given by
+
+F(~
+p, ) = E~p[ln P(X, Z|)] + H(~
+p).
+(13)
+
+where ~
+p is some distribution of Z|(X, ). From a maximum-
+likelihood perspective, the primary objective function that
+we want to maximize to get the correct mixture model is
+the incomplete data log-likelihood ln P(X|). Now, one in-
+teresting property of the function F is that it lower bounds
+ln P(X|) over choices of ~
+p. Hence, it makes sense to try
+to maximize F with respect to ~
+p. For a given , the ~
+p that
+maximizes F(·, ) is given by (11) [23]. The corresponding
+optimal value of the function is given by
+
+F(p, ) = Ep[ln P(X, Z|)] + H(p)
+= Ep[ln P(X, Z|)] - Ep[ln P(Z|(X, ))]
+= Ep
+»ln,,
+P(X, Z|)
+P(Z|(X, ))«­
+= Ep[ln P(X|)]
+= ln P(X|),
+(14)
+
+the incomplete data log-likelihood. Further, one can easily
+see that for a given ~
+p, the  that optimizes F(~
+p, ·) is the
+the same as the one that optimizes the expectation of the
+complete data log-likelihood in (5). Hence, the M-step is
+
+
+21
+
+equivalent to optimizing F with respect to  for a given ~
+p.
+It follows [5, 23], that the incomplete data log-likelihood,
+ln p(X|), is non-decreasing at each iteration of the alter-
+nate maximization of the function F in terms of  and ~
+p,
+or equivalently the parameter and the distribution updates
+given by (6), (8), (9), and (11). Iteration over this set of
+updates forms the basis of our algorithm soft-movMF to be
+discussed in section 4.
+
+In the hard-assignment case, effectively each of the hidden
+random variables has a distribution that has probability 1
+for one of the mixture components, and 0 for all the oth-
+ers. We shall denote this class of distributions by H. The
+important question is: is there a way to optimally pick a dis-
+tribution from H and then perform a regular M-step, and
+guarantee, as before, that the incomplete log-likelihood of
+the data is non-decreasing at each iteration of the update?
+Unfortunately, this is not possible in general. However, we
+show that it is possible to reasonably lower bound the in-
+complete log-likelihood of the data using expectations over
+q  H as in (12). The distribution q  H is optimal in
+the sense that it gives the tightest lower bound to the in-
+complete log-likelihood among all distributions in H. The
+lower bound is reasonable in the sense that the expecta-
+tion over q is itself lower bounded by (5), the expectation
+of the complete log-likelihood over the distribution p given
+by (11). Then, an iterative update scheme analogous to
+regular EM guarantees that this tight lower bound on the
+incomplete log-likelihood is non-decreasing at each iteration
+of the update. The parameter estimation, or, M-step re-
+mains practically unchanged, with p replaced by q in the
+update equations (6), (8), and (9).
+
+Since p given by (11) optimizes F for a given , the func-
+tional value F(·, ) is smaller for any other choice of ~
+p. In
+particular, if ~
+p = q as in (12), we have
+
+F(q, )  F(p, ) = ln P(X|).
+(15)
+
+Now, all distributions in H have the property that their
+entropy is 0. In particular, H(q) = 0. Then, from the
+definition of the function F, we have
+
+Eq[ln P(X, Z|)]  ln P(X|).
+(16)
+
+So, the expectation over q actually lower bounds the likeli-
+hood of the data. Using the definitions of p and q, one can
+easily prove [2] that Ep[ln P(Z|(X, ))]  Eq[ln P(Z|(X, ))].
+Now, adding the incomplete data log-likelihood ln P(X|)
+to both sides of this inequality, we have
+
+Ep[ln P(X, Z|)]  Eq[ln P(X, Z|)].
+(17)
+
+Combining (16) and (17), we get
+
+Ep[ln P(X, Z|)]  Eq[ln P(X, Z|)]  ln P(X|). (18)
+Thus, the expectation over q lies in between the incomplete
+data likelihood and the expectation of the complete data
+likelihood over p and hence is a reasonable lower bound to
+the incomplete data likelihood value.
+
+Finally, we show that our choice of the distribution q is opti-
+mal in the sense that the expectation over q gives the tightest
+lower bound among all distributions in H. Let ~
+q be any other
+distribution in the subset so that ~
+q(hi|xi, ) = 1. Let hi =
+argmax
+h
+p(h|xi, ).
+Hence, p(hi |xi, )  p(hi|xi, ), i.
+Then,
+
+E~
+q
+[ ln P(X, Z|)]
+
+=
+N
+X
+i=1
+k
+X
+h=1
+~
+q(h|xi, ) ln p(h|xi, ) =
+N
+X
+i=1
+ln p(hi|xi, )
+
+
+
+N
+X
+i=1
+ln p(hi |xi, ) =
+N
+X
+i=1
+k
+X
+h=1
+q(h|xi, ) ln p(h|xi, )
+
+= Eq[ln P(X, Z|)].
+Hence, the choice of q as in (12) is optimal. This analysis
+forms the basis of our algorithm hard-movMF to be discussed
+in section 4.
+
+4. ALGORITHMS
+In this section, we propose two algorithms for clustering
+directional data based on the development of the previous
+section. The two algorithms are based on soft and hard-
+assignment schemes and are respectively called soft-movMF
+and hard-movMF. The soft-movMF algorithm, presented in
+Algorithm 1 estimates the parameters of the mixture model
+exactly following the derivations in section 3 using EM.
+Hence, it assigns soft (or probabilistic) labels to each point
+that are given by the posterior probabilities of the compo-
+nents of the mixture conditioned on the point. On termina-
+tion, the algorithm gives the parameters  = {h, µh, h}kh
+=1
+of the k vMF distributions that model the data set X,
+as well as the soft-clustering, i.e., the posterior probabili-
+ties p(h|xi, ), h, i. Appropriate convergence criteria de-
+termine when the algorithm should terminate.
+
+Algorithm 1 soft-movMF
+Input: Set X of data points on Sd
+-1
+Output: A soft clustering of X over a mixture of k vMF
+distributions
+Initialize all h, µh, h, h = 1, ··· , k
+repeat
+{The E (Expectation) step of EM}
+for i = 1 to n do
+for h = 1 to k do
+fh(xi|h)  cd(h)ehµTh xi
+p(h|xi, ) 
+hfh(xi|h)
+Pkl
+=1
+lfl(xi|l)
+end for
+end for
+{The M (Maximization) step of EM}
+for h = 1 to k do
+
+h 
+1
+n
+n
+X
+i=1
+p(h|xi, )
+
+µh 
+Pn
+i=1
+xip(h|xi,)
+Pn
+i=1
+xip(h|xi,)
+h  A-1
+d
+,, Pn
+i=1
+xip(h|xi,)
+Pn
+i=1
+p(h|xi, )
+«
+end for
+until convergence
+
+
+
+The hard-movMF algorithm estimates the parameters of the
+mixture model by a hard assignment, based on a derived
+
+
+22
+
+posterior distribution given by (12). The algorithm is ob-
+tained from Algorithm 1 by replacing all the posteriors p by
+the hardened posteriors q as in (12). Thus, after the hard
+assignments in every iteration, each point belongs to a single
+cluster. As before, the updates of the component parameters
+are done using the posteriors of the components given the
+points. The only difference in this case is that the posterior
+probabilities can take values only in {0, 1}. On termination,
+the algorithm gives the parameters  = {h, µh, h}kh
+=1
+of the k vMFs that model the data set X under the hard
+assignment setup, and the hard-clustering, i.e., a disjoint k-
+partitioning of X based on the conditional posteriors q on
+the component vMF distributions.
+
+4.1 Revisiting Spherical Kmeans
+We briefly revisit the spkmeans algorithm [11], that has been
+shown to perform well on real life text clustering tasks [11,
+3], in the light of the developments of sections 3 and 4.
+First, we present the spkmeans procedure in Algorithm 2.
+The main observation is that the spkmeans algorithm can
+be looked upon as a special case of the soft-movMF as well
+as the hard-movMF algorithms under certain restrictive as-
+sumptions on the generative model. To be more precise,
+say we assume that the generative model of the mixture of
+vMFs is such that the priors of all the components are the
+same, i.e., h = 1/k, h. In order to get spkmeans as a
+reduction from soft-movMF, we further assume that all the
+components have (equal) infinite concentration parameters,
+i.e., h =   , h. With these assumptions, the E-step
+reduces to assigning a point to its nearest cluster where near-
+ness is computed as a cosine similarity between the point and
+the cluster representative. Thus, a point xi will be assigned
+to cluster h = argmax
+h
+xTi µh, since
+
+
+p(h|xi, ) = lim
+
+e
+xT
+i
+µh
+Pkh
+=1
+e
+xT
+i
+µh
+ 1
+(19)
+
+and p(h|xi, )  0, h = h.
+
+To show that spkmeans can also be seen as a special case
+of the hard-movMF algorithm, in addition to assuming the
+priors of the components to be equal, we further assume
+that the concentration parameters of all the components
+are equal, i.e., h = , h. Then, hard-movMF reduces to
+spkmeans. With these assumptions on the model, the es-
+timation of the common concentration parameter becomes
+unessential since the hard assignment will depend only on
+the value of the cosine similarity xTi µh. Given a set of values
+for {µh}kh
+=1
+, define Xh = {x : x  X, h = argmaxh xT µh }.
+It is easy to see that {Xh}kh
+=1
+forms a disjoint k-partitioning
+of X. For a given set of values for {µh, h}kh
+=1
+, we can
+rewrite the hard-movMF algorithm using a similar notation of
+set partitions, Xh = {x : x  X, h = argmaxh h xT µh }.
+
+In addition to the above three algorithms, we report ex-
+perimental results on another algorithm fskmeans [3] that
+belongs to the same class in the sense that, like spkmeans, it
+can be derived from the mixture of vMF models with some
+restrictive assumptions. In fskmeans, the centroids of the
+mixture components are estimated as in hard-movMF. The
+concentration of a component is set to be inversely propor-
+tional to the number of points in the cluster corresponding
+to that component in order to simulate a frequency sensitive
+Algorithm 2 spkmeans
+Input: Set X of data points on Sd
+-1
+Output: A disjoint k-partitioning {Xh}kh
+=1
+of X
+Initialize µh, h = 1, ··· , k
+repeat
+{The E (Expectation) step of EM}
+Set Xh  , h = 1, ··· , k
+for i = 1 to n do
+Xh  Xh  {xi} where h = argmax
+h
+xTi µh
+
+end for
+{The M (Maximization) step of EM}
+for h = 1 to k do
+
+µh 
+Px
+Xh
+x
+Px
+Xh
+x
+end for
+until convergence
+
+
+
+competitive learning that implicitly prevents the formation
+of null clusters, a well-known problem in regular kmeans [4].
+
+5. EXPERIMENTAL RESULTS
+In this section we briefly describe the datasets and exper-
+imental methodology used. Then, we discuss the perfor-
+mance of the four algorithms under consideration on the
+various datasets.
+
+5.1 Datasets
+We present results on two standard text datasets: 20 News-
+groups2, and Yahoo News3, and a dataset of Yeast gene-
+expression levels.
+
+The 20 Newsgroups dataset is a collection of 19997 docu-
+ments from 20 different Usenet newsgroups with (approxi-
+mately) equal number of documents from each group. We
+present results on several subsets of this dataset. The full
+dataset will be called news20. A smaller version small-news20
+was created with 100 randomly chosen documents from each
+of the 20 newsgroups. Various subsets of these two datasets
+were studied to understand the impact of dataset properties
+on the relative performance of the algorithms. news-diff3 is
+a subset consisting of 3 very different newsgroups (alt.atheism,
+rec.sport.baseball, sci.space) with 1000 documents per clus-
+ter, and small-news-diff3 consists of the same 3 news-
+groups with 100 documents per cluster. news-sim3 is a sub-
+set consisting of 3 very similar newsgroups (comp.graphics,
+comp.os.ms-windows, comp.windows.x) with 1000 documents
+per cluster, and small-news-sim3 consists of the same 3
+newsgroups with 100 documents per cluster.
+
+The Yahoo News (K-series) dataset is a collection of 2340
+Yahoo news articles from 20 different categories. We used
+the full yahoo dataset for experimentation. The underlying
+clusters in this dataset are highly skewed in terms of the
+number of documents per clusters, with sizes ranging from
+9 to 494.
+
+The Rosetta Inpharmatics Yeast gene-expression dataset [14]
+is a collection of gene-expression vectors constructed using
+
+2
+http://www.ai.mit.edu/people/jrennie/20 newsgroups
+3
+ftp://ftp.cs.umn.edu/users/boley/PDDPdata/
+
+
+23
+
+DNA microarray experiments on the Yeast genes. The origi-
+nal dataset consists of 300 experiments measuring expression
+of several yeast genes. We used a subset of 996 genes (with
+known phylogenetic profiles) for our experiments.
+
+5.2 Methodology
+Performance of the four algorithms discussed in section4 on
+all the text datasets have been analyzed using mutual infor-
+mation (MI) between the cluster and class labels. The MI
+gives the amount of statistical similarity between the clus-
+ter and class labels [6]. If X is a random variable for the
+cluster assignments and Y is a random variable for the pre-
+existing labels on the same data, then their MI is given by
+I(X; Y ) = E[ln
+p(X,Y )
+p(X)p(Y )
+] where the expectation is computed
+on the joint distribution of (X, Y ) estimated from a particu-
+lar clustering of the dataset under consideration. All results
+reported are averaged over 10 runs and all algorithms were
+started with the same random initialization. Since the the
+standard deviations of MI were reasonably small for all al-
+gorithms, to reduce clutter, error bars have not been shown
+in the plots. Also note that for the gene-expression datasets,
+since class labels are unavailable, the average cosine similar-
+ity between each data-point and its cluster representative is
+used to evaluate the performance of the algorithms.
+
+
+
+
+0
+5
+10
+15
+20
+25
+30
+35
+40
+0.2
+0.4
+0.6
+0.8
+1
+1.2
+1.4
+
+
+
+
+Number of clusters, k
+Mutual
+Information
+value
+MI values on small-news20
+
+fskmeans
+spkmeans
+hard-movMF
+soft-movMF
+
+
+
+
+Figure 1: Clustering results on small-news20
+
+
+
+5.3 Results on 20 Newsgroups
+In this section, we briefly discuss the performance of the al-
+gorithms on the 20 Newsgroups datasets. All the algorithms
+performed similarly for the news20 dataset achieving a MI of
+approximately 1.5 at the correct number of clusters. Exper-
+iments with artificial directional data revealed the empirical
+fact that if the clusters have almost equal priors, have suffi-
+ciently large number of data points per cluster, and several
+of them are reasonably separated the algorithms perform
+similarly, since the clustering problem is rather simple. On
+the other hand, if one or more of these conditions are vio-
+lated, they give quite different clusterings according to their
+respective biases. Lesion experiments with the various sub-
+sets of news20 are performed to study these biases in detail.
+For example, even though the small-news20 dataset is just
+a sampled version of the news20 dataset, significant perfor-
+mance differences are observed as shown in Figure 1. The
+number of documents per cluster being small, spkmeans and
+fskmeans do not perform that well, even for the true number
+of clusters, since for a small number of points, they become
+more susceptible to getting trapped in bad local minima
+of their respective objective functions. On the other hand,
+soft-movMF performs significantly better than all the other
+algorithms over the entire range, while hard-movMF gives
+satisfactory MI values till the true number of clusters after
+which it falls sharply.
+
+
+
+
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+0.4
+0.6
+0.8
+1
+
+
+
+
+Number of clusters, k
+Mutual
+Information
+value
+MI values on news20-diff3
+
+fskmeans
+spkmeans
+hard-movMF
+soft-movMF
+
+
+
+
+Figure 2: Clustering results on news20-diff3
+
+
+spkmeans
+soft-movMF
+I
+II
+III
+I
+II
+III
+Class I
+815
+1
+184
+957
+5
+38
+Class II
+21
+972
+7
+14
+981
+5
+Class III
+58
+13
+929
+27
+11
+962
+
+Table 1: Confusion matrix for news20-diff3
+
+
+Next, the effect of small number of points per cluster in
+high-dimensions is studied more closely using the two vari-
+ants of the news20-diff3 dataset. The basic news20-diff3
+dataset is an easy dataset to cluster since it has equal priors,
+reasonably separate clusters and sufficient number of docu-
+ments per cluster. However, as we shall shortly see, when the
+smaller version, small-news20-diff, of this simple dataset
+is used, the performance of the algorithms change by signif-
+icant amounts. The results on news20-diff3 are shown in
+Figure 2. The performance of all the algorithms are compa-
+rable, though the vMF based algorithms give higher values
+of MI consistently over the entire range of the number of
+clusters we experimented with. Further, at the correct num-
+ber of clusters k = 3, the vMF-based algorithms perform
+significantly better. We demonstrate this more clearly by
+presenting confusion matrices generated by spkmeans and
+soft-movMF for k = 3 in Table 1. Among the two vMF
+based algorithms, soft-movMF performs consistently better
+than hard-movMF over the entire range.
+
+
+24
+
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+
+
+
+
+Number of clusters, k
+Mutual
+Information
+value
+MI values on small-news20-diff3
+
+fskmeans
+spkmeans
+hard-movMF
+soft-movMF
+
+
+
+
+Figure 3: Clustering results on small-news20-diff3
+
+spkmeans
+soft-movMF
+I
+II
+III
+I
+II
+III
+Class I
+31
+28
+41
+94
+2
+4
+Class II
+26
+53
+13
+1
+80
+19
+Class III
+41
+21
+51
+0
+18
+82
+
+Table 2: Confusion matrix for small-news20-diff3
+
+
+Results on the small-news20-diff3 dataset are presented in
+Figure 3. We note that the vMF-based algorithms perform
+significantly better than fskmeans and spkmeans, which show
+a rather poor performance since the number of data points
+per cluster is relatively small compared to the dimension-
+ality of the data. In fact, for such high-dimensional data
+with sparse representation, such as text documents, a few
+points chosen at random have a high probability of being
+orthogonal to each other, so that a kmeans-based iterative
+update scheme may get stuck at a local minimum at the
+very point it is initialized (see [10]). As a result, kmeans-
+based algorithms suffer in high-dimensions, especially when
+the number of data points available is small. This explains
+the performance of fskmeans and spkmeans. Among the
+vMF-based algorithms, soft-movMF performs significantly
+better than hard-movMF over the entire range. This can be
+attributed to a very interesting implicit simulated annealing
+type behavior that soft-movMF demonstrates. This behav-
+ior will be discussed in some detail in section 6. Typical
+confusion matrices generated by spkmeans and soft-movMF
+for the correct number of clusters are presented in Table 2.
+
+spkmeans
+soft-movMF
+I
+II
+III
+I
+II
+III
+Class I
+618
+100
+282
+644
+120
+236
+Class II
+88
+629
+283
+120
+766
+114
+Class III
+225
+225
+550
+55
+122
+823
+
+Table 3: Confusion matrix for news20-sim3
+
+
+The next two datasets help us study the effect of high-
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+0.45
+0.5
+
+
+
+
+Number of clusters, k
+Mutual
+Information
+value
+MI values on news20-sim3
+
+fskmeans
+spkmeans
+hard-movMF
+soft-movMF
+
+
+
+
+Figure 4: Clustering results on news20-sim3
+
+
+dimensional overlapping clusters on the performance of the
+algorithms. Results on the news20-sim3 data are presented
+in Figure 4.
+Though each of the clusters has sufficient
+number of points, this is a rather difficult dataset to clus-
+ter because the 3 newsgroups are on very similar topics.
+Since there are enough points to work with, fskmeans and
+spkmeans attain reasonable performance all along, but suffer
+a little due to the cluster overlaps. Again, the vMF-based
+algorithms consistently perform better than the kmeans-
+based algorithms. Among the two vMF-based algorithms,
+soft-movMF seems to achieve higher values of MI, though
+the differences are not always significant. Representative
+confusion matrices generated by spkmeans and soft-movMF
+are presented in Table 3.
+
+
+
+
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+0
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+0.35
+0.4
+
+
+
+
+Number of clusters, k
+Mutual
+Information
+value
+MI values on small-news20-sim3
+
+fskmeans
+spkmeans
+hard-movMF
+soft-movMF
+
+
+
+
+Figure 5: Clustering results on small-news20-sim3
+
+
+
+The small-news20-sim3 dataset is perhaps the most diffi-
+cult dataset to cluster among the news20 subsets that we
+
+
+25
+
+spkmeans
+soft-movMF
+I
+II
+III
+I
+II
+III
+Class I
+43
+28
+29
+82
+47
+8
+Class II
+33
+38
+29
+2
+21
+27
+Class III
+34
+31
+35
+16
+32
+65
+
+Table 4: Confusion matrix for small-news20-sim3
+
+
+consider. It has overlapping clusters with a relatively small
+number of points per cluster. As expected, fskmeans and
+spkmeans do poorly on this dataset. The vMF-based algo-
+rithms perform significantly better as before. Again, soft-movMF
+achieves much higher values of MI over the entire range of
+cluster values over which experiments were performed. Typ-
+ical confusion matrices are presented in Table 4.
+
+
+
+
+0
+5
+10
+15
+20
+25
+30
+35
+0.5
+0.6
+0.7
+0.8
+0.9
+1
+
+
+
+
+Number of clusters, k
+Mutual
+Information
+value
+MI values on yahoo
+
+fskmeans
+spkmeans
+hard-movMF
+soft-movMF
+
+
+
+
+Figure 6: Clustering results on yahoo
+
+
+5.4 Results on Yahoo News
+The Yahoo News dataset is a difficult dataset for cluster-
+ing in the sense that in addition to having some amount of
+overlap in the clusters and insufficient points per cluster, the
+clusters are highly skewed in terms of the number of points
+per cluster. We present results for the different algorithms
+in Figure 6. Over the entire range, soft-movMF consistently
+performs better than the other algorithms. Even at the cor-
+rect number of clusters k = 20, it performs significantly bet-
+ter than the other algorithms. fskmeans and spkmeans have
+a very similar behavior till a moderate number of clusters.
+For higher numbers of clusters, spkmeans generates empty
+clusters because of which its MI does not increase as fast
+as fskmeans that has an explicit mechanism for preventing
+null clusters. The performance of hard-movMF is interest-
+ing; its MI values are comparable and at times worse than
+those of fskmeans and spkmeans. Though it seems to per-
+form marginally better at the correct number of clusters, the
+improvement is not statistically significant. As seen earlier,
+hard-moVMF performed significantly better than the kmeans-
+based algorithms on the other datasets that we discussed.
+In fact, similar behavior is observed on all other datasets we
+experimented with [2]. The skewness of yahoo in terms of
+cluster sizes can be a possible reason for its bad performance
+4
+6
+8
+10
+12
+14
+16
+18
+20
+22
+24
+0
+0.2
+0.4
+0.6
+0.8
+1
+
+
+
+
+Number of clusters, k
+Averag
+cosine
+similarity
+values
+Average cosine on Yeast gene-expression
+
+FSKMeans
+SPKMeans
+hard-moVMF
+soft-moVMF
+
+
+
+
+Figure 7:
+Clustering results on Yeast gene-
+expression data
+
+
+on this dataset, but experiments on other skewed datasets
+[2] do not explain this behavior.
+
+5.5 Results on Yeast Gene-expression
+Results on the Yeast gene-expression dataset are presented
+in Figure 7. As can be clearly seen, for a rather differ-
+ent clustering domain with a different performance measure,
+the vMF-based algorithms perform significantly better than
+the kmeans-based algorithms. Among the vMF-based algo-
+rithms, the performance of hard-movMF is marginally better
+than soft-movMF, but the differences are not significant. It
+is interesting to note that the vMF-based algorithms, while
+trying to maximize rather different objective functions, ac-
+tually perform significantly better than spkmeans in terms of
+the average cosine similarity, even though the latter is the
+objective function that spkmeans explicitly tries to maxi-
+mize.
+
+6. DISCUSSION
+The mixture of vMF distributions gives a parametric model-
+based generalization of the widely used cosine similarity
+measure. As discussed in section 4.1, the spherical kmeans
+algorithm that uses cosine similarity arises as a special case
+of the EM on mixture of vMFs when, among other things,
+the concentration  of all the distributions is held constant.
+From a different perspective, we argue that if a particular
+dataset has been sampled following a vMF distribution with
+a given , say  = 1, the natural similarity between any pair
+of data points in that set is given by the cosine similarity.
+More precisely, if data-points are represented in a feature-
+space with orthonormal basis, the Fisher-Information ma-
+trix is identity, and hence, the Fisher kernel similarity [18]
+is given by
+
+K(xi, xj) = (
+µ
+ln f(xi|µ))T (
+µ
+ln f(xj|µ))
+(see (1))
+
+= (
+µ
+(µT xi))T (
+µ
+(µT xj)) = xTi xj,
+
+which is exactly the cosine similarity. In other words, when-
+ever cosine similarity is used in a particular application (not
+
+
+26
+
+necessarily clustering), the implicit assumption one makes
+is that the data has been drawn from a vMF distribution.
+
+In terms of performance, the magnitude of improvement
+shown by the soft-movMF algorithm for the difficult cluster-
+ing tasks was surprising, especially since for low-dimensional
+non-directional data, the improvements using a soft-assignment
+based kmeans over the standard hard-assignment based ver-
+sions are oftentimes quite minimal. In particular, we were
+curious regarding a couple of issues: (i) why is soft-movMF
+performing substantially better than hard-movMF, even though
+the final probability values obtained by soft-movMF are ac-
+tually very close to 0 and 1; and (ii) why is soft-movMF,
+which needs to estimate more parameters, doing better even
+when there are insufficient number of points relative to the
+dimensionality of the space, e.g., all the small- datasets.
+
+It turns out that both these issues can be understood by
+taking a closer look at how the soft-movMF converges. In
+all our experiments, we initialized  to 10, and initial cen-
+troids to small random perturbations of the global centroid.
+Hence, for soft-movMF, the initial posterior membership dis-
+tributions of the data points are almost uniform and the
+entropy H(p) of the hidden random variables is very high.
+The change of this entropy over iterations for the news20
+subsets is presented in Figure 8. The behavior is similar
+for all the other datasets. Unlike kmeans-based algorithms
+where most of the relocation happens in the first two or
+three iterations with only minor adjustments later on, in
+soft-movMF the data points are noncommittal in the first
+few iterations, and the entropy remains very high (the max-
+imum possible entropy can be log2 3 = 1.585). The cluster
+patterns are discovered only after several iterations, and the
+entropy drops drastically within a small number of iterations
+after that. When the algorithm converges, the entropy is
+practically zero and all points are effectively hard-assigned
+to their respective clusters. Note that this behavior is strik-
+ingly similar to simulated annealing approaches where  can
+be considered as the inverse of the temperature parameter.
+The drastic drop in entropy after a few iterations is the typ-
+ical critical temperature behavior observed in annealing.
+
+As text data has only non-negative features values, all the
+data points lie in the first orthant of the d-dimensional hy-
+persphere and hence, is naturally very concentrated. The
+gene-expression data, though spread all over the hypersphere
+seemed to have some high concentration regions. In either
+case, the final  values on convergence are very high, reflect-
+ing the concentration in the data, and implying a low final
+temperature from the annealing perspective. Then, initial-
+izing  to a low value, or equivalently a high temperature,
+is a good idea because in that case when soft-movMF is run-
+ning, the  values will keep on increasing over successive
+iterations to get to its final large values, giving the effect
+of a decreasing temperature in the process, without any ex-
+plicit simulated annealing strategy. This explains why the
+soft-movMF algorithm performs so well for difficult cluster-
+ing tasks in high-dimensions. The hard-movMF algorithm,
+instead of using the more general vMF model, suffers be-
+cause of hard-assignments from the very beginning. The
+fskmeans and spkmeans do not do well for difficult datasets
+due to their hard assignment scheme as well as their signif-
+icantly less modeling capabilities.
+0
+5
+10
+15
+20
+25
+0
+0.2
+0.4
+0.6
+0.8
+1
+1.2
+1.4
+1.6
+1.8
+
+
+
+
+Number of iterations
+Entropy
+of
+hidden
+variables
+Entropy over Iterations for soft-movMF
+
+news20-same3
+small-news20-same3
+news20-diff3
+small-news20-diff3
+
+
+
+
+Figure 8: Variation of Entropy of hidden variables
+with number of Iterations
+
+
+7. CONCLUSIONS AND FUTURE WORK
+In this paper we have proposed two algorithms for clustering
+directional data. The algorithms are essentially expectation
+maximization schemes applied to an appropriate generative
+model, namely a mixture of von Mises-Fisher distributions.
+We show that the spkmeans algorithm [11], that has been
+shown to work well for text clustering, is a special case of
+both the proposed schemes. Another high-dimensional clus-
+tering algorithm, fskmeans [3], is also a special case of one
+of the proposed algorithms. All the algorithms are compre-
+hensively evaluated using several real-life high dimensional
+datasets with varying degrees of complexity. From the ex-
+perimental results, it seems that certain high-dimensional
+datasets, e.g., text, gene-expression etc., after L2 normal-
+ization have properties that match well with the modeling
+assumptions of the vMF mixture model. Hence, the pro-
+posed algorithms form powerful clustering techniques for
+such datasets.
+
+The vMF distribution that we considered in the proposed
+techniques, is one of the simplest parametric distributions
+for directional data. More general models, e.g., the Fisher-
+Bingham distribution, have added expressive power and may
+be useful under certain circumstances. However, the param-
+eter estimation problem is significantly more difficult for
+such models. Also, one needs substantially more data to
+get reliable estimates of the parameters. Hence these more
+complex models may not be viable for most problems. Nev-
+ertheless, the tradeoff between model complexity (in terms
+of the number of parameters), and sample complexity needs
+to be studied in more detail in the context of directional
+data. We could also adapt a local search strategy such as
+the one in [10], for incremental EM to yield better local
+minima for both hard and soft-assignments.
+
+Acknowledgments: This research was supported in
+part by NSF grant ECS-9900353 and NSF CAREER Award
+No. ACI-0093404 and Texas Advanced Research Program
+grant 003658-0431-2001.
+
+
+
+27
+
+8. REFERENCES
+[1] C. Aggarwal. Re-designing distance functions and
+distance based applications for high dimensional data.
+SIGMOD Record, 30(1), March 2001.
+
+[2] A. Banerjee, I. S. Dhillon, J. Ghosh, and S. Sra.
+Clustering on hyperspheres using Expectation
+Maximization. Technical Report TR-03-07,
+Department of Computer Sciences, University of
+Texas, February 2003.
+
+[3] A. Banerjee and J. Ghosh. Frequency sensitive
+competitive learning for clustering on
+high-dimensional hyperspheres. In Proceedings
+International Joint Conference on Neural Networks,
+pages 1590­1595, May 2002.
+
+[4] P. S. Bradley, K. P. Bennett, and A. Demiriz.
+Constrained k-means clustering. Technical report,
+Microsoft Research, May 2000.
+
+[5] M. Collins. The EM algorithm. In fulfillment of
+Written Preliminary Exam II requirement, September
+1997.
+
+[6] T. M. Cover and J. A. Thomas. Elements of
+Information Theory. Wiley-Interscience, 1991.
+
+[7] S. Dasgupta. Learning mixtures of Gaussians. In
+IEEE Symposium on Foundations of Computer
+Science, 1999.
+
+[8] A. P. Dempster, N. M. Laird, and D. B. Rubin.
+Maximum likelihood from incomplete data via the EM
+algorithm. Journal of the Royal Statistical Society,
+Series B, 39:1­38, 1977.
+
+[9] I. Dhillon and J. Kogan, editors. Proc. Workshop on
+Clustering High Dimensional Data and its
+Applications. SIAM, 2002.
+
+[10] I. S. Dhillon, Y. Guan, and J. Kogan. Iterative
+clustering of high dimensional text data augmented by
+local search. In Proceedings of The 2002 IEEE
+International Conference on Data Mining, 2002.
+
+[11] I. S. Dhillon and D. S. Modha. Concept
+decompositions for large sparse text data using
+clustering. Machine Learning, 42(1):143­175, 2001.
+
+[12] I. S. Dhillon and S. Sra. Modeling data using
+directional distributions. Technical Report TR-06-03,
+University of Texas, Dept. of Computer Sciences,
+February 2003.
+
+[13] M. B. Eisen, P. T. Spellman, P. O. Brown, and
+D. Botstein. Cluster analysis and display of
+genome-wide expression patterns. Proc. Natl. Acad.
+Sci., 95:14863­14868, 1998.
+
+[14] T. R. H. et. al. Functional discovery via a compendium
+of expression profiles. Cell, 102:109­126, 2000.
+
+[15] J. Ghosh. Scalable clustering methods for data
+mining. In N. Ye, editor, Handbook of Data Mining,
+pages 247­277. Lawrence Erlbaum, 2003.
+[16] G. K. Gupta and J. Ghosh. Detecting seasonal and
+divergent trends and visualization for very high
+dimensional transactional data. In Proc. 1st SIAM
+Intl. Conf. on Data Mining, April 2001.
+
+[17] P. Indyk. A sublinear-time approximation scheme for
+clustering in metric spaces. In 40th Symposium on
+Foundations of Computer Science, 1999.
+
+[18] T. Jaakkola and D. Haussler. Exploiting generative
+models in discriminative classifiers. In M. S. Kearns,
+S. A. Solla, and D. D. Cohn, editors, Advances in
+Neural Information Processing Systems, volume 11,
+pages 487­493. MIT Press, 1999.
+
+[19] A. K. Jain and R. C. Dubes. Algorithms for Clustering
+Data. Prentice Hall, New Jersey, 1988.
+
+[20] M. Kearns, Y. Mansour, and A. Ng. An
+information-theoretic analysis of hard and soft
+assignment methods for clustering. In 13th Annual
+Conf. on Uncertainty in Artificial Intelligence
+(UAI97), 1997.
+
+[21] K. V. Mardia. Statistical Distributions in Scienctific
+Work, volume 3, chapter Characteristics of directional
+distributions, pages 365­385. Reidel, Dordrecht, 1975.
+
+[22] K. V. Mardia and P. Jupp. Directional Statistics. John
+Wiley and Sons Ltd., 2nd edition, 2000.
+
+[23] R. M. Neal and G. E. Hinton. A view of the EM
+algorithm that justifies incremental, sparse, and other
+variants. In M. I. Jordan, editor, Learning in
+Graphical Models, pages 355­368. MIT Press, 1998.
+
+[24] K. Nigam, A. K. Mccallum, S. Thrun, and
+T. Mitchell. Text classification from labeled and
+unlabeled documents using EM. Machine Learning,
+39(2/3):103­134, 2000.
+
+[25] C. R. Rao. Linear Statistical Inference and its
+Applications. Wiley, New York, 2nd edition, 1973.
+
+[26] B. M. Sarwar, G. Karypis, J. A. Konstan, and
+J. Reidl. Item-based collaborative filtering
+recommendation algorithms. In World Wide Web, 10,
+pages 285­295, 2001.
+
+[27] B. Sch¨olkopf and A. Smola. Learning with Kernels.
+MIT Press, 2001.
+
+[28] J. Sinkkonen and S. Kaski. Clustering based on
+conditional distributions in an auxiliary space. Neural
+Computation, 14:217­239, 2001.
+
+[29] P. Smyth. Clustering sequences with hidden Markov
+models. In M. C. Mozer, M. I. Jordan, and T. Petsche,
+editors, Advances in Neural Information Processing,
+volume 9, pages 648­654. MIT Press, 1997.
+
+[30] A. Strehl, J. Ghosh, and R. Mooney. Impact of
+similarity measures on web-page clustering. In Proc
+7th Natl Conf on Artificial Intelligence : Workshop of
+AI for Web Search (AAAI 2000), pages 58­64. AAAI,
+July 2000.
+
+
+
+
+28
+

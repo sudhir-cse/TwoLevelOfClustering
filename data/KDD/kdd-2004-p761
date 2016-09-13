@@ -1,0 +1,1135 @@
+Optimal Randomization for Privacy Preserving Data Mining
+
+
+Yu Zhu
+Department of Statistics
+Purdue University
+W. Lafayette, IN 47907
+
+yuzhu@stat.purdue.edu
+Lei Liu
+Department of Statistics
+Purdue University
+W. Lafayette, IN 47907
+
+liulei@stat.purdue.edu
+
+
+
+ABSTRACT
+Randomization is an economical and efficient approach for
+privacy preserving data mining (PPDM). In order to guaran-
+tee the performance of data mining and the protection of in-
+dividual privacy, optimal randomization schemes need to be
+employed. This paper demonstrates the construction of op-
+timal randomization schemes for privacy preserving density
+estimation. We propose a general framework for randomiza-
+tion using mixture models. The impact of randomization on
+data mining is quantified by performance degradation and
+mutual information loss, while privacy and privacy loss are
+quantified by interval-based metrics. Two different types
+of problems are defined to identify optimal randomization
+for PPDM. Illustrative examples and simulation results are
+reported.
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications--
+Data mining; H.2.0 [Database Management]: General--
+Security, integrity, and protection
+
+General Terms
+Theory, Algorithms, Security
+
+Keywords
+mixture model, randomization operator, individual privacy
+
+1. INTRODUCTION
+In today's world, huge amounts of data are frequently
+collected, processed and stored. In order to extract useful
+information from these data, various data mining tools have
+been developed and used. Meanwhile, there arise serious
+concerns over individual privacy in data collection, process-
+ing and mining [4]. [13] predicted the making of a conflict
+between data mining and privacy. [2] and [10] proposed the
+concept of privacy preserving (PP) data mining (DM) aimed
+at alleviating this conflict.
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD'04, August 22­25, 2004, Seattle, Washington, USA.
+Copyright 2004 ACM 1-58113-888-1/04/0008 ...$5.00.
+The setting of PPDM can be described by a sever-client
+model [5]. It consists of a sever S and n clients C1, C2, ...,
+Cn. S needs to collect data from the clients to conduct a
+certain data mining task. For simplicity, we assume that
+the data includes only one attribute X. Let xi be the value
+of X for Ci with 1  i  n. When X is privacy sensitive,
+the clients may not want to reveal their individual data and
+thus create a dilemma between data mining and privacy.
+There exist two general approaches to solving this dilemma,
+which are the secure multi-party computing approach and
+the randomization approach. The former relies on secure
+multi-party computing protocols that can perform compu-
+tation without revealing each party's private data [10, 14],
+while the latter perturbs each individual data and reveal the
+perturbed data for data mining. In this paper, we focus on
+the randomization approach.
+The randomization approach was first introduced by [2].
+Each client (Ci) adds noise (zi) generated from certain dis-
+tribution to his/her true data (xi) and sends the sum (yi =
+xi + zi) to the server. Denote the randomized data by
+y = {yi}n
+i=1
+. Empirical results showed that data mining
+can be conducted with satisfaction using y instead of x. [9]
+raised concerns over the capability of randomization to pro-
+tect individual privacy. Clearly, on one hand, randomiza-
+tion protects individual data and allows data mining; on
+the other hand, it also results in information loss as well
+as privacy loss due to the revelation of randomized data.
+Hence, the central question in randomization is to construct
+randomization schemes that can achieve a balance between
+sharing information and preserving privacy.
+The proper quantification of privacy and privacy loss is
+crucial for PPDM. Several privacy metrics were proposed
+in the literature. Based on information theory, [1] used the
+differential entropy to measure the amount of privacy of a
+random variable X, and the mutual information between
+X and Y to measure the privacy loss for X caused by dis-
+closing Y . [5] and [6] introduced a concept called privacy
+breach and proposed the amplification method to limit pri-
+vacy breaches. However, most existing results are either
+ad hoc or empirical. The connections between information
+and privacy, especially individual privacy, are still not clear.
+Many questions remain open. For example, how random-
+izations exactly affect PPDM? how to discriminate different
+randomization schemes, and how to construct optimal ran-
+domization for various PPDM tasks? This paper is intended
+to build up a general framework to address these questions.
+We focus on privacy preserving density estimation only
+in the current paper, because it is one of the most fun-
+
+
+
+
+761
+Research Track Poster
+
+damental tasks in data mining. The rest of the paper is
+organized as follows. Section 2 introduces a general frame-
+work for randomization. Section 3 presents various density
+estimators. Section 4 includes several numeric methods for
+calculating the estimators. Section 5 formally discusses in-
+formation loss due to randomization, develops metrics to
+quantify individual privacy and proposes two optimization
+problems to identify optimal randomization for PPDM. Sec-
+tion 6 presents experimental results. Section 7 summarizes
+the main contributions of this paper.
+
+2. A GENERAL FRAMEWORK
+In the server-client model, the attribute X can be consid-
+ered as a random variable with distribution G(x) and density
+function g(x). The original data x = {x1,x2,... ,xn} is a
+random sample drawn from G, but the server only receives
+the randomized data y = {y1, y2,... ,yn}. In Section 1, y is
+derived from x by adding noise. In fact, more general ran-
+domization schemes exist. For Ci, randomizing xi can be
+regarded as randomly drawing an observation from a den-
+sity f(y|xi,) that depends on xi and some other parameter
+. We call f(y|x,) the randomization operator following [5].
+y can be viewed as a random sample of a random variable
+Y with the following distribution,
+
+h(y;, G) =
+f(y|x,)dG(x) =
+f(y|x,)g(x)d(x),
+
+(1)
+
+where  is either the Lebesgue measure or the counting mea-
+sure. Then privacy preserving density estimation is to re-
+construct G or g based on y and the randomization operator
+f. In statistics, (1) is known as the mixture model and g the
+mixing distribution. General mixture models have been well
+studied in statistics. The existing theory and methods for
+mixture models can be employed to facilitate the construc-
+tion of optimal randomization for PPDM. Next, we discuss
+two randomization schemes proposed in the PPDM litera-
+ture and show that they are special cases of (1).
+
+Example 1. A discrete version of (1) was considered in [5],
+where both x and y are discrete and f(y|x,) was written as
+p[x  y]. [6] and [5] employed a scheme called select-a-size
+randomization to perturb itemsets for mining association
+rules. Let I is a set of n items and T = {xi}1
+iN
+be
+a collection of N transactions with each being a subset of
+items. For convenience, the transactions are assumed to
+have the same size. For given   [0, 1] and a multinomial
+distribution  = {j}m
+j=0
+,
+
+f(y|x,,1,... ,m) =
+j
+m
+j
+m
+-j
+(1 - )n
+-m-m +j
+
+
+
+
+where y is a transaction of m items and j is the number of
+items shared by x and y. Hence, the select-a-size random-
+ization is equivalent to sampling an item subset from the
+space of all possible subsets according to f(y|x,), where
+ = (,1,. .. ,m). Readers are referred to [5] for a de-
+tailed description of the randomization procedure.
+
+Example 2.
+In [1] and [2], yi are obtained by adding
+noise zi to the original data xi, that is, yi = xi + zi for
+1  i  n. Assume the noise follows a distribution with den-
+sity f0(z|). Then f(y|x,) = f0(y - x|), and h(y;,G) =
+Ê
+f0(y -x|)g(x)d(x), which is called the convolution of f0
+and g. To estimate g based on h is called deconvolution. If
+f0(z|) =
+1
+2
+exp{-
+z2
+22
+}, then adding zi to xi is equiva-
+lent to randomly drawing yi from a normal distribution with
+mean xi and variance 2. If f0(z|) =
+1
+2
+I(
+-,)
+(z), a uni-
+form distribution over (-,), then adding zi is equivalent
+to randomly drawing yi from a uniform distribution over
+(xi - ,xi + ).
+
+Theoretically, (1) represents an extremely flexible frame-
+work for randomization. The variables x and y can be dis-
+crete or continuous, and do not have to be of the same type.
+We will focus on the case where both are continuous in this
+paper. f(y|x,) can be a general density function that de-
+pends on x and . In practice, however, one may want to
+restrict f to be in a family of distributions F. For example,
+in Example 2, F is the family of normal distributions with
+variance 2. In general, the exponential family can be con-
+sidered. How to choose an optimal f  F for randomization
+is crucial for the success of PPDM.
+Mixture models naturally arise from a variety of appli-
+cations and form an important type of model in statistics.
+Readers can consult [11] for a comprehensive account of this
+topic. As it will be shown later on, many existing theory and
+methods can be used for PPDM directly. An important dif-
+ference, however, does exist. In statistics, f is considered
+to be fixed thought it may not be completely known; while
+in PPDM, a central question is how to construct or identify
+an optimal f that can best facilitate both data mining and
+privacy preserving. In Sections 3-4, we will focus on the re-
+construction of G or g using existing theory and methods
+from mixture model.
+
+
+
+3. DISTRIBUTION RECONSTRUCTION
+In this section, we present two main approaches to esti-
+mating G0 or g0, which denotes the original distribution,
+and emphasize on the role played by f. When f is chosen,
+ is known. So, it is suppressed in both h and f.
+
+
+3.1 Nonparametric MLE
+Let M be the class of all possible distributions over the
+range of X, denoted by . Because y is a random sample
+from h(y|G), the likelihood function of G  M is l(G) =
+Èn
+i=1
+log h(yi;G) The nonparametric maximum likelihood
+estimator (NPMLE) is defined as
+^
+Gn = argmax
+GM
+l(G).
+Under fairly general regularity conditions on f, it is known
+that
+^
+Gn exists and converges to G0 asymptotically [11].
+There exists a nice geometric description of how
+^
+Gn is
+determined by y and f(y|x). For convenience, we assume
+that yi are different from each other. Define the likelihood
+vector to be L(x) = (f(y1|x),... ,f(yn|x)). When x varies
+in , L(x) forms a likelihood curve  = {L(x),x  }
+in Rn. For a given G, define L(G) =
+Ê
+L(x)dG(x). Let
+VM = {L(G),G  M}. It is not difficult to see that VM
+is the convex hull of . Consider the upper sets U(c) =
+{p : p  Rn such that
+Èn
+i=1
+log pi  c}. It can be shown
+that U(c) is convex and there exists a unique ^
+c such that
+VM  U(^
+c) = {L(
+^
+Gn)}. In other words, the likelihood vec-
+tor corresponding to the NPMLE
+^
+Gn is on the boundaries
+of VM and U(^
+c). Furthermore,
+^
+Gn is a discrete distribution
+
+
+
+762
+Research Track Poster
+
+with a finite number of support points, that is,
+
+^
+Gn 
+~
+x1 ~
+x2 ··· ~
+xm
+~
+q1 ~
+q2 ··· ~
+qm
+(2)
+
+
+where ~
+x = (~
+xi) denotes the support set and ~
+q1,... , ~
+qm are
+the corresponding probabilities
+^
+Gn can be further characterized by the gradient function
+of l(G). For any two distributions G1 and G2, define Gt =
+(1 - t)G1 + tG2. Clearly, Gt belongs to M if t  [0, 1] and
+l(Gt) is a function over [0, 1]. The derivative of l(Gt) with
+respect to t at 0 is defined to be the gradient of l from G1 to
+G2, which is D(G1;G2) =
+Èn
+i=1
+Li(G2)
+Li(G1)
+- 1 . When G2 is a
+
+point mass at x, it becomes D(G1;x) =
+Èn
+i=1
+Li(x)
+Li(G1)
+- 1 .
+Assume that f(yi|x) are nonnegative and bounded, we have
+G is a MLE estimator if and only if (P1) D(G; x)  0 for
+x   ; (P2) D(
+^
+Gn; ~
+x) = 0 for ~
+x in ~
+x. P1 and P2 can be
+used to derive algorithms for calculating
+^
+Gn.
+
+3.2 Kernel Estimators
+The kernel method is popularly used to estimate nonpara-
+metric functions. A typical kernel estimator of g0 based on
+y has the following form
+
+
+^
+gn(x) =
+1
+nbn
+n
+
+
+i=1
+K(
+x - yi
+bn
+).
+(3)
+
+
+where K(x) is the kernel and bn the bandwidth. The choices
+of K and bn are crucial for ^
+gn. When f(y|x) = f(y - x),
+the mixture model is called the convolution model. For the
+convolution model, the properties of ^
+gn have been well un-
+derstood [7].
+Let x(t), f(t) and y(t) be the characteristic functions
+of g, f and h respectively. Because h(y;G) =
+Ê
+f(y -
+x)g(x)dx, we have x(t) = y(t)/f(t). Using the inverse
+Fourier transform, g(x) =
+1
+2
+Ê
+exp{-itx}y(t
+)
+f(t)
+dt. Based on
+
+y, y(t) can be approximated by its empirical characteristic
+function
+^
+yn(t) =
+1
+n
+Èn
+j=1
+exp{-ityj}. Introduce another
+kernel function m(x) with characteristic function m(t) sat-
+isfying some necessary conditions [7]. Then the kernel esti-
+mator of g0 is ~
+gn(x) =
+
+1
+2
+exp{-itx}m(bnt)
+^
+yn(t)
+f(t)
+dt =
+1
+n
+n
+
+
+j=1
+1
+bn
+Kn(
+x - yj
+bn
+).
+
+(4)
+
+where Kn(x) =
+1
+2
+Ê
+exp{-itx}m(bnt)/e(t)dt. ~
+gn is a
+continuous density function and it converges to g as n  .
+
+4. COMPUTING ALGORITHMS
+The calculation of ~
+gn is relatively straightforward, but
+the calculation of
+^
+Gn is not trivial. There exist two types
+of algorithms for computing
+^
+Gn. The first type is based on
+P1, P2 and other properties of
+^
+Gn discussed in Section 3.1
+and is called the gradient method. Due to limited space,
+readers are referred to [3] for a comprehensive review. This
+section focuses on discussing the second type, that is, the
+EM algorithm.
+The EM algorithm is often used to calculate parametric
+MLEs when explicit solutions are not available. Although
+^
+Gn is a nonparametric MLE, the EM algorithm can still be
+used because
+^
+Gn is discrete with finite support points. The
+only difficulty is that the exact number of support points is
+unknown. Momentarily, we assume that it is known to be
+m. This issue will be further discussed later. Since
+^
+Gn has
+m support points, we only need to consider all the discrete
+distributions with m support points in M. Let
+
+Mm = {G  M : G 
+z1 z2 ··· zm
+q1 q2 ··· qm
+}.
+
+If G is restricted to Mm, then (1) becomes a finite mix-
+ture model, h(y|G) =
+Èm
+j=1
+qjf(y|zj), and the likelihood
+function becomes l(G) =
+Èn
+i=1
+log[
+Èm
+j=1
+qjf(yi|zj)]. Then
+^
+Gn = argmaxG
+Mm
+l(G). The standard EM algorithm for
+finite mixture models was developed a long time ago. It
+starts with an initial distribution, then alternates between
+an expectation step and a maximization step to update the
+estimates of zi and qi so that they converge to ~
+xi and ~
+qi, re-
+spectively. In the following, a pseudo-code of the algorithm
+is given. For the derivation, readers can consult [12].
+
+EM Algorithm:
+(1) Initialize Go with {zoj}m
+j=1
+and {qoj}1
+jm
+;
+(2) For 1  i  n and 1  j  m, calculate ij =
+qo
+j
+f(yi|zo
+j
+)
+h(yi|Go)
+,
+where h(yi|Go) =
+Èm
+j=1
+qojf(yi|zoj);
+(3) For 1  j  m, update zj and qj: qn
+j
+=
+1
+n
+Èn
+i=1
+ij,
+zn
+j
+= argmax
+z
+ Èn
+i=1
+ij log f(yi|z)
+¡
+
+(4) Replace zoj and qoj with zn
+j
+and qn
+j
+, respectively, for
+1  j  m and go to (2).
+(5) Stop when some stopping criterion is met.
+
+For given f(y|z), the maximization in the third step usu-
+ally has explicit solutions, so the EM algorithm is a highly
+automatic procedure. One approach to overcoming the dif-
+ficulty caused by an unknown m is to start with a small
+m. When the algorithm converges, one step of any gradi-
+ent method is employed to add more points to the support
+and the EM algorithm is run again until it converges to
+^
+Gn.
+The algorithm in [1] is a special case of the EM algorithm
+described above.
+
+
+5. INFORMATION VERSUS PRIVACY
+Randomization is an economical and efficient approach
+for PPDM. However, there are also concerns. First, ran-
+domization can result in information loss or performance
+degradation in data mining. Second, the randomized data
+contain information about the original data, thus they may
+compromise individual privacy.
+
+5.1 Performance Degradation and
+Information Loss
+If f(y|x) does not depend on x, then y contains no infor-
+mation about g0, that is, Y and X are independent. This im-
+mediately fails any attempts to conduct data mining based
+on y. Some f(y|x) can cause the so-called nonidentifiabil-
+ity problem in estimating g0 [11]. Therefore, great caution
+should be exercised to avoid using those randomization op-
+erators. The major concern over randomization is that it
+may reduce the accuracy of data mining. This is evident
+by comparing the performance of the estimators based on
+y and based on x. We use the kernel estimator as an ex-
+ample. Let gn(x) be a kernel estimator based on x. Using
+the integrated mean squared errors (IMSE) as metric, the
+
+
+
+763
+Research Track Poster
+
+distance between gn and g0 is usually of order O(n-
+
++1
+),
+where  depends on the smoothness of g0. The accuracy
+of ~
+gn, which is the kernel estimator based on y, can be re-
+duced to O(n-
+
+++1
+) or even to O(( log n)-), where ,
+ and  are parameters related to the types and degrees of
+smoothness of g0 and f0 [8, 7]. Hence, based on some prior
+knowledge about g0, we need carefully choose f to avoid
+severe deterioration in accuracy. Due to limited space, we
+refer interested readers to [8, 7] for details.
+For a given g0, suppose F is a family of proper randomiza-
+tion operators. Intuitively, in order to guarantee the perfor-
+mance of data mining based y, we need select f to make y
+and x, or Y and X, as dependent as possible. And the mu-
+tual information I(X,Y ) is a natural measure of the depen-
+dence. Based on (1), I(X,Y ) =
+Ê
+f(y|x)g0(x)logf(y|x)d(x)
+d(y) -
+Ê
+h(y|G0)logh(y|G0)d(x). It is known that 0 
+I(X,Y ) < + with I(X,Y ) = 0, when X and Y are inde-
+pendent, and I(X,Y ) = +, when X = Y . For a specific
+data mining task, direct performance measures can also be
+derived, which are usually complicated. I(X,Y ) can act as
+a simple surrogate for these performance measures. In the
+literature, I(X,Y ) was proposed to be a privacy loss mea-
+sure [1]. The reason why we use it as an information measure
+will be discussed in Section 5.2.1 and Section 5.2.3.
+
+Example 3. Suppose g0 follows N(µ, 2). The random-
+ization is to add noise drawn from N(0, 2) to the original
+data. Then f(y|x) =
+1
+2
+exp {-(y
+-x)2
+22
+}, and Y follows
+
+N(µ, 2 + 2). So I(X,Y ) = log
+Õ
+1 +
+2
+2
+. Clearly, when
+2 changes from 0 to +, I(X,Y ) decreases from + to
+0, where  = 0 corresponds to revealing the original data.
+This implies that if no privacy constraints are imposed, the
+original data is the best. In PPDM, however, privacy con-
+straints must be considered and guaranteed. Then a trade-
+off between information and privacy need be carried out.
+
+5.2 Individual Privacy and Its Protection
+Privacy is the most important concept in PPDM, but its
+quantification turns out to be difficult. In this section, we
+define different levels of privacy and examine their connec-
+tions to information. We emphasize that it is the individual
+privacy that we need to preserve in PPDM. Based on several
+privacy measures proposed in literature, we further define or
+develop metrics to quantify individual privacy in the context
+of density estimation.
+
+5.2.1 Individual Privacy, Aggregate Privacy and
+Information
+Recall that the primary goal of PPDM is to share popula-
+tion information (or aggregate information) while protecting
+individual privacy. The individuality aspect of privacy has
+not been well emphasized in the literature. For a given pop-
+ulation, privacy can be defined at different levels or scales.
+Let's consider a hypothetical example. Suppose we are in-
+terested in estimating the salary distribution of professors
+in a private university. Let X denote the amount of annual
+salary made by a professor. There exist at least three hier-
+archical levels for the privacy of salary, which are the indi-
+vidual, the departmental and the university levels. Because
+the individual level is related to every possible values of X,
+while the other two levels are related to collections of possi-
+ble values of X, we refer to the former as individual privacy
+and the latter two as aggregate privacy. In PPDM, generally
+one can specify the level of privacy one need protect. In this
+paper, we assume we want to preserve individual privacy.
+A close connection exists between privacy and informa-
+tion. Similarly, information can also be defined at various
+levels. At the same level, privacy and information could be
+regarded as the two sides of the same coin, because both
+of them are directly related to randomness and uncertainty.
+If this is true, sharing information must result in privacy
+loss, even when secure computing is employed. Then, we
+must ask how can PPDM be possible? A careful examina-
+tion concludes that the properties (information) we want to
+mine and the privacy we want to protect are usually at dif-
+ferent levels. This is exactly how PPDM was defined at the
+first place, which is mining aggregate properties while pro-
+tecting individual privacy. This definition can be generalized
+to mining properties at level i while protecting privacy at
+level j, where the levels should be well defined and j is usu-
+ally lower than i. Although mining aggregate properties can
+still cause the decrease in individual privacy, individuals are
+willing to participate a data mining process because (1) the
+decreased privacy is above certain tolerable level and (2) the
+potential benefits can be huge relative to the small loss in
+privacy.
+In summary, PPDM is possible because one can trade ag-
+gregate privacy for aggregate information while the individ-
+ual privacy is maintained to be above some tolerance level.
+Next, we consider possible measures to quantify individual
+privacy.
+
+5.2.2 Interval-based privacy metric
+The idea of using intervals to measure privacy was origi-
+nally suggested in [2]. However, [1] criticized this approach
+and suggested information-based measures instead. The
+counterexample in [1] was in fact not against the idea itself,
+it rather showed that the original definition was not enough
+and information regarding posterior distributions needs also
+to be taken into consideration. We modify the original defi-
+nition and show that it is indeed a quite legitimate approach.
+Suppose X is a random variable with density g over 
+where g(x) > 0. For x  , we define its individual privacy
+at level , denoted by (x), to be
+
+min{µ((a,b)  ) : x  (a,b) and P(X  (a,b))  }, (5)
+
+where   (0,1) and µ is the Lebesgue measure. If  is the
+whole real line, the privacy of x is the width of the narrowest
+interval that contains x and has probability .
+
+Example 4. Suppose X follows a uniform distribution over
+(-a,a), that is, g(x) =
+1
+2a
+I(
+-a,a)
+(x). Then for every x in
+(-a,a), (x) = 2a. Note that every x in (-a,a) has the
+same amount of privacy. (x) increases from 0 to 2a as 
+increases from 0 to 1.
+
+Example 5. Suppose X follows N(µ, 2). Define  to
+be -
+1
+(1+
+2
+). It can be shown that
+
+
+(x) =
+2
+if |x - µ| < ;
+|x - µ| - -
+1
+(( |x
+-µ|
+
+) - )
+if |x - µ|  .
+(6)
+
+We introduce a function to characterize individual's privacy
+tolerance. Let t() : [0, 1]  (0,+) be an nonnegative
+
+
+
+764
+Research Track Poster
+
+and increasing function. If an individual has X = x and
+(x)  t(), then he/she is comfortable with his/her in-
+dividual privacy at level , otherwise, the individual will
+consider his/her privacy being breached. Individuals in a
+population are willing to reveal their population distribu-
+tion, when their individual privacy can be above their tol-
+erance, that is, (x)  t() for all x   and a given
+.
+In randomization, because the randomized data are re-
+vealed in addition to the data mining results, individual pri-
+vacy will be further affected. For a give data x, we assume
+its randomized data is y. From (1), the posterior distribu-
+tion of X given Y = y is p(x|y) =
+f(y|x)g(x)
+h(y)
+. Let y be the
+support of p(x|y). For x  y, the privacy of x after PPDM,
+called the posterior privacy, is defined to be (x|y) =
+
+min{µ((a,b)  y) : x  (a,b) and P(X  (a,b)|y)  }.
+(7)
+
+If there is a pair of data x and y such that (x)  t()
+and (x|y) < t(), we claim that a privacy breach occurs
+at x. For a fixed x, the difference between its privacy and
+posterior privacy is
+
+(x) = (x) - (x|y),
+(8)
+
+which measures the impact of randomization on the privacy
+of x. Note that (x) is not necessary to be positive, because
+individual privacy can increase or decrease due to random-
+ization.
+
+Examples 3&5 (Continued). Suppose we use a normal
+distribution with mean 0 and variance 2 as the randomiza-
+tion operator. So f(y|x) =
+1
+2
+exp {-(y -x)2/22}. The
+posterior distribution p(x|y) is also a normal distribution
+with mean
+
+~
+µ =
+2
+2 + 2 µ
++
+2
+2 + 2 y
+(9)
+
+
+and variance ~
+2 =
+22
+2+2
+. So the posterior privacy at level
+ is
+
+(x|y) =
+´
+2
+Õ
+22
+2+2
+
+if |x - ~
+µ| < ~
+;
+|x - ~
+µ| - ~
+-
+1
+(( |x
+-~
+µ|
+~
+
+- )
+if |x - ~
+µ|  ~
+,
+(10)
+
+where  = -
+1
+(1+
+2
+). Note that the minimum posterior
+privacy is 2~
+, which is less than the minimum prior pri-
+vacy 22. But (x) can be positive or negative depends
+on the randomized data y. When  goes to zero, the pos-
+terior privacy will go to zero and result in serious privacy
+breach. On the other hand, when  goes to infinity, the
+posterior privacy converges to the prior privacy, that is,
+(x|y)  (x) for any x, y and . In PPDM, a proper
+ should be chosen between 0 and +.
+
+5.2.3 Entropy-based privacy metric
+Another type of privacy measure proposed in the litera-
+ture is based on information theory. Again, we assume X
+is a random variable with density g over . [1] defined the
+privacy of X to be h(X) = -Ê g(x) log g(x)d(x), which is
+the differential entropy of X. Entropy was originally used
+to measure the randomness as well as the information of a
+random variable and it represents an aggregate property of
+X. We can have two random variables that have the same
+entropy but are entirely different. So, h(X) is not directly
+related to the values of X, thus is not a proper measure of
+individual privacy. In an extended version of this paper, we
+explore the possibility to "individualize" entropy and pro-
+pose entropy-based privacy measures. Interested readers can
+request the paper from the authors.
+
+5.3 Optimal Randomization
+In the previous sections, we discussed the impacts of ran-
+domization on data mining, e.g., density estimation, and
+privacy protection, and proposed several metrics to quan-
+tify them. We argued that the success of PPDM hinges
+on the proper choice of randomization operators. Next, we
+define two types of problems for constructing optimal ran-
+domization.
+Suppose T is a data mining task. Let LDM(T ;f, g;x,y)
+be a measure of the discrepancy between the results of T
+based on y and x. The average discrepancy is defined to
+be LDM(T ;f,g) = Ex,
+y
+(LDM(T ;f,g;x,y)). For density es-
+timation, the distances between the NPMLE
+^
+Gn and the
+ordinary empirical distribution Gn, or between ~
+gn and gn,
+can be used as LDM. When f is already restricted to be
+in a family F of proper distributions, we advocate to use
+some surrogate measures such as the mutual information
+for choosing optimal randomization operators, that is, let
+LDM = -I(X,Y ). Let LPP(x;T , f,g) denote the privacy of
+x after randomization and data mining. In density estima-
+tion, the worst-possible posterior privacy of x can be used,
+which is LPP(x;T ,f,g) = miny(x|y).
+There are two types of problems in PPDM one need solve
+in order to choose optimal randomization operators. The
+first one is to maximize data mining performance under the
+constraint that posterior privacy for all x is above certain
+specified tolerance level (CPP). The second is to maximize
+privacy protection under the constraint that data mining
+performance is guaranteed to be above certain satisfaction
+level (CDM). These two types of problems are summarized
+below.
+
+Problem 1:
+
+Minf
+F
+LDM(T ;f, g)
+subject to LPP(x,f,g)  CPP for all x.
+
+
+Problem 2:
+
+Maxf
+F
+LPP(x,f,g)
+Subject to LDM(T ,f,g)  CDM.
+
+6. SIMULATIONS
+In this section, an example is used to show how to identify
+optimal randomization from a family of operators. Assume
+g0(x) = 0.5I(0,
+1)
+(x) + 0.25I(2,
+4)
+(x), and the family of opera-
+tors is F = {N(0, 2)}  {2 exp{-|z|}}. The randomized
+value y is obtained by adding noise z to x, where z follows
+f chosen from F. We will use the definition of optimality in
+Problem 1 of Section 5.3 only.
+Let LDM(T ;f, g) = -I(X,Y ). Let L(1)
+PP
+(f, g) = minyminx
+(x|y) and L(2)
+PP
+(f,g) = EY (minx(x|Y )), which are the
+minimum lowest-possible privacy and the average lowest-
+possible privacy, respectively. We calculated LDM, L(1)
+PP
+and
+L(2)
+PP
+for normal and double exponential randomization op-
+erators with different variances and plotted them in Figure
+
+
+
+765
+Research Track Poster
+
+1. The left is the plot of -LDM (i.e. I(X,Y )) versus vari-
+ance, in which the solid curve is for normal operators while
+the dot-dashed curve for double-exponential operators. The
+dot-dashed curve is above the solid one consistently. This
+indicates that the double-exponential operators caused less
+information loss. The right plot contains two pairs of curves.
+The pair on top is for L(2)
+PP
+(f,g), in which the long-dashed
+curve represents normal operators while the dotted curve
+represents double-exponential operators. The long-dashed
+curve is slightly above the dotted curve. This indicates
+that, on average, normal operators preserve slightly more
+individual privacy. The pair at bottom is for L(1)
+PP
+(f,g), in
+which the dashed curve corresponds to double-exponential
+operators while the two-dashed curve corresponds to normal
+operators. The two-dashed curve is quite flat. In fact, for
+normal operators, L(1)
+PP
+is always zero. It is positive in the
+plot because we computed it with y in a fixed finite interval.
+Small L(1)
+PP
+implies that when normal distributions are used,
+there always exists possibility of privacy breaches due to low
+posterior privacy. But the double-exponential operators do
+not have such a drawback. One can show that there exists a
+positive lower bound for the posterior privacy when double
+exponential distributions are used. Based on Figure 1, we
+conclude that double-exponential operators outperformed
+normal operators and should be employed for randomiza-
+tion. The particular choice of variance 2/2 depends on the
+tolerance threshold CPP. For example, if we set CPP = 1.0,
+then the variance should be larger than or equal to 2.25.
+Since the mutual information monotonically decreases with
+the variance increases, we should choose 2.25 as the optimal
+variance, so the optimal  =
+Ô
+2/2.25  0.9428. Hence, the
+optimal operator for this example is a double exponential
+distribution with  = .9428.
+
+
+
+
+0
+1
+2
+3
+4
+0.0
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+
+
+
+
+Variance of noise
+Mutual
+Information
+
+
+
+
+0
+1
+2
+3
+4
+0.5
+1.0
+1.5
+2.0
+
+
+
+
+Variance of noise
+Lowest-possible
+privacy
+(alpha=0.90)
+
+
+
+
+Figure 1: Mutual Information and Privacy Measures
+
+
+
+7. CONCLUSIONS
+In this paper, a general framework based on mixture mod-
+els is proposed for randomization in PPDM. We advocate
+the use of mutual information between the randomized and
+original data as a surrogate measure of the performance
+of PPDM and redefine the interval-based privacy measure.
+Furthermore, two types of optimization problems are intro-
+duced for the identification of optimal randomization oper-
+ators.
+
+8. ACKNOWLEDGEMENT
+Our thanks go to Professor Chris Clifton for many valu-
+able discussions, help and encouragement.
+
+9. REFERENCES
+[1] D. Agrawal and C. Aggarwal. On the design and
+quantification of privacy preserving data mining
+algorithms. In Proceedings of the 20th ACM
+SIGACT-SIGMOD-SIGART Symposium on Principles
+of Database Systems, Santa Barbara, California, USA,
+May 21-23 2001.
+[2] R. Agrawal and R. Srikant. Privacy-preserving data
+mining. In Proceedings of the 2000 ACM SIGMOD on
+Management of Data, pages 439­450, Dallas, TX
+USA, May 15 - 18 2000.
+[3] D. Bohning. A review of reliable maximum likelihood
+algorithms for semiparametric mixture models. J.
+Statist. Plann. Inference, 47:5­28, 1995.
+[4] The Economist. The end of Privacy. May, 1999.
+[5] A. Evfimievski, J. E. Gehrke, and R. Srikant. Limiting
+privacy breaches in privacy preserving data mining. In
+Proceedings of the 22nd ACM
+SIGACT-SIGMOD-SIGART Symposium on Principles
+of Database Systems (PODS 2003), San Diego, CA,
+June 2003.
+[6] A. Evfimievski, R. Srikant, R. Agrawal, and
+J. Gehrke. Privacy preserving mining of association
+rules. In Proceedings of 8th ACM SIGKDD
+International Conference on Knowledge Discovery and
+Data Mining, Edmonton, Alberta, Canada, July 2002.
+[7] J. Fan. Global behavior of deconvolution kernel
+estimates. Statistica Sinica, 1:541­551, 1991.
+[8] J. Fan. On the optimal rates of convergence for
+nonparametric deconvolution problem. Annals of
+Statistics, pages 1257­1272, 1991.
+[9] H. Kargupta, S. Datta, Q. Wang, and K. Sivakumar.
+On the privacy preserving properties of random data
+perturbation techniques. In Proceedings of the 3rd
+IEEE International Conference on Data Mining, pages
+99­106, Melbourne, Florida, November 19-22 2003.
+[10] Y. Lindell and B. Pinkas. Privacy preserving data
+mining. In Advances in Cryptology - Crypto2000,
+Lecture Notes in Computer Science, volume 1880,
+2000.
+[11] B.G. Lindsay. Mixture Models: Theory, Geometry and
+Applications, NSF-CBMS Regional Conference Series
+in Probability and Statistics, Vol. 5. Alexandria,
+Virginia: Institute of Mathematical Statistics and the
+American Statistical Association, 1995.
+[12] R. A. Redner and H. F. Walker. Mixture densities,
+maximum likelihood and the EM algorithm. SIAM
+Review, 26(2):195­239, 1984.
+[13] K. Thearling. Data mining and privacy: a conflict in
+making. DS,November 1998.
+[14] J. Vaidya and C. Clifton. Privacy preserving
+association rule mining in vertically partitioned data.
+In Proceedings of the 8th ACM SIGKDD International
+Conference on Knowledge Discovery and Data Mining,
+July 23-26 2002.
+
+
+
+766
+Research Track Poster
+

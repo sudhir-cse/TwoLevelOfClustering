@@ -1,0 +1,968 @@
+Estimating BusinessTargets
+
+
+Piew Datta
+James H. Drew
+Andrew Betz
+Verizon Laboratories
+40 Sylvan Road
+Waltham, MA 02154
+{piew.datta,jim.drew, andrew.betz, d.r.mani}
+@verizon.com
+D. R. Mani
+Jeffery Howard
+Verizon Information Services
+2200 West Airfield Drive
+D/FW Airport, TX 75261
+jeffreyx.howard
+@verizon.com
+
+
+Abstract
+Determining and setting maximal revenue expectations or
+other business performance targets--whether it is for regional
+company
+divisions or
+individual customers--can
+have
+profound financial implications. Operational techniques are
+changed, staffing levels are altered and
+management
+attention is re-focused--all in the name of expectations. In
+practice these expectations are often derived in an ad hoe
+manner.
+To address this unsupervised task, we combine
+nearest neighbor methods and classical statistical methods and
+derive a new solution to the classical econometric task of
+frontier analysis.
+We apply our methodology to two real
+world
+business
+problems
+in
+Verizon,
+a
+major
+telecommunications provider in the United States, more
+specifically in the print yellow page division Verizon
+Information
+Services:
+(1)
+identifying
+under
+marketed
+customers for targeted upselling campaigns and focused sales
+attention, and (2) benchmarking regional directory divisions
+to incent performance improvements. Our analysis uncovers
+some commercially useful aspects of these domains and by
+conservative estimates can increase revenue by several million
+dollars in each domain.
+
+
+Categories and Subject Descriptors
+H.2.8[Database Management]: Database Applications--data
+mining; 1.5.3[Pattem Recognition]: Statistical
+
+
+Keywords
+Nearest neighbor, frontier analysis, maximal value estimation
+
+
+
+1. INTRODUCTION
+What is the maximal revenue a business can earn? What is the
+most a customer is willing to spend? These are difficult but
+important business questions that obviously vary from
+division to division, and customer to customer even within the
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the first page. To copy
+otherwise, to republish, to post on servers or to redistribute to lists,
+requires prior specific permission and/or a fee.
+KDD 01 San Francisco CA USA
+Copyright ACM 2001 1-58113-391-x/01/08...$5.00
+same company.
+Setting targets whether it is for regional
+business divisions or for sales to individual customers is a
+critical task.
+Typically targets are set in an ad hoc manner
+(e.g. past performance or financial goals) that can reflect poor
+business or selling practices, or neglect intrinsic capabilities.
+
+Assuming that target setting is necessary for several entities, a
+simple method could set the target of each entity to the
+average amongst the entities; however, this is non-optimal
+since half of the entities could do better by definition. Using a
+sports analogy, when estimating the potential maximum
+distance for a long jump Olympian, we will expect him to
+jump farther than the average long jump distance over the
+entire population. A better estimate would compare him to
+other long jump Olympians. Two challenging aspects to this
+task exist: (1) the characteristics of the entities will have a
+heavy influence on the outcome, and (2) the inherent
+unsupervised nature of the problem.
+
+
+Our contribution to the knowledge discovery arena is to
+provide a methodology for estimating unsupervised maximal
+or minimal targets; more specifically in this paper we describe
+our methodology and provide discussion on its application
+within two actual business domains within Verizon: (1)
+setting revenue target expectations for individual customers
+who will eventually be targeted for up-selling and increased
+sales focus, and (2) revenue target setting for regional yellow
+page directories. This paper is structured as follows. Section
+2 describes historical approaches to this task and Section 3
+describes our methodology for unsupervised target estimation.
+Sections 4 and 5 discuss two real world business domains
+where this technique has been applied. Section 6 provides a
+summary and conclusions.
+
+
+2. HISTORICAL APPROACHES
+Two different communities, mathematical programming and
+econometricians, have researched estimating maximal or
+minimal targets.
+Both assume that the targets can be
+described by data, which are used to estimate targets. Both
+assume that the target is described by q~i = g (xi) where
+
+q~i is the target for x/, a vector for the ith observation.
+
+
+Termed
+data
+envelopment
+analysis
+(DEA)
+by
+the
+mathematical programming community, the task is to find a
+
+
+
+
+420
+
+surface that exceeds, or "envelopes" each target. Seiford and
+Thrall (1990) [11] provide a recent description of the state of
+the art in DEA. The estimated target is set to the maximum
+(or minimum) from the observed targets. This method has
+been criticized for its sensitivity to errors or outliers since it
+assumes that all observed targets define the possible space.
+
+Referred to as frontier analysis by the econometricians, they
+assume that ~oi = g(xi) + F.i , where e i is a non-negativeerror
+
+term. This sets the target above its observed performance, and
+also estimates a function of the variables that can update the
+frontier when the variables change.
+As Bauer (1990) [2]
+points out, the major problem with this approach is the
+requirement of a model for the error term and for g. Popular
+choices have been linear models, the Cobb-Douglas function
+and the translog.
+All are known to be merely local
+approximations to a more global function. Our approach
+expands this methodology and is described next.
+
+
+3. TARGET ESTIMATION
+METHODOLOGY
+When target estimation is necessary for several entities we
+argue that finding a smaller region of closely related entities
+provides more precise data for estimation. Two possibilities
+in the knowledge discovery area exist for finding closely
+related entities: nearest neighbor ([4], [1]) methods and
+clustering methods [7]. Although both of these techniques use
+similarity metrics to determine groups, the characteristics of
+the resulting groups are vastly different. In nearest neighbor,
+the closest entities are found for each entity whereas in
+clustering, groups are formed that reflect the general
+similarities among all entities.
+Although clustering is
+computationally more efficient than nearest neighbor, when
+clusters are formed two entities that are the closest to each
+other could theoretically fall into different clusters. In fact as
+the dimensionalityof the problem space increases this is more
+likely to occur. This will not occur with nearest neighbors.
+For this reason we opt to determine nearest neighbors for each
+entity.
+In this section we describe our two-step process: (1)
+finding neighborhoods with similar entities using nearest
+neighbor and (2) estimating frontiers for each entity from its
+neighborhood.
+
+
+3.1 The Neighborhoods
+Assuming we have a dataset of i observations, let xi denote the
+ith observation and y~denote the variable containingits target
+value. We define a neighborhood ni to be the neighborhood
+for x~ where ni is a set of observations {x~,xj,... } such that nt
+contains those entities that have the minimum distance from
+x~.
+Each observation will have a specific neighborhood
+containingits most similar observations.
+
+
+3.2 The Distance Function
+Defining the
+similarity or distance function between
+observations is a crucial part of finding the neighborhoods.
+Since our domains are defined by both continuous and
+nominal variables, we use a separate function for each type of
+variable and combine the results. For continuousvariables we
+use a weighted Minkowski distance [5] and for nominal
+variables we use a weighted distance typically used by
+instanced-based classifiers [1]. The distance between two
+observationsxi and xj is defined by
+
+D(xi,xj)
+= N(xi,xj)+
+C(xi,xj)
+
+
+
+
+0,
+iq = X jq
+N (x,,x
+~) =
+q~
+hal
+L W q ~X iq ~t: X jq
+
+where X~q denotes the value of the qth variable for xi, Wq
+denotes the weight for the qth variable, and r is set to either 1
+or 2 depending on the variable transformations applied.
+
+
+Since each of the continuous variables has different
+magnitudes and distributions, standardizing the continuous
+variables allows better control of the contribution of each
+variable to the similarity function via variable weighting.
+Researchers have also discussed the applicability of more
+complex distance metrics (e.g. [8], [12], [13]) that can be
+applied if necessary.
+Determining the contribution of each
+variable is a task that requires knowledge of the domain; some
+examples are discussed later.
+
+
+3.3 Computational Complexity
+The computational complexity for nearest neighbors is O(n2).
+A simple method for increasing the efficiency can employ a
+short-circuit such that the computation for the D(xi, xj) is
+stopped if the current distance is greater than that of the
+smallest distances already found, Other methods of reducing
+computational complexity via approximate nearest neighbor
+search and using more complex data structures such as kd-
+trees [1] or creating specialized database indexes [3] can also
+be applied.
+
+In situations where the data is too large even with complexity
+reducing measures, sampling may be a reasonable alternative.
+For example,
+the neighborhoods would be learned from a
+representative sample and then the maximum estimates would
+be calculated by the method described in the next section.
+Other efficient data mining methods (e.g. neural networks)
+would then be applied to learn a model mapping sample data
+to their estimates.
+This model can then be applied to the
+remainingdata for predicting their estimates. In short, nearest
+neighbor would be used to change the task from a
+unsupervisedtask to a supervised task.
+
+
+3.4 Target Estimation from the
+Neighborhoods
+Constructingneighborhoods of similar observations is the first
+step in estimating targets for each observation.
+In the
+previous section, neighborhoods were constructed for each
+division, so that associated with each xi, there are k-1 other
+observations that are similar (assuming k=lniD.
+The target
+measure from the observation itself, and each of the neighbors
+are considered to be realizations from a chosen statistical
+distribution.
+
+If q~; is the frontier for n~,we seek to estimate the relationship
+
+defined earlier where for the observed target measures
+
+
+
+
+421
+
+Yl, Y2..... Yk, we postulate that ~0~- Y,'k- f(2~),where f(. )
+
+is a statistical distribution taking on only non-negative values.
+Some of the distributions chosen in the econometrics literature
+[11] are the exponential, Gamma or half-Normal. We chose
+an exponential distribution [6].
+
+Let Yi(I),Yi(2).... Yi(k) be the order statistics for the observed
+
+performance, so that Yi(1) is the largest target measure in n~.
+
+For our chosen distribution, two natural estimators are the
+maximum likelihood estimator, or a linear unbiased estimator.
+The maximum likelihood estimator of qT~is just Y~tl~itself, so
+
+that the target frontier would be set at the largest in that
+neighborhood.
+From a business viewpoint, this has the
+unpalatable consequence of requiring no increase, as its
+performance is also constructed to be at the frontier. To solve
+this problem, we propose the following unbiased estimator of
+the exponential parameter )l~
+
+1
+k-I
+~' = k-'--'-'~,
+(k -
+j)( Y,(I+,) -
+Y,.(I))
+
+Set the estimator of the frontier (bi to
+
+
++
+2,
+or
+(0,
+=
+Y,(k)-A~'~!-~
+q~i = Y~m
+k
+K
+
+
+for each observation xb depending on whether the maximum
+or minimum target is desired.
+
+3.5
+A
+Heuristic
+for
+Comparing
+Neighborhoods
+In this unsupervised task, a method for comparing various
+distance metrics is necessary. Consider the ratio of y~to the
+estimated target $~ defined by
+
+[I ni I> 1,(y,/0,)))
+]
+
+E(x,)
+= tin,
+l= 1, unclefined
+
+[ (~~ = O, undefined
+If we are considering the maximal frontier, E(xi)
+will range
+from 0 to 1, illustrating the proportion of the target attained.
+If we are considering the minimal frontier, E(xi) > 1, and will
+show the number of times the observation's target is larger
+than the minimum.
+The distribution of E(x~) will vary
+depending on the estimation method and the distribution of
+the target.
+
+4.
+TARGET
+REVENUES
+FOR
+DIRECTORY BOOK ADVERTISERS
+To illustrate target estimation techniques, we describe two
+application domains related to yellow page directories
+produced by Verizon Information Services.
+Each of these
+750 directories contains thousands of ads placed by businesses
+large and small, local and national, to attract customers. Our
+first case study looks into revenue generated from advertisers.
+The revenue generated from even a single type of heading
+(e.g. doctors) varies greatly across directory books.
+One
+explanation is the competitiveness in the area.
+However,
+when these characteristics are accounted for by considering
+businesses with similar size and income, with similar market
+and directory competitiveness and size, we assume that
+businesses should spend similar amounts on yellow page
+advertisement. Our goal is to find businesses that have low
+spending
+relative
+to
+those
+with
+otherwise
+similar
+characteristics. This could identify under-marketed businesses
+that require additional sales attention and are ideal targets for
+upselling campaigns.
+
+Our case study focuses on Dentist listings occurring in all
+Verizon domestic yellow page directories for 2000. We chose
+dentists because our analysis showed that they have long
+lifetimes [10], but low revenue. Our dataset contains Dentist
+listings that have three categories of data available.
+
+
+·
+Advertiser variables: e.g. number of employees,
+business income, national or local business, and
+contact channel,
+·
+Directory
+variables:
+e.g.
+distribution
+size,
+competitive index, directory penetration, and unit
+price for heading,
+·
+Market variables: e.g. penetration of heading,
+median household income and total number of
+businesses.
+
+Although this is an unsupervised task, that is, the maximal
+amount a business is willing to spend is unknown, we have
+indirect measures of this unknown maximum via the revenue
+variable. The revenue in any form is not used for finding
+neighborhoods although it is used for verification purposes.
+
+4.1 Calculating Nearest Neighbors
+Before finding neighborhoods for each advertiser, we
+preformed some common measures to standardize data, (e.g.
+continuous variables transformed by natural log), and applied
+the distance metrics described earlier in this paper.
+The
+neighborhoods are kept small (k----4) to restrict the maximal
+frontier estimates.
+For this domain we decided to initially
+weigh
+the
+variables
+equally,
+however,
+after
+some
+consideration, we felt that variables such as market growth
+were not as important as business income for grouping similar
+businesses. Therefore we decreased the weights for many of
+the directory and market variables.
+
+4.2 Insights into Advertiser Revenue
+Figure 1. shows the distribution of E(x) for this task on a
+random sample of 500 advertisers. The x-axis shows E(x)
+grouped according to decile while the y-axis shows the
+percentage of the advertisers falling into each decile. Since
+neighborhoods have 4 observations, xs and 3 of its neighbors,
+x~ has a 25% chance of having the largest revenue under a
+random generation of maximal revenues..
+The estimator
+distributes this throughout the 80-100% spikes in Figure 1.
+One possible explanation for the distribution from 10% to
+80% is that advertisers may feel that purchasing the minimum
+ad is sufficient or they may have figured out how to
+manipulate the discount programs.
+This distribution is
+considerably different than Figure 3 for a different but related
+domain and reflects the buying pattern of this group of
+advertisers.
+Of particular interest is the relatively large
+number of low-efficiency advertisers.
+
+
+
+
+422
+
+E(x) for Advertisers
+
+
+
+"i 0.2
+m
+0.1
+o
+mlm.,..
+
+
+E(x)
+
+Figure 1 shows the distribution for E(x) for advertisers.
+
+In an effort to better understand the characteristics of
+advertisers with low spending compared to their neighbors,
+we used a,decision tree to predict the difference between the
+revenue ofxt and its estimated maximum revenue (i.e. ~,-
+
+y~).
+Figure 2 shows the partial structure of the decision tree
+for a random sample training/test sample. The contact type
+for the advertiser is the most important factor. Although its
+not shown, a close competitive split for the root is the annual
+revenue from the advertiser.
+Other important factors related
+to the directory distribution size and market size. Directory
+characteristics such as advertiser number and ad price, and
+market characteristics such as business count and household
+income are also important. If the right most node containing
+over 1100 observations is expanded ad price, median home
+value, and market heading penetration can more finely
+breakdown advertisers.
+It appears that low-efficiency
+advertisers are most numerous in competitive environments
+that require special sales reps and have large numbers of
+businesses.
+Further, efficiency differences develop in later
+years of an advertiser's tenure (few first year advertisers have
+small efficiencies), showing the importance of effective
+relationship management.
+
+
+
+
+I
+I
+N4017
+[
+
+I
+Distribution |
+
+'-
+I'
+In addition to using neighborhoods to set advertiser revenue
+targets, neighborhoods can suggest products advertisers may
+be more likely to buy.
+For example, new products can be
+developed that fulfill the needs of particular neighborhood
+types. In the case of Dentists, the introduction of a product
+bundle (e.g. print ad combined with internet yellow pages)
+that includes exclusive access to strategic partner websites,
+such as WebMD and Dentist.corn, would add value to the
+advertiser by increasing internet traffic and adding industry
+specific content.
+
+Since
+neighborhoods
+contain
+advertisers
+with
+similar
+business, directory, and market characteristics, sales people in
+direct contact with advertisers could use the information not
+only for targeting advertisers for the upsell opportunities
+described above, but also for identifying product features
+associated with intra-neighborhood competition. The visual
+attraction of larger ads, adding iinformation or color, from
+similar businesses may provide the nudge to persuade
+competitive advertisers to purchase more products.
+
+
+5. TARGET REVENUE
+FOR REGIONAL
+DIRECTORIES
+Our second case study describes estimating the potential
+revenue that can be generated by regional yellow page
+divisions. Division revenue comes from advertisement space
+sold to businesses. Managers would like to better understand
+the revenue potential for directory books that can motivate
+goal setting and provide specific tactical information for
+regional markets.
+
+
+
+Our dataset contains descriptions of directory books for 1999.
+Each observation contains variables specific to the book (e.g.
+distribution size,
+the
+average price per ad,
+type of
+
+
+
+N 1663 713
+[
+
+
+- - - J - - - !
+I SalesRepType
+I
+i
+r
+[
+
+Small Differences
+LargeDifferences
+
+
+
+
+I
+I
+I
+I
+TotalBusinessCount
+
+"
+I
+I
+N 1184 514
+
+
+
+
+r" . . . .
+/ _ - -I
+.
+.
+.
+.
+I
+RrstAdvertisingYear
+I
+I
+Non-ManufacturingSales -- I
+m
+m
+~
+m
+m
+~
+m
+m
+
+
+i
+I
+134 48
+[
+
+I
+Figure 2: a decision tree to predict ~i "xt. N denotes the number of training and test examples.
+
+
+
+
+423
+
+book, book features) and information regarding the market
+the book covers (e.g. the national competitive index, number
+of households, and average household income). In addition,
+each observation contains the revenue generated during the
+time period. For analysis purposes, the revenue variable and
+variations are dropped during modeling.
+
+5.1 Nearest Neighbors and Variable
+Weighting
+As in the previous domain, we preformed some common
+measures to standardize data, (e.g. all continuous variables
+are transformed with natural log) and applied the distance
+metrics described previously. We separated the data into two
+sets: the training set containing about 80% and the holdout
+set containing the remaining 20%.
+We calculated the four
+nearest neighbors for each directory xi (including xi) in the
+training set and defined this as the neighborhood n~. Initially
+we weighted the variables equally.
+
+Since Verizon has been producing printed yellow page
+directories
+for
+several
+years
+in
+very
+competitive
+environments achieving numerous awards, we assume that
+the efficiency of the businesses to be reasonable. If the
+efficiency of any directory is substantially low, we would
+expect competitive forces and revenue expectations to drive
+changes to make the business more efficient, otherwise the
+division is a lost expense. For these reasons we expect to see
+division efficiencies (i.e. E(x)) distributed normally hopefully
+skewed towards higher efficiencies.
+
+However we were somewhat disappointed with the results
+since according to our assumption of reasonably efficient
+businesses, too many directories had inefficient revenues
+(e.g. E(x) < 20%).
+We contributed this to our variable
+weighting scheme. Following our assumption of reasonably
+efficient businesses, we weighted variables according to their
+contribution towards predicting revenue (i.e. Yi). This was
+done
+to
+mitigate complaints from regional directory
+managers stating they were being treated unfairly by being
+grouped with higher revenue divisions.
+We calculated
+regression weights for the continuous and nominal variables
+to predict revenue using only the training set and recalculated
+the neighborhoods.
+
+
+
+
+0.25
+~
+0.2
+o 0.15
+01
+~ o.o5
+
+=-
+o
+The last piece of variable weighting requires domain
+knowledge regarding directories yellow pages and their
+regions.
+Many of the nominal variables when combined
+define directory book characteristics.
+Comparing the
+efficiency of two directories with very different book
+characteristics would be unfair. One example is book type of
+which there are three: system, neighborhood and system-
+neighborhood.
+A system book is the usual yellow pages
+produced by the franchised telephone company for an entire
+serving area.
+A system-neighborhood book is a directory
+that contains a smaller number of geographic areas in the
+franchise area, while a neighborhood book contains a small
+grouping of areas outside of the telephone company's
+franchise area. We weighted book characteristic variables
+more heavily than other variables such that two books of
+differing types would not
+to be placed in the same
+neighborhood.
+
+Figure 3 shows the efficiency E(x~) distributions on the
+training and holdout sets for 3 different weighting schemes:
+equally weighted variables, variables weighted via regression
+weights, and variables weighted via regression weights with
+specialized book feature weights.
+The x-axis shows E(xi)
+grouped according to decile while the y-axis shows the
+percentage of the training data that falls into the group. As
+can be seen in the Figure 3, E(x) has increased by using
+specialized weighting schemes related to the domain.
+
+5.2 ManagerialInsights
+Another application of these efficiencies is in developing
+business strategy based on the relation of E(x) to each
+variable. One kind of investigation is the way frontiers and
+efficiencies depend on the type of directory, system, non-
+system, and neighborhood described in the previous
+paragraph. The difference among book types carries over to
+calculated efficiencies, as shown by the following three
+charts in Figure 4 of E(x) versus book size (measured by
+log(number of books distributed)). A quadratic least-squares
+fitted line is superimposed to highlight the overall shape.
+
+
+
+
+m
+E(x) for Regional Directories
+
+
+
+
+~T,
+04
+"d"
+u3
+,,-
+o
+E(x)
+[]Training(Equally
+Weighted)
+
+
+IB Training(Regression
+Weights)
+
+
+[] Training(Regression
+Weightswith
+SpecializedBook
+FeatureWeights)
+M Holdout (Regression
+weightswithSpecializec
+BookFeatureWeights)
+
+
+
+
+Figure 3 shows four different distributions labeled according to the legend
+
+
+
+
+424
+
+EFF109
+EFF109
+EFF109
+
+BK'I'YPE:
+n
+flKTYPE:
+S
+8KTYPE: z
+........
+.1' ,L ,t'
+
+'
+i -'Z-o,,,,=,te
+,~
+~
+[
+T~
+I~
+~,
+
+L.~STTOT
+L~9"rTOT
+
+
+
+
+Figure 4: The x-axis shows log(distribution) and the y-axis E(x) for (a) neighborhood books (b) system books (c) non-system
+books.
+
+System books (Figure 4b) show increasing returns to scale
+[5]
+(i.e.
+E(x)
+increases
+as
+distribution
+increases)
+while
+neighborhood books have a fairly distinct maximum in the
+middle size ranges.
+It seems probable that such books are
+[6]
+inefficient if too small, as not enough territory is covered, or if
+too large, they compete with the system book in that
+franchise.
+[7]
+6. CONCLUDING REMARKS
+We have presented a general data mining methodology for
+estimating business targets by extending frontier analysis.
+Our first case study examined the methodology when applied
+to Dentist advertisers
+for yellow page directories
+and
+identified
+existing advertisers
+that are under-marketed.
+[8]
+Increasing sales focus on these customers could increase the
+potential revenue for dentist advertisers by several million
+according to our conservative estimates.
+We expect similar
+gains when other headings within directories are analyzed. In
+[9]
+our second case study, we provide a methodology for
+estimating optimal revenue performance targets for directory
+divisions.
+Since nearest neighbors contain divisions with
+similar directory and region characteristics, they could be used
+[10]
+for benchmarking or other performance measures.
+Our
+conservative estimate of potential
+revenue increase for
+directory books is a minimum of several million dollars.
+
+
+7. REFERENCES
+[1] Aha, D., Kibler, D. & Albert M. (1991). Instance-based
+learning algorithms. Machine Learning. (6) 37-66.
+
+Bauer, Paul W. (1990). Recent developments in the
+econometric estimation of frontiers, Journal of
+Econometrics, 46(1990), 39-56.
+[2]
+
+
+
+
+Bennett, K., Fayyad, U. & Geiger, D. (1999). Density-
+based indexing for approximate nearest-neighbor queries.
+In Proceedings of the Fifth ACM SIGKDD International
+Conference of Knowledge Discovery and Data Mining.
+San Diego.
+[3]
+[11]
+
+
+
+
+[12]
+
+
+
+
+[13]
+Everitt, B. & Dunn, G. (1991). Applied Multivariate
+Data Analysis. Oxford University Press.
+
+Johnson, Norman L., Samuel Kotz, N. Balakfishnan
+(1994). Continuous Univariate Distributions, vol. 1.New
+York: John Wiley & Sons.
+
+MacQueen, S. (1967). Some methods for classification
+and analysis of multivariate observations. Proceedings of
+the Fifth Berkeley Symposium on Mathematical
+Statistics and Probability. University of California Press.
+Berkley, CA.
+
+Mahalanobis, P. (1936). On the generalized distance in
+statistics. In Proceedings of the National Institute of
+Science, Calcutta India.
+
+Maneewongvatana & Mount, (1999). Analysis of
+Approximate Nearest Neighbor Searching with Clustered
+Point Sets," ALENEX 99, 1999.
+
+Mani, D.R., Drew, J., Betz, D., & Datta, P. (1999)
+Statistics and Data Mining Techniques for Lifetime
+Value Modeling. Proceedings of the Fifth International
+Conference on Knowledge Discovery and Data Mining.
+San Diego, CA. Association for Computing Machinery,
+New York, NY.
+
+Seiford, Lawrence and Robert Thrall (1990). Recent
+developments in DEA: the mathematical programming
+approach to frontier analysis, Journal of Econometrics,
+46 (1990).
+
+Stanfill, C. & Waltz, D. (1986). Toward memory-based
+reasoning. Communications of the ACM. vol. 29 no. 12,
+pp1213-1228.
+
+Wilson D. R., Martinez, T. R. (1997). Improved
+heterogeneous distance functions. Journal of Artificial
+Intelligence Research, vol. 6 pp. 1-34.
+
+[4] Duda, R. & Hart, P. (1973). Pattern Classification and
+Sceen Analysis. John Wiley & Sons.
+
+
+
+
+425
+

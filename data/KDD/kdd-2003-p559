@@ -1,0 +1,1656 @@
+ABSTRACT
+We present a method for very high-dimensional correlation analy-
+sis. The method relies equally on rigorous search strategies and on
+human interaction. At each step, the method conservatively
+"shaves off" a fraction of the database tuples and attributes, so that
+most of the correlations present in the data are not affected by the
+decomposition. Instead, the correlations become more obvious to
+the user, because they are hidden in a much smaller portion of the
+database. This process can be repeated iteratively and interac-
+tively, until only the most important correlations remain.
+The main technical difficulty of the approach is figuring out
+how to "shave off" part of the database so as to preserve most cor-
+relations. We develop an algorithm for this problem that has a
+polynomial running time and guarantees result quality.
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications - Data
+Mining
+
+Keywords
+Data mining, correlations, association rules, minimum cut
+
+1. INTRODUCTION
+Co-occurrence analysis is a fundamental problem in knowledge
+discovery. Given a database containing a large set of events, the
+problem is to discover subsets of those events that co-occur or cor-
+relate well enough to be considered "interesting," even though the
+definition of "interesting" may not always be clear beforehand. A
+large body of related work has been published in the last ten years,
+much of it based on the pioneering paper by Agrawal et al. on
+association rule mining [1]. However, the ideas presented in this
+paper are rooted in the belief that a drawback of state-of-the-art
+work in this area is that co-occurrence analysis is usually not
+treated as an iterative process with active human participation.
+The problem with removing most human interaction from the
+analysis is that we cannot predefine a statistical test that always
+accepts exactly the patterns the user is interested in. So, we are left
+with two choices. We can be optimistic, and define a test that
+accepts only a small (polynomial) number of patterns (the "top k"
+approach [3][8][9]). The problem here is that there are typically an
+exponential number of candidate patterns, so any "selective" test
+must be exponentially selective; thus, we run the risk of missing
+some or all of our target patterns. Alternatively, we can define a
+test that does not return a polynomial set of patterns [1][2][5], but
+then the problem is that tremendous computational resources are
+required to enumerate an exponential number of patterns. For
+example, using the support statistic [1], it may be impossible to
+enumerate all of the patterns, even given days of computer time.
+We propose to sidestep these problems by eliminating as much
+as possible the need to pre-define a statistical test to define the
+most "interesting" correlated events. Instead, we believe that the
+onus for discovering the important patterns should reside jointly
+with a human expert, and with powerful search algorithms.
+Our proposal relies on iterative refinement to find the most
+interesting patterns. At each step, a portion of the search space is
+decomposed into two components by the system. This decomposi-
+tion is facilitated by the search for the Most Interesting Lesson, or
+MIL. The decomposition is such that the most important correla-
+tions are preserved in the remaining data, and become more obvi-
+ous because extraneous data have been removed. The user guides
+the refinement, but significant computation is devoted to automati-
+cally computing the best decomposition (the MIL) at each step.
+
+2. THE MOST INTERESTING LESSON
+We begin by defining the MIL problem.
+Consider a database table, as is shown in Figure 1. The database
+has n records, each containing m columns. For simplicity, all
+attributes take the value of 0 or 1, but we do not care about the
+value 0. This is not a restrictive requirement, since if we are also
+interested in the absence of certain values, we can always add addi-
+tional columns signifying their absence (as was done in Figure 1).
+Given this, we are ready to define a lesson:
+
+Definition 1: A lesson is a double of the form (percent,
+attribute_set), where percent is a rational number between 0 and
+1 inclusive, and attribute_set is a non-empty subset of the data
+attributes {att1, att2, ..., attm}.
+
+Conceptually, a lesson L can be used to describe the interaction of
+database tuples and attributes, where the set L.attribute_set shares
+some specific property over L.percent of the database tuples. A
+lesson is simply a data structure that can be used to encode many
+different types of patterns (including frequent itemsets [1]). Next
+we define the notion of a fit.
+
+Definition 2: Let 2tuples denote all subsets of tuples from a given
+database, and let 2atts denote all subsets of attributes from the
+database. Let p (the "penalty") be some rational number greater
+
+than 1. Given a set
+and another set
+, the fit
+of T and A is fit(T, A) =
+.
+
+
+Thus, given a subset of the database attributes as well as a subset
+of the database tuples, the fit of the two is simply the size (number
+of cells) of the region corresponding to their intersection in the
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and
+that copies bear this notice and the full citation on the first page. To
+copy otherwise, or republish, to post on servers or to redistribute to
+lists, requires prior specific permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA.
+Copyright 2003 ACM 1-58113-737-0/03/0008...$5.00.
+T
+2
+tuples
+
+A
+2
+atts
+
+T
+A
+×
+p
+1 t a
+[ ]
+­
+a
+A
+
+
+t
+T
+
+
+­
+Playing Hide-And-Seek with Correlations
+
+
+Christopher Jermaine
+CISE Department
+University of Florida, Gainesville, FL, 32611
+cjermain@cise.ufl.edu
+
+
+
+
+559
+
+database, minus a certain penalty (p) for each of the 0's (errors)
+that are encountered in the intersection. The MIL is now defined.
+
+
+Definition 3: Let a lesson L describe two sets
+and
+
+,
+so
+that
+and
+
+L.attribute_set = A. Given a penalty level p, L is the most inter-
+esting lesson (MIL) from the database if there does not exist
+another lesson
+such that
+.
+
+For an example of the MIL from a database, consider the database
+of Figure 1. If the penalty p is 2, then the MIL is the double (4/8,
+{item#1, not_item#2, age0-20, $21-30, year2001}). The fit of this
+lesson is
+, since the lesson describes four tuples
+(numbers three, four, five, and six) which all have positive values
+for the five attributes from the lesson, with the exception of only
+two zeros. This lesson is shown in Figure 1.
+Though the definition of the MIL problem might seem rather
+arbitrary, it actually has a solid statistical foundation. The MIL
+problem seeks to find the rectilinear subspace that maximizes the
+values of a multinomial loglikelihood ratio test, under certain sim-
+plifying assumptions. See our previous work for more details [7].
+
+3. A DATA DECOMPOSITION ALGEBRA
+As described in Section 2, the user can supply a penalty parameter
+p to control search for the MIL. For smaller penalty values, the
+MIL will be extremely conservative, and will remove only a rela-
+tively small fraction of the database tuples and attributes from con-
+sideration (if p = 1, the database itself is the MIL). This makes it
+meaningful to recursively search for the MIL in an interactive,
+exploratory decomposition of the data.
+For example, the user can first search for the MIL from a data-
+base using small p. If the MIL is large, the user can then find the
+MIL within that MIL, and then find the MIL in that MIL, and so
+on. Or, the user can first discover the MIL from a database, have it
+removed from the data, then find the MIL in the remaining portion
+of the database, and recursively decompose that MIL.
+We now describe an algebra that facilitates such an interactive
+decomposition. We denote the set of all binary-valued relations
+with the symbol R. What we describe is an algebra in the sense that
+it is a set of operators that are closed over all relations in R. We
+will assume that each tuple or record in every relation has an iden-
+tifier (e.g., a surrogate key) that makes it meaningful to check if
+ti.id = tj.id for two tuples ti and tj.
+We begin with two operators over database tuples that will
+allow us to succinctly describe our three operators over relations.
+Definition 4: Let t be a tuple, and let L be a lesson. Then
+where
+if
+
+and
+otherwise.
+
+Definition 5: Let t be a tuple, and let L be a lesson. Then
+where
+if
+
+and
+otherwise.
+
+Given a lesson L, Restrict deletes from t any positive values for
+attributes that were not in L. Remove removes from t any positive
+values for attributes that were in L.
+Given these two operators over tuples, the most important of our
+three algebraic operators over relations is the decompose operator.
+This operator is defined in terms of the discovery of the MIL.
+
+Definition 6: Let p (the penalty) be a real number greater than 1,
+and
+let
+.
+Then
+the
+decompose
+operator
+is defined as follows. Let L be the MIL in R.
+Also, let
+
+
+
+
+U is the set of all tuples from R that contributed to the MIL L.
+Then
+and
+
+
+
+Intuitively, the decompose operator
+breaks a relation into two
+sub-relations based upon the MIL. One resulting relation T con-
+tains all attributes and tuples that were present in the MIL. The
+other resulting relation S is the original relation, without the posi-
+tive attribute values that were already included in T.
+The next operator that we discuss is the constrain operator
+.
+
+Definition 7: The constrain operator
+for
+is defined as follows. Let L be a lesson with
+. Then
+and
+
+.
+
+Again, the idea here is simple.
+takes as an argument a relation R,
+and a second relation S. It then decomposes R into two resulting
+relations T and U. T is the result of removing all of the attribute
+values that are present in S from all tuples in R. U is the result of
+removing all of the attribute values not present in tuples in S from
+R. In practice, this operator will be useful after a series of applica-
+tions of the decompose operator
+have identified a relation S that
+has a set of attributes whose co-occurrence is interesting to the
+user. Usually, the searches for the MIL in order to find S would
+also have restricted the tuples present in S. The constrain operator
+can be used to analyze how the attributes in S interact in other sub-
+sets of database tuples (or in the entire database). We will give an
+example of the use of
+in the next Section.
+Finally, we define the exclude operator.
+
+Definition 8: The exclude operator
+for
+is defined as follows. Given R and S, let
+
+
+and
+.
+
+This final operator takes as an argument two relations R and S, and
+partitions R using the tuples of S. All tuples in R that match any
+non-empty tuple in S are put into one relation, T. All tuples in R
+that do not match any non-empty tuple in S are put into a second
+T
+2
+tuples
+
+
+A
+2
+atts
+
+L.percent
+T
+database
+--------------------------
+=
+
+
+
+L'
+fit L'
+( ) fit L
+( )>
+#1 ~ #1 #2 ~#2 0-20 21-40 41-80 0-20 21-30 31+ `00 `01 `02
+
+1 1 0
+1 0
+0
+0
+1
+0
+0
+1
+1
+0
+0
+
+2 0 1
+0 1
+0
+1
+0
+1
+0
+0
+1
+0
+0
+
+3 1 0
+0 1
+1
+0
+0
+0
+1
+0
+0
+1
+0
+
+4 0 1
+0 1
+1
+0
+0
+0
+1
+0
+0
+1
+0
+
+5 1 0
+1 0
+1
+0
+0
+0
+1
+0
+0
+1
+0
+
+6 1 0
+0 1
+1
+0
+0
+0
+1
+0
+0
+1
+0
+
+7 1 0
+0 1
+0
+0
+1
+0
+0
+1
+0
+0
+1
+
+8 1 0
+0 1
+0
+0
+1
+0
+1
+0
+0
+0
+1
+Customer Age
+Total $$ Spent Purchas YrItems Purchased
+
+
+
+
+Figure 1: The most interesting lesson for a penalty p of 2.
+
+
+
+
+4
+5
+×
+4­
+16=
+Restrict t L
+,(
+)
+t'
+
+t' i
+[ ]
+t i
+[ ]
+=
+i
+L.attribute_set
+
+
+t' i
+[ ]
+0=
+
+
+Remove t L
+,(
+)
+t'
+
+t' i
+[ ]
+t i
+[ ]
+=
+i
+L.attribute_set
+
+
+t' i
+[ ]
+0=
+
+
+
+
+R S T
+R
+, ,
+ p R
+,(
+)
+S T
+,(
+)
+
+
+U
+t|t
+R
+
+L.attribute_set
+1 t i
+[ ]
+­
+i
+L.attribute_set
+
+
+­
+
+
+
+
+
+0
+>
+
+
+
+
+
+
+=
+
+
+
+S
+Restrict t L
+,(
+)| t
+U
+(
+){
+}
+
+T
+Remove t L
+,(
+)|t
+U
+{
+}
+t|t
+U
+
+t
+R
+{
+}
+
+
+
+
+
+
+
+
+ R S
+,(
+)
+T U
+,(
+)
+R S T U
+,
+R
+, ,
+L.attribute_set
+i|t i
+[ ]
+1=
+for some t
+S
+{
+}
+=
+T
+Restrict t L
+,(
+)| t
+R
+(
+){
+}
+
+U
+Remove t L
+,(
+)| t
+R
+(
+){
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ R S
+,(
+)
+T U
+,(
+)
+R S T U
+,
+R
+, ,
+T
+t|t
+R
+
+t' where t'
+S
+t'.id
+t.id
+=
+
+(
+)(
+){
+}
+
+t' i
+[ ]
+1 for some i
+=
+(
+)(
+){
+}
+U
+R T
+­=
+
+
+
+
+560
+
+relation, U. The exclude operator
+is a counterpart to the con-
+strain operator
+, except that the exclude operator works on
+tuples, whereas the constrain operator works on attributes.
+
+4. CASE STUDY: RIVER LEVELS
+In order to demonstrate the use of this decomposition, we consider
+its application to exploring a database containing twenty years of
+streamflow information for 467 different rivers and streams in the
+state of California, measured by the US Geological Survey.
+Several times a day from 1980 through 2002, the flow of each of
+those rivers is measured (in cubic feet per second), and each set of
+flows becomes a data point in a 467-attribute database table. The
+data are transformed into discrete, categorical data by creating five
+different, equidepth buckets for each river (bucket one contains the
+lowest flow for the river, bucket three contains the median flow for
+the river, and bucket five contains the highest flow for the river).
+Thus, there are
+different categorical values that
+can be present in each tuple, and 467 values are present in most.
+The problem is to help an end-user understand how those river
+flow levels correlate with one another. Are there sets of rivers that
+tend to flow at high levels with one another? How about rivers that
+tend to flow at low levels together? This problem lends itself to the
+type of co-occurrence analysis facilitated by AR and FP-style algo-
+rithms. However, the tremendous number of "items" present in
+each tuple, as well as the number and strength of the correlations
+present in the data can defeat many algorithms. We have used the
+commercial implementation of the Magnum Opus algorithm [9] on
+the data in an attempt to discover the few rules with the highest lift
+from the data. After seven days with the progress monitor frozen at
+3%, we decided to abandon our attempt.
+The attributes present in the full data set are visualized at the left
+in Figure 2. Each of the flows is plotted at the location of the sta-
+tion where it is observed. Because all data are plotted, each of the
+five flows for most rivers is shown.
+We begin our analysis of the data by using three recursive appli-
+cations of the decompose operator as follows:
+
+
+
+
+The result of this is the relation E, whose attributes are visualized
+at right in Figure 2. E corresponds to 14% of the tuples in DB, lim-
+ited to 144 of the 467 different rivers. For any given tuple in E, an
+average of 121 of the 144 rivers from E are at their highest flow.
+There are several rivers in E that are correlated with the other 144,
+but have low flows at the time the other 144 rivers have high flows
+(two are in Southern California, at longitudes -118 and -116).
+If we again decompose E using:
+
+
+
+we then arrive at the relation G, whose attributes are shown at the
+left of Figure 3. G corresponds to a set of 94 rivers, where an aver-
+age of 89 of the 94 are at high flow for the tuples in G. Also
+included in G are a couple of low flow rivers.
+We note that the
+operator appears to have excluded most of
+the rivers in Southern California from E in order to produce G. To
+see which rivers were removed, we use the
+operator:
+
+
+The attributes of the resulting relation J are shown at right in Fig-
+ure 3. It turns out that 50 rivers were excluded from E, mostly in
+Southern California and coastal Northern California. To under-
+stand why these rivers were separated out, it is helpful to consider
+Figure 5. This Figure shows the percentage of the rivers from G
+and J that were at their highest flow for each day of the year. The
+rivers in both G and J tend to peak in early March, but the rivers in
+G have a more uniform distribution of high flows throughout the
+year, explaining the difference between G and J.
+Another interesting fact was that there were a large number of
+very low flows present in A, which was one of the first relations
+produced during the decomposition. However, most of these low
+flows were removed by the operator
+. Thus, we focus
+for a moment on D, which is what remained of A after the tuples
+and attributes of C were removed. We use:
+
+
+
+to produce the relation K, shown at left in Figure 4. This is a set of
+56 highly-correlated low flows. In order to see whether there are
+other flows in the entire database (not just in A) that are correlated
+with these 56, we can use the
+operator to limit the database to
+only those measurements taken at the same time as those in K:
+
+
+
+If we then decompose M in order to find the strongest correlations
+present in only the tuples of K using:
+
+
+
+we then arrive at O, which is shown at right in Figure 4. This is a
+set of 211 highly correlated low river flows.
+
+5. DIFFICULTY OF FINDING THE MIL
+The implementation of most of the operators described in Section
+3 is relatively straightforward, but discovery of the MIL is not.
+Finding the MIL is a provably difficult problem. However, it may
+be counter-intuitive that the problem is trivial for small p, and
+becomes more difficult for larger values of p.
+
+Theorem 1: For any fixed value of
+, the problem of discov-
+ering the most interesting lesson from a database is NP-hard if
+
+.
+
+In other words, if the value of p is bound to be polynomial in the
+size of the database, then the problem of discovering the most
+interesting lesson is NP-hard. Combined with the fact that the util-
+ity of using a very small value of p is questionable (for a p value of
+1, the database itself is the MIL), this probably renders the problem
+intractable for most practical situations.
+The news regarding the difficulty of finding the MIL gets even
+worse. Not only is the problem of finding the MIL intractable, but
+approximating a solution is likely intractable as well.
+
+Theorem 2: Given
+for some fixed
+value of
+, let Lopt be the MIL from a database. Then unless
+
+, there exists a value
+such that no polynomial-time
+algorithm exists that can be guaranteed to find a lesson L having
+
+.
+
+
+The set
+is the set of all problems that can be solved in
+pseudopolynomial time (O(2)poly
+log(n)
+), and it is generally
+
+assumed that
+. Thus, Theorem 2 is very strong evidence
+that not only is efficiently finding the MIL impossible, but finding
+anything that is even close to the MIL is impossible as well, at
+least in the general case.
+
+
+
+
+
+
+467
+5
+×
+2335=
+
+
+
+
+ 1 8
+/
+DB
+,(
+)
+A B
+,(
+)
+ 1 3
+/
+A
+,(
+)
+C D
+,(
+)
+ 2 C
+,(
+)
+E F
+,(
+)
+
+
+
+
+ 5 E
+,(
+)
+G H
+,(
+)
+
+
+
+
+
+
+
+ E G
+,(
+)
+I J
+,(
+)
+ 1 3
+/
+A
+,(
+)
+
+
+
+ 1 6
+/
+D
+,(
+)
+K L
+,(
+)
+
+
+
+
+
+
+
+ DB K
+,(
+)
+M N
+,(
+)
+
+
+
+
+ 1 2
+/
+M
+,(
+)
+O P
+,(
+)
+
+
+
+
+ 0
+>
+
+
+p
+#tuples
+#attributes
+×(
+)
+
+
+
+
+
+p
+#tuples
+#attributes
+×(
+)
+
+ 0
+>
+P~
+NP
+
+ 0
+>
+
+
+fit L
+( )
+fit Lopt
+(
+)
+
+#tuples
+#attributes
+×(
+)
+--------------------------------------------------------
+>
+
+
+P~
+
+
+P~
+NP
+
+
+
+
+
+561
+
+-114-116
+-118-120
+-122-124
+42
+
+
+
+
+40
+
+
+
+
+38
+
+
+
+
+36
+
+
+
+
+34
+
+
+
+
+32
+
+
+Longitude (degrees)
+L
+a
+t
+i
+t
+u
+d
+e
+(
+d
+e
+g
+r
+e
+e
+s
+)
+lowest
+flow
+
+
+
+
+medium
+flow
+
+
+
+
+highest
+flow
+42
+lowest
+flow
+
+
+
+
+medium
+flow
+
+
+
+
+highest
+flow
+
+
+
+
+-114-116
+-118-120
+-122-124
+40
+
+
+
+
+38
+
+
+
+
+36
+
+
+
+
+34
+
+
+
+
+32
+
+
+Longitude (degrees)
+L
+a
+t
+i
+t
+u
+d
+e
+(
+d
+e
+g
+r
+e
+e
+s
+)
+
+
+
+
+-114-116-118-120
+-122
+-124
+42
+
+
+
+
+40
+
+
+
+
+38
+
+
+
+
+36
+
+
+
+
+34
+
+
+
+
+32
+
+
+Longitude (degrees)
+L
+a
+t
+i
+t
+u
+d
+e
+(
+d
+e
+g
+r
+e
+e
+s
+)
+lowest
+flow
+
+
+
+
+medium
+flow
+
+
+
+
+highest
+flow
+
+
+
+
+Figure 2: Visualization of the attributes from the full Rivers database (above, left) and from the relation E (above, right).
+
+
+Figure 3: Visualization of the attributes from the relation G (below, left) and from the relation J (below, right).
+
+
+
+
+flow
+
+
+
+
+-114-116-118-120
+-122
+-124
+42
+
+
+
+
+40
+
+
+
+
+38
+
+
+
+
+36
+
+
+
+
+34
+
+
+
+
+32
+
+
+Longitude (degrees)
+L
+a
+t
+i
+t
+u
+d
+e
+(
+d
+e
+g
+r
+e
+e
+s
+)
+lowest
+flow
+
+
+
+
+medium
+flow
+
+
+
+
+highest
+flow
+
+
+
+
+562
+
+6. TRYING TO FIND THE MIL
+Still, there is hope for discovering the most interesting lesson from
+a database. This hope comes from the fact that as the fit of the MIL
+increases, it actually becomes easier to find. We will state this
+property of the problem more formally in Section 6.3. This is
+encouraging, because it loosely implies that if we cannot find a
+good approximation for the MIL, then the MIL was probably not
+too significant to begin with. If this happens, the user can simply
+decrease p in order to increase the size of the MIL.
+In this Section, we will give a simple algorithm for discovering
+an approximation to the MIL from a database. The algorithm that
+we describe in this Section uses a technique introduced by Dorit
+Hochbaum in her work in certain edge deletion problems [6].
+
+6.1 The APPROXMILSEARCH Algorithm
+Our algorithm for finding a lesson approximating the MIL has
+three high-level steps. In the first step, a bipartite graph encoding
+the database is constructed. On one side of the graph are nodes rep-
+resenting the database tuples; on the other are nodes representing
+the database attributes. Then, a minimum cut for the graph is com-
+puted in such a way that the attributes on the right side of the cut
+are the ones that will be included in the approximate MIL. After
+the cut is computed, the tuples that are to be included in the
+approximate MIL are computed from the set of attributes repre-
+sented by the cut. The exact algorithm is given in Figure 6.
+
+6.2 Example
+We now give an example of the operation of the algorithm.
+Consider the database of Figure 1, limited to the first four data-
+base attributes. Use of the APPROXMILSEARCH algorithm on this
+database will proceed as follows. We begin the algorithm in steps
+(1.1) to (1.4) by creating a graph with two sets of nodes: one set of
+nodes for the database tuples, and one set of nodes for the database
+attributes. A tuple is connected to an item if the tuple does not con-
+tain that item. This is shown on the next page in Figure 7.
+Next, we add the source node and the sink node. Each tuple is
+connected to the source via an edge; each attribute to the sink via
+an edge. The edges are weighted according to the number of posi-
+tive values associated with the edge or tuple. In our example, each
+tuple has exactly two positive attribute values, and so the edge to
+each tuple is weighted with a 2/2. However, the different attributes
+will have differing weights. The first attribute value (item#1) is
+found in six tuples, so the edge from that attribute is weighted with
+a 3 (or 6/2). However, it is not found in two tuples, and so the edge
+from not_item#1 has weight one.
+The next step is to compute a minimum cut for the graph. This
+can be done using any of a number of algorithms, each with its
+own particular performance characteristics (the fastest alternative
+is the push-relabel approach [4]). If p is 3 in our particular exam-
+ple, then the minimum cut is shown above in Figure 8.
+The final step is to then use the cut to compute the approximate
+MIL. Determining the set of attributes is immediate: the attributes
+-114
+-116-118-120
+-122-124
+42
+
+
+
+
+40
+
+
+
+
+38
+
+
+
+
+36
+
+
+
+
+34
+
+
+
+
+32
+
+
+Longitude (degrees)
+L
+a
+t
+i
+t
+u
+d
+e
+(
+d
+e
+g
+r
+e
+e
+s
+)
+lowest
+flow
+
+
+
+
+medium
+flow
+
+
+
+
+highest
+flow
+
+
+
+
+-114-116-118-120
+-122-124
+42
+
+
+
+
+40
+
+
+
+
+38
+
+
+
+
+36
+
+
+
+
+34
+
+
+
+
+32
+
+
+Longitude (degrees)
+L
+a
+t
+i
+t
+u
+d
+e
+(
+d
+e
+g
+r
+e
+e
+s
+)
+lowest
+flow
+
+
+
+
+medium
+flow
+
+
+
+
+highest
+flow
+
+
+
+
+Figure 4: The attributes of the relation K (left) and of the relation O (right).
+
+
+
+
+Month
+%
+athighestflow
+Rivers in relation G
+Rivers in relation J
+
+
+
+
+Figure 5: Annual distribution of high river flows.
+(solid lines are 1-month
+running average)
+
+
+
+
+563
+
+on the right side of the cut correspond to the attributes in the
+approximate MIL. In our example these are the attributes item#1
+and not_item#2. Steps 3.2 to 3.4 of the APPROXMILSEARCH algo-
+rithm then find the set of tuples that maximize the fit over all les-
+sons including those attributes. In our example, this set contains
+the tuples 3, 6, 7, and 8. Thus, the approximate MIL computed by
+the algorithm is (4, {item#1, not_item#2}). We leave it to the
+reader to verify that in this particular example, the approximate
+MIL is actually the exact MIL for the database.
+
+6.3 Accuracy of the Algorithm
+As stated previously, the problem of discovering the MIL is NP-
+hard. Furthermore, it is probably not approximable in polynomial
+
+time in the general case (unless
+). However, our algorithm
+can give quite good results in many practical cases. As the size of
+the MIL decreases, the quality of the approximation is arbitrarily
+bad. However, as the size of the MIL increases, the approximation
+actually becomes arbitrarily accurate. The following describes the
+accuracy of the algorithm.
+
+Theorem 3: Given a penalty p, let Lopt be the most interesting les-
+son from a database containing s non-zero cells. The
+APPROXMILSEARCH algorithm always finds some lesson L such
+that
+, where num-
+Holes(Lopt) is the number of cells in Lopt having a zero value.
+
+7. CONCLUSION
+We have proposed a method for correlation analysis that allows the
+user to repeatedly "shave off" the portions of the database (records
+and attributes) that are least likely to contain the important correla-
+tions. After this decomposition, the correlations become more
+obvious to a human user, because they are now hidden in a much
+smaller portion of the database. This facilitates exploratory, user-
+centric data analysis. From a computational point of view, the
+interesting problem is to figure out which portion of the database
+to retain. We have developed a solution that features a guaranteed
+polynomial running time and guarantees result quality. Current,
+ongoing work is concerned with making the algorithm scalable for
+disk-based data and with visualization of the discovered patterns.
+
+8. ACKNOWLEDGMENTS
+Special thanks to Carlos Ordonez and Jennifer Tomsen for their
+suggestions and help in preparing this paper.
+
+REFERENCES
+[1] R. Agrawal, T. Imielinski, A.N. Swami: Mining association
+rules between sets of items in large databases. SIGMOD
+1993: 207-216
+[2] R.J. Bayardo Jr. Efficiently mining long patterns from data-
+bases. SIGMOD 1998: 85-93
+[3] R.J. Bayardo Jr., R. Agrawal: Mining the most interesting
+rules. KDD 1999: 145-154
+[4] A. V. Goldberg and R. E. Tarjan: A new approach to the max-
+imum flow problem. JACM 35(4): 921-940 (1988)
+[5] J. Han, J. Pei, Y. Yin: Mining frequent patterns without can-
+didate generation. SIGMOD 2000: 1-12
+[6] D.S. Hochbaum: Approximating clique and biclique prob-
+lems. J. Algorithms 29(1): 174-200 (1998)
+[7] C. Jermaine. Finding the most interesting correlations in a
+database... How hard can it be? To appear in Inf. Systems J.
+[8] S. Morishita, J. Sese: Traversing itemset lattice with statisti-
+cal metric pruning. PODS 2000: 226-236
+[9] G. I. Webb: Efficient search for association rules. KDD 2000:
+99-107
+ALGORITHM APPROXMILSEARCH
+(1) Let p = num / denom. Construct a graph as follows:
+(1.1) Construct one set of nodes T, where T = {all database
+tuples}
+(1.2) Construct a second set of nodes A, where A = {all data-
+base attributes}
+(1.3) For each pair
+, create an edge from t to a of
+weight num iff t[a] = 0
+(1.4) Create two additional nodes, called source and sink
+(1.5) For each tuple
+, create an edge from source to t of
+
+weight
+
+(1.6) For each tuple
+, create an edge from a to sink of
+
+weight
+
+(2) Compute the minimum weight cut separating source and
+sink
+(3) Output the MIL as follows:
+(3.1) Let
+be the set of attributes on the sink side of the cut
+(3.2) Sort all tuples in descending order based upon the prod-
+uct
+
+(3.3) Let ti denote the ith tuple in this sorted order
+(3.4) For i = 2 to the size of the database, do:
+(3.4.1) Let Tlast = {t1...ti-1} and let Tnext = {t1...ti}.
+
+(3.4.2) If fit (Tlast,
+) > fit (Tnext,
+), then output (
+,
+
+) as the MIL
+t
+T
+
+a
+A
+,
+
+
+
+t
+T
+
+denom
+2
+-----------------
+t a
+[ ]
+a
+A
+
+
+a
+A
+
+denom
+2
+-----------------
+t a
+[ ]
+t
+T
+
+
+
+
+
+A'
+
+
+num
+t a
+[ ]
+a
+A'
+
+
+×
+
+
+
+
+A'
+A'
+i 1­
+DB
+----------
+
+A'
+
+Figure 6: The APPROXMILSEARCH algorithm.
+
+
+tuple 1
+2
+3
+4
+5
+6
+7
+8
+item#1
+
+
+not_item#1
+
+
+item#2
+
+
+not_item#2
+
+
+all edges of weight num
+
+Figure 7: Steps (1.1) to (1.4) of APPROXMILSEARCH.
+
+
+
+
+Figure 8: Result of the minimum cut of step (2).
+all edges of weight num
+1
+1
+1
+
+1
+1
+
+1
+
+1
+1
+3
+1
+1
+3
+
+source
+sink
+tuples
+attributes
+P~
+NP
+
+
+
+
+
+fit L
+( ) 2fit Lopt
+(
+) numHoles L
+( ) p
+×
+s
+­+
+
+
+
+
+
+564
+

@@ -1,0 +1,1403 @@
+MARK: A Boosting Algorithm for Heterogeneous Kernel
+Models
+
+
+Kristin P. Bennett
+Department of Mathematical
+Sciences
+Rensselaer Polytechnic
+Institute
+Troy, NY 12180
+bennek@ rpi.edu
+Michinari Momma
+Department of Decision
+Sciences and Engineering
+Systems
+Rensselaer Polytechnic
+Institute
+Troy, NY 12180
+mommam@rpi.edu
+Mark J. Embrechts
+Department of Decision
+Sciences and Engineering
+Systems
+Rensselaer Polytechnic
+Institute
+Troy,NY 12180
+embrem @rpi.edu
+
+
+ABSTRACT
+
+Support Vector Machines and other kernel methods have
+proven to be very effective for nonlinear inference. Practi-
+cal issues are how to select the type of kernel including any
+parameters and how to deal with the computational issues
+caused by the fact that the kernel matrix grows quadrat-
+ically with the data.
+Inspired by ensemble and boosting
+methods like MART, we propose the Multiple Additive Re-
+gression Kernels (MARK) algorithm to address these issues.
+MARK considers a large (potentially infinite) library of ker-
+nel matrices formed by different kernel functions and param-
+eters. Using gradient boosting/column generation, MARK
+constructs columns of the heterogeneous kernel matrix (the
+base hypotheses) on the fly and then adds them into the
+kernel ensemble.
+Regularization methods such as used in
+SVM, kernel ridge regression, and MART, are used to pre-
+vent overfitting. We investigate how MARK is applied to
+heterogeneous kernel ridge regression. The resulting algo-
+rithm is simple to implement and efficient. Kernel parame-
+ter selection is handled within MARK. Sampling and "weak"
+kernels are used to further enhance the computational effi-
+ciency of the resulting additive algorithm. The user can in-
+corporate and potentially extract domain knowledge by re-
+stricting the kernel library to interpretable kernels. MARK
+compares very favorably with SVM and kernel ridge regres-
+sion on several benchmark datasets.
+
+
+I.
+INTRODUCTION
+Support Vector Machines (SVMs) and other Kernel Meth-
+ods have proven to be very effective inference tools for many
+applications [20]. By introducing kernels, many linear meth-
+ods for classification, regression and unsupervised learning
+can be transformed into nonlinear methods [18]. For each
+application, an appropriate kernel and any associated par
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributedfor profit or commercial advantage and that copies
+bear this notice and the full citation on the firstpage. To copy otherwise, to
+republish, to post on serversor to redistributeto lists, requires prior specific
+permission and/or a fee.
+SIGKDD '02 Edmonton, Alberta, Canada
+Copyright2002 ACM 1-58113-567-X/02/0007...$5.00.
+rameters must be selected.
+The choice of kernel represents an opportunity to include
+background knowledge into the modeling process and to bias
+the models to have desirable properties. The kernel deter-
+mines how similarity is measured on a particular domain.
+For any given application, there are many possible kernels.
+Typical algorithms require that the user pick one type of
+kernel.
+Then the kernel parameters have to be chosen so
+as to obtain a model with good generalization capability.
+Kernel parameter selection typically optimizes cross vali-
+dation accuracy or leave-one-out bounds [2, 14]. However,
+these method can suffer from the "curse of dimensionality"
+severely when optimizing large number of kernel parameters.
+Thus one sticks to kernels such as the Radial Basis Func-
+tion (RBF) kernels that can approximate many functions
+and have only one parameter.
+But then the only oppor-
+tunity for incorporating domain knowledge is through the
+choice of input attributes. The resulting RBF models may
+provide very good predictions, but they provide little infor-
+mation about the underlying properties of the problem, e.g.
+which attributes are important etc.
+Our goal is to develop an approach to construct inference
+models based on heterogeneous families of kernels. We fo-
+cus on the regression problem, but the general approach is
+applicable to classification and other types of inference prob-
+lems. Based on domain knowledge and desired properties of
+the final regression function, the application specialist can
+choose a library of kernels. The regression algorithm should
+resolve which kernels (including their parameters) to include
+and efficiently construct the heterogeneous kernel fimction.
+The resulting function should generalize well and not require
+storage of large amounts of data in order to make future pre-
+dictions.
+The proposed raultiple additive regression kernel approach,
+MARK, accomplishes these goals.
+Gradient descent ap-
+proaches developed for ensemble methods such as AdaBoost,
+MarginBoost, gradient boost, leveraging [6, 12, 7, 9, 5, 15]
+are generalized to the heterogeneous kernel model problem.
+The columns of the heterogeneous kernel matrix are gener-
+ated on the fly, just like base learners are used to construct
+hypotheses in ensembles. Regularization is used to prevent
+overfitting and to enforce sparsity within the kernel repre-
+sentation. Analogously to how ensemble methods can ben-
+eficially build upon "weak learners", MARK can be applied
+
+
+
+
+24
+
+to families of "weak kernels" that would not be adequate for
+an algorithm using a single kernel. Computational results
+demonstrate that MARK efficiently produces sparse hetero-
+geneous kernel models based on simple interpretable weak
+kernels that generalize as well, and require dramatically less
+storage and testing time than baseline kernel methods pro-
+duced using a single kernel.
+This paper is organized as follows. In Section 2, we ex-
+amine the heterogeneous kernel model. A regularized loss
+function is minimized to construct a model. We examine the
+gradient of this loss function and discuss coordinate descent
+strategies for optimizing the model. In Section, 3 we demon-
+strate how MARKing can be applied to least squares kernel
+models for regression which are known by various names
+including least squares SVM [19] and Kernel Ridge Regres-
+sion (KRR) [17]. We review the basic KRR method. Then
+propose two different approaches for heterogeneous KRR,
+MARK-L and MARK-S. In Section 4, we introduce the idea
+of a "weak kernel" functions.
+In Section 5, the computa-
+tional costs of MARK and strategies for improving it are
+examined. Computational results are also provided in Sec-
+tion 5. We conclude with a discussion of the approach and
+future research issues.
+
+
+2.
+HETEROGENEOUS KERNEL MODELS
+We define the heterogeneous kernel model (HKM) prob-
+lem as follows.
+Giving a training data set consisting of
+N M-dimensional points x, with associated output y,, we
+would like to construct a regression function F that min-
+imizes some convex loss function L(y, F) on the training
+data.
+To prevent overfitting the function F is regularized
+by the convex function P(F). The regularization function
+P(F) helps to constrain the possible set of regression func-
+tions F considered. Typically P(F) is chosen such that some
+norm of the parameters of F is minimized. Thus our goal is
+to find the solution of
+
+mine
+~iN=lL(yi, F(x,)) + CP(F)
+(1)
+
+where C _> 0 is a fixed parameter.
+With the choice of ap-
+propriate loss functions, these general models are applied to
+both classification and regression problems, but we focus on
+regression in this paper.
+For a single kernel problem like SVM, F is based on a
+single kernel K and would be defined as
+
+N
+
+F(x) =: f~,b ----E
+o~,K(x, x,) + b.
+(2)
+i=l
+
+For example, K could be a radial basis function kernel with
+a fixed parameter a:
+
+_ fl~-xill 2
+K(x, xi) = e
+
+where ]] · t] is the Euclidean or 2-norm. For HKM, the func-
+tion F is composed of a linear combination of heterogeneous
+kernel functions K1,... , Kq
+
+Q
+N
+F(x) =: f·.b = E
+E
+Olq,gq(x, X,) + b.
+(3)
+q=l 4=1
+
+The kernelscan be of any type and they need not all be of
+the sametype. For example,eachKqcouldbe a RBF kernel
+with a differentparameter aq.
+If P(F) = p(c~,b) for some convex function p, then the
+HKM problem becomes
+
+minc~.b H(c~, b) := ~N=~vL(y, , f~.b(x,)) + Cp(oL,b)
+with
+fa,b = ~qQ=l ~i=l C~qigq(x, x,) + b.
+(4)
+
+Note that the size of a is very large (Q x N) since there is
+a column of each kernel corresponding to each data point.
+So it is not immediately evident that it is practical to solve
+this problem.
+Certainly we cannot afford to generate the
+full heterogeneous kernel matrix, K --- [K1,... , KQ].
+But in fact, those familiar with boosting and ensemble
+methods will realize that the problem is just like the opti-
+mization problem solved in ensemble approaches [5, 9, 10,
+12]. Ensemble methods generate linear combination of hy-
+potheses. We can think of each column of the kernel as a
+hypothesis. Just like ensemble methods generate hypothesis
+on the fly, we can generate kernel columns on the fly. The
+generic gradient-based ensemble algorithm such as gradi-
+ent boosting used in MART, Margin Boost, and Leveraging
+can be readily adapted to the heterogeneous kernel prob-
+lem. The key to these approaches is the gradient of the loss
+function.
+Most ensemble algorithms can be generated using gradi-
+ent descent methods in function space or coordinate-descent
+in the space of c~,b. Assuming the loss and regularization
+functions are continuously different,able, the gradient of H
+with respect to f is
+
+OH
+~
+OL (y, f(x,))
+0"-7" ----,=1
+Of(x,)
+(5)
+
+By the chain rule the gradient of H with respect to c~, is
+
+OH
+g
+DL y , ~ _ ~
+.~_COP(c~,b)
+Oaqj
+--
+~'=1
+Of(Xi)
+Oaqj
+Oaq#
+_-- ~V=l oL(u,i(~,)) K ix . ~.~ ± f,,e(a,b )
+(6)
+01(=~)
+q~ ~,~j]Tv
+0auj
+
+Coordinate descent algorithms optimize one component
+of the solution vector at a time. If VH(o~,b) = 0 then the
+current solution is optimal. If 0H~.b ¢ 0 then either de-
+Oaqj
+creasing or increasing aqj (depends on the sign of the partial
+1
+2
+gradient) will strictly decrease H. Ifp = 5Ha[[
+and all the
+C~qj = O, then the best kernel column to choose is the one
+maximizing
+
+~N=, OL(~,~K (z"
+o](.,)
+qt ,, x¢)
+(7)
+
+This is roughly the column that most highly correlates with
+the gradient.
+MARKing works by computing the gradient for the cur-
+rent kernel ensemble Fat.b, generating the column that max-
+imizes (7), adding the column to the kernel submatrix K t
+and then computing the optimal weights at, b for the hetero-
+geneous kernel, then repeating until the algorithm converges
+or the maximum iteration limit is reached.
+There are two choices on how to compute the optimal
+weights at, b. The usual ensemble and additive model ap-
+proach is to just update the component of at corresponding
+to the newly marked kernel column. The second approach is
+to update the weights of all the kernels selected and marked
+so far. Both approaches have pros and cons that are some-
+what dependent on the choice of loss function.
+Thus for
+the remainder of the paper we will focus on MARKing for a
+particular loss function, squared error in regression problem.
+
+
+
+
+25
+
+3.
+MARKING KRR
+In this section, we assume a least square error loss function
+for regression with 2-norm regulaxization. Without kernels,
+such a problem is usually called ridge regression [9]. With
+kernels, we will call the problem kernel ridge regression al-
+though it is sometime referred to by other names [4]. For a
+single kernel function K1, we can define the kernel matrix
+(K1)ij = Kl(xi, xj), so for N training points, Ki is a N x N
+matrix. The kernel ridge regression problem is then
+
+C (o/a+b 2)+ 1
+min H(a, b) =
+~-
+5lly- g~- beH~
+(8)
+
+
+wherec~ E R ~v, bE R, C > 0isaconstant
+and eisaN
+dimensional vector of ones.
+Kernel regression is very attractive because optimization
+problem (8) can be solved by simply solving a system of
+equalities.
+Since the problem is an unconstrained convex
+optimization problem, the necessary and sufficient condition
+for optimality is VH(c~, b) = 0. Thus by doing an analysis
+such as in [8], the solutions satisfies
+
+
+b
+= G'y,
+(9)
+
+
+where G ~- [K e].
+If (&, b) solve equation (9), then the final regression model
+is
+
+N
+f(x) = E&iK(x,x,)
++ b
+(10)
+i=l
+
+Unlike classic SVM or least squares model with LASSO
+type regularization, this optimization solution can be found
+by simply solving a system of equations, without introduc-
+ing an optimization package. The catch is that the resulting
+optimal & is not sparse, e.g. &i ¢ 0 for many i. By choosing
+alternative objective functions such as in SVM, only rela-
+tively few multipliers for the kernel columns, the support
+vectors, will be nonzero.
+KRR has the advantage of sim-
+ple implementations and relatively fast training times. The
+method can be applied to any type of kernel function. There
+axe no limitations on the kernel matrix K. In SVM, the ker-
+nel matrix is assumed to be a square positive definite matrix.
+Typically the choice of kernels is limited to those that obey
+Mercer's Condition since this ensures that K is positive def-
+inite (see [20]). In the approach studied here, the matrix
+K need not be positive definite or square. Kernel functions
+that do not satisfy Mercer's condition may be utilized. But
+the disadvantage of KRR without MARKING is that all the
+training data has to be stored in order to test new data.
+
+3.1
+Heterogeneous KRR
+The flexibility in the choice of K in KRR allows the model
+to be easily extended to Heterogeneous kernel ridge regres-
+sion (HKRR), but the resulting optimization problem is
+more challenging. Define the heterogeneous kernel matrix
+K as the concatenation of Q kernel matrices Kq E R g ×N,
+K = [Ki,... ,KQ] E R N×QN. The above definition of the
+kernel ridge regression model (8) then applies to HKMs but
+now o~E R QN.
+If we treat each column of K as a hypothesis in an ensem-
+ble method, we can use ensemble algorithms to generate a
+small set of kernel columns/hypotheses: that approximately
+solve the model. If we denote the ith column of K as K~
+then
+
+o~(~.b)on,
+=
+--g~(y
+-
+(Kc~ + be)) + Cc~i
+(11)
+
+The residual error vector for the data for any particular
+choice of a, b is r = y- (Ka +be) , where e is an N vector of
+ones. By the above coordinate descent analysis, any column
+of K with the maximum or almost maximum value of
+
+IgOr - Cc~il
+(12)
+
+is a good candidate for inclusion in the model.
+Motivated by the leveraging and column generation algo-
+rithms for classification in [15, 16], we developed the MARK-
+L algorithm described below. Note that we assume a~ =
+0 for any kernel column K~ that has not been generated.
+MARK-L works by generating a kernel column to include
+in the model, concatenating that column to the kernel sub-
+matrix ~:, and then solving the system of equalities (9) to
+find the optimal a t, b for the KRR model restricted to ~:.
+At iteration t, MARK-L requires (t + 1) x (t + 1) storage
+and the solution of a system of equalities at each iteration.
+Since typically the maximum T is small and we use fast
+iterative Krylov-type algorithms for solving the system of
+equalities, this is not an issue except on massive datasets.
+The primary benefit of solving the restricted KRR problem
+at each iteration is much faster convergence and therefore
+fewer kernel columns are needed to achieve good solutions.
+A secondary benefit of MARK-L is that it forces the regu-
+larization term to be applied at each iteration in order to
+prevent overfitting.
+
+ALGORITHM 3.1. MARK-L (X,y,T, toO
+
+1. Select b = ~
+
+2. Let h:= {}
+
+3. Let a ° = 0
+
+4. .for t := O tot
+do
+
+5.
+Let r* :=: y - Ra t - be
+
+6.
+Generate kernel column Kt+l for X approximately
+maximizing IK~+l rl
+
+7.
+if ]K~+lrI _<tol then
+
+8.
+return a t,
+
+9.
+end if
+
+10.
+k = [k, Kt+l]
+
+11.
+Solve (9) for c~t,
+
+12. end for
+
+13. return a~,b
+
+Another approach is to use the more typical boosting or
+stepwise additive regression methods that for each iteration
+optimize the multiplier at for the incoming column and then
+fixes it for the :remainder of the algorithm [6, 9]. Storage
+is drastically reduced because the restricted kernel subma-
+trices need not be stored.
+Each iteration is less expensive
+because there is no need to solve a system of equalities. One
+disadvantage of this approach is regulaxization. The MART
+
+
+
+
+25
+
+algorithm in this case applies a parameter called "shrinkage"
+to address this problem. Regularization or "flatness" is im-
+posed by reducing the weight of each added kernel column
+by a constant factor v at each iteration. As we will see, this
+can greatly improve the generalization performance of the
+algorithm. Thus our low storage version of MARK, MARK-
+S incorporates shrinkage v. However, MARK-S needs more
+kernel columns, or iterations, to converge because typically
+the shrinkage parameter is set to be small. Therefore, spar-
+sity is severely lost in MARK-S.
+
+ALGORITHM 3.2. MARK-S (X, y, T, v, tol)
+
+1. Select b =
+
+2. Let R = {}
+
+3. Let ao = 0
+
+4. Let r°:=y-be
+
+5. for t := O to T do
+
+6.
+Generate kernel column Kt+I for X approximately
+maximizing [K~+lrI
+
+7.
+if [K~r[ _<tol then
+
+8.
+return a,
+
+9.
+end if
+
+10.
+Compute tit : argmin E/N=i ]]rt -- aKt+l][ 2
+
+11.
+Let r t+l := rt - t~c~tKt+l
+
+12. end for
+
+13. return va,
+
+3.2
+Solving KRR Subproblem
+The HKRR subproblem in step 11 of MARK-L can be
+solved quite efficiently.
+In fact we don't really store the
+matrix K. Note that the only matrix required is G'G (9).
+The storage required for GIG is at most (T + 1) x (T + 1).
+To show this more explicitly, we express G'G in terms of
+and e (a vector of ones);
+
+
+G'G= [ R'~e,K K'e
+"
+(13)
+
+
+When a kernel column Kt is added at iteration t, the new
+submatrix ~(t+l),~(t+l) will be written as;
+
+k(t+l)t~(t+l)
+RtR
+^,
+
+=
+Kill K[Kt "
+
+K'Kt, K~Kt
+Therefore, only update of t+ 1 elements from (
+)
+
+is needed taking account of the symmetry. As for
+]
+
+
+
+
+k(t+l)'e=
+[ K' ]
+K~
+e,
+(15)
+
+we only add one element to the new matrix. Therefore, at
+each stage, we need to add t+2 elements to the memory. The
+total memory requirements are O(T2). For most problems,
+the number of points N is very large and T << N. Thus
+the storage requirements for MARK are much smaller that
+for methodologies based on the full N × N kernel matrix.
+Another key to the efficiency of MARK-L is the equation
+solver used in Step 11. Our equation solver is based on a
+second-order optimization code based on a scaled conjugate
+gradient method where the Hessian matrix is made positive
+definite with a Levenberg-Marquardt term. Indeed, solving
+a symmetric system Ax = y of equations is equivalent to
+minimizing A~Ax - A'y + C, where C is an arbitrary con-
+stant.
+The scaled conjugate gradient method was utilized
+by M511er [13] as an alternate iterative higher-order learning
+algorithms for training neural networks, and it can be read-
+ily applied to general unconstrained optimization problems.
+This scaled conjugate gradient method for solving equations
+is a Krylov-type [11] method, that is fast, robust, and com-
+pact to code.
+It scales as N 2, rather than the N 3 which
+applies for most traditional equation solvers. Furthermore
+the equation solver can exploit the fact that we are solving a
+series of closely related equations in order to further enhance
+performance.
+
+
+4.
+KERNEL COLUMN GENERATION
+Another key aspect to the performance of MARK is the
+column generation method used in step 6 of MARK-L and
+MARK-S. Recall that the goal is to generate a column max-
+imizing or approximately maximizing
+
+IrtKil
+(16)
+
+Returning to the underlying KKM with Q types of kernels
+each centered about the N data points, the column genera-
+tion problem becomes
+
+n
+
+gq(x,x~) = argmax/q,n IE
+t
+xn)l
+r~Kq(xl,
+(17)
+i=l
+
+Note that this is closely related to but not identical to choos-
+ing the column that most closely fits the residuals, i.e.
+
+
+r t
+gq(x, x.) = argmaxgq,~~(,
+-- gq(x,, ~.))2
+(18)
+i=l
+
+such as done in MART and additive basis models [9]. So
+MARK is not identical to these algorithms in this respect.
+One advantage of the kernel column selection problem is that
+it only requires the computation of a dot product. Consider
+the case of constructing a linear function for data stored in
+a relational database.
+Then the candidate kernel columns
+are the columns of the table containing the training data,
+and one can compute which column to generate via a simple
+SQL query.
+The exact algorithm used to solve problem (17) depends
+on the kernel function.
+In this work we use regular RBF
+kernels and "weak" RBF kernels. Regular RBF kernels are
+assumed to be of the form
+
+_ E~=i ((~)¢ -(=~)~)2
+K(x,x~) = e
+o
+(19)
+
+where xi is one of the training data points, (x~)j is the jth
+attribute of xi and a > 0 is a parameter to be optimized. In
+the spirit of weak hypothesis in ensemble methods, we also
+constructed weak RBF kernels which are restricted to one
+attribute of the data set. So for example a weak RBF kernel
+defined based on the jeh attribute and ith data point would
+
+
+
+
+27
+
+be
+
+((~)~ _(zl)j)2
+Kj(x, xi) = e-
+~
+(20)
+
+The kernel Kj is weak in the sense that if used in a regular
+SVM, it would not typically be sufficient for solving a prob-
+lem alone. It is only as part of a HKM that such choice of
+kernels can be used. The benefit of using HKM composed of
+weak RBF kernels is that the kernels selected provide more
+interpretation than in the case of regular RBF kernels. A
+weak RBF kernel models inherently performs feature selec-
+tion.
+Only a subset of the attributes will be used in the
+final model, and this is valuable information to the domain
+experts. In addition each weak RBF kernel has a somewhat
+clear meaning.
+For example if the attribute j is size, the
+weak RBF kernel can be interpreted as identifying if the
+size is about that of instance x~. Weak RBF kernels are
+only one possible type of weak kernel. The domain experts
+can introduce new kernels that make sense in a particular
+domain. Since there are no restriction on the matrix K in
+MARK-L and MARK-S, these kernels need not obey Mer-
+cer's condition (see Section 3.) The only important thing is
+that one can define efficient algorithms to generate them.
+For regular RBF kernels we use the following column gen-
+eration algorithm. With an exhaustive search, the RBF col-
+umn generation can be computationally expensive. To ob-
+tain better scalability, we try sampling uniformly from the
+data matrix X and choose the best kernel column in the
+sample.
+
+RBF Column Generation
+(r, N')
+1. Construct a sample S of data of size N'
+2. For n = 1, ..., N'
+Call 1-D search and find a,~ that optimizes (17) for
+fixed center Sn
+3. Return kernel column Kt for best found S~, a~ pair
+
+For weak regular RBF kernels we use the following column
+generation algorithm:
+
+Weak BLBF Column Generation
+(r, N')
+1. Construct a sample S of data of size N'
+2. For n = 1, ..., N'
+3.
+For j = l,...,M
+Call 1-D search and find a,~ that optimizes (17) for
+fixed center (S,~)j
+3. Return kernel column K~ for best found (S,~)j, a,~ pair
+
+There are many benefits to using weak RBF kernels. As
+discussed above, by analyzing the final weak kernel model,
+we can investigate the importance and influence of attributes
+by looking at the kernel columns added to the model and
+their associated weights. This leads to a way of non-linear
+feature selection. Another advantage of weak RBFs is that
+the number of parameters associated with a weak RBF ker-
+nel is dramatically reduced from M+i for regular RBF ker-
+nels to 2 for weak RBF. Thus the storage and computational
+time required for testing a HKM based on weak RBF ker-
+nels can be dramatically reduced from that of HKM based
+on regular kernels. The computational costs of regular RBF
+and weak RBF column generation are both dependent on
+the choice of the sample size N'. The experimental results
+in the next section shows how efficient sampling can be in
+practice as well as comparison between regular and weak
+RBF kernels.
+5.
+COMPUTATIONAL RESULTS
+We perform a series of experiments to investigate the effec-
+tiveness of MARK-S and MARK-L on regression problems.
+In the next section, we examine the effect of parameters
+and variations of MARK. Then we look at generalization of
+MARK as compared to SVM and KRR algorithms. Finally
+we examine the scalability of MARK.
+
+5.1
+Behavior of MARK
+We examine the effect of sampling on generalization with
+the column generation algorithm. It is important to know
+the performance of sampling since exhaustive search is com-
+putationally prohibitive.
+Representative results for Boston Housing available from
+the UCI Machine Learning Repository [1] are presented.
+Boston Housing consists of 506 data points and 14 attributes.
+The results for 10-fold cross validation for normalized data
+are presented in Figures in the section 5.1.
+The statistic
+reported is Q2 which is just the predicted mean squared er-
+ror divided by the sample variance. Small values of Q2 are
+better.
+
+
+
+
+0.35
+
+0.3
+
+0.25
+i
+MARK-L (Cffil0) Samplingvs. without Sampling,
+0.45
+--
+Sample(50)Training
+Sample(60)Test
+0.4
+W~hoLnSaITtplIwJTraining
+WithoutSampl~gTest
+
+
+
+
+0.2 -
+
+0.15
+..
+
+
+
+
+Iteration
+
+MARK-S
+(vffiO.5)Samplingvs. without Sampling
+
+
+
+
+50
+100
+150
+200
+250
+30
+Iteration
+
+
+
+Figure 1: Comparison between sampling (size = 50)
+and without sampling.
+For both cases the same
+value of regularization constant (C = 10) and weak
+FtBF kernels were used.
+Both test and training
+learning curves are plotted,
+above: MARK-L, be-
+low: MARK-S.
+
+
+Figure 1 illustrates the effect of sampling on MARK-L
+and MARK-S. The sample size is set to 50.
+The kernel
+space is restricted to weak (column) kernels.
+As seen in
+the figure, the differences between sampling and without
+sampling are small for both MARK algorithms. Although
+
+
+
+
+28
+
+the difference in hypothesis space size is extremely large,
+the weak learning algorithm succeeds in tuning the kernel
+parameters and makes use of available small sample size to
+fit the training examples. This observation is consistent with
+other kernel sampling methods such as in RSVM [8].
+Next, we illustrate the difference between regular RBF
+kernels and weak RBF kernels. Sample results for MARK-L
+with C = 10 and sample size 50 are shown in Figure 2. Sur-
+prisingly, weak kernels converge much quicker than regular
+RBF kernels. This behavior comes from the fact that the
+importance of the data is not 'symmetric' in each dimension
+and, therefore, the assumption that there exists a best ker-
+nel width a for regular RBFs does not hold in this dataset.
+MARK algorithm with sampling gives a practical way to
+tune the width in each dimension so that we can make use
+of geometrical information inherent to the dataset.
+Weak
+RBF kernels inherently perform feature selection and this
+leads to faster learning speed.
+By choosing the attributes
+and adjusting the width of the kernel, MARK tunes the
+significance of each attribute individually.
+
+
+MARK-L Sample = 50 C=10 Full Kernel v,s. Column Kemel
+
+
+
+Column (TraJnlnl
+0.6
+Column (Test)
+
+
+0.5
+
+
+0.4
+i~.
+,~..
+0·3
+'~"-*.
+· %'.,,,
+
+
+
+o.~
+......... ~'~:: ....
+"....................................
+--:22
+o
+:
+::
+0
+50
+100
+1~
+CUU
+tteration
+
+
+
+Figure 2:
+Comparison
+between
+regular full kernel
+and weak column kernel.
+
+
+
+Next we examine the effect of the regularization parame-
+ters C in MARK-L and v, in MARK-S. In Figure 3, learning
+curves are shown for each of MARK-L and MARK-S for var-
+ious regularization parameter choices. Once again the sam-
+ple size is set to 50 and weak RBF kernels are used. When
+the degree of regularization is small, for example C = 1 and
+= 1, the test learning curve exhibits over-fitting. However,
+increasing regularization slows convergence.
+For example
+when u = 0.1 in Figure 3, the training error is high showing
+that learning is not yet finished. Shrinkage creates regular-
+ization by slowing down the learning rate. It is an implicit
+form of introducing flatness, but it is more difficult to tune
+compared to C in MARK-L and results in HKM with more
+basis functions. Therefore, we prefer MARK-L to MARK-S.
+In general, MARK-L converges faster and gives stable gen-
+eralization errors by explicitly controlling 'capacity' via C.
+MARK-L requires the solution of a system of equalities at
+each iteration and storage of the necessary matrix in order
+to compute a and b at each iteration, but this added expense
+is justified. The best parameter that we obtain is C = 10
+with MARK-L and this value will be used as a 'fixed pol-
+icy' for the remainder of this paper. Better results may be
+obtained by tuning C.
+%
+
+
+
+
+0.45
+
+0.4
+
+0.35
+
+0.3
+
+0.25
+
+0.2
+
+0.15
+
+0.1
+
+0.05
+
+0
+0
+MARK-L Sample = 50 Dependence on C
+
+t
+- - I (Training) r
+..... 1 (Test)
+,
+_
+1o (Training)
+.... 10 crest)
+--
+50 (Trainklg)
+...... 50 flea I
+I
+
+
+
+
+3
+6
+1 Iteration
+-~-
+
+o.5
+
+
+i ~
+..... 1 Fest)
+II
+\
+j=0.5......
+,
+~
+.... 05 0-eat)
+~il
+\\
+I''o'.-'n'°0>
+I I[
+'~\
+I "
+ol ('r'eat)
+Z~
+%~
+[--- MARK-L(C.1O)Training
+
+
+
+
+50
+100
+li0
+~0
+IteraUon
+
+
+
+Figure
+3:
+Dependence
+on
+parameters.
+MARK-L,
+below: MARK-S.
+above:
+
+
+
+
+5.2
+Benchmark Studies
+We compare MARK with SVM and KRR on three datasets.
+For SVM, SVMTorch [3] is used.
+The three datasets are
+HIV, Boston Housing and Abalone.
+HIV is Quantitative
+Structure Activity Relationship (QSAR) data on reverse
+transcriptase inhibition of HIV generated as part of the
+DDASSL project at RPI (http://www.drugmining.com). HIV
+has 64 data points and 230 real attributes. Boston Housing
+has 506 data points and 13 attributes.
+Abalone has 4177
+data points and 9 attributes.
+We note that HIV and the
+other two data sets have quite different shapes of the data
+matrix. Specifically, M >> N for HIV and M << N for
+others. As for HIV, since there are much less data points
+than attributes, we perform leave-one-out cross validation to
+obtain the test error estimate. For the other two datasets,
+a ten-fold cross validation is used for error estimation. All
+the computations are done on Windows 2000 machine with
+Pentium III 886MHz and 512MB RAM.
+Based on the results in the previous section, MARK-L is
+used with weak RBF kernels, sample size 50, C =10, and
+number of iterations T = 100. This fixed policy is not nec-
+essarily optimal for all datasets. For SVM and KRR, model
+and kernel parameters selection is automatically done by
+Pattern Search [14] using a validation set for each of the 10
+folds. The size of validation set is set to 20% of the training
+set.
+Leave-one-out cross validation results for HIV are pre-
+sented in Table 1.
+The MSE for MARK-L is the lowest
+of the three approaches.
+We know results on HIV can be
+greatly improved by incorporating feature selection before
+
+
+
+
+29
+
+running SVM or KRR. So one reason for the advantage of
+MARK-L may be that it inherently selects feature through
+the use of the weak RBF kernels. KRR used 63 support vec-
+tors since it is not a sparse method and there are 63 points
+in each training set. SVM requires only 27 full RBF ker-
+nels. MARK-L is set to always use 100 weak RBF kernels.
+The total number of parameters used by MARK-L can be
+found by the following argument; For each weak kernel we
+need to store two parameters, namely the center of kernel
+and the width a, and the associated a~. In addition For T
+weak kernels, therefore, the number of elements we store is
+3T + 1 = 300 + 1 (the 1 is for the threshold b). However,
+for SVMs, we cannot throw away any attributes of a sup-
+port vector and only one parameter a is required therefore,
+the total number of information that has to be recorded is
+((# support vectors)xM + 2. In this case, 3T -t- 1 = 301
+and (# support vectors) x M + 2 = 6304 (average). There-
+fore, the MARK model requires significantly less memory
+and is in some sense a simpler model. Specificaly, the ra-
+tio of storage required by SVM to MARK is 20.9. With a
+dataset like this, dimension reduction is necessary to obtain
+a good model.
+MARK with weak RBF kernels automati-
+cally performs feature selection, which is a key feature for
+success oa QSAR type problems. In addition the reduction
+in model complexity produces an even greater reduction in
+computational costs in the testing phase.
+
+
+
+MSE
+SV
+Storage
+MARK-L
+SVMTorch
+0.333
+0.353
+100
+27.4
+1
+20.9
+KRR
+0.567
+63
+48.9
+
+
+Table 1: Leave-one-out test results for HIV. SV is
+the average number
+of support
+vectors or kernel
+columns used by each methods.
+Storage is the ratio
+of model storage required for the indicated method
+versus MARK-L
+
+
+Ten-fold cross validation results for Boston and Abalone
+are shown in Table 2 and 3. MARK performed comparably
+to SVMTorch on both datasets.
+KRR performs uniformly
+worse. Tuning of MARK parameters may further improve
+results.
+Pattern Search methodologies for tuning MARK
+are currently being tested. Moreover, as the size of dataset
+grows, storage requirements of the prediction model, in gen-
+eral, grows. The computational cost and storage requirer
+ments for reproducing the model for prediction unknown
+test data cannot be ignored.
+In SVM, if the number of
+support vector is S, the computational cost to produce a
+prediction is O(M × S).
+In MARK with weak kernels, it
+is just O(1 × T). This advantage cannot be ignored when
+dealing with a large dataset. On Abalone, a predictive SVM
+model requires 1375 × 9 + 2 units of information (4 bytes for
+a double precision variable). The factor '9' accounts for the
+number of attributes. Addition of '2' accounts for threshold
+b and the kernel parameter a. For MARK, it is 100 × 3 + 1
+where '3' accounts for c~ and a for each center of the col-
+umn kernel, '1' accounts for the threshold b. The ratio is
+~
+-
+=
+41. Therefore, in this example, the memory
+requirement for MARK is about 41 times less than that for
+SVM. There would also be a corresponding decrease in clas-
+sification costs. Similar ratios are provided for all the results
+in the table.
+
+
+
+
+MSE
+Std
+SV
+Storage
+Time
+MARK-L
+Train
+Test
+7.85
+12.4
+6.80
+7.0
+100
+SVMTorch
+Train
+Test
+6.22
+11.5
+2.25
+6.95
+256
+KRR
+Train
+Test
+7.92
+14.0
+7.79
+6.86
+364
+1
+11.1
+15.7
+6.0
+1.02
+20.25
+
+
+
+Table 2: Results for Boston Housing
+
+
+
+
+MSE
+Std
+SV
+Storage
+Time
+MARK-L
+SVMTorch
+KRR
+Train
+Test
+Train
+Test
+Train
+Test
+4.30
+4.65
+4.26
+4.50
+6.17
+6.66
+0.052
+0.504
+0.10
+0.486
+3.50
+4.36
+100
+1375
+3579
+1
+41.1
+105.5
+57.0
+22.7
+5.7 × 105
+
+
+
+Table 3: Results for Abalone
+
+
+5.3
+Scalability
+In the final experiment we investigate the scalability of
+MARK-L on a large dataset, the DELVE Housing8H dataset
+with 22,784 data points and 8 attributes. We compare the
+computational time with SVMTorch version 2.2.
+In this
+experiment, it does not make sense to use T = 100 because
+as the number of data points increases it is reasonable for
+the capacity of the learning function to increase as well.
+Therefore, we use a sampling of 5,000 data points to find a
+baseline MSE and use this value as a stopping criterion for
+MARK-L. For the SVM, we use the fixed policy described
+in [14]. MARK-L exhibits near linear scaling.
+
+
+~alabiliW
+
+3000
+~
+MARK
+
+
+
+2500
+/:"
+
+
+
+
+y f::
+
+~
+.."u"
+
+1
+
+
+
+
+0.5
+I
+1.5
+Data size
+x
+10 4
+
+
+
+Figure 4:
+Scalability of MARK-L
+compared
+with
+SVM on DELVE Housing8H.
+
+
+
+
+6.
+CONCLUSIONS
+This work was motivated by our long term goal to con-
+struct kernel methods that can more easily incorporate and
+extract domain knowledge. Within an application domain
+
+
+
+
+30
+
+there are many notions of distance. HKM allows the domain
+experts to incorporate many different notion of distance into
+a kernel based model. We proposed the MARK algorithm
+for constructing inference models based on these heteroge-
+neous families of kernels. Motivated by ensemble and addi-
+tive model methods, the MARK algorithm utilizes a coordi-
+nate descent approach to optimize the heterogeneous kernel
+models. Analogous to base learning algorithms in ensem-
+ble methods, kernel columns from the heterogeneous kernel
+matrix are generated on the fly. Since many kernels can
+be combined, we can utilize weak kernels such as the weak
+RBF kernel examined in this work. Computational results
+showed that MARK with weak kernels produced models of
+similar quality to SVM but with dramatically less storage
+requirements. One benefit of MARK is that the method in-
+herently performs feature selection, an important property
+for problems such a QSAR/drug discovery and micro-array
+gene expressions where there are many attributes relative
+to the number of points. In addition, the weak kernels are
+in some sense interpretable. Therefore we are investigat-
+ing approaches for interpreting and visualizing the resulting
+HKM.
+
+7. REFERENCES
+[1] C. L. Blake and C. J. Merz. UCI repository of
+machine learning databases, 1998.
+http://www.ics.uei.edu/,,~mlearn/MLRepository.html.
+[2] O. Chapelle, V. Vapnik, O. Bousquet, and
+S. Mukherjee. Choosing multiple parameters for
+support vector machines. Machine Learning,
+46(1/3):131, 2002.
+[3] R. Collobert and S. Bengio. Support vector machines
+for large-scale regression problems. IDIAP-RR-O0-17,
+2000.
+[4] N. Cristianini and J. Shawe-Taylor. An introduction
+to support vector machines and other kernel-based
+methods, 2000.
+[5] N. Duffy and D. Helmbold. Leveraging for regression.
+In Proc. COLT, pages 208-219, 2000.
+[6] Y. Freund and R. Shapire. A decision-theoretic
+generalization of on-line learning and an application to
+boosting. Journal of Computer and System Sciences,
+55(1):119-139, August 1997.
+[7] J. Friedman. Greedy function approximation.
+Technical report, Department of Statistics, Stanford
+University, February 1999.
+[8] G. Fung and O. Mangasarian. Proximal support
+vector classifiers. In Proceedings of the Seventh A CM
+SIGKDD International Conference on Knowledge
+Discovery and Data Mining, pages 77-86. ACM, 2001.
+[9] T. Hastie, R. Tibshairani, and J. Friedman. The
+elements of statistical Learning. Springer, 2001.
+[10] T. Hastie and R. Tibshirani. Generalized additive
+models. Statistical Science, 1:297-318, 1986.
+[11] C. F. Ipsen and C. D. Meyer. The idea behind krylov
+methods. Amer. Math. Monthly, 105(10):889-99, 1998.
+[12] L. Mason, P. Bartlett, J. Baxter, and M. Frean.
+Functional gradient techniques for combining
+hypotheses. In B. SchSlkopf, A. Smola, P. Bartlett,
+and D. S. ans, editors, Advances in Large Mau]in
+Classifiers. MIT Press, 2000.
+[13] M. F. MSller. A scaled conjugate gradient algorithm
+for supervised learning. Neural Networks, 6:525-533,
+1993.
+[14] M. Momma and K. P. Bennett. A pattern search
+method for model selection of support vector
+regression. In Proceedings of the Second SIAM
+International Conference on Data Mining. SIAM,
+2002. to appear.
+[15] G. R£tsch. Robust Boosting via Convex Optimization:
+Theory and Applications. PhD thesis, University of
+Potsdam, Department of Computer Science, 2002.
+[16] G. R~tsch, A. Demiriz, and K. Bennett. Sparse
+regression ensembles in infinite and finite hypothesis
+spaces. Machine Learning, 48((1-3)):193-221,
+February 2002.
+[17] G. Saunders, A. Gammerman, and V. Vovk. Ridge
+regression learning algorithm in dual variables. In
+Proc. 15th International Conf. on Machine Learning,
+pages 515-521. Morgan Kaufmann, San Francisco,
+CA, 1998.
+[18] A. Smola, Bartlett, B. SchSlkopf, and D. Schuurmans.
+Advances in Large Margin Classifiers. MIT Press,
+Cambridge, MA, 2000.
+[19] J. Suykens and J. Vandewalle. Least squares support
+vector machine classifiers. Neural Processing Letters,
+9(3):293-300, 1999.
+[20] V. Vapnik. Statistical Learning Theory. John Wiley &
+Sons, New York, 1998.
+
+
+
+
+31
+

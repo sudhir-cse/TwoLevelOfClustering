@@ -1,0 +1,1029 @@
+When do Data Mining Results Violate Privacy?
+
+
+
+
+
+Murat Kantarcioglu
+Purdue University
+Computer Sciences
+250 N University St
+West Lafayette, IN
+47907-2066
+kanmurat@cs.purdue.edu
+Jiashun Jin
+Purdue University
+Statistics
+150 N University St
+West Lafayette, IN
+47907-2067
+jinj@stat.purdue.edu
+Chris Clifton
+Purdue University
+Computer Sciences
+250 N University St
+West Lafayette, IN
+47907-2066
+clifton@cs.purdue.edu
+
+
+ABSTRACT
+Privacy-preserving data mining has concentrated on obtain-
+ing valid results when the input data is private. An extreme
+example is Secure Multiparty Computation-based methods,
+where only the results are revealed. However, this still leaves
+a potential privacy breach: Do the results themselves violate
+privacy? This paper explores this issue, developing a frame-
+work under which this question can be addressed. Metrics
+are proposed, along with analysis that those metrics are con-
+sistent in the face of apparent problems.
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications--
+Data mining; H.2.7 [Database Management]: Database
+Administration--Security, integrity, and protection
+
+General Terms
+Security
+
+Keywords
+Privacy, Inference
+
+1. INTRODUCTION
+There has been growing interest in privacy-preserving data
+mining, with attendant questions on the real effectiveness of
+the techniques. For example, there are discussions about
+the effectiveness of adding noise to data: while adding noise
+to a single attribute can be effective [3, 2], the adversary
+could have much higher ability to recover individual val-
+ues for multiple correlated attributes [12]. An alternative
+encryption based approach was proposed in [14]: nobody
+learns anything they didn't already know, except the result-
+ing data mining model. While [14] only discussed the case
+
+
+This material is based upon work supported by the Na-
+tional Science Foundation under Grant No. 0312357.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD'04, August 22­25, 2004, Seattle, Washington, USA.
+Copyright 2004 ACM 1-58113-888-1/04/0008 ...$5.00.
+for two parties, it has been shown in [10] that this is also
+feasible for many parties (e.g., rather than providing "noisy"
+survey results as in [3], individuals provide encrypted sur-
+vey results that can be used to generate the resulting data
+mining model.) This is discussed further in Section 4.
+However, though these provably secure approaches reveal
+nothing but the resulting data mining model, they still leave
+a privacy question open: Do the resulting data mining mod-
+els inherently violate privacy?
+This paper presents a start on methods and metrics for
+evaluating the privacy impact of data mining models. While
+the methods are preliminary, they provide a cross-section of
+what needs to be done, and a demonstration of techniques
+to analyze privacy impact. Work in privacy-preserving data
+mining has shown how to build models when the training
+data is kept from view; the full impact of privacy-preserving
+data mining will only be realized when we can guarantee
+that the resulting models do not violate privacy.
+To make this clear, we present a "medical diagnosis" sce-
+nario. Suppose we want to create a "medical diagnosis"
+model for public use: a classifier that predicts the likelihood
+of an individual getting a terminal illness. Most individuals
+would consider the classifier output to be sensitive ­ for ex-
+ample, when applying for life insurance. The classifier takes
+some public information (age, address, cause of death of
+ancestors), together with some private information (eating
+habits, lifestyle), and gives a probability that the individual
+will contract the disease at a young age. Since the classifier
+requires some information that the insurer is presumed not
+to know, can we state that the classifier does not violate
+privacy?
+The answer is not as simple as it seems. Since the classifier
+uses some public information as input, it would appear that
+the insurer could improve an estimate of the disease prob-
+ability by repeatedly probing the classifier with the known
+public information and "guesses" for the unknown informa-
+tion. At first glance, this appears to be a privacy violation.
+Surprisingly, as we show in Section 1.1, given reasonable
+assumptions on the external knowledge available to an ad-
+versary we can prove the adversary learns nothing new.
+We assume that data falls into three classes:
+
+· Public Data:(P) This data is accessible to every one
+including the adversary.
+
+· Private/Sensitive Data:(S) We assume that this
+kind of data must be protected: The values should
+remain unknown to the adversary.
+
+
+
+599
+Research Track Poster
+
+· Unknown Data:(U) This is the data that is not known
+to the adversary, and is not inherently sensitive. How-
+ever, before disclosing this data to an adversary (or
+enabling an adversary to estimate it, such as by pub-
+lishing a data mining model) we must show that it does
+not enable the adversary to discover sensitive data.
+
+1.1 Example: Classifier Predicting Sensitive
+Data
+The following example shows that for the "medical diag-
+nosis" scenario above, it is reasonable to expect that pub-
+lishing the classifier will not cause a privacy violation. Indi-
+viduals can use the classifier to predict their own likelihood
+of disease, but the adversary (insurer) does not gain any
+additional ability to estimate the likelihood of the disease.
+To simplify the problem, we assume that the classifier is
+a "black-box": the adversary may probe (use the classifier),
+but cannot see inside. An individual can use the classifier
+without any risk of disclosing either their private data or
+their private result.1 This represents a best-case scenario:
+If this classifier violates privacy, then no approach (short of
+limiting the adversary's access to the classifier) will provide
+privacy protection.
+Formally, suppose X = (P,U)T is distributed as N(0, )
+with
+
+ =
+,,
+1 r
+r 1
+«
+,
+(1)
+
+where -1 < r < 1 is the correlation between P and U. As-
+sume that for n independent samples (x1,x2,...,xn) from
+N(0, ), the sensitive data S = (s1,s2, ...,sn) can be dis-
+covered by a classifier C0 that compares the public data pi
+and the unknown data ui:
+
+si = C0(xi) =
+
+1 if pi  ui ,
+0 otherwise;
+, where:
+(2)
+
+· each pi is a public data item that everyone can access,
+
+· the data items denoted by ui are unknown to the ad-
+versary; ui is only know to the i-th individual,
+
+· each si is sensitive data we need to protect, and
+
+· The adversary knows that X  N(0,), it may or may
+not know r.
+
+We now study whether publishing the classifier C0 violates
+privacy, or equivalently, whether the adversary can get a
+better estimate of any si by probing C0.
+Given the public data pi for an individual i, the adver-
+sary could try to probe the classifier C0 to get an estimate
+of si as follows. It is reasonable to assume that the adver-
+sary has knowledge of the (marginal) distribution that the
+ui are sampled from; we can even assume that the adversary
+knows the joint distribution that (pi,ui)T are sampled from,
+or equivalently  or r. (We will see soon that though the
+adversary seems to know a lot, he doesn't know anything
+more about the si ­ this makes our example more surpris-
+ing). Thus for each individual or for each pi, the adversary
+could sample ~
+ui from the conditional distribution of (U|P),
+he then can use the pairs (pi, ~
+ui)T to probe C0 and get an
+
+estimate ~
+si = C0(pi, ~
+ui). Assuming that the information P
+1
+This is feasible, for examples see [9].
+was correlated with S, this will give the adversary a better
+estimate than simply taking the most likely result in S.
+However, this assumes the adversary has no prior knowl-
+edge. In our medical example, it is likely that the adversary
+has some knowledge of the relationship between P and S.
+For example, cause of death is generally public information,
+giving the adversary a training set (Likely as complete as
+that used to generate C0, as for some diseases ­ Creutzfeldt-
+Jakob, Alzheimer's until recently ­ an accurate diagnosis
+required post-mortem examination, so the training data for
+C0 would likely be deceased individuals.)
+Given that the adversary has this knowledge, what does
+the adversary know if we do not publish C0? Notice that
+
+Pr{S = 1|P = p} = (
+1 - r
+
+1 - r2 p)
+(3)
+
+
+=
+
+ 1/2, if p  0,
+< 1/2, otherwise,
+(4)
+
+where (·) is the cdf of N(0, 1). According to (3), (or even
+just based on symmetry), the best classifier the adversary
+can choose in this situation is:
+
+si =
+
+1 if pi > 0
+0 otherwise,
+(5)
+
+Let C1 denote this classifier.
+Next, we study what the adversary knows if we publish
+the classifier C0. We even allow the adversary to know r. In
+this situation, the best classifier the adversary can use is the
+Bayesian estimator C2, which is based on the probability of
+Pr{U  P|P = pi}:
+
+si =
+
+1 if Pr{U  P|P = pi} >
+1
+2
+,
+0 otherwise.
+(6)
+
+However, notice that
+
+(
+1 - r
+
+1 - r2 pi)
+= Pr{U  P|P = pi}
+
+compare this to (3), we conclude that C1  C2.
+Thus in this situation, publishing C0 or even the key pa-
+rameter r doesn't give the adversary any additional capabil-
+ity, as long as the adversary has no access to the ui. This
+enables us to argue that even though C0 apparently reveals
+sensitive information, it does not actually violate privacy.
+
+1.2 Contribution of this Paper
+As the above example demonstrates, determining if a data
+mining model violates privacy requires knowing many things:
+What information is sensitive? To whom is it sensitive?
+What else is known? Whose privacy is at risk? What is an
+acceptable tradeoff between privacy and the benefit of the
+data mining result, and how do we measure this tradeoff?
+In this paper, we suggest a framework where some of the
+above questions can be answered. We give precise definitions
+for privacy loss due to data mining results. A formal analysis
+of those definitions are provided for some examples, as well
+as empirical evaluations showing how the models could be
+applied in real life.
+Specifically, in Section 2, we present a model that enables
+us to discuss these issues in the context of classification.
+Section 3 presents a metric for privacy loss for one such
+situation, including examples of when the metric would be
+appropriate and how the metric could be calculated (ana-
+lytically or empirically) in specific situations.
+
+
+
+600
+Research Track Poster
+
+2. THE MODEL FOR PRIVACY IMPLICA-
+TIONS OF DATA MINING RESULTS
+To understand the privacy implications of data mining re-
+sults, we first need to understand how data mining results
+can be used (and misused). As described previously, we as-
+sume data is either Public, Unknown, or Sensitive. We now
+discuss additional background leading toward a model for
+understanding the impact of data mining results on privacy.
+We assume an adversary with access to Public data, and
+polynomial-time computational power. The adversary may
+have some additional knowledge, possibly including Unknown
+and Sensitive data for some individuals. We want to ana-
+lyze the effect of giving the adversary access to a classifier
+C; specifically if it will improve the ability of the adversary
+to accurately deduce Sensitive data values for individuals
+that it doesn't already have such data for.
+
+2.1 Access to Data Mining Models
+If the classifier model C is completely open (e.g., a decision
+tree, or weights in a neural network), the model description
+may reveal sensitive information. This is highly dependent
+on the model.
+Instead, we model C as a "black box": The adversary
+can request that an instance be classified, and obtain the
+class, but can obtain no other information on the classifier.
+This is a reasonable model: We are providing the adversary
+with access to C, not C itself. For example, for the pro-
+posed CAPPSII airline screening module, making the clas-
+sifier available would give terrorists information on how to
+defeat it. However, using cryptographic techniques we can
+provide privacy for all parties involved: Nothing is revealed
+but the class of an instance[9]. (The party holding the clas-
+sifier need not even learn attribute values.)
+Here, we will only consider the data mining results in the
+form of classification models. We leave the study of other
+data mining results as future work.
+
+2.2 Basic Metric for Privacy Loss
+While it is nice to show that an adversary gains no privacy-
+violating information, in many cases we will not be able to
+say this. Privacy is not absolute; most privacy laws provide
+for cost/benefit tradeoffs when using private information.
+For example, many privacy laws include provisions for use
+of private information "in the public interest"[6]. To trade-
+off the benefit vs. the cost of privacy loss, we need a metric
+for privacy loss.
+One possible way to define such a metric for classifier ac-
+curacy is using the Bayesian classification error. Suppose
+for data (x1,x2,..., xn), we have classification problems in
+which we try to classify xi's into m classes which we labeled
+as {0, 1,..., m - 1}. For any classifier C:
+
+xi  C(xi)  {0, 1, ...,m - 1},
+i = 1,2, ...,n,
+
+we define the classifier accuracy for C as:
+
+m-1
+X
+
+i=0
+Pr{C(x) = i|z = i}Pr{z = i}.
+(7)
+
+
+Does this protect the individual? The problem is that
+some individuals will be classified correctly: If the adversary
+can predict those individuals with a higher certainty than
+the accuracy, then the privacy loss for those individuals is
+worse than expected. Tightening such bounds requires that
+the adversary have training data, i.e., individuals for which
+it knows the sensitive value.
+
+2.3 Possible Ways to Compromise Privacy
+The most obvious way a classifier can compromise privacy
+is by taking Public data and predicting Sensitive values.
+However, there are many other ways a classifier can be mis-
+used to violate privacy. We break down the possible forms a
+classifier that could be (mis)used by the adversary can take.
+
+1. P  S: Classifier that produces sensitive data given
+public data. Metric based on accuracy of classification.
+
+
+sup
+i
+,,
+Pr{C(X) = Y |Y = i} -
+1
+ni
+«
+(8)
+
+
+2. PU  S: Classifier taking public and unknown data
+into sensitive data. Metric same as above.
+
+3. PS  P: Classifier taking public and sensitive data
+into public data. Can adversary determine value of
+sensitive data. (May also involve unknown data, but
+this is a straightforward extension.)
+
+4. The adversary has access to Sensitive data for some
+individuals. What is the effect on privacy of other
+individuals of classifiers as follows.
+
+(a) P  S: Can the adversary do better with such a
+classifier because of their knowledge, beating the
+expectations of the metric for 1.
+(b) P  U: Can giving the adversary a predictor
+for Unknown data improve its ability to build a
+classifier for Sensitive data?
+
+We gave a brief example of how we can analyze problem 2
+in Section 1.1. The rest of the paper looks at item 4b above,
+giving both analytical and empirical methods to evaluate
+the privacy impact of a classifier that enables estimation of
+unknown values.
+
+
+3. CLASSIFIERREVEALINGUNKNOWNS
+A classifier reveals a relationship between the inputs and
+the predicted class. Unfortunately, even if the class value
+is not sensitive, such a classifier can be used to create un-
+intended inference channels. Assuming the adversary has
+t samples from a distribution (P,S), it can build a clas-
+sifier C1 using those t samples. Let a1 be the prediction
+accuracy of the classifier C1. Assume a "non-sensitive" clas-
+sifier C : P  U is made available to the adversary. Using
+C, and the t samples, the adversary can build a classifier
+C2 : P,C(P)  S. Let a2 be the accuracy of the C2. If a2
+is better than a1, then C compromises the privacy of S.
+
+3.1 Formal Definition
+Given a distribution (P, U,S), with P public data that ev-
+eryone including the adversary can access, S sensitive data
+we are trying to protect (but known for some individuals),
+and U is data not known by the adversary. A "black-box"
+classifier C is available to the adversary that can be used
+to predict U given P. Assume that t samples ((p1,s1),
+..., (pt,st)) are already available to adversary, our goal is
+to test whether revealing C increases the ability of the ad-
+versary to predict the S values for unseen instances.
+
+
+
+601
+Research Track Poster
+
+First, assume attributes P and U are independent, or
+more generally, though P and U are dependent, C only con-
+tains the marginal information of P. In such cases, classifier
+C wouldn't be much help to the adversary: as C contains
+no valuable information of U, we expect that C wouldn't be
+much more accurate than random guess, and as a result, we
+expect that the adversary is unable to improve his estimate
+about S by using C, or formally, the Bayes error for all clas-
+sifiers using P only should be the same as the Bayes error
+for all classifiers using (P,C(P)).
+However, it is expected that C contains information on
+the joint distribution of P and U (or equivalently the condi-
+tional information of (U|P)), otherwise C would be uninter-
+esting (no better than a random guess.) The adversary can
+thus combine C or C(P) with already known information of
+P to create an inference channel for S, and the prediction
+accuracy of the newly learned classifier violates privacy.
+Formally, given C and t samples from P, S, letting
+
+(t) = {
+t;P,S}
+,
+(t;C) = {
+t;P,C(P),S}
+
+be the Bayes error for classifiers using P only and using
+P, C(P) respectively; also, letting
+
+¯
+ = lim
+t
+(t),
+¯
+(C) = lim
+t
+(t;C),
+
+we have the following definition:
+
+Definition 1. For 0 < p < 1, we call the classifier C (t,p)-
+privacy violating if (t;C)  (t)- p, and the classifier C is
+(,p)-privacy violating if ¯
+(C)  ¯
+ - p.
+
+The important thing to notice about the above definition
+is that we measure the privacy violation with respect to
+number of available samples t. An adversary with many
+training instances will probably learn a better classifier than
+one with few training instances.
+In this case, the release of the C1 has created a privacy
+threat. The main difference between this example and the
+one given in the Section 1 is that we put a limitation on the
+number of available examples to the adversary.
+
+3.2 Analysis for Mixture of Gaussians
+We now give a formal analysis of such an inference in the
+case of Gaussian mixtures. Although we gave our defini-
+tions for a classifier C, in the case of the Gaussian mixtures,
+the sensible way to model C is the conditional distribution
+of some particular attribute based on the other attributes.
+Note that C can also be viewed as a "black box".
+Suppose X = (P,U)T is distributed as a n-dimensional
+2-point mixture (1 - )N(0, ) + N(µ, ), where
+
+µ =
+,,
+µ1
+µ2
+«
+,
+ =
+,,
+11
+12
+12
+22
+«
+.
+(9)
+
+For a set of t realizations X = (x1,x2,. ..,xt) (here xi =
+(pi,ui)T), t sensitive data S = (s1,s2,.. .,st) are generated
+according to the rule:
+
+si =
+
+1,
+if xi is generated from N(0,),
+0,
+if xi is generated from N(µ,).
+(10)
+
+
+Assume:
+
+· The adversary has access to pi, and know the marginal
+distribution of P in detail (this is possible for example
+for sufficiently large sample size t),
+· The adversary has no access to ui,
+
+· The adversary knows that xi are from the above 2-
+point mixture, he knows n, , µ1, and 11, which can
+be obtained through the marginal of P, but not µ2
+or any other entries in  that can not be obtained
+through the marginal of P.
+
+We are concerned the following two questions.
+
+1. What is the privacy loss by releasing ui? In other
+word, what is the Bayes error when we limit the ad-
+versary's to the knowledge to the above assumption.
+
+2. What is the privacy loss by allowing the adversary to
+know the conditional distribution of (U|P)?
+
+Before answering these questions, we work out the Bayes
+error when only pi are available and when both pi and ui
+are available. Notice here that, by symmetry, the Bayes
+error for t samples is the same of univariate Bayes error.
+By direct calculation, the Bayes error with only pi's is:
+
+( ,µ1,11) = (1 - )Pr{CB(pi) = 1|si = 0}
++ Pr{CB(pi) = 0|si = 1}
+
+where CB is the Bayesian classifier. The Bayes error can be
+rewritten as:
+
+( ,µ1,11)
+(11)
+
+= (1 - )¯
+
+,,a
++ µT1 -
+1
+11
+µ1
+q
+µT1 -
+1
+11
+µ1
+«
++
+¯
+
+,,a
+- µT1 -
+1
+11
+µ1
+q
+µT1 -
+1
+11
+µ1
+«
+(12)
+
+
+where a = log(1
+-
+) and
+¯
+(·) is the survival function of
+N(0, 1).
+In comparison, the Bayes error with both pi's and ui's is:
+
+( ,µ,) = (1 - )Pr{CB(pi,ui) = 1|si = 0}
++ Pr{CB(pi,ui} = 0|si = 1).
+
+This can be rewritten as:
+
+(1 - )¯
+
+,,a
++ µ -
+1
+µ
+pµ
+-
+1
+µ
+«
++
+¯
+
+,,a
+- µ -
+1
+µ
+pµ
+-
+1
+µ
+«
+.
+
+
+We can now answer question 1:
+
+Lemma 3.1. Let (z) = (1 - ) ¯
+(a
++z
+z
+) +
+¯
+(a
+-z
+z
+). Then
+
+1. (z) strictly decreases in z.
+
+2. µT1 -
+1
+11
+µ1  µT-
+1
+µ with equality if and only if µ2 =
+T12-
+1
+11
+µ1.
+
+3. As a result, ( ,µ, )  ( ,µ1, 11), with equality if
+and only if µ2 = T12-
+1
+11
+µ1.
+
+The proof of Lemma 3.1 is omitted. Lemma 3.1 tells us
+that, in general, releasing ui's or any classifier that predicts
+ui's will compromise privacy. This loss of privacy can be
+measured by Bayes error, which has an explicit formula and
+can be easily evaluated through the function (z).
+Next, for question 2, we claim that from the privacy point
+of view, telling the adversary the detailed conditional distri-
+bution of (U|P) is equivalent to telling the adversary all the
+ui, in other words, the privacy loss for either situation are ex-
+actly the same. To see this, notice that when the adversary
+knows the conditional distribution of (U|P), he knows the
+
+
+
+602
+Research Track Poster
+
+distribution of S in detail since he already knew the marginal
+distribution of P. Furthermore, he can use this conditional
+distribution to sample ui based on each pi, the resulting data
+si = (pi, ~
+ui)T is distributed as (1 - )N(0, ) + N(µ, );
+though si's are not the data on our hand, but in essence the
+adversary has successfully constructed an independent copy
+of our data. In fact, the best classifier for either case is the
+Bayesian rule, which classifies si's to 1 or 0 according to
+f(x;µ,)  (1 - )f(x;0, ),
+(13)
+
+here we use f(x;µ,) to denote the density function of
+N(µ, ). Thus there won't be any difference if the adversary
+know any ui's of our data set, or just know the conditional
+distribution of (U|P). This suggests that when S is highly
+correlated with U, revealing any good method to predict U
+may be problematic.
+
+3.3 Practical Use
+For most distributions it is difficult to analytically evalu-
+ate the impact of a classifier on creating an inference chan-
+nel. An alternative heuristic method to test the impact of a
+classifier is described in Algorithm 1. We now give experi-
+ments demonstrating the use, and results, of this approach.
+
+
+Algorithm 1 Testing a classifier for inference channels
+1: Assume that S depends on only P,U, and the adversary
+has at most t data samples of the form (pi,si).
+2: Build a classifier C1 on t samples (pi,si).
+3: To evaluate the impact of releasing C, build a classifier
+C2 on t samples (pi,C(pi),si).
+4: If the accuracy of the classifier C2 is significantly higher
+than C1, conclude that revealing C creates a inference
+channel for S.
+
+
+We tested this approach on several of the UCI datasets[4].
+We assumed that the class variable of each data set is pri-
+vate, treat one attribute as unknown, and simulate the effect
+of access to a classifier for the unknown. For each nominal
+valued attribute of each data set, we ran six experiments.
+In the first experiment, a classifier was built without using
+the attribute in question. We then build a classifier with the
+unknown attribute correctly revealed with probability 0.6,
+0.7, 0.8, 0.9, and 1.0. For example, for each instance, if 0.8
+is used, the attribute value is kept the same with probability
+0.8, otherwise it is randomly assigned to an incorrect value.
+The other attributes are unchanged.
+In each experiment, we used C4.5 with default options
+given in the Weka package [17]. Before running the exper-
+iments, we filtered the instances with unknown attributes
+from the training data set. Ten-fold cross validation was
+used in reporting each result.
+Most of the experiments look like the one shown in Fig-
+ure 1 (the credit-g dataset). Giving an adversary the ability
+to predict unknown attributes does not significantly alter
+classification accuracy (at most 2%). In such situations, ac-
+cess to the public data may be enough to build a good clas-
+sifier for the secret attribute; disclosing the unknown values
+to the adversary (e.g., by providing a "black box" classifier
+to predict unknowns) does not really increase the accuracy
+of the inference channel.
+In a few data sets (credit-a, kr-vs-kp, primary-tumor,
+splice, and vote) the effect of providing a classifier on some
+68
+69
+70
+71
+72
+73
+74
+75
+
+
+
+
+0
+0.2
+0.4
+0.6
+0.8
+1
+Overall
+Prediction
+Accuracy
+in
+%
+
+
+
+
+Prediction Accuracy of C
+Att= 10
+Att= 12
+Att= 14
+Att= 15
+Att= 17
+Att= 19
+Att= 20
+Att= 21
+Att= 4
+Att= 6
+Att= 7
+Att= 9
+
+
+
+
+Figure 1: Effect of classification with varying quality
+estimate of one attribute on "credit-g" data (repre-
+sentative of most UCI data sets.)
+
+
+
+
+70
+72
+74
+76
+78
+80
+82
+84
+86
+88
+
+
+
+
+0
+0.2
+0.4
+0.6
+0.8
+1
+Overall
+Prediction
+Accuracy
+in
+%
+
+
+
+
+Prediction Accuracy of C
+Att= 10
+Att= 12
+Att= 13
+Att= 16
+Att= 1
+Att= 4
+Att= 5
+Att= 6
+Att= 7
+Att= 9
+
+
+
+
+Figure 2: Effect of classification with varying quality
+estimate of one attribute on "credit-a" data (repre-
+sentative of five UCI data sets.)
+
+
+
+attribute increased the prediction accuracy significantly. We
+discuss the "credit-a" data set as an example of these. If the
+adversary does not have an access to the 9th(A9) attribute
+(a binary attribute), it can build a decision tree that infers
+the secret (class) attribute with 72% accuracy ­ versus 86%
+if given all data. This holds even if the adversary is given a
+classifier (C) that predicts A9 with 60% accuracy. However,
+as shown in Figure 2, if C has accuracy 80% or greater, the
+adversary can do a significantly better job of predicting the
+secret (class) attribute.
+
+
+4. RELATED WORK
+Privacy implications of data mining have been pointed
+out, a survey is given in [8]. To our knowledge, none gave
+precise definitions for privacy loss due to data mining results.
+Considerable research has gone into privacy-preserving
+data mining algorithms. The goal is to learn a data mining
+model without revealing the underlying data. There have
+been two different approaches to this problem. The first is
+to alter the data before delivery to the data miner so that
+
+
+
+603
+Research Track Poster
+
+real values are obscured, protecting privacy while preserving
+statistics on the collection. Recently data mining techniques
+on such altered data have been developed for constructing
+decision trees[3, 2] and association rules[15, 7]. While [2]
+touched on the impact of results on privacy, the emphasis
+was on ability to recover the altered data values rather than
+inherent privacy problems with the results.
+The second approach is based on secure multiparty com-
+putation: privacy-preserving distributed data mining[14, 5,
+11, 16, 13]. The ideas in this paper compliment this line
+of work. Privacy-preserving data mining tries to guarantee
+that nothing is revealed during the data mining process. In
+our case, we want to make sure that even a limited access
+to the data mining result does not cause a privacy threat.
+The inference problem due to query results has also been
+addressed in a very different context: Multi-level secure
+databases. A survey of this work can be found in [1]. This
+does not address the privacy threat due to the data mining
+result, and does not directly apply to our problem.
+
+
+5. CONCLUSIONS
+Increases in the power and ubiquity of computing resources
+pose a constant threat to individual privacy. Tools from
+privacy-preserving data mining and secure multi-party com-
+putation make it possible to process the data without with
+disclosure, but do not address the privacy implication of the
+results. We have defined this problem and explored ways
+that data mining results can be used to compromise privacy.
+We gave definitions to model the effect of the data mining
+results on privacy, analyzed our definitions for a Mixture
+of Gaussians for two class problems, and gave a heuristic
+example that can be applied to more general scenarios.
+We have looked at other situations, such as a classifier that
+takes sensitive data as input (can sampling the classifier with
+known output reveal correct values for input?) and privacy
+compromise from participating in training data. We are
+working to formalize analysis processes for these situations.
+We plan to test our definitions in many different contexts.
+Possible plans include a software tool that automatically as-
+sesses the privacy threat due to the data mining result based
+on the related training instances and the private data. We
+also want to augment existing privacy-preserving algorithms
+so that the output of data mining is guaranteed to satisfy
+the privacy definitions, or the algorithm terminates without
+generating results. Finally, we want to be able extend the
+formal analysis to more complex data models using tools
+from statistical learning theory.
+
+
+6. REFERENCES
+[1] N. R. Adam and J. C. Wortmann. Security-control
+methods for statistical databases: A comparative
+study. ACM Comput. Surv., 21(4):515­556, Dec. 1989.
+[2] D. Agrawal and C. C. Aggarwal. On the design and
+quantification of privacy preserving data mining
+algorithms. In Proceedings of the Twentieth ACM
+SIGACT-SIGMOD-SIGART Symposium on Principles
+of Database Systems, pages 247­255, Santa Barbara,
+California, USA, May 21-23 2001. ACM.
+[3] R. Agrawal and R. Srikant. Privacy-preserving data
+mining. In Proceedings of the 2000 ACM SIGMOD
+Conference on Management of Data, pages 439­450,
+Dallas, TX, May 14-19 2000. ACM.
+[4] C. Blake and C. Merz. UCI repository of machine
+learning databases, 1998.
+[5] W. Du and Z. Zhan. Building decision tree classifier
+on private data. In C. Clifton and V. Estivill-Castro,
+editors, IEEE International Conference on Data
+Mining Workshop on Privacy, Security, and Data
+Mining, volume 14, pages 1­8, Maebashi City, Japan,
+Dec. 9 2002. Australian Computer Society.
+[6] Directive 95/46/EC of the european parliament and of
+the council of 24 october 1995 on the protection of
+individuals with regard to the processing of personal
+data and on the free movement of such data. Official
+Journal of the European Communities, No
+I.(281):31­50, Oct. 24 1995.
+[7] A. Evfimievski, R. Srikant, R. Agrawal, and
+J. Gehrke. Privacy preserving mining of association
+rules. In The Eighth ACM SIGKDD International
+Conference on Knowledge Discovery and Data Mining,
+pages 217­228, Edmonton, Alberta, Canada, July
+23-26 2002.
+[8] C. Farkas and S. Jajodia. The inference problem: A
+survey. SIGKDD Explorations, 4(2):6­11, Jan. 2003.
+[9] M. Kantarcio^glu and C. Clifton. Assuring privacy
+when big brother is watching. In The 8th ACM
+SIGMOD Workshop on Research Issues in Data
+Mining and Knowledge Discovery (DMKD'2003),
+pages 88­93, San Diego, California, June 13 2003.
+[10] M. Kantarcioglu and J. Vaidya. An architecture for
+privacy-preserving mining of client information. In
+C. Clifton and V. Estivill-Castro, editors, IEEE
+International Conference on Data Mining Workshop
+on Privacy, Security, and Data Mining, volume 14,
+pages 37­42, Maebashi City, Japan, Dec. 9 2002.
+Australian Computer Society.
+[11] M. Kantarcioglu and C. Clifton. Privacy-preserving
+distributed mining of association rules on horizontally
+partitioned data. IEEE Transactions on Knowledge
+and Data Engineering, to appear.
+[12] H. Kargupta, S. Datta, Q. Wang, and K. Sivakumar.
+On the privacy preserving properties of random data
+perturbation techniques. In Proceedings of the Third
+IEEE International Conference on Data Mining
+(ICDM'03), Melbourne, Florida, Nov. 19-22 2003.
+[13] X. Lin, C. Clifton, and M. Zhu. Privacy preserving
+clustering with distributed EM mixture modeling.
+Knowledge and Information Systems, to appear 2004.
+[14] Y. Lindell and B. Pinkas. Privacy preserving data
+mining. Journal of Cryptology, 15(3):177­206, 2002.
+[15] S. J. Rizvi and J. R. Haritsa. Maintaining data privacy
+in association rule mining. In Proceedings of 28th
+International Conference on Very Large Data Bases,
+pages 682­693, Hong Kong, Aug. 20-23 2002. VLDB.
+[16] J. Vaidya and C. Clifton. Privacy-preserving k-means
+clustering over vertically partitioned data. In The
+Ninth ACM SIGKDD International Conference on
+Knowledge Discovery and Data Mining, pages
+206­215, Washington, DC, Aug. 24-27 2003.
+[17] I. H. Witten and E. Frank. Data Mining: Practical
+Machine Learning Tools and Techniques with Java
+Implementations. Morgan Kaufmann, San Fransisco,
+Oct. 1999.
+
+
+
+
+604
+Research Track Poster
+

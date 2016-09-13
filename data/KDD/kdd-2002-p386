@@ -1,0 +1,1638 @@
+ADMIT: Anomaly-based Data Mining for Intrusions
+
+Karlton Sequeira "andMohammed Zaki *
+Computer Science Department
+Rensselaer Polytechnic Institute, Troy, New York 12180
+{sequek,zaki}~cs,rpi.edu
+
+
+
+
+ABSTRACT
+Security of computer systems is essential to their acceptance
+and utility. Computer security analysts use intrusion detec-
+tion systems to assist them in maintaining computer system
+security. This paper deals with the problem of differenti-
+ating between masqueraders and the true user of a com-
+puter terminal. Prior efficient solutions are less suited to
+real time application, often requiring all training data to be
+labeled, and do not inherently provide an intuitive idea of
+what the data model means. Our system, called ADMIT, re-
+laxes these constraints, by creating user profiles using semi-
+incremental techniques. It is a real-time intrusion detection
+system with host-based data collection and processing. Our
+method also suggests ideas for dealing with concept drift
+and affords a detection rate as high as 80.3% and a false
+positive rate as low as 15.3%.
+
+
+1.
+INTRODUCTION
+Security of computer systems is vital to their utility and
+acceptance. It is maintained by monitoring audit logs. The
+ever-increasing size of these logs makes it mandatory for
+network administrators and security analysts to use spe-
+cific tools, called intrusion detection systems (IDS), to prune
+down the monitoring activity. According to the 2000 Com-
+puter Security Institute/FBI computer crime study, 85% of
+the 538 companies surveyed, reported an intrusion or exploit
+of their corporate data, with 64% suffering a loss [12]. Thus,
+IDS are becoming increasingly important.
+For an IDS to be powerful it must run continually, be
+adaptable to user behavior changes, be fault tolerant (i.e.
+crashes must not require retraining or re-learning of behav-
+ior), be impervious to subversion, be scalable, should impose
+minimal overhead, be configurable, and should show graceful
+degradation of service[19]. Other challenges to contend with
+
+*This work was supported by Pitney Bowes, Inc.
+tThis work was supported in part by NSF CAREER Award
+IIS-0092978, and NSF Next Generation Software Program
+grant EIA-0103708.
+
+
+
+
+Permissionto make digital or hard copies of all or part of this work for
+personalor classroomuse is granted without fee providedthat copies are
+not madeor distributedfor profitor commercialadvantageand that copies
+bear thisnoticeand thefull citationon the firstpage. To copy otherwise,to
+republish,to poston serversor to redistributeto fists,requirespriorspecific
+permissionand/ora fee.
+SIGKDD02 Edmonton,Alberta,Canada
+Copyright2002ACM 1-58113-567-X/02/0007...$5.00.
+include, determining what audit data to collect and what
+data model to use to represent it, dealing with noisy, high-
+dimensional, categorical audit data, and satisfying generic
+requirements like automation and real-time detection [10].
+The specific problem we seek to solve is that of differen-
+tiation between masqueraders and the true user of a com-
+puter terminal. We do so by augmenting conventional pass-
+word authentication measures, with a continuously running
+terminal-resident IDS program, called ADMIT (Anomaly-
+based Data Mining for InTrusions), which monitors the
+terminal usage by each user and creates an appropriate pro-
+file and verifies user data against it.
+
+1.1
+Background
+Intrusion detection systems are primarily of two types:
+siffrmture-based, in which audit data is searched for patterns
+known to be intrusive [9], or anomaly-based, in which aber-
+rations from normal usage patterns are searched for. The
+former are susceptible to new attacks and hence reliance on
+these schemes is decreasing.
+While anomaly-based meth-
+ods can detect new attacks, they are prone to higher false
+positive rates, as user behavior is often erratic and hard to
+model. Some methods [5] use a hybrid of the two to combine
+their benefits and counter their disadvantages.
+Most IDS efforts so fax have been targeted at network-
+level data [20], which does not solve our problem, since a
+poorly chosen password may be guessed, an authorized user
+may turn hostile or a terminal may be left unattended, al-
+lowing an intruder to gain access without using the network.
+Other efforts have been carried out using system call-level
+data [7, 13].
+Early methods involved immunocomputing-
+based approaches by Forrest et al. [21] and recently Cabrera
+et al. [3], which examined fixed-length contiguous sequences
+of system calls, pertaining to privileged programs like send-
+mail, known to have exploits. In a related vein, Lee et al.
+[13], used a machine learning classifier, RIPPER, to pro-
+duce rules to classify system call sequences as "normal" or
+"abnormal". However, system-call level data is far too fine
+grained, which increases overhead.
+Our method concentrates on user command-level data. In
+doing so, even if the masquerader gains access through what-
+ever means, (s)he still runs the risk of being detected. In
+contrast, the risk of detection is much lower in IDS based on
+system-call or network level data. For instance, the intruder
+does not have to exploit the system calls or the network,
+having gained higher privileges.
+Ryan et al. [17] has also suggested that every user leaves
+a print on the terminal, which could be picked up using
+artificial neural networks (ANNs).
+User-profile based en-
+
+
+
+
+386
+
+deavors include statistical-based methods such as IDES [5]
+and EMERALD [15], which create multi-level usage pro-
+files (i.e., at user or group levels). DuMouchel [6], created
+contiguous command sequence-based probability transition
+matrices, which serve as user profiles. Schonlau et al [18]test
+a variety of statistical methods for building user profiles.
+Clustering is an unsupervised learning technique, in which
+data is partitioned into meaningful subgroups called clusters
+based on some similarity measure. Prior efforts using clus-
+tering for intrusion detection include those by Portnoy [16]
+and Zamboni [22]. Portnoy used non-real-timeclustering to
+group unlabeled network data and labeled them based on
+the assumption that the proportion of network data that
+is anomalous is very low. Zamboni observed that the dis-
+tribution of test points to clusters changes significantly at
+the time of attacks, which can be used as an indicator of
+anomalous behavior.
+The work most closely related to ours is that by Lane and
+Brodley [10, 11], who used both instance-based learning [1]
+(IBL) as well as Hidden Markov Models (HMM) techniques
+to create user profiles for user command data.
+Like our
+method, they too use clustering, however only for model
+scaling (i.e., limiting the number of sequences representing
+the user). The IBL approach by Lane [10] provides the ad-
+vantage that the class of a test point is based on the points
+most similar to it in the training database, rather than the
+similarity of all database points, thereby limiting problem
+complexity. Statistically-based anomaly-detection methods
+[16] often assume that anomalies form a very small propor-
+tion of audit data. But an intruder may use such "anoma-
+lous" sequences repeatedly, so that their frequency becomes
+high enough frequency to be labeled "normal". However,
+as the IBL approach is not statistically based, even a single
+labeled point is useful and using this ploy is futile. At the
+same time, a coincidence may result in contamination and
+hence expert supervision is essential. Also, since nearly all
+computation in IBLs takes place at run time, it is a slow
+alternative. Also, IBLs do not inherently provide a method
+of model scaling.
+Most of the IDS efforts, thus far, require substantial train-
+ing data, which must all be labeled. Also, the more success-
+ful efforts are less suited to real time application; the experi-
+ments conducted suggest that a considerably large sequence
+of anomalous commands is crucial to the performance. Our
+method suggests an environment in which these constraints
+may be relaxed. Also, unlike our method, all the models
+mentioned so far such as HMMs, ANNs, etc., do not intrin-
+sically convey information about the user behavior to the
+security analyst.
+
+
+1.2
+Contributions
+It is our belief that current IDS techniques are not sophis-
+ticated enough to completely automate the intrusion detec-
+tion problem, and that expert supervision is ultimately nec-
+essary. Hence, we try to minimize the work of the security
+analyst by providing likely alarms, rather than completely
+automating the process.
+ADMIT is a user-profile dependent, temporal sequence clus-
+tering based, real-time intrusion detection system with host-
+based data collection and processing.
+Using user profiles
+makes it hard for intruders who have gained access to higher
+privileges, to actually use them, since doing so would most
+probably create a usage pattern different from the true user's
+profile. The new pattern would be labeled as an anomaly
+and thus give them away.
+There are several reasons why we used clustering to model
+the user behavior. Firstly, it affords us automatic model
+scaling. A cluster, with low variance, can be efficiently rep-
+resented by its center. Hence the run time constraint in IBLs
+is relaxed depending on the cluster support, i.e., the number
+of sequences assigned to a cluster. Secondly, by putting a
+constraint on the cluster support, we can reduce noise and
+retain more relevant clusters. Thirdly, if the intra-cluster
+similarity threshold (i.e., the minimum acceptable similarity
+between a cluster's center and any other sequence assigned
+to it) is set high enough, some test sequences may remain
+unassigned. These sequences are said to be "anomalous"
+and hence an alarm (of Type A) may be raised. In general,
+different types of alarms can be raised; Type A refers to
+a single anomalous sequence, while Type B refers to a se-
+quence of Type A alarms in near succession. The profile may
+be updated by clustering the anomalous sequences. Finally
+only the centers of the anomalous clusters are displayed to
+the analyst, thereby effecting significant data reduction as
+compared to the IBL scheme [10] in which all flagged se-
+quences are offered to the security analyst.
+In designing ADMIT we preferred host-based processing
+and data collection. While centralized IDS architectures
+e.g. IDIOT [9], offer lower processing overhead on hosts
+and easier defense against subversion (just one component
+to protect), they are difficult to dynamically reconfigure
+and do not scale.
+Also, the penalty is very high if sub-
+verted. ADMIT, like other distributed IDS [19, 14] does
+not have these problems and by having a host-based ar-
+chitecture, distributed-related co-ordination problems and
+sniffing-related methods of user spoofing are eliminated. A
+preview of the ADMIT architecture is presented in the next
+section.
+
+
+2.
+ADMIT ARCHITECTURE
+There are two main stages in our approach to mining in-
+trusions. In the training phase the user profiles are created,
+and in the testing phase the user command stream data is
+verified against the corresponding profile. The complete ar-
+chitecture of ADMIT is shown in Figure 1.
+User data enters the system by the monitoring of UNIX
+shell command data [10], captured via the (t)csh history file
+mechanism. A recognizer for the (t)~h command language
+parses user history data and emits them as a sequence of
+tokens in an internal format. Also, all commands between
+logging on and logging off are referred to as a session and
+corresponding delimiters (*SOF* and *EOF*, respectively)
+are inserted to indicate the same. We process data within
+different sessions separately to avoid patterns created by co-
+incidence across sessions from being incorporated into the
+user profiles. An example session could be: *SOF*; Is -l; vi
+tl.txt; ps -eaf; vi t2.txt; ls -a /usr/bin/*; rm -i //home/*," vi
+t3.txt t4.txt; ps -ef; *EOF*
+During training, the commands entered by a user are
+stored in that user's audit data table according to the time
+of entry. During testing, the command data is directly used
+to detect anomalies via online sequential classification.
+We consider each process/command in the history data
+together with its arguments as a single token (*SOF* and
+*EOF* are not considered to be tokens). However, to reduce
+the alphabet size, we omitted filenames in favor of a file
+
+
+
+
+387
+
+TRAINING
+TESTING
+
+
+Figure 1: ADMIT's Architecture: Training/Testing
+
+count as in Lane [10]. For example, the user sequence given
+above is converted to the following set of tokens T = {ti :
+0 <_i < 8}, where to = ls-1, tl = vi <1>, t2 = ps-eaf, t3 =
+vi <1>, t4 = Is -a <1>, ts = rm -i <1>, ts = vi <2>, and tr
+= ps -ef. The notation <n> gives the number of arguments
+(n) of a command. For instance, the command vi tl.txt is
+tokenized as vi <1>, while vi t3.txt ~.txt as vi <2>.
+ProfileManager is the top-level module in ADMIT; it is
+responsible for the security of a terminal. It has a number
+of deputies, whose operations it configures, coordinates and
+decides. ProfileCreator, during training, creates profiles for
+users authorized to use the terminal. During testing, Pro-
+fileUpdater updates profiles for those users, while Sequence-
+Examiner examines each sequence of tokens of process data
+and determines if that is characteristic or not, of the user
+thought to have produced it. Based on the decision, it takes
+action specified by the ProfileManager.
+The ProfileCreator and ProfileUpdater both use two sub-
+modules. FeatureSelector parses the source command data
+for a user, cleans it up by replacing argument names by num-
+bers (e.g., cat test.txt > sort becomes cat <1> > sort) and
+converts it into tokens as described above. It then converts
+the token data from each session, into sequences of tokens,
+whose length is specified by the ProfileManager.
+Cluster-
+Creator converts the input array of sequences into clusters
+which form the profile of the user they originate from.
+At startup, the ProfileManager initializes the ProfileCre-
+ator, ProfileUpdater and SequenceExaminer with various
+parameters. At training time, the ProfileCreator instructs
+FeatureSelector, as to what data to parse, and how to clean
+and tokenize it. The FeatureSelector makes sequences out
+of the tokens, whose length is determined by the ProfileM-
+anager. Thus, a sequence s, of specified length l, is a list of
+tokens, occurring contiguously in the same session of audit
+data, i.e., s E T t, where T is the token alphabet.
+If the
+number of commands is less than l, blank tokens are used
+to right pad the session.
+The ProfileCreator also initializes ClusterCreator and passes
+on the clustering algorithm and similarity measure, specified
+by the ProfileManager, so that the ClusterCreator can con-
+vert the sequences into clusters which are added to the user
+profile. Thus, a cluster c, is a collection of sequences offuser-
+initiated command data, such that all its sequences are very
+similar to others within itself using some similarity measure
+SimO, but different from those in other clusters.
+If the clusters have sufficiently high intra-cluster simi-
+larity, the entire cluster may be represented by the cen-
+ter sequence.
+~Ne define the cluster center (denoted so)
+as the sequence having the maximum aggregate similar-
+ity to the other sequences within the cluster.
+That is, if
+c = {so, sl,..., e~n-1} is a cluster with n sequences, then
+
+rt~l
+
+sc = max{E
+Sim(s,, s~)}
+(1)
+siEc
+j=O
+
+The clusters make up the profile for a given user. A pro-
+file p, is the set of clusters of sequences of user-initiated
+command data whose centers characterize the user behavior.
+Thus, for user u,
+
+p~ = {e,l(Sim(so,,s) _>r, Vs ~ c,)^(Sim(sc,,%)
+<_r',i # j)}
+
+where r and r t are the intra,cluster and inter-cluster sim-
+ilarity thresholds, respectively, so{ is the center of cluster
+ci, and Sire(s1, s2) is the similarity between two sequences.
+More formally, Sire : T l x T t ~
+~, where T is the token
+alphabet and l is the length of the sequences. We expect p~,
+to include several clusters to adequately capture the usage
+variations for user u. Having fine grained (but not overly so)
+clusters also allows us to reduce false alarms while testing.
+Profiles thus created by the ProfileCreator are added to the
+pool of user profiles P.
+During testing, the SequenceExaminer instructs Feature-
+Selector to parse, clean and tokenize command stream data
+of the user u currently logged in and convert them into se-
+quences. These sequences are matched against the corre-
+sponding profile p~, obtained from the pool of user pro-
+files P by the ProfileUpdater. An alarm of Type A may be
+sent to the security analyst for each anomalous sequence.
+In contrast to the ProfileCreator's ClusterCreator, only the
+anomalous sequences, deemed so by the SequenceExaminer,
+are clustered by the ProfileUpdater's ClusterCreator. These
+can be added to user u's profile p~,, at the analyst's behest.
+
+
+3.
+ADMIT' ALGORITHMS
+In this section, we use a running example to explain the
+methods used in ADMIT during training and online testing.
+To match command sequences against user profiles, it is
+essential to establish a similarity measure, which we write as
+Sire(s1, s2), between two categorical command sequences,
+sl and s2. It is an atomic function of the clustering and
+classification process and hence should be quick. Also, it
+is important to note that, we consider all commands to be
+of equM importance. The following similarity metrics have
+been proposed in the literature [10]: 1.) MCP (Match Count
+Polynomial Bound) counts the number of slots in the two se-
+quences for which both have identical tokens and the count
+is the similarity score for the two sequences. For example,
+if sl = { vi <1>, ps -eaf, vi <1>, ls -a <1>}, and s2 = {vi
+<1>, ls -a <1>, rm -i <1>, vi <2>}, then MCP for sl
+and s2 is 1 since they are identical only in slot 1. 2.) MCE
+,(Match Count Exponential Bound) is a variant of MCP,
+in that it doubles its value for each matching position. 3.)
+MCAP/MCAE (Match Count with Adjacency Reward and
+Polynomial/Exponential Bound) is a variant of MCP/MCE
+[10], where adjacent matches are rewarded.
+Lane [10] re-
+ported that MCAP is typically better than the others, so
+we use that in our study.
+In addition, we proposed using the LCS metric (Longest
+Common Subsequence), which gives the length of the longest
+
+
+
+
+388
+
+V
+
+
+
+
+subsequence of tokens that the two sequences have in com-
+mon. It is polynomially bounded in the length l, i.e. O(/2)
+[4]. While LCS is a quadratic algorithm in comparison to
+the exact match-based linear algorithms, it does represent
+similarity between phase-shifted sequences. For example, for
+the Sl and s2 from above, LCS is 2, since they both share
+the subsequence vi <1>, Is -a <1>. The same result may be
+achieved using edit distance, dot-plots with the length of the
+longest diagonal corresponding to the similarity between the
+sequences and other sequence alignment algorithms.
+Note
+that all of the proposed metrics produce a similarity mea-
+sure having a whole value, i.e., Sim : T l x T l --~ [0, l]. This
+restricts the granularity of differentiation.
+
+3.1
+Dynamic
+Training
+
+Initial user profiles in ADMIT are mined in the training
+phase from user commands at their host machine. There are
+three main steps during training: 1) data pre-processing, 2)
+clustering user sequences, and 3) cluster refinement. These
+steps are described in detail below.
+
+3.1.1
+Data Pre-processing
+ADMIT collects user audit data, by monitoring the com-
+mand history files of the users. We use the following history
+as a running example: *SOF*; ls -1; vi tl.txt; ps -eaf; vi
+t2.txt; ls -a/usr/bin/*; rm -i/home/*; vi t3.txt t4.txt; ps
+-ef; *EOF*
+The FeatureSelector parses, cleans and tokenizes the audit
+data, within each session specified by the ProfileManager.
+The above command stream results in the token list, T =
+{ti : 0 _< i < 8}, where to = ls -1, tl = vi <1>, t2 = ps -eaf,
+t3 = vi <1>, t4 = ls -a <1>, t5 = rm -i <1>, t6 = vi <2>,
+and tr = ps -ef.
+The FeatureSelector next creates sequences of length l
+from the tokens based on the order of their creation time,
+as specified by the ProfileManager. For example, if/=4, the
+set of user sequences is given as S = {sl : 0 < i < ITI - l},
+where:
+so = { ls -1, vi <1>, ps -eaf, vi <1> }
+Sl = { vi <1>, ps -eaf, vi <1>, ls -a <1>}
+s2 = { ps -eaf, vi <1>, ls -a <1>, rm -i <1>}
+sz = {vi <1>, ls -a <1>, rm -i <1>, vi <2>}
+sa = {Is -a <1>, rm -i <1>, vi <2>, ps -ef }
+
+
+3.1.2
+Clustering User Sequences
+Once tokens have been converted into sequences, we next
+cluster them using a suitable algorithm.
+K-Means [8] is an often favored clustering algorithm be-
+cause it allows reallocation of samples even after assignment
+and it converges quickly.
+During each iteration, k-means
+first assigns each point to the closest cluster center and then
+recalculates the cluster centers.
+The first step takes time
+O(SkN), where 5 is the cost of computing similarity be-
+tween any two sequences, and N is the number of sequences
+to be clustered. Recalculating the cluster centers based on
+Equation 1 takes time O((fn2), and since there are k clusters,
+the time for the second step is O(Skn 2) (with the simplify-
+ing assumption that all clusters have an equal number of
+points n). The cost of k-means per iteration is then given as
+~kN + 5kn2 = O(Sk(N + n2)). Since there are t iterations,
+the total cost of k-means is O(tSk(N + n2)). The problem
+with basic k-means is that the random allocation of cluster
+centers reduces its accuracy.
+Also, k (number of clusters)
+and t (number of iterations) are hard to set to achieve a
+good clustering.
+To counter this, we use a dynamic clustering approach
+to group a user's sequences, where clusters are grown when
+needed, as shown in the pseudo-code below:
+
+DynamicClustering
+(r, Su,pu, S~):
+//r is intra-cluster similarity threshold
+//S,, is a set of a user u's sequences to be clustered
+//p,, is the user u's profile, i.e., set of clusters
+//S~ is the set of user u's cluster centers
+1. S~ = S,~//set of user u's "anomalous" sequences
+2. while (S~ ~ 0)//"anomalous" sequences exist
+3.
+select random s~ E S~ -- S~ as new cluster center
+4.
+c,~e,o = {s~} //i.e., initialize new cluster
+5.
+s~, = S~ u so
+6.
+for MI remaining sequences sl E Su - S,~
+7.
+if (Sim(si, so) _>r)
+i
+!
+c
+_
+8.
+if ( S m(si, s¢) < Sim(s~, sc)Vs~ E S~
+so)
+9.
+c,.~ = c,,~o u {s~}
+10.
+recalculate cluster center, s~ for c,~,
+11.
+p,, = p~ U c,~o
+12.
+S,~ =S~ -cn¢w
+
+
+Consider how DynamicClustering works on our example
+sequences (with r = 3). Initially S~, = S,~ = {so, Sl, s2, s3, s4},
+p~, = S,~ = 0. Within the while loop, we pick a random
+sequence as the new center, say so. For all remaining se-
+quences in S~, -S~,, where S~, = {so}, we compute similarity
+to the new center so. Using LCS as the similarity metric
+we get Sim(st,so)
+= 3 since vi <1>, ps -ear, vi <1> is
+their LCS. For the other sequences we get: Sim(sz, so) = 2,
+Sim(sa,so) = 1, and Sim(s4,so) = 0.
+Since Sl passes
+the threshold, we add it to the new cluster to get Cne~o =
+{s0,sl}. Now the new S~ = {s2,sa,s4} and we repeat the
+while loop. After a few steps we may find that the profile is
+given as p~, = {co = (s0, sl}, ca = {s2}, c2 = {s3, sa}}.
+Let's look at the time complexity of DynamicClustering.
+The for loop (line 6) takes at most O(N) time if there are N
+sequences. Also, if r is well-chosen (i.e., reasonably high),
+cluster reassignment drops considerably enough to make the
+assumption that line 10 executes O(1) times for each point
+during the execution of the entire algorithm.
+The cost of
+incrementally recalculating the centers as a cluster grows in
+size from 1 to n is 5 x (12 +2 2 +3 2 + ... +n2)), i.e., O(SnZ).
+Hence for k clusters, it will be O(SknZ). Finally, the while
+loop repeats O(k) times, where k is the number of clusters.
+Thus DynamicClustering has complexity O(Sk(N+nZ)). As
+an optimization we recalculate cluster centers lazily, for ex-
+ample, every time the cluster support doubles since the last
+recalculation. Lazy update improves the algorithm complex-
+ity to O(Sk(N+n2)), while at the same time ensuring that a
+center closely represents its cluster. Notice that this time is
+typically better than k-means, since in DynamicClustering,
+t=l. It also has the advantage that k need not be pre-set, it
+is found dynamically. From the analysis in 4.1 and 4.5, it is
+evident that r is easier to set compared to k in the k-means
+method. Finally, it allows the analyst to set the lower bound
+on the similarity of a cluster's sequences to its center.
+While clustering, we aim to produce clusters of high sim-
+ilarity and low variance to deter spoofing attempts and to
+allow a single sequence to represent the entire cluster. This
+
+
+
+
+389
+
+calls for a large number of clusters, i.e., the number of clus-
+ters, k = O(N).
+Thus, in general n is small and can be
+neglected.
+In this case, for the LCS and MCAP similar-
+ity measures, as 5 = O(1) and 5 = O(/2) respectively, the
+algorithm has complexity O(12N2) and O(lN 2) respectively.
+
+3.1.3
+Cluster Refinement
+The last step in training phase is refinement of the clusters
+found above. Although DynamicClustering counters all the
+basic k-means disadvantages, setting the intra-cluster sim-
+ilarity r may require experimentation. Also, a cluster may
+have a lot in common with another, i.e., sequences assigned
+to it are as close to it as they are to another cluster. There
+may also be denser sub-clusters within the larger ones. To
+tackle these problems, we improve the clustering by merging
+and splitting clusters as follows:
+
+
+MergeClusters (r', p~,, S,~):
+//r' is the inter-cluster similarity threshold
+1. For each pair of clusters, ca, c~ inprofile p~,, i ¢ j
+2.
+if (Sire(ca, c~) > r')
+3.
+ca = caU cj //merge clusters
+4.
+Recalculate center for ca
+5.
+p~ = p~ - cj //remove cj from profile
+6.
+S,~ = S~ -s~j
+
+Split Clusters(r, t~, p~, S,~):
+//t~ is a splitting threshold support
+1. For each cluster ca in profile p~,
+2.
+if (cluster_support(ca) > t~)
+3.
+DynamicClustering(r + 1, cl, p~, S~)
+4.
+p~ = p~, - ca //.remove ca from profile
+5.
+S,~ = S~ -sc,
+
+Assume that p~, = {c0,cl,c2} and r' = 2 from above·
+Let's see how MergeClusters works·
+For instance, using
+LCS, Sim(co,cl) = Sire(so,s2) = 2. In this case, the two
+clusters should be merged to get co = {so, sl, s2} and cl will
+be removed from the profile. Also, the center for co becomes
+sl. For clusters that have high support SplitClusters calls
+DynamicClustering to re-cluster them into smaller, higher
+density clusters.
+In terms of time complexity MergeClusters takes O(Sk2)
+time, while SplitClusters takes O(Sknk') time, where k' is
+the number of resultant clusters after splitting. The split-
+ting algorithm splits only very large clusters; while it may
+produce many sparse clusters, we found empirically, that
+it still increases the probability of finding better clusters·
+The main advantage of these two methods are that they are
+faster than most other splitting and merging algorithms·
+
+3.2
+Online Testing
+Once ADMIT creates user profiles it can be used to test
+for masqueraders. Unlike training, the testing must happen
+in an online manner as user sequences are produced. Testing
+consists of four main steps: 1) real-time pre-processing, 2)
+similarity search within the profile, 3) sequence rating, and
+4) sequence classification (normal vs. anomalous).
+These
+steps are detailed below.
+
+3.2.1
+Real-time Data Pre-processing
+Capture user-based process data in real time.
+We use
+the following user data as an example: *SOF*; vi t4·txt; vi
+t4.txt; vi t4.txt; ls -a/home/*; rm -i/home/turbo/tmp/*;
+ls -a/home/*; vi t2.txt t4.txt; ps -el;. Note that an entire
+session's data is; not required.
+The FeatureSelector parses, cleans and tokenizes the audit
+data specified to get the token set. It right pads the first
+(l - 1) sequences of a session with (l - 1 + i) blank tokens,
+where i is the sequence index in the session·
+(not shown
+here). T' = {t~ : 0 < i < 8}, t~ = vi <1>, t~ = vi <1>, t~
+vi <1>, t~
+ls -a <1>, t~ = rm -i <1>, t'
+ls -a <1>,
+t~ = vi <2>, t~, = ps -of.
+Next the FeatureSelector creates sequences from tokens,
+using l = 4 as i:n training to get S' = {s~ : 0 < i < IT'I - l}
+s~ = {vi <l>,vi <l>,vi <l>,ls -a <1>}
+s~ = {vi <l>,vi <l>,ls -a <l>,rm -i <1>}
+s~ = {vi <l>,ls -a <l>,rm -i <l>,ls -a <1>}
+s~ = {Is-a <l>,rm-i
+<l>,ls-a
+<l>,vi <2>}
+s~ = {rm -i <l>,ls -a <l>,vi <2>,ps -ef}
+
+3.2.2
+Profile' Search
+For each newly created sequence, we compute the highest
+similarity value within u's profile (assuming for the moment,
+that these new sequences come from user u), i.e., for each
+sequence, we find the most similar cluster in p~,. Define the
+similarity between a sequence s~ and a profile p~ as follows:
+Sim(s~,p~,) = maxc~ep,, {Sim(s~, sos }. For example, assume
+p~ = {co = {so, s~, s2}, cl = {s~, s4}} from section 3.1.3
+(cluster centers are indicated with '*'). Then Sim(s~,p=) =-
+
+·
+!
+S
+max( S~m(so, ,:o),Sirn(s~, sc~)) = max( Sim( s~, sl ), Sim( s~, s3))
+= max(3, 2) = 3. Similarly Sim(s~,p,) = 3, Sim(s~,p~) =
+·
+8!
+3, Sim(s~,pu) := 3, and Szm( 4,pu) = 2.
+Although the search for the closest cluster takes time
+O(Sk), since we expect a user to have many clusters, one
+may use more efficient methods like those suggested in [2],
+where cluster centers may be clustered using K-means into
+an efficient data structure like a k-d tree to store the clusters
+in the profile and hence speed up profile search·
+
+3.2.3
+Sequence Rating
+Simply using the similarity measure between the current
+sequence s~ being evaluated and the profile p~ to determine
+the user authenticity is not advisable. The data is noisy and
+a high false positive rate results in the absence of a filter· It
+is a good idea to approximate the user authenticity, based
+on the sequences seen so far. In other words, we use the
+past sequences to determine, if the current sequence is just
+noise or if it is a true change from profile. We call this pro-
+cess sequence rating and we use a number of possible rating
+metrics, viz. LAST_n, wEIet.rrED, and DECAYED_WEIGI-rrs.
+LAST_a:
+The arithmetic mean of the similarities of the last
+n sequences.
+It has finite memory and captures temporal
+locality present in user command stream· The rating R~ for
+the jth sequence is calculated as
+
+I1
+t=j
+·
+I
+~t=~-~+l S~m(st,p~)
+if j _> n
+
+
+Rj=,[
+1
+t=j
+·
+s~,p~)
+ifj<n
+7~ ~=0 Sam(
+
+For the five new sequences, using this rating metric with
+n = 3, we would get the following ratings: Ro = R1 = R2 =
+R3 = 3, and Ra = 8/3 = 2.67. The drawbacks of LAST.as
+are that it is hard to choose n and all the last n sequences
+are treated equally. As n increases, performance approaches
+that of the arithmetic mean of all sequences.
+
+
+
+
+390
+
+WEIGHTED:
+The weighted mean of the last rating and the
+current sequence's similarity. The rating Rj for the jth se-
+quence is calculated as
+
+Rj = ~.Sim(s~.,p~) + (1 -o 0 * Rj-1
+
+where Ro = Sim(s~,p~).
+For example, if o~ = 0.33, then
+Ro =R1
+=R2 =R3
+=3, and R4 =2.66.
+In general, it is
+more sensitive than LAST..a, and one doesn't have to fix n.
+However, it is hard to choose an optimal weight ratio.
+DECAYED_WEIGI-rrs: A variant of the weighted mean. Instead
+of using a constant a weight ratio, we vary it according to the
+sequence number. We thought of diminishing the sensitivity
+of the system as time passes. Doing this counters the effects
+of concept drift (i.e., shift in user profiles), which increases
+as time passes by, giving lesser sensitivity as the sequence id
+increases. The rating Rj for jth sequence is calculated as
+·
+!
+Rj = cq * S~m(s3,p~) + (1 - a~) · R~-i
+
+Here weight varies with sequence id, and is given as
+
+~J
+~
+~j--1
+a~-i + 1 - log(~+j)' oLo= 1
+
+Thus o~j is a decaying weight as long as 1 - log(A)
+> 0
+Y
+3
+As an example, if y = 4100 and z = 7500, then R0 = R1
+R2 = R3 = 3, and R4 = 2.66.
+
+:?.2.4 Prediction: Normal vs. Anomalous
+
+Once sequences have been rated, we need to classify them
+as either "normal", i.e., true user, or as "anomalous", i.e.,
+a possible masquerader. This classification is based on the
+t
+rating Rj for a given sequence sc.
+
+
+NormalSequences.
+We use a threshold value on the rating
+of a sequence to determine if it is normal or not. The lower
+accept threshold, TACCEPT , is the threshold rating for a
+sequence, which, if exceeded by the test sequence's rating,
+causes the system to label that sequence as having originated
+from the true user. It is generally an empirically selected
+value. A normal sequence is added to the profile p,, to the
+cluster it is the closest to. For example, with TACCEPT -~-
+2.7, for WEIGHTED rating metric (a = 0.33) no alarm will be
+raised for s~, since Ro = 3 > 2.7. Similarly, s~, s2,' s3' are all
+deemed to be normal; they are assigned to the nearest profile
+cluster, e.g., co = {so, s~, s2, s~, s~}, c2 = {s~, 84, 8~, S3}, and
+cluster centers are recalculated lazily.
+
+
+Anomalous Sequences. An anomalous sequence is one that
+doesn't pass the TACCEPT threshold (e.g., s~ is anomalous,
+since Ra = 2.66 < 2.7). This may occur as the result of any
+one of three phenomena: 1) noise, e.g., from typing errors,
+randomness, etc., 2) concept drift, e.g., working on a differ-
+ent project, etc., and 3) masquerader, i.e., the one we want
+to detect. A lone anomalous sequence is most likely noise. A
+number of sequences which do not get assigned in near suc-
+cession suggest a change in the behavior, and are more likely
+to be an intrusion or concept drift, as compared to evenly
+distributed anomalous sequences, which are more likely to
+be noise. The larger the number of anomalous sequences
+in near succession, the more suspicious the identity of the
+user. However, these sequences do not have to be contigu-
+ous, otherwise IDS spoofing, in which harmful commands
+are inserted between normal commands to confuse the IDS,
+would be possible. To get a better estimate of the type of
+the behavioral change (i.e., noise or otherwise), we use clus-
+tering of anomalous sequences on the basis of their sequence
+ids.
+Also, we would like to put off clustering anomalous
+sequences as far as possible, to better estimate the size of
+behavioral change. However as the size increases beyond a
+certain threshold Tct~,s~,-, we raise the Type B alarm. We
+borrow from Zetmboni [22], the idea of monitoring the rate
+of change of cluster production. A sharp increase in the rate
+indicates an intrusion.
+Thus, incremental clustering of anomalous sequences is
+basically temporal locality mining. Informally, an anoma-
+lous cluster is a chain of anomalous sequences, such that
+the mean difference in the sequence ids of consecutive pairs
+is within rl called the incremental intra-cluster proximity
+threshold and the maximum difference in the sequence ids
+of consecutive pairs is within r~ called the incremental inter-
+cluster proximity threshold. The incremental clustering al-
+gorithm works as follows:
+
+
+IncrementalCluster!ng(s~, S~', r, rl, r~, p~,, S,~)
+//s~ is an anomalous sequence
+
+//S:'
+is the list of anomalous sequences
+//rl
+and r~ are the intra and inter incremental cluster prox-
+imity thresholds
+//p,, is the profile we are updating incrementally
+//S~
+is the set of cluster centers for p~,
+//r
+is intra-cluster threshold used in DynamicClustering
+1. if the maximum difference in adjacent sequence ids of
+S:' < r~ and the mean difference in list of sequences ids < rl
+2
+s:'=s:'us;
+3.
+If (IS:' I > Tct~st~)//the cluster threshold
+4.
+Raise a Type B alarm
+5. else
+6.
+DynamicClustering(r,s:', p,,, S~)
+
+r.
+s:' = {s;}
+
+In line 1, the if conditions maintain nearness between
+members of an anomalous sequence cluster. In line 2, anoma-
+lous sequences conforming to the constraints are added to
+the anomalous cluster. In line 4 we raise a Type B alarm,
+if the cluster has grown beyond a threshold size. All such
+clusters are interpreted to be a significant change from pro-
+file. In line 6, since the cluster does not satisfy the con-
+straints, the sequences within it are mined using Dynam-
+icClustering on the basis of the Sirn function and added
+to the profile, and the s~ is added to a new cluster. Con-
+sider how IncrementalClustering works onour example. Ini-
+tially, p~, = {co,cl},S~' = @,r = 3, S~ = {s,,s3}.
+Since
+Ra = 2.66
+<
+(TAccEPT---- 2.7), hence s~ = s~. In line 2, s~
+is assigned to Sa'. In line 6, p,, = p, tJ (c3 = {s~}) Note that
+in general, a sequence may get a different label depending
+on the rating metric used (for the same value of TACCEPT).
+Thus, after testing the sequence stream S', the profile will
+become p,,
+{co
+{so,sl,s2,s~,sl},c2 = {sz,s4, 2, at,
+e3 = {4}
+
+4.
+APPLICATION STUDY
+In the discussion below SELF refers to the true user and
+OTHER to the masquerader. The system classifies a com-
+mand sequence as SELF ACCEPT if it considers it to be
+from the true user (SELF), otherwise it classifies the se-
+quence as OTHER REJECT.
+
+
+
+
+391
+
+IDS are evaluated on the basis of accuracy, efficiency and
+usability [14] according to the following metrics: 1) Detec-
+tion Rate gives the percentage of OTHER sequences that
+receives a rating below TACCEPT (or
+OTHER REJECT).
+2) False Positive Rate is the percentage of SELF sequences
+that the system incorrectly determines to be intrusive, i.e.,
+the percentage of SELF sequences that receive a rating be-
+low TACCEPT(or
+100
+- SELF ACCEPT). 3) Time-To-Alarm
+(TTA) [10] is the expected number of normal sequences be-
+tween two anomalous sequences. It is a measure of the sys-
+tem's sensitivity and efficacy in detecting intrusions in real
+time.
+4) Data reduction is a measure of the system's us-
+ability in terms of reducing the data the network security
+analyst has to browse through.
+As such, high SELF ACCEPT and OTHER REJECT are
+desirable, as they indicate a low false positive rate and a high
+detection rate, i.e., high accuracy.
+A high TTA indicates
+that there is considerable time between alarms, which is
+desirable for SELF since SELF should not raise alarms, but
+is undesirable for OTHER.
+For our experimental study, we use command stream data
+collected from nine UNIX users from Purdue University [10]
+over varying periods of time. The time over which the data
+for each user was collected is not known, so we use the num-
+ber of sessions as an indicator of time. Since there were 500
+sessions for the user with the fewest sessions, we use the first
+500 sessions from each user as our dataset. We further split
+the data for each user into five overlapping folds (i.e., blocks)
+of 225 sessions each (i.e., sequence numbers 0-224, 69-293,
+138-362, 207-431, 275-499). Each of the folds is used inde-
+pendently of the others for testing and the results reported
+are the average over the five folds.
+For training and testing, 'each fold of 225 sessions is fur-
+ther split into two parts, the first 125 sessions are used for
+training and the latter 100 for testing.
+In each fold, for
+each user, the system creates a profile of SELF by train-
+ing on 125 sessions of SELF data.
+It then independently
+tests the first t sequences of the last 100 sessions of the cor-
+responding fold, for all users, including SELF, against this
+profile. Thus, each profile is tested against t SELF sequences
+and 8 x t OTHER sequences. Unless otherwise indicated, we
+perform experiments using LCS similarity measure and us-
+ing the DECAYED_WEIGHTSrating metric with y=6750 and
+z=7500. The intra-cluster threshold similarity r=3, the se-
+quence length l=5, the cluster support t~=15, test data size
+t=250 and inter-cluster threshold r'=2.
+All the experiments assume that training data is labeled.
+However, this is not a hard requirement.
+After clustering
+the training data it can be labeled easily, with substantial
+decrease in the work of the security analyst.
+This relaxes
+the requirements imposed by other methods, at no addi-
+tional cost. In the following graphs, we plot the variation
+in ADMIT's performance as a function of its configuration
+parameters, generally varied one at a time.
+
+4.1
+Effect of Sequence Length
+The accuracies resulting from different sequence lengths
+varied from user to user. Hence we report tile mean of the
+readings of all users. We tested the performance for sequence
+length l = {2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20}. A different
+TACCEPT was used for each value of I 1. Also, the intra-
+cluster threshold similarity was set as r = I - 2 to ensure
+
+1Empirically we determined that TACCEPT = 0.55 * I + 0.1
+high intra-cluster similarity and the training data set sizes
+were 150 sessions long.
+
+
+180
+
+160
+
+140
+
+120
+
+100
+
+8o
+
+60
+
+40
+
+20
+
+0
+'SELl ~ TT/~
+,'
+/'~
+OTHER
+"I-I'A .....x .....
+/
+~
+SELF ACCEPT
+o%
+::::_-.i~i:.::.:.
+
+
+
+
+L/'
+.............=~
+...............
+E3
+
+
+
+
+0
+2
+4
+6
+8
+10
+12
+14
+16
+18
+20
+Sequence Length (I)
+Figure 2: Effect of Sequence Length
+
+As I decreases, mean accuracy, i.e., the mean of SELF AC-
+CEPT and OTHER REJECT, increases and OTHER TTA
+decreases as vis']ble in Figure 2. However, for very small se-
+quences i.e. l=2, SELF ACCEPT becomes very high, while
+OTHER REJECT drops below an acceptable level. This is
+so, because for all values of/, (l-r) is constant viz. 2. Hence,
+as sequence length decreases, the ratio, !~
+increases. This
+ratio is more closely related to the amount of variance tolera-
+ble in the cluster than (l-r). Ideally, !~ would be identical
+for all values of l, but r is a whole number.
+Thus, as the
+ratio increases, variance increases and hence the model gets
+more generalized. For/-~2, OTHER REJECT drops, as the
+model becomes very general.
+
+
+25
+
+
+20
+
+
+15
+
+
+10:
+
+
+5
+
+
+0
+'
+Training Time(rain)
+--:~---- j
+Cluster Support (#sequences)
+y
+
+
+
+3
+4
+5
+6
+7
+8
+9
+10
+Sequence Length (I)
+Figure 3: Sequence Length: Time, Cluster Support
+
+As shown in Figure 3, mean cluster support also increases
+with smaller length, since the more general the model, the
+more the sequences that can be assigned to a user. Cluster
+support is crucial in determining the extent to which classifi-
+cation time improves over the IBL method, thereby increas-
+ing applicability to real-time use.
+Clustering time drops
+as fewer clusters are produced.
+Although mean accuracy
+for small values of I is very high, the difference between the
+SELF ACCEPT and OTHER REJECT percentages is cause
+for worry. Also, a cluster having a low value of !~
+implies
+unacceptably high variance within the cluster, thereby di-
+minishing the capacity of the cluster center to represent the
+entire cluster. This variance was particularly disturbing as it
+increases the vulnerability of IDS spoofing. It was not possi-
+ble to make the r vary sufficiently to minimize its effects on
+the performance, as it must be a whole value and variations
+in either direction introduced a considerable, rather than
+gradual, change in performance (see Section 4.5).
+Hence,
+
+gave us high accuracy for each length.
+
+
+
+
+392
+
+a suitable choice for sequence length with reasonably high
+mean accuracy and low difference in SELF ACCEPT and
+OTHER REJECT percentages to counter spoofing is 5. As
+we used LCS, for the similarity measure, the time for train-
+ing does not increase linearly with sequence length, as evi-
+dent from the graph.
+
+4.2
+Effect of Training Data Size
+The training data set size is an indicator of the amount
+of concept drift in the user data.
+Learning from all the
+historical data may incorporate irrelevant concepts in the
+user profile. It also indicates the amount of training data
+required to create a satisfactory profile. TACCEPTwas fixed
+at 2.75 for these experiments, and the training data set sizes
+used were {50, 75, 100, 125, 150, 200, 250, 275} sessions. As
+evident from Figure 4, as training data size decreases, SELF
+ACCEPT and SELF TTA decrease, since fewer concepts are
+being learned. OTHER REJECT increases steadily for the
+same reason. The average of SELF ACCEPT and OTHER
+REJECT, i.e., mean accuracy tends to peak at about 125
+sessions of training data and dip on either side.
+
+
+140
+SELF TTA
+I
++
+OTHER
+"I'-'I'A .....x .....
+/
+120
+SELF ACCEPT %
+......
+~
+......
+/
+OTHER
+REJECT
+% .......o .........
+/
+1O0
+-j
+
+
+
+
+4O
+
+
+
+20
+.
+
+............
+M .......
+x
+
+O
+~.......
+~ .......
+~
+.......
+X .......
+-N ................
+-N .....
+,
+50
+1O0
+150
+200
+250
+300
+
+Training
+Data Size (#Sessions)
+Figure 4: Effect of Training Data Size
+
+For training sets of size greater than 125 sessions, there is
+a tendency to learn many concepts (i.e., sequence clusters),
+all of which may not be relevant to the user currently due to
+the principle of temporal locality. The reverse happens for
+training sets of size less than 125 sessions. Again, a large
+difference between the SELF ACCEPT and OTHER RE-
+JECT is not good. Hence, 125 sessions is a suitable training
+dataset size for our data.
+
+4.3
+Effect of Sequence Rating Metric
+Performance of different rating metrics depends on differ-
+ent TACCEPTvalues, SO we use different values determined
+empirically.
+We tried out three of the methods described
+earlier viz. LAST_n, WEIGHTED and DECAYED_WEIGHTS.
+For LAST..n we use n = 20, for WEIGH'rEDwe set a = 0.05
+and for DECAYED_WEIGHTS,we used z = 7500 and y = 6500.
+Thus in each metric, the weight of the current sequence is
+0.05. From Figure 5 it is evident that the performance of
+DECAYED_WEIGIgSis the most satisfactory because although
+LAST_n has a lower OTHER TTA as compared to DECAYED_-
+WEIGHTS,its SELF TTA is significantly smaller as well. How-
+ever, the accuracy measures for LAST.n have a smaller dif-
+ference than those for DECAYED_WEIGHTS.However, choice of
+the metric depends upon the security policy in place. For
+example, in a policy where security is premium and having
+a relatively high false alarm rate is tolerable, LhST_n is a
+good choice. In most other cases, DECAYED_WEIGHTSwould
+be preferred.
+4.4
+Performance
+variation
+as
+a function
+of
+sequence
+rating
+rnatdc
+
+N
+
+
+
+
+8ELF
+TTA
+
+
+
+, F ~
+
+
+
+Figure 5: Effect of Rating Metric
+
+Sensitivity Variation
+
+
+
+Performtlnoe varlalIon as a fl,lnctlon of iNmllUvlty
+
+160
+~,r,~--~- ~
+~
+~"..............77~ "
+~,-
+140
+~ , : ~
+~,
+.....
+.........................
+
+
+100
+
+80
+
+
+
+
+SELF IrA
+OTHER
+SELF
+OTHER
+TTA
+ACCEPT %
+REJECT %
+
+Performance
+Measure
+~weight=0.t Iweight=0.05 Oweight:0.04 Qwei~lht=0.03 IBwei~lht=0-~
+
+
+
+Figure 6: Effect of Sensitivity
+
+Sensitivity is a critical feature of an IDS. It indicates the
+IDS response time.
+An overly sensitive IDS responds to
+noise and hence has a high false positive rate. For different
+rating metrics, sensitivity varies dramatically. We prefer to
+define sensitivity in terms of the weight of current sequence's
+similarity to the profile in the current sequence's rating, i.e.,
+for LASTm, WEIGHTEDand DECAYED_WEIGHTS,the sensitiv-
+ity is ~, ~ and o~/2 respectively. For example, for LAST_n,
+WEIGHTED, DECAYED_WEIGHTS,Weight = 0.01 would imply
+n=100, a = 0.01, ~12s = 0.01 respectively. For these exper-
+iments, we fixed TACC~PTand use LAST_n rating metric.
+Figure 6 shows that as the weight of the current sequence's
+similarity to the profile decreases, SELF TTA and SELF
+ACCEPT increases due to noise being logged by the IDS. A
+less sensitive IDS detects only gradual attacks.
+
+,1.5 Effect of Intra-ehster Threshold
+The intra-chster similarity threshold r controls the amount
+of variance permitted within a cluster and hence it decides
+how tightly the profile fits the test data.
+We tested the
+performance for all possible values of r, i.e., 1, 2, 3, and 4
+(since I = 5). Figure 7 shows that as the value ofr increases,
+SELF ACCEPT increases and OTHER REJECT decreases.
+This is because the model progresses from over-fitting to
+becoming too generalized. Also important, is the steep rate
+
+
+
+
+393
+
+~
+~ H
+R
+A
+~
+eL
+~A
+E
+~
+=L
+
+
+
+
+Figure 7: Effect of Intra-cluster Threshold
+
+
+at which it switches in performance at one value of r to the
+next, due to the whole values of the similarity metric chosen.
+
+4.6
+Effect of Test Data Size
+
+
+450
+" SELF
+-I-~FA
+I
+400
+-
+O T H E R
+"l-rA
+..... x .....
+/
+
+SELF
+A C C E P T
+%
+...... ~ .....
+
+
+
+300
+-
+
+~.
+250
+
+~
+200
+
+15O
+
+
+
+
+0 e"--S'~"'"~" x-
+100
+200
+300
+400
+500
+600
+700
+Test Data. Size (#Sequences)
+Figure 8: Effect of Test Data Size
+
+The test data size t is crucial as human behavior is con-
+stantly changing and the performance degrades as a result
+of being tested on concepts not learned during the training
+phase. Also, it emphasizes the rate at which user behavior
+changes, i.e., concept drift. We tested the model developed
+for test data sizes of {100, 150, 200, 250, 300, 400, 500,600,
+700} sequences. Figure 8 shows that as test data size in-
+creases, performance hardly varies. This is probably due to
+the decayed sensitivity countering the concept drift. The
+variation of TTA is a result of the fact that if there are no
+anomalous sequences in a test set, the TTA is assumed to
+be the size of the set.
+
+4.7
+Effect of Similarity Metric
+We tried out two similarity measures, viz. MCAP and
+LCS. According to results from Lane [10], MCAP performs
+better than MCP, MCE and MCEP, hence we did not test
+them. Note that the empirically selected TACCEPr corre-
+sponding to each metric is different.
+As seen in Figure 9, LCS is slower than MCAP in terms
+of performance as it is an O(/2) algorithm (see rightmost
+set of bars).
+However, as small l yields good accuracy,
+we chose (/=5) and the cost overhead is tolerable. On the
+other hand, LCS outperforms MCAP in all categories other
+than OTHER TTA. Thus choosing the similarity measure
+involves a tradeoff between two of our desirable character-
+istics viz. minimal overhead versus accuracy. We opt for
+accuracy, as we believe that the overhead becomes truly in-
+Figure. 9: Effect of Similarity Metric
+
+
+tolerable at training time, which is done at initialization.
+The overhead incurred during the testing phase, we believe
+is acceptable in return for the resultant accuracy.
+
+4.8
+Real-time Learning
+In the next set of experiments, we allowed real-time learn-
+ing as well, i.e., concepts learned during testing are added to
+the profile. We use l~up to denote the minimum acceptable
+size of the list of anomalous sequences for clusters produced
+by online clustering to be added to the profile i.e. line 6 of
+IncrementalClustering becomes
+6.
+if(IS~'l > l~rup) DynamicClustering(r,S:',p~,S~)
+In the extreme bars of Figure 10 for each performance mea-
+sure, we see that real-time learning improves SELF AC-
+CEPT marginally, while OTHER REJECT decreases sub-
+stantially. This suggests that IDS perform better when they
+do not learn during real-time (for l_sup = o¢~, i.e., never
+invoke online clustering). This happens because, in the ab-
+sence of expert supervision, the IDS is fooled easily. In other
+words, although new concepts are learned, due to which
+SELF ACCEPT increases, new concepts are learned from
+the masquerader as well and so OTHER REJECT decreases.
+This problem can be remedied in a number of ways: 1)
+Before admitting new clusters to the profile, we do send a
+warning to the security analyst, who can then guide the
+system. 2) We could create user classes by clustering across
+user profiles [10], i.e., such classes could possibly differen-
+tiate users on the basis of their skill, or the types of ap-
+plications they were using. Thus each user would belong
+to a class. We could admit new clusters to the profile if
+they existed in profiles of other users belonging to the same
+user class. 3) We can monitor the rate at which the profile
+is changing, i.e., the rate at which new clusters are being
+added to the profile. If that changes dramatically, we could
+stop admitting clusters to the profile[22]. 4) To avoid adding
+clusters for noise, cluster a list of anomalous sequences only
+if they meet certain support requirements, i.e., l_sup.
+In Figure 10, where we tested option 4) from above, SELF
+ACCEPT and OTHER REJECT increases as l_supincreases,
+due to elimination of noise from the concepts learned.
+It was observed that when we tested option 3) from above,
+by monitoring the number of incrementally mined clusters
+during real-time learning, the mean ratio of clusters pro-
+duced when tested with OTHER data as compared to SELF
+data is 1.85. Thus, nearly twice the number of clusters are
+produced during times of attacks as compared to during
+
+
+
+
+394
+
+180
+160
+140
+120
+
+
+
+t30
+
+40
+
+2O
+
+0
+
+
+
+
+I-,_s,
+
+Figure 10: Real-time Learning
+
+
+times of normal usage.
+Also it was observed that during
+times of attacks, the number of Type B alarms raised is 2.41
+times that produced during testing against SELF data, i.e.,
+larger clusters of anomalous sequences are produced during
+times of attacks.
+
+
+5.
+DISCUSSION
+Our system achieves approximately 80% detection rate
+and 15% false positive rate (Figure 1 for l=4) for Type A
+alarms. Making the security analyst examine only the cen-
+ters of the anomalous clusters, makes these statistics far
+more practical and at no further cost. While these numbers
+are lower than those reported by Ryan et al [17] (96% and
+7% respectively) and DuMouchel et al [6] (78% and 6.6%
+respectively), their dataset is different, and it is thus not
+meaningful to directly compare these numbers. On the other
+hand, our results are better than those reported by Lane and
+Brodley [11] (74% and 28% respectively), who used the same
+data as in this paper. The advantages of ADMIT over the
+other implementations are that it requires a much shorter
+training time, summarizes the data and achieves model scal-
+ing simultaneously. ADMIT is better suited to real-time ap-
+plication than the methods of DuMouchel and Lane, as it
+can use shorter window sequences. Keep in mind that raw
+accuracy numbers only give a partial picture of the complex
+process of detecting intrusions. For instance in setting pa-
+rameters to maximize accuracy in ADMIT, we have traded
+off time and sensitivity by using the LCS algorithm and rat-
+ing metrics respectively. Also, our work does not advocate
+the use of LCS, DECAYED_WEIGHTS,etc. It rather represents
+the advantages of using them in comparison to others. Pa-
+rameter selection depends on the specific security policy.
+
+
+Future Work: . Open problems that we plan to address
+include reducing amount of training data required by estab-
+lishing user classes and using sequences from user class as
+initial clusters for user believed to belong to that class (as
+in section 4.8). Other improvements would be using differ-
+ent parameters for different users and parameter selection
+using cross-validation.
+Integration with profiles based on
+biometric data, e.g., keystroke monitoring are future direc-
+tions of research. We believe better clusters will result using
+algorithms from the field of bioinformatics.
+
+
+6.
+REFERENCES
+[1] D. Aha, D. Kibler, M.Albert. Instance-based learning
+algorithms. Machine learning, 6(1):37-66, 1991.
+[2] K. Alsabti, S. Ranka, V. Singh. An efficient K-means
+Clustering Algorithm. In llth International Parallel
+Processing Symposium, 1998.
+[3] J.B.D. Cabrera, L. Lewis, R.K. Mehra. Detection and
+Classification of Intrusions and Faults using Sequences of
+System Calls. SIGMOD Record, 30(4), pp 25-34. December
+2001.
+[4] T. H. Cormen, C. E. Leiserson, R. L. Rivest. Introduction
+to Algorithms. McGraw-Hill. 1990.
+[5] D. E. Denning. An Intrusion-Detection Model. IEEE
+Transactions on Software Engineering, 13(2):222-232,
+February 1987.
+[6] W. DuMouchel. Computer Intrusion Detection Based on
+Bayes Factors for Comparing Command Transition
+Probabilities. In National Institute of Statistical Sciences
+Tech. Report 91, February 1999.
+[7] S.A. Hofmeyr, S. Forrest, A. Somayaji. Intrusion Detection
+using sequences of system calls. In Journal of Computer
+Security, 6:151-180, 1998.
+[8] L. Kaufmann, P.J. Rousseeuw. Finding Groups in Data:
+An Introduction to Cluster Analysis. John Wiley and Sons.
+March 1990.
+[9] S. Kumar, E. H. Spafford. A pattern matching model for
+misuse intrusion detection. In 17th National Computer
+Security Conference, pp. 11-21, 1994.
+[10] T. Lane. Machine Learning Techniques for the Computer
+Security Domain of Anomaly Detection. Ph.D. Thesis,
+CERIAS TR 2000-12, Purdue University, August 2000.
+[11] T. Lane, C. E. Brodley. Temporal Sequence Learning and
+Data Reduction for Anomaly Detection. ACM Transactions
+on Information and System Security, 2:295-331, 1999.
+[12] D. J. Langin. Out of the NOC(a) and Into the Boardroom:
+Director and Officer Responsibility for Information
+Security. July 30, 2001. URL:
+http:/ /www.recourse.com/news/press/releases/r073001 .html
+[13] W. Lee, S. J. Stolfo. Data Mining Approaches for Intrusion
+Detection. In Proceedings of the 7th USENIX Security
+Symposium, January 1998.
+[14] W. Lee, S. Stolfo, P. Chan, E. Eskin, W. Fan, M. Miller, S.
+Hershkop, J. Zhang. Real Time Data Mining-based
+Intrusion Detection. In DARPA Information Survivability
+Conference and Exposition II. June 2001.
+[15] P. A. Porras, P. G. Neumann. EMERALD: Event
+monitoring enabling responses to anomalous live
+disturbances. In 20th National Information Systems
+Security Conference, October 1997.
+[16] L. Portnoy, E. Eskin, S. Stolfo. Intrusion detection with
+unlabeled data using clustering. In ACM Workshop on Data
+Mining Applied to Security (DMSA 2001), November 2001.
+[17] J. Ryan, M.J. Lin, R.Miikkulainen. Advances In Neural
+Information Processing Systems 10, Cambridge, MA: MIT
+Press 1998.
+[18] M. Schonlau, W. DuMouchel, W. Ju, A. Karr, M. Theus,
+Y. Vardi. Computer Intrusion: Detecting Masquerades.
+Statistical Science, 16:1-17. February 2001.
+[19] J. S. Subramaniyan, J. O. Garcia-Fernandez, D. Isacoff, E.
+Spafford, D. Zamboni. An Architecture for Intrusion
+Detection Using Autonomous Agents. In 14th Annual
+Computer Security Applications Conf, December 1998.
+[20] A. Valdes, K. Skinner. Adaptive, Model-based Monitoring
+for Cyber Attack Detection, Lecture Notes in CS, No. 1907,
+Springer-Verlag, pp. 80-92, October 2000.
+[21] C. Warrender, S. Forrest, B. Pearlmutter. Detecting
+intrusions using system calls: alternative data models. In
+IEEE Symposium on Security and Privacy, 1999.
+[22] D.Zamboni. Using clustering to detect abnormal behavior
+in a distributed intrusion detection system. Unreleased
+Technical Report, Purdue University. August, 2001.
+
+
+
+
+395
+

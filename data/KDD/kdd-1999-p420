@@ -1,0 +1,1583 @@
+The PanQ Tool and EMF
+SQL for Complex
+Data
+Management
+
+
+Damianos
+Chatziantoniou
+Panakea Software Inc.
+damianos@panakea.com
+
+
+
+
+Abstract
+
+Users frequently
+formulate complex data analysis queries
+in order to identify
+interesting
+trends,
+make unusual
+patterns stand out, or verify hypotheses.
+They also issue
+complex data manipulation
+queries in order to generate
+tables to be used by data mining tools.
+Being able to
+express these queries succinctly
+and concisely is of major
+importance
+not only from the user's, but also from the
+system's point of view.
+Extended
+Multi-Feature
+query
+language (EMF SQL), an extension to SQL, has proven
+useful in the expression of these queries.
+The succinct
+representation
+of complex
+data
+manipulation
+queries
+leads to a simple and generic evaluation
+algorithm
+that
+is easy to analyze, optimize,
+scale and parallelize.
+The
+PanQuery
+tool (PanQ) is a product
+that utilizes
+EMF
+SQL to combine and aggregate information
+from several
+data sources.
+It implements
+efficient
+evaluation
+and
+optimization
+techniques developed specifically
+for EMF
+SQL, offering at least one to two orders of magnitude
+performance
+improvement
+in most cases compared
+to
+traditional
+commercial
+database systems.
+
+
+1
+Introduction
+
+Collecting
+data is easier today than ever before.
+Per-
+forming
+complex
+analysis
+on these data to identify
+interesting aspects is vital to many companies. Users
+may ask complex data analysis queries in order to
+identify irregularities
+or unusual behavior, to verify
+hypotheses, or to prepare tables for input to data
+mining tools. Although
+significant research has been
+conducted on datacubes [GBLP96],
+little
+has been
+done on complex ad hoc data manipulation,
+despite
+of its huge importance in decision support and data
+mining.
+Currently
+there are three approaches one
+can follow in order to express and evaluate ad hoc
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the tirst page. To copy
+otherwise, to republish, to post on servers or to redistribute te lists,
+requires prior specific permission and/or a fee.
+KDD-99
+San Diego CA USA
+Copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+complex queries : (i) s/he can use standard SQL,
+which is usually very cumbersome and inefficient,
+(ii)
+s/he can use specialized query or data mining tools
+using tool-specific query languages and/or store data
+in some proprietary
+format, or (iii) hire an expensive
+database consultant
+to write C or API.
+The importance of coupling mining with database
+systems has been only recently realized and several
+researchers [STA98] proposed SQL extensions and
+query processing techniques to accommodate com-
+plex data analysis.
+EMF SQL proposed in [CR96,
+Cha99, JC99] is a small, simple and intuitive
+exten-
+sion of SQL that can be used to express succinctly
+many common complex data analysis queries. Sec-
+tion 2 briefly describes EMF SQL. The succinctness
+of EMF SQL leads to a generic evaluation algorithm
+that can be easily analyzed and optimized.
+Our tech-
+niques are shortly
+presented in Section 3. Several
+query cases are presented in Section 4.
+Almost all data mining tools mine flat files, mainly
+because flat files are very fast to read. Unfortunately,
+as Groth points out in [Gro98], "flat files have to
+be created from somewhere and once they are cre-
+ated, it is very difficult
+to manipulate."
+Pan& tool
+manipulates
+data in flat files and translates
+EMF
+SQL queries into efficient C programs incorporating
+our evaluation
+and optimization
+methods. The per-
+formance improvement
+over traditional
+commercial
+database systems is huge.
+We briefly discuss this
+issue in Section 5.
+The query examples of Section 4 are based on the
+following two tables:
+
+Sales(cust, prod, day, month, year, sale)
+Web(user-id, site, categ, day, month, year, time,
+duration)
+
+Table Sales stores the purchase of a product
+by
+a customer
+on a day month
+year in a state at
+an amount
+of sale.
+The Web table stores the
+connection of a particular
+user at a site belonging to
+some category on a day,month,year
+and time. The
+duration of that connection is also stored.
+
+
+
+
+420
+
+2
+Proposed
+Syntax
+
+We have introduced
+the syntax
+of extended
+multi-
+feature
+(EMF)
+queries
+first
+in
+[CR961
+and
+later
+in [ChaSS].
+Th e novelty
+of these papers
+was the
+introduction
+of the concept
+of grouping
+variables.
+A grouping
+variable
+is a tuple
+variable,
+i.e.
+it
+denotes
+a set of tuples.
+However,
+the definition
+of
+a grouping
+variable
+is replicated
+for each group,
+i.e.
+a grouping
+variable
+denotes
+a (possibly
+different)
+set of tuples
+for each
+group.
+Several
+grouping
+variables
+may be defined
+in an EMF
+query.
+These
+are declared
+in the group
+by clause,
+following
+the
+grouping
+attributes
+and separated
+by them
+with
+a
+sem.icolon.
+The scope of the grouping
+variables
+is
+the entire
+,relation.
+The newly
+introduced
+such
+that
+clause
+defines
+the range
+of the grouping
+variables
+X1, X2,. . .X,
+mentioned
+in the
+group
+by clause.
+It
+has the
+following
+form:
+
+such
+that
+(2'1 , CZ , ... , C,
+
+Each G'i is a (potentially
+complex)
+condition
+that
+is used to define
+the Xi
+grouping
+variable,
+i =
+1,2,. . . , n.
+It may involve
+(i) attributes
+of Xi,
+(ii)
+constants,
+(iii)
+grouping
+attributes,
+(iv)
+aggregates
+of the group and (v) aggregates
+of the X1, . . . , Xi-1
+grouping
+variables.
+Part
+(v) means tha,t aggregates
+of previously
+defined grouping
+variables
+can be used
+to define subsequent
+grouping
+variables
+which
+adds
+greatly
+to the ability
+to express
+ad hoc complex
+queries.
+The select
+clause is the same as in standard
+SQL,
+but now attributes
+and aggregates
+of the grouping
+variables
+can also appear
+in that
+clause
+`.
+The
+having
+clause
+is extended
+to contain
+aggregates
+of
+the grouping
+variables.
+A simple example
+illustrates
+our syntax.
+
+Example
+2.1:
+One wants to identify
+for each prod-
+uct, those months
+m of 1998 such that the total
+sales
+of the previous
+month of m was greater than the total
+sales of m. This can be expressed
+in EMF
+SQL as:
+
+select prod,month,sum(x.sale),sum(y.sale)
+from Sales
+where year=1998
+group by prod,month;
+x,y
+such that
+x.prod=prod
+and x.month=month
+,
+y.prod=prod
+and y.month=month-1
+having sum(x.sale)
+< sum(y.sale)
+
+For
+each value
+of product
+and
+month,
+grouping
+variable
+2 denotes
+the
+sales of that
+product
+on
+
+`In
+this
+version
+of EMF
+SQL
+implementation,
+attributes
+of grouping
+variables
+are not
+allowed
+in the select
+clause
+for
+performance
+reasons.
+However,
+the
+any
+aggregate
+function
+introduced
+later
+can solve
+most
+problems.
+that
+month
+(i.e.
+the whole
+group),
+while
+grouping
+variable
+y denotes
+the sales of that
+product
+the
+previous
+month
+(y.month=month-1).
+0
+
+
+The group
+by clause acts as an implicit
+iterator
+over the values
+of the grouping
+columns;
+for each
+such value one or more "interesting"
+subsets of the
+relation
+are defined
+(the grouping
+variables).
+The
+challenge
+was to provide
+the user with this "looping"
+ability
+without
+sacrificing
+the
+declarativeness
+of
+SQL.
+We
+show
+briefly
+in
+the
+following
+section
+that
+this syntax
+translates
+directly
+to an efficient,
+optimizable
+implementat,ion.
+We
+are
+currently
+working
+on decoupling
+the definition
+of the group-
+by values
+(e.g.
+could
+be replaced
+by a cube-by
+or even by a user-supplied
+set of base values)
+and
+the
+computation
+phase,
+unifying
+thus
+all
+multi-
+dimensional
+queries under one framework
+[CJK99].
+
+We
+also
+introduce
+a new
+aggregate
+function
+called
+any( . > that
+solves several
+known
+schematic
+problems
+of SQL in a clean and principled
+manner.
+This function
+is described
+in Section 4, Example
+4.8.
+
+
+
+3
+Evaluation
+and Optimization
+:
+Reverse
+Engineering
+
+Many
+complex
+data
+analysis
+queries
+can
+be ex-
+pressed
+in EMF
+syntax
+significantly
+easier than in
+standard
+SQL. However,
+the main reason to extend
+SQL is optimizability.
+The structure
+of an extended
+multi-feature
+query is such that its evaluation
+can be
+mapped
+directly
+to an efficient
+implementation
+that
+is easy to optimize.
+A compact
+data structure
+is used
+for this purpose,
+mostly
+corresponding
+to the output
+of the EMF query.
+This is called the mf-structure
+or
+mf-table
+of the EMF
+query.
+The
+basic evaluation
+algorithm
+uses only
+scans of the base relation
+in
+order to compute
+the answer.
+
+
+
+Definition
+3.1:
+Let & be an extended
+multi-feature
+query
+and H be a table with
+columns
+the grouping
+attributes
+and the aggregates
+of each grouping
+vari-
+able (denoted
+as outp(Xi),
+i = 0,. . . , n, X0 denotes
+the group itself).
+Then
+H is called the mf-structure
+(or mf-table)
+of Q. Th e rows of H are called entries.
+
+
+Each row of H corresponds
+to a distinct
+value of
+the grouping
+attributes
+(i.e. a group).
+The following
+algorithm
+computes
+correctly
+the mf-structure
+H of
+an extended
+multi-feature
+query.
+
+
+Algorithm
+3.1:
+Evaluation
+of EMF
+queries:
+
+
+
+
+421
+
+for
+scan
+sc=O to
+n {
+foreach
+tuple
+t on scan
+SC {
+for
+all
+entries
+of
+H,
+check
+if
+the
+defining
+condition
+of grouping
+var
+X,,
+is
+satisfied.
+If
+yes,
+update
+Xsc)s
+aggregates
+of the
+entry
+appro-
+priately.Xs
+denotes
+the
+group
+(the
+defining
+cond.
+of
+Xs
+is
+X0.S = S,
+S denotes
+the
+grouping
+attributes.)
+I
+P
+
+The
+only
+access method
+used in this
+algorithm
+is scanning
+(or indexed
+scanning).
+As a result,
+the
+evaluation
+of multiple
+EMF queries can overlap
+since
+the query-specific
+computation
+takes
+place
+in the
+individual
+mf-structure.
+We briefly
+describe
+below
+several immedia,te
+optimizations
+implemented
+in our
+tool.
+(i)
+Relative
+Entries.
+Algorithm
+3.1 can
+become
+very
+expensive
+if the mf-structure
+has a
+large
+number
+of entries
+since,
+for every
+scanned
+tuple
+all H's entries
+are examined,
+resulting
+to an
+implicit
+nested-loop
+join.
+However,
+this is not always
+necessary
+since,
+given
+a tuple
+t, one can identify
+a small
+number
+of mf-structure's
+entries
+that
+may
+be updated
+with
+respect
+to t during
+the evaluation
+of a grouping
+variable
+X.
+Note
+that
+this implies
+indexing
+of the mf-structure
+which is always memory
+resident
+as shown
+in optimization
+(iv).
+Standard
+query
+processing
+techniques
+require
+indexing
+of the
+base tables (hence the "reverse engineering"
+term for
+our approach).
+(ii)
+Dependency
+Analysis.
+A scan of the
+base relation
+can be very
+expensive,
+especially
+if
+the data. set is large.
+It is therefore
+essential
+to
+reduce
+the number
+of scans as much
+as possible.
+Algorithm
+3.1 requires
+one pass over the base data
+for each grouping
+variable,
+for a total
+of n + 1 scans.
+This
+number
+can be reduced
+by performing
+simple
+dependency
+analysis
+on t&he grouping
+variables.
+(iii)
+More
+Scans,
+Less
+Memory
+So far, we have
+assumed that the mf-structure
+fits in main memory.
+This is not always
+the case, e.g. for certain
+queries
+on very large data sets. Since it is essential
+to keep
+the mf-structure
+memory
+resident,
+the solution
+is to
+compute
+t,he a.nswer in m "rounds"
+instea.d of one
+at the cost of increasing
+the number
+of scans of the
+base table.
+As a result,
+we can always devise a query
+evaluation
+plan in which
+Algorithm
+3.1 operates
+on
+memory-resident
+data.
+
+
+4
+Query
+Cases
+
+All the following
+examples
+describe
+typical
+ad hoc
+data
+analysis/decision
+support,
+queries.
+Use your
+imagination
+and combine
+these cases to build
+more
+complex
+queries.
+
+
+Example
+4.1:
+(Pivoting
+- data
+become
+columns)
+Suppose that you want to find for each customer
+the
+average sale in "NY",
+the average sale in "CT"
+and
+the average sale in "NJ".
+
+
+select cust, avg(x.sale),avg(y.sale),avg(z.sale)
+from Sales
+where year=1997
+group by cust ; x,y,z
+such that
+x.cust=cust
+and x.state="NY",
+y.cust=cust
+and y.state= "CT",
+z.cust=cust
+and z.state= "NJ" 0
+
+
+Example
+4.2:
+(Hierarchical
+Queries
+- aggre-
+gate
+along
+some
+hierarchy
+/ roll-up)
+For sales
+of 1997, show for each product
+each month's
+total
+sales as percentage
+of this
+product's
+yearly
+total
+sales.
+
+
+select prod, month, sum(x.sale)/sum(y.sale)
+from Sales
+where year= 1997
+group by prod,month
+; x,y
+such that
+x.prod=prod
+and x.month=month,
+y.prod=prod
+0
+
+
+Example
+4.3:
+(Trends
+- moving
+aggregate
+along
+some
+time
+sequence)
+Suppose
+that
+you want
+to
+find for each customer
+and for each month
+of 1997
+The average
+sales to this customer
+for this month,
+and also the average for the three preceding
+and the
+three following
+months.
+
+
+select cust,month,avg(x.sale),avg(sale),avg(y.sale)
+from Sales
+where year=1997
+group by cust, month ; x, y
+such
+that
+x.cust=cust
+and x.month<month
+and
+x.month>month-3,
+y.cust=cust
+and y.month>month
+and
+y.month<month+3
+0
+
+
+Example
+4.4:
+(Dependent
+Aggregation
+- use
+aggregated
+values
+to further
+select
+tuples)
+One
+can use aggregates
+of grouping
+variables
+in order to
+define subsequent
+grouping
+variables.
+Assume
+that
+you want for each product
+to count for each month
+of 1997 the sales that
+were between
+the previous
+month's
+average
+sale
+and
+the
+following
+month's
+average sale.
+
+
+
+
+422
+
+select prod,
+month,
+count(z.*)
+from
+Sales
+where
+year=1997
+group
+by prod,month
+; x,y,z
+such that
+x.prod=prod
+and x.month=x.month-1,
+y.prod=prod
+and y.month=y.month+l,
+z.prod=prod
+and z.month=month
+and
+z.sale>avg(x.sale)
+and z.sale<avg(y.sale)
+0
+
+Example
+4.5:
+Inter-Dimensional
+Comparisons
+One can discover
+customers
+who have the potential
+to increase
+their
+purchases
+in one or more products
+by comparing
+for each customer
+and product,
+the
+customer's
+average
+sale on this product
+versus the
+average sale of the product
+to other customers.
+
+select
+cust, prod,
+avg(x.sale),
+avg(y.sale)
+from
+Sales
+group
+by cust, prod
+; x, y
+such that
+x.cust=cust
+and x.prod=prod,
+y.cust<>cust
+and y.prod=prod
+0
+
+Example
+4.6:
+(Medians)
+There
+are several
+real-
+life examples
+that
+require
+the computation
+of the
+median.
+Suppose
+that
+we want
+to find the month
+of 1997 by which
+every customer
+had made half of
+their
+total
+purchases.
+
+
+select cust, month
+from
+Sales
+group
+by cust, month;
+x, y, x
+such that
+x.cust=cust,
+y.cust=cust
+and y.month<month,
+z.cust=cust
+and z.month=month,
+having
+sum(y.sales)<sum(x.sales)/:!
+and
+sum(y.sales)+sum(z.sales)&um(x.sales)/2
+0
+
+The declarative
+expression
+of EMF
+SQL allows us
+great flexibility
+in specifying
+the exact nature
+of the
+median
+to be computed.
+With
+a small modification
+to the above query, we could find the month by which
+half of the total
+number
+of purchases
+were made, or
+the 1nont.h by which 75% of the purchases
+were made.
+
+Example
+4.7:
+(Multiple
+Data
+Sources)
+Infor-
+mation
+from
+several
+sources can be combined
+and
+aggrega.ted.
+It, resembles
+a join;
+however,
+only
+the
+grouping
+columns
+can be used to combine
+different
+tables.
+Assume
+that
+the cust
+column
+of the Sales
+t,able and the user-id
+column
+of the Web table
+are
+drawn
+from the same domain.
+With
+the following
+query
+we want
+to find
+for each customer
+his/her
+monthly
+total
+web access as percentage
+of the yearly
+total
+web
+access,
+but
+only
+during
+those
+months
+that
+the customer's
+average
+sale before this month
+was less than the customer's
+average sale after this
+month.
+select cust, month,
+sum(z.duration)
+/ sum(w.dm-ation)
+from
+Sales
+group
+by cust, month
+; x, y, z(web),
+w(web)
+such
+that
+x.cust=cust
+and x.month<month
+and x.year=1997,
+y.cust=cust
+and y.month>month
+and y.year=1997,
+z.userid=cust
+and z.month=month
+and z.year=1997,
+w.userid=cust
+and w.year=1997
+having
+avg(x.sale)
+< avg(y.sale)
+
+The grouping
+variables
+2, y range over table
+Sales,
+while
+grouping
+variables
+y, z range over table
+Web.
+The
+values
+for the grouping
+columns
+are selected
+only from the Sales
+table.
+Note that in this example
+we combining
+pieces of other
+queries
+(e.g., running
+sums and percent-of-total
+aggregates).
+q
+
+Example
+4.8:
+(The
+any
+aggregate
+function)
+PanQ
+tool
+introduces
+a new
+aggregate
+function
+called
+any, with
+very simple
+semantics
+yet powerful
+enough
+to solve several
+known
+SQL problems
+(and
+EMF
+SQL problems).
+A t,uple is selected at random
+among
+the
+rows
+being
+aggregated
+(the
+selection
+is implementation
+specific)
+a.nd the
+value
+of the
+argument
+column
+is returned.
+Assume
+that
+you want to find for each customer,
+the state on which his/her
+maximumsale
+took place.
+
+select
+cust, any(x.state),
+max(sale)
+from
+Sales
+group
+by cust ; x
+such that
+x.cust=cust
+and x.sale=max(sale)
+
+In
+this
+case,
+several
+rows
+of the
+zz grouping
+variable
+may have sale equal to the maximum
+sale.
+Only
+one of these rows is selected.
+This
+example
+shows
+how
+one can have
+non-grouping
+attributes
+in the select
+clause `.
+Solutions
+proposed
+in the
+past
+(e.g.
+[GBLP96])
+suggested
+that
+attributes
+functionally
+dependent
+on the grouping
+attributes
+should
+be allowed
+as well.
+The
+aggregate
+function
+any provides
+a c1ea.n and flexible
+solution
+to this
+problem.
+The
+any aggregate
+function
+can be used
+to solve
+several
+other
+problems,
+such as pivoting
+without,
+aggregation
+and mappings.
+For exa.mple
+if cust
+and user-id
+attributes
+are not drawn
+from
+the same domain,
+a table mapping
+cust
+to userid
+values
+must
+be used.
+The
+any aggregate
+function
+can be used to express this join in one EMF query,
+resembling
+aggregation.
+
+5
+Performance
+
+In Figure
+l(a)
+we compare
+the performance
+(elapsed
+time,
+in
+seconds)
+of the
+SQL
+component
+of a
+
+2Standard
+SQL manifests
+that
+only grouping
+attributes
+and aggregate
+functions
+can appear
+in the select
+clause.
+
+
+
+
+423
+
+(4
+
+
+
+
+Example 4.3. - PanQ Tool
+-
+
+
+
+
+Figure 1: Performance Improvements
+
+
+leading commercial database system versus PanQ's
+performance
+(for the same platform)
+on query
+Examples
+4.1, 4.3 and 4.7 3. In all cases Sales
+table contains 250000 rows and stores activity
+of
+10000 customers (10MB). Webtable contains 200000
+rows and stores activity of the same 10000 customers
+(12MB). As a
+t bl e size increases, commercial system's
+elapsed time grows faster than PanQ's, which grows
+linearly
+(Figure l(b) and (c)).
+
+
+6
+Conclusions
+
+Complex manipulation
+of large volumes of data is
+essential to decision support and data mining sys-
+tems. PanQ tool is based on EMF SQL, which is
+a simple and intuitive
+extension of SQL. It manip-
+ulates flat files, which is usually the input to many
+data mining tools and generates efficient C programs
+incorporating
+our optimization
+techniques.
+Current
+work focus on functionality
+and performance.
+The
+following issues are under consideration:
+replicating
+grouping variables for pivoting
+over a list of values
+(e.g. the result of an SQL query) instead of indi-
+vidual definitions;
+nested aggregation;
+user-defined
+aggregate functions;
+multiple
+EMF query process-
+ing; efficient indexing of the mf-structure
+(which is
+always memory resident).
+
+References
+
+[ChaSS]
+Damianos
+Chatziantoniou.
+Ad
+Hoc
+OLAP : Expression and Evaluation.
+In
+IEEE
+International
+Conference on Data
+Engineering,
+1999.
+
+[CJK99]
+Damianos
+Chatziantoniou,
+Theodore Johnson, and
+Samuel Kim. On Modeling and Process-
+ing Decision Support Queries. Submitted
+for publication,
+February 1999.
+
+[CR961
+Damianos Chatziantoniou
+and Kenneth
+Ross.
+Querying
+Multiple
+Features
+of
+Groups in Relational
+Databases. In 22nd
+VLDB
+Conference,
+pages 295-306, 1996.
+
+[GBLP96]
+J. Gray, A. Bosworth,
+A. Layman, and
+H. Pirahesh.
+Datacube
+:
+A Rela-
+tional
+Aggregation
+Operator
+General-
+izing
+Group-by,
+Cross-Tab,
+and Sub-
+Totals.
+In IEEE
+International
+Confer-
+ence on Data
+Engineering,
+pages 152-
+159, 1996.
+
+[Gro98]
+Robert Groth.
+Data Mining
+: A Hands-
+On Approach
+for Business
+Professionals.
+Prentice Hall, 1998.
+
+[JC99]
+Theodore
+Johnson
+and
+Damianos
+Chatziantoniou.
+Extending
+Complex Ad
+Hoc OLAP.
+Submitted
+for publication,
+February 1999.
+
+[STA98]
+Sunita
+Sarawagi,
+Shiby
+Thomas,
+and
+Rakesh Agrawal.
+Integrating
+Mining
+with Relational
+Database Systems:
+Al-
+ternatives
+and Implications.
+In ACM
+SIGMOD,
+Conference
+on Management
+of
+Data, pages 343-354, 1998.
+
+
+
+
+3We experimented
+with
+different
+commercial
+DBMS
+and
+the measurements
+were comparable
+to the results
+presented
+here.
+
+
+
+
+424
+

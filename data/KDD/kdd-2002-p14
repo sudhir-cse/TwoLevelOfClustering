@@ -1,0 +1,1565 @@
+Scalable Robust Covariance and Correlation Estimates for
+Data Mining
+
+
+Fatemah A. Alqallaf
+Dept. of Mathematics
+Univ. of BritishColumbia
+Vancouver, BC Canada
+fatemah @math.ubc.ca
+Kjell P. Konis
+InsightfulCorp.
+Seattle, WA
+USA
+kkonis @insightful.com
+R. Douglas Martin
+Dept. of Statistics
+Univ. of Washington
+Seattle, WA USA
+doug @insightful.com
+Ruben H. Zamar
+Dept. of Statistics
+Univ. of BritishColumbia
+Vancouver, BC Canada
+ruben@stat.ubc.ca
+
+
+
+ABSTRACT
+
+Covariance and correlation estimates have important appli-
+cations in data mining. In the presence of outliers, classical
+estimates of covariance and correlation matrices are not re-
+liable.
+A small fraction of outliers, in some cases even a
+single outlier, can distort the classical covariance and cor-
+relation estimates making them virtually useless. That is,
+correlations for the vast majority of the data can be very er-
+roneously reported; principal components transformations
+can be misleading; and multidimensional outlier detection
+via Mahalanobis distances can fail to detect outliers. There
+is plenty of statistical literature on robust covariance and
+correlation matrix estimates with an emphasis on affine-
+equivariant estimators that possess high breakdown points
+and small worst case biases. All such estimators have unac-
+ceptable exponential complexity in the number of variables
+and quadratic complexity in the number of observations. In
+this paper we focus on several variants of robust covariance
+and correlation matrix estimates with quadratic complex-
+ity in the number of variables and linear complexity in the
+number of observations. These estimators are based on sev-
+eral forms of pairwise robust covariance and correlation es-
+timates. The estimators studied include two fast estimators
+based on coordinate-wise robust transformations embedded
+in an overall procedure recently proposed by [14]. We show
+that the estimators have attractive robustness properties,
+and give an example that uses one of the estimators in the
+new Insightful Miner data mining product.
+
+Keywords
+Data Mining, Outliers, Robust Statistics, Robust Estima-
+tors, Scalable Algorithm
+
+
+1.
+INTRODUCTION
+Covariance and correlation matrices estimated from pos-
+sibly very large data tables are used for a variety of purposes
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redisu-ibuteto lists, requires prior specific
+permission and/or a fee.
+SIGKDD '02 Edmonton, Alberta, Canada
+Copyright 2002 ACM 1-58113-567-X/0210007...$5.00.
+....
+.~..~. [!" :." .....
+.-.-.~ ~.- .....
+.'.
+:
+:
+...
+.
+...
+o,
+
+
+
+oJ
+
+.'...'.
+'
+t..
+"
+:'
+°,
+
+°,,
+"t
+" . . .
+.
+::
+.
+.
+·
+.
+
+
+::::
+i,:'
+"
+:? .....
+?/::.
+:.i
+o,o
+m
+4
+
+
+
+m $
+i
+~ m ~
+
+
+
+i
+.
+" ~" ~.
+".
+·
+· .'*~.:
+·
+!
+
+
+
+
+:~: . ~..'-.:. ~.~'.'...
+...::"
+:~
+. :,
+i
+
+
+
+
+0~
+.
+.
+.
+.
+.
+.
+.
+v,
+.
+."
+0, :.
+..
+:.,!....
+·
+.
+~.
+°w
+
+
+
+
+Figure
+1:
+Woodmod
+5-D
+Data
+with
+Outliers.
+
+
+in data mining. For example, pairwise sample correlation co-
+efficients are often examined in an exploratory data analysis
+(EDA) stage of data mining to determine which variables
+are highly correlated with one another.
+Estimated covari-
+ance matrices are used as the basis for computing principal
+components for both general principal components analy-
+sis (PCA), and for manual or automatic dimensionality re-
+duction and variable selection. Estimated covariance matri-
+ces are also the basis for detecting multidimensional outliers
+through computation of the so-called Mahalanobis distances
+of the rows of a data table.
+Unfortunately the classical sample covarianee and corre-
+lation matrix estimates, motivated by either Gaussian maxi-
+mum likelihood or simple method of moments principles, are
+very sensitive to the presence of multidimensional outliers.
+Even a small fraction of outliers can distort these classical es-
+timates to the extent that the estimates are very misleading,
+and virtually useless in any of the above data mining appli-
+cations. To cope with the problem of outliers, statisticians
+have invented robust methods that are not much influenced
+by outliers for a wide range of problems, including estima-
+tion of covariance and correlation matrices.
+We illustrate
+the extent to wlhich outliers can distort classical correlation
+matrix estimates and the value of having a robust correla-
+tion matrix estimate with the small five-dimensional data
+set example illustrated in Figures 1-3.
+Figure i shows all pairwise scatter plots of the 5-dimensional
+data set called "Woodmod". This data clearly has at least
+several multidimensional outliers that show up as a cluster
+in several of the scatterplots.
+Note that while these out-
+liers are clearly outliers in two-dimensional space they are
+
+
+
+
+14
+
+f~-
+-
+·
+
+
+
+
+o.~le7
+0,70~
+
+
+
+
+.o,~0oa
+o.~04
+0.0a~
+0.M14
+\
+
+
+
+Rottmt
+- -
+
+
+
+
+Figure 2:
+Classical and Robust Correlations for
+Woodmod Data.
+
+not univariate outliers, i.e., they do not show up as well
+detached outliers in any of the variables. Figure 2 shows
+the result of computing all pairwise classical correlations by
+both the classical method (sample correlation coefficients)
+and a particular robust method known as the Fast MCD.
+The lower left triangle of values shows both the classical
+and robust' correlation coefficient estimates, while the upper
+right triangle of ellipses visually represent the contours of
+a bivariate Gaussian density with zero means, unity vari-
+ances, and correlation coefficients given by the classical and
+robust correlation coeffient estimates. A nearly circular el-
+lipse indicates an estimated correlation coefficient of nearly
+zero. A narrow ellipse with its major axis oriented along the
++45 degree (-45 degree) direction indicates a large positive
+(negative) estimated correlation coefficient. From the visual
+representation you immediately see differences between the
+classical and robust correlations, sometimes very substan-
+tial differences, including changes of sign. For example the
+classical correlation between V4 and V5 is -.24 whereas the
+robust correlation is +.65. The latter is quite consistent
+with what you might expect if you deleted the small cluster
+of outliers occurring in the scatterplot of V4 versus V5 in
+Figure 1.
+A common way of detecting multidimensionaloutliers is
+to use the classical squared Mahalanobis distance:
+
+d2(x,) = (x, - ~),~-z (x, - ~)
+(1)
+
+In the above expression xi is the i-th data vector of dimen-
+sion p (the transpose of the i-th row of your data table),
+is the vector of sample means of the columns of your data
+table, and C is the usual sample covariance matrix estimate.
+Under the assumption that the data is multivariate normal
+and that you use known values p and C in place of the
+above estimates, the d2(x~) would have chi-squared distri-
+bution with p degrees of freedom. With reasonably large
+sample sizes the sample mean vector and sample covariance
+matrix will be close to their true values, and it is common
+practice to use the square root of chi-square (with p degrees
+of freedom) percent point such as .95 or .99 as a threshold
+to compare d(xl) with, and declare xi to be an outlier if it
+exceeds this threshold. If you follow this classical approach
+for the Woodmod data of Figure 1, you get the results in
+the right-hand panel of Figure 3. The horizontal dashed
+line is the square-root of the 95% point of a chi-squared
+distribution with 5 degrees of freedom. Clearly no points
+are declared outliers by the classical Mahalanobis distance
+approach. This is because the outliers have distorted the
+"it
+
+
+
+
+1,.
+J
+J
+
+
+s
+1'o
+iJ
+zo
+
+Indlx
+
+
+Figure 3: Classical and Robust Distances with 95~
+Chi-Squared Threshold.
+
+classical C so much that it does not produce reliable Ma-
+halanobis distances. On the other hand the left-hand panel
+of Figure 3, based on a robust C (and a robust ~ ) results
+in detection of not only the cluster of four very large out-
+liers evident on the scatterplots of Figure 1, but also three
+additional moderate sized outliers.
+The above example serves to vividly illustrate the inade-
+quacy of classical correlation and covariance matrices in the
+presence of outliers and the valuable role of robust alterna-
+tives. Indeed the statistical literature contains a substantial
+number of papers proposing and studying the properties of
+robust covariance matrix estimation. An important early
+approach was that of M-estimates [11]. These estimates are
+positive definite, affine equivariant and relatively easy to
+compute, but have as a substantial limitation the fact that
+their breakdown point (BP) -- i.e., the maximum propor-
+tion of outliers that the estimate can safely tolerate -- is at
+most 1/p where p is the dimension of the data.
+Subsequentlythere has been considerable emphasis on ob-
+taining positive definite, affine equivariant estimators with
+a high breakdown point, namely a breakdown point of one-
+half.
+The best known such estimators are the Minimum
+Volume Ellipsoid (MVE) and Minimum Covariance Deter-
+minant (MCD) estimates [16, 17], which are special cases
+of S estimates [2]. Another important class of affine equiv-
+ariant high-breakdown point estimates are those based on
+projections: the Stahel-Donoho estimate (SDE) proposed
+by [20] and [4] and studied by [13] ; and P-estimates [12].
+All known affine equivariant high-breakdown point esti-
+mates are solutions to a highly non-convex optimization
+problem and as such pose a serious computational chal-
+lenge. The main challenge is to find good initial estimates
+from which to search for a nearest optimum in hopes that
+it produces a global optimum. The initial estimates are in-
+variably obtained by using some form of repeated random
+sub--sampling of N~ rows of the original data table, with
+the number of samples N, determined in order to achieve a
+high-breakdown with high probability, e.g., with probability
+.99 or .999 (see for example [19]). It turns out that achiev-
+ing this latter condition results in computational algorithms
+that have exponential complexity of order 2p in terms of the
+dimension p of the data. This rules out the use of such esti-
+mates for many data mining applications where one has in
+excess of 20 - 30 variables. In addition, the robust covariance
+matrix based on projections has a computational complex-
+ity n~ in the number of observations if implemented in a
+naive manner. Empirical evidence indicates that a clever
+
+
+
+
+15
+
+implementation can reduce this to approximately n · log(n)
+[10]. Since many data mining applications involve hundreds
+of thousands if not millions of rows, the current projection
+estimators are not feasible for data mining.
+In order to deal with such severe scalability limitations
+[18] recently proposed a "Fast MCD" (FMCD) method that
+is much more effective than naive subsampling for minimiz-
+ing the objective function of the MCD. The FMCD seems
+capable of yielding "good" solutions without requiring huge
+values of N~. But FMCD still requires substantial running
+times for large p, and it no longer retains a high breakdown
+point with high probability when n is large.
+Much faster estimates with high breakdown points can
+be computed if one is willing to drop the requirements of
+positive definiteness and affine equivariance of the resulting
+covariance or correlation matrix. The simplest such meth-
+ods are based on pairwise robust correlation or covariance
+estimates such as (i) classical rank based methods, such as
+the Spearman's p and Kendall's r (see for example [1]); (ii)
+classical correlations applied after coordinate-wise outlier in-
+sensitive transformations, such as the quadrant correlation
+(QC) and 1-D "Huberized" data (see [7], p. 204); and (iii)
+bivariate outlier resistant methods such the method pro-
+posed by [5] and studied by [3]. The palrwise approach is
+appealing in that one can achieve high breakdown point on
+a palrwise basis that results in a high breakdown point for
+the overall covariance or correlation matrix, and at the same
+time reduces the computational complexity in the data di-
+mension p from exponential to quadratic (from 2p to p2).
+This greatly increases the range of data mining problems
+to which robust covariance and correlation estimates can be
+applied, e.g., 200-300 variables becomes quite feasible.
+In recognition of this opportunity, [14] recently proposed
+a new method based on a modification of approach (iii)
+that preserves positive definiteness and has an "almost affine
+equivariant" property. However, the particular palrwise es-
+timator they used is not particularly transparent to data
+miners and is not nearly as fast as one might like. In the
+present paper we follow in a similar spirit to that of [14],
+but focus on the following:
+
+
+Use of the quadrant correlation and Huberized esti-
+mates of approach (ii)above, which are very trans-
+parent in the way they work, and enable fast scalable
+computation for data mining applications, with com-
+plexity O(n)
+· O(p 2) for the resultingp x p covariance
+or correlation matrix.
+
+
+Computation of attractive maximum
+bias and break-
+down points for the component robust pairwise corre-
+lation and covariance estimates.
+
+
+Monte Carlo comparison of FMCD
+and QC
+using a
+new classofcontamination models appropriate fordata
+mining applications.
+
+
+· Use of the [14] method of obtaining positive definite-
+ness.
+
+
+Introduction of a new way of computing reliable thresh-
+olds for detecting multidimensional outliers with ro-
+bust Mahalanobis distances, based on robust fitting of
+gamma distributions to the distances.
+· Implementation of the quadrant correlation version of
+[14] in the new Insightful Miner data mining pipeline
+architecture for dealing with arbitrarily large data sets.
+
+In Section 2 we describe the quadrant correlation and Hu-
+berized estimates, introduce the new contamination model
+and calculate maximum biases and breakdown points of the
+estimates, and compare their performance. This section also
+describes how to insure that the resulting covariance or cor-
+relation matrix is positive definite.
+Section 3 briefly dis-
+cusses the setting of thresholds for outlier detection with
+robust Mahalanobis distances, including the new method
+based on robust fitting of a gamma distribution to the dis-
+tances.
+Section 4 describes the Insightful Miner pipeline
+implementation of the new robust covariance and outlier
+detection method, and Section 5 gives two examples.
+
+
+2.
+PAIRWISE ROBUST COVARIANCES AND
+CORRELATIONS
+Statisticians use contamination or mixture models to study
+the performance of robust alternatives to classical statistical
+procedures wheELthese procedures are applied to messy data
+sets that contain outliers. Most multivariate contamination
+models for numeric data proposed to date (see for exam-
+ple [6]) assume that the majority of the observations (rows
+in your data table) come from a nominal distribution such
+as a multivariate normal distribution, while the remainder
+come from another multivariate distribution that generates
+outliers. Specifically it is assumed that a p-dimensional row
+vector y of your data table has a multivariate mixture dis-
+tribution of the form:
+
+F=(i-e).Fo+E.H
+0<E<
+1/2
+(2)
+
+where for example Fo is a multivariate normal distribution
+with mean # and scatter matrix E, i.e., Fo = N(p, ~), and H
+is an arbitrary multivariate distribution. Under this model
+a fraction (1 - e) of the rows on average are distributed ac-
+cording to Fo and are therefore the majority or "core" data,
+while a fraction e of the rows are from H and generate out-
+liers that deviate from the core behavior of the data.
+We
+stress that such outliers could be "bad" data due to record-
+ing errors of all kinds, or they could be a highly informative
+subset of the data that leads to new scientific discovery or
+improved business operation. There is a need for more real-
+istic contamination models for applications in data mining.
+We note that the above mixture model may be equivalently
+represented as a very special case of the following replace-
+ment model
+
+y = (I - B)x + B~
+(3)
+
+where x represents the core data, ~ is an arbitrary random
+vector represent!mg outliers, and B = Diag(B1, B2,..., Bp) is
+a p × p diagonal matrix such that B, B2,. ··, Bp are Bernoulli
+random variables with marginal probabilities P(B~ = 1) =
+1- P(B~ = O) = ei. Specifically, if x has distribution Fo and
+i has distribution H, and in addition the diagonal matrix
+B of Bernoulli random variables has the special completely
+dependent structure
+
+P(B1 = B2 .....
+Bp) = 1,
+(4)
+
+then y generated by the replacement model has the classical
+multivariate mixture distribution (2) above.
+
+
+
+
+16
+
+I p
+I 1
+2
+5
+10
+15
+20
+25
+50
+100 I
+Percentage
+95
+90
+77
+60
+46
+36
+28
+8
+1
+
+Table 1:
+Percentage of Perfectly
+Observed
+Cases
+
+(Rows) as a Function
+of the Number
+of Variables
+
+in the Data Set.
+
+Unfortunately model (2) does not adequately model re-
+ality for many kinds of large multivariate data sets that
+arise in data mining applications.
+It may often happen in
+data mining applications that outliers occur in each of the
+variables independently of the other variables, or in special
+dependency patterns other than the complete dependency
+pattern (4). Different values of ei and different dependence
+structures among the B~s generate different contamination
+neighborhoods. We focus in this paper on the former situ-
+ation, which we call the "independent outliers in variables
+(IOIV)", with equal probabilities of an outlier occurring in
+each variable (and reserve treatment of unequal probabilities
+of outliers and special dependency patterns for a subsequent
+study). This amounts to assuming that the B~ (i -- 1,... ,p)
+are independent with constant ei = e. This leads to a com-
+pletely different situation than with the classical outlier gen-
+erating mixture model (2). For example, if observations in
+each column of the data table are spoiled on average 5~0 of
+the time, independently from column to column, the proba-
+bility of a perfectly observed row becomes exceedingly small
+when the number of columns increases (see Table 1).
+We have learned from our study of the new IOIV model
+above that robust affine equivariant methods may not be
+very reliable in the case of large data sets because the op-
+erations needed to compute affine equivariant robust esti-
+mates tend to "propagate" the effect of the outliers.
+We
+illustrate this fact by comparing the performance of the
+affine equivariant Fast Minimum Covariance Determinant
+(FMCD) with that of the simple non-affine equivariant ro-
+bust covariance estimate based on pairwise quadrant corre-
+lation coefficient (QC) estimates, defined below, under the
+new contamination model. The results are shown in Figure
+4, which displays the distance between the two robust esti-
+mates and the true covariance matrix (the ratio of condition
+numbers as proposed by [13] versus the fraction of contami-
+nation e). The QC based estimate clearly out-performs the
+FMCD for p -- 20 and 30. We can see that as p increases
+FMCD performs very poorly and practically breaks down
+at e -- 0.10 for p ----20 and at e = .05 for p -- 30. Based
+on Table 1 and Figure 4 we conjecture that the maximum
+BP of any affine equivariant scatter estimates under the new
+contamination model is very small for large p. In the least
+favorable dependence configuration the maximum BP may
+be bounded above by 1 - 0.51/p (e.g. 0.03 for p = 20). Pair-
+wise methods like QC are much cheaper to compute and
+more reliable in these situations.
+The following theorem illustrates the type of results that
+one obtains when using IOIV models: you do best using the
+smallest possible number of columns at a time. More pre-
+cisely it shows that for calculating the multivariate location
+we do better off processing each column of the data table
+separately, in that we minimize the maximum bias by using
+the coordinate-wise median. The family of multivariate dis-
+tribution functions F generated by (3) is a contamination
+neighborhood of Fo and will be denoted by .T'.
+
+
+THEOREM 1. Suppose that Fo = N(#,
+O"21).
+The coordi-
+natewise median minimizes maxbias (worst case bias over
+jz) among all translation equivariant estimates offmultivari-
+
+ate location.
+
+Proof." Available from the authors upon request.
+
+2.1
+Pairwise
+scatter
+Estimates
+
+The discussion above motivates the construction of ro-
+bust covariance and correlation matrices by using pairwise
+robust correlation coefficients (or covariances) as basic build-
+ing blocks. Several such methods have been around for many
+year, but they have been mostly ignored because:
+(i) the
+lack of affine equivariance, and (ii) the resulting covariance
+matrix built up from the pairwise estimates lacks positive
+definiteness. We are motivated to re-examine the pairwise
+approach because: (i) the lack of affine equivariance is not
+necessarily important in data mining applications, and (ii)
+there now exists a good method for obtaining positive defi-
+niteness, recently introduced by [14].
+We will concentrate on a class of estimates originally intro-
+duced by [7], who defined robust correlation coefficient esti-
+mates as follows. Let sj
+(j = 1, ...,p) be some robust scale
+estimates and let tj (j -- 1, ...,p) be location M-estimates
+defined by the equations
+
+Z
+¢ ((xlj - t~)/sj) = 0
+(j = 1, ...,p)
+
+where ¢(x) is an appropriate score function. The following
+two cases are of primary interest:
+Huber's Function:
+
+Co(x) = min {max {--c,x},c},c > 0
+
+"Sign" Function:
+
+¢(x) = SaN(x)
+
+where SaN(x)
+has the values +1 for x > 0, -1 for x < 0,
+and 0 for x = 0. The robust correlation coefficients ~jk is
+now defined as the Pearson correlation coefficient computed
+on the outlier-free transformed data ylj = ¢ ((x~j - tj) /sj)
+(j = 1,...,k j--~l ..... p):
+
+
+
+
+Notice that .~j = .~k ---- 0 by definition of tj and tk. To
+save computing time (and possibly gain robustness) we will
+use tj -~ median(xij) and therefore our robust correlation
+coefficient has the form
+
+[E (u,~ - #~) (y,k - #~)]
+
+
+
+When ¢ is the Huber function, we call this the Huberized
+correlation coefficient, and when ¢ is the "sign" function
+the estimator is the so-called quadrant correlation coefficient
+(QC).
+Bias Properties:
+We
+need to distinguish between two
+kinds of bias for the above estimators. The firstis intrinsic
+bias that occurs at the nominal model Fo because of the
+structure of the estimator. Specifically,when xij and xlk
+are jointly normal with correlation p#k, the value r#~ of ~jk
+in large samples (which we have in data mining) satisfies
+Ir3kl_< IP#kl,with strictinequality except in the trivialcases
+IPjkl = 0, i. To remove bias at a Gaussian model Fo you
+
+
+
+
+17
+
+P.edo,mwle~ o~FMCD and ~C, P. 30
+Perlormance ol FMCD and ClC, P = 20
+
+
+
+
+"1
+
+
+
+
+use an appropriate transformation ~j~ = g¢(~j~). For the
+QC estimator this transformation turns out to be gqc(r) =
+sin ((w/2)r), and for general c > 0, gc can be obtained by
+numerical means (see [7]).
+A main drawback of rjk is that unlike t~ = (~jk)~,~=l,....p
+
+the correlation matrix f/ = (rJk)j,k=l,...,p is not positive
+definite. However, [14] introduced an intuitively appealing
+method of adjusting the resulting correlation matrix so that
+it is positive definite. Let
+
+e =
+(5)
+
+
+where A1 < ~2 < '"
+< Ap are eigenvalues of C and fii
+(i :
+1, ...,p) are the corresponding eigen vectors. One no-
+tices that when C is the sample correlation, the ASs are the
+variances of the projected data on the direction of the corre-
+sponding eigen vectors. This suggest that in order to get rid
+of possibly negative eigenvalues one can replace the ASs in
+(5) by the square of a robust scale estimate (e.g. the median
+absolute deviation) for the projected data. Fortunately, for
+values of c typically used for the Huber score function, e.g.,
+c ~ 1.5 or so, the intrinsic bias is very small (below 0.01)
+and therefore ÷3k ,~- ~k. In such cases we recommend using
+~jk to preserve positive definiteness.
+One important consideration to guide the choice of the
+tuning constant c is the maximum bias over contamination
+neighborhoods, which we would like to make as small as
+possible.
+For simplicity we will assume that the location
+and scale parameters of the two variables are known and
+we wish to estimate their correlation.
+Since in this case
+there are only two variables involved we can use the classical
+
+contamination model ~(p) = {H: H = (1 - e) H0 + eH~,,
+
+as a good approximation.
+Here Ho = N (O,I) and H is
+arbitrary and unspecified.
+
+
+THEOREM 2. (Worst Case Bias): The maximum bias B (~,p)
+under classical contamination neighborhoods of size e,
+
+suPHe.r,(p ) ]~(H) - Pl is given by
+
+{
+_
+'
+\
+i¥,5
+/
+"j'
+
+where ~ = [e/(1 - e)] [g,~ (c~)/E¢~ (Z)], w/th Z ~ Y (0, 1).
+
+Proof: Assume without loss of generality that ¢ (¢x~) = 1.
+Let A = EHo¢(X)¢(Y), B = EHo~22(X),
+a =
+EHl~d2(X), b =
+EH1¢2 (y), and
+
+r(H) =
+EH¢(X)¢(Y)
+x/EHC2(X)EH¢2(Y)
+Perfornwcl of F'MCD and QC, P = 10
+
+
+
+
+f{
+
+
+ill
+
+
+Figure 4: Comparing
+QC with FMCD
+Estimates.
+
+c
+p=.l
+p=.5
+p=.9
+0.00
+0.08
+0.09
+0.07
+0.215
+0.09
+0.10
+0.08
+0.50
+0.09
+0.11
+0.10
+1.00
+0.09
+0.14
+0.16
+1.25
+0.11
+0.17
+0.20
+1.50
+0.12
+0.20
+0.24
+2.00
+0.17
+0.28
+0.35
+
+Table 2: Maximum
+Bias Calculations for Different
+
+Values
+of c and p, Under
+the Classical
+Contamina-
+
+tion Model
+of Size e = 0.05.
+
+By the Cauchy-Shwartz inequality
+
+(1- E)A +eVZgg
+r(g) <
+- E)B +
+- E)B +
+
+Differenciating the right hand side with respect to a and
+using the Cauchy-Shwartz inequality again we can verify
+that this derivative is non-negative for all a < b. Therefore,
+letting (e/(1 - e))/b =/~ and noticing that r(Ho) = A/B
+we can write
+
+(1 - e)A + eb < (1 - e)A + e
+r(Ho) +/3
+(6)
+r(H)_< (1
+e)B÷eb-
+(1
+e~:
+=
+1+/3
+
+The second inequality follows because
+
+[(1 - e)A + eb] / [(1 -- e)B + eb]
+
+is increasing in b. An analogous reasoning gives
+
+r(g) > r(H0) - ~/
+(7)
+-
+1+8
+
+[7] stated inequalities (6) and (7) without providing a proof.
+The result follows now because the function p = g (r) is non-
+decreasing. Table 2 shows maxbias calculations for different
+values of c, and p using the result from Theorem 2. The table
+exhibits that the QC (c = 0) is a very attractive alternative.
+
+
+3.
+THRESHOLD DETERMINATION OF OUT-
+LIER DETECTION
+Consider the robust Mahalanobis squared distances (1)
+where the p-dimensional vector ~ is a robust estimate of
+the mean of the observation vectors x~ and C is a robust
+covariance matrix estimate based on one of the pairwise
+methods described in the previous section, The example in
+the introduction indicated that use of such robust distances
+can lead to reliable detection of multidimensional outliers,
+whereas use of tile classical Mahalanobis distances based on
+the Gaussian maximum likelihood estimates of mean and
+covariance can completely fail to find such outliers. In that
+
+
+
+
+18
+
+example we used the 95% quantile of the chi-squared distri-
+bution with p degrees of freedom as a "guideline" threshold
+for flagging potential outliers. Use of such a guideline pre-
+sumes that the estimates ~ and C accurately represent the
+true mean and covariance of the majority (or core) of the
+data, and that the distribution of this majority are well ap-
+proximated by a multivariate normal distribution.
+These
+are idealized assumptions, and it has been found in practice
+that this chi-squared distribution tends to be inadequate,
+particularly for large p [15]. Thus some improved alterna-
+tive is sometimes needed in order to determine a threshold
+for flagging outliers. We very briefly mention two possible
+approaches.
+The first approach is to recognize that the chi-squared dis-
+tribution is a special case of a gamma distribution, and that
+the gamma distribution provides a flexible form for mod-
+eling deviations of the distribution of the d2(xl) from the
+ideal chi-squared distribution· Furthermore it is well known
+how to estimate the parameters of the gamma distribution
+by maximum likelihood· However, the maximum likelihood
+estimates of the gamma distribution can be very adversely
+influenced by outliers as has been vividly shown by [9], who
+has developed methods of robustly fitting a gamma distri-
+bution. These methods are available in the S-PLUS Robust
+Library. We are in the process of thoroughly investigating
+this intuitively attractive approach, and hope to report on
+the results in a final revision of this paper.
+The second approach is very simple and practical, namely
+you visually inspect a histogram estimate or kernel density
+estimate of the true density of the squared distances d2(xi).
+We have found that often the data are such that these esti-
+mates will exhibit multiomodality with one or more modes
+in the tails of the density representing clustering of the out-
+lying d2(xi) into one or more well distinguished groups· In
+such cases visual inspection will allow the user to immedi-
+ately specify one or more thresholds for clustering the data
+into the central majority and one or more outlying groups.
+We provide such an example in Section 5.
+
+
+
+4.
+A SCALABLE
+ROBUST COVARIANCE
+MATRIX IMPLEMENTATION
+We have implemented the QC based robust covariance
+matrix estimation, and outlier detection via robust Maha-
+lanobis distances, in the new Insightful Miner (I-Miner) data
+mining product.
+I-Miner has a pipeline processing archi-
+tecture that supports implementation of data mining algo-
+rithms designed to work on arbitrarily large sets of data by
+processing a block of rows of a data table at a time, with
+block sizes small enough to fit in memory. Our implementa-
+tion is a three-pass algorithm, which operates as follows on
+the arbitrarily large data matrix
+
+
+
+
+X =
+Xll
+X12
+' ' '
+Xlp
+\
+
+)
+X21
+X22
+' " '
+~2p
+
+
+
+
+Xnl
+Xn2
+" · *
+Xnp
+
+
+
+PASS 1:
+Compute
+Simple Robust
+Location and
+Scale Estimates for Each Column
+First we compute the median (MED) and scaled inter-
+quartile distance (IQD) of each column:
+
+
+
+mj
+=
+MEDi
+(xls)
+
+
+ss
+=
+.7413 · IQDi (xis)
+
+
+The scaling in the IQD is such that ss is an unbiased esti-
+mate of the standard deviation when the column variables
+are normally distributed. The above computation amounts
+to finding three order statistics for the 25%, 50% and 75%
+quantiles of the data respectively. In order to do this in the
+pipeline architecture, processing a block at a time we have
+implemented the algorithm recently introduced by [8] that
+does not require knowledge of n ahead of time, and which
+computes the order statistics with an accuracy of at least
+.001 · n with probability at least 1 - 10-5. Specifically, we
+have implemented the algorithm as described in Section 3
+of their paper using six buffers of size 11914.
+PASS
+2: Compute
+Bias-Adjusted
+QC Estimates
+and Initial Robust Covariance Matrix
+
+
+
+rlk
+~=1 SGN(yu) SGN(ylk)
+
+nlk,o
+
+
+
+where Y~s = x~s - ms and nlk,o is the number of rows i such
+that neither yu or yik are zero (which can happen because of
+ties some data values are equal to a column median). This
+computation is carried out in C++ with a simple bucket sort
+algorithm that counts the number of observations that fall
+(strictly) in each of the four quadrants defined by a coordi-
+nate axis centered at the column medians (ml,mk).
+Next
+we compute the "bias-corrected"quadrant correlations
+
+
+
+ptk
+=
+sin
+rlk
+,
+l ~ k
+
+
+plk
+=
+1,
+l = k
+
+and then compute the pairwise robust covariance estimates
+
+Clk
+=
+SlSkplk.
+From the clk we form the the initial robust
+covariance matrix estimate
+
+Co
+=
+{clk}.
+
+This initial covariance matrix is not necessarily positive def-
+inite.
+PASS 3: Form the Final Positive Definite Robust
+Covariance Matrix
+Compute the spectral decomposition of Co:
+
+Co = QAQ'
+
+where A is the diagonal matrix of eigenvalues, not all of
+which are guaranteed to be positive, and Q is the p x p
+orthogonal matrix of eigenvectors. We have used the sub-
+routine rs in S-PLUS library to obtain A and Q. Transform
+the data matrix X, a row at a time, as you pass over the
+data:
+
+~i
+=
+Q.x~
+
+where x~ is the i-th row of X and i~ is the i-th row of the
+transformed data matrix X. At the same time as we pass
+
+
+
+
+19
+
+I-
+
+]u-
+
+i~-
+
+
+o-
+~u. 100~0
+
+
+
+
+:=
+
+
+~0
+4o
+4m
+em
+
+Number~ C.o&m~
+
+
+
+Figure 5: Some Timing Results.
+
+over the data we use the order statistic algorithm of PASS 1
+to compute the robust scale estimate of the columns of the
+transformed X:
+
+~ = .7413. IQD~ (~)
+
+These estimates are positive in all but special non-degenerate
+situations (which we discuss briefly below), and as such their
+squared values serve as robust non-negative estimates of the
+eigenvalues of of Co. Let D be the diagonal matrix whose
+elements are ~ ordered from largest to smallest, i.e., ./911 is
+the largest and Dpp the smallest of the g~, respectively. The
+final positive definite robust covariance matrix is:
+
+= Qf)q'.
+
+
+Computational Complexity and Computing Times.
+The resulting robust positive definite covariance matrix es-
+timate has computation complexity
+
+O(n). O(p~).
+
+We have carried out some timing experiments for a range of
+n and p, and the results are displayed in Figure 5.
+The timing results confirm the above complexity claim,
+and are such as to support computation on very large data
+sets in bearable amounts of time.
+The memory required
+for the I-Miner outlier detection node is roughly p * 600KB
+where p is the number of columns used to estimate the co-
+variance matrix. When p ----80 this works out to be 48MB.
+Our test computer has only 128MB of memory total so some
+virtual memory was used. We suspect that this paging ex-
+plains the slower than quadratic performance for -- 80 in
+these timing results.
+The
+Choice of Robust Scale Estimate.
+The IQD
+scale estimate used has a breakdown point of 1/4. We used
+it in the current implementation instead of the median ab-
+solute deviation about the median (MAD) scale estimate,
+which has a breakdown point of 1/2, because the use of
+MAD would require another pass over the data. However,
+for some data sets the additional pass may be worth the
+extra computation effort to achieve a breakdown point of
+one-half, as this may be useful for special highly structured
+data sets having a fraction greater than 1/4 of outliers.
+The Robust
+Mahalanobis Distance. The above ro-
+bust covariance matrix estimate is now used, along with the
+coordinate-wise medians as a robust location estimate, to
+compute a robust Mahalanobis distance. The computation
+of these distances requires another pass over the data.
+D
+
+
+
+Figure 6: I-Miner
+Outlier Detection
+Visual Flow
+
+Map.
+
+
+5.
+AN INSIGHTFUL-MINER OUTLIER DE-
+TECTION EXAMPLE
+
+5.1
+Glass Example
+The data set glass is a small 241 × 10 table consisting
+of 9 numeric variables and one categorical variable.
+The
+9 numeric variables are the percentages of various chemical
+constituents of the glass. We computed the QC based robust
+covariance matrix: and robust Mahalanobis distances for the
+sub-table consisting of the first five columns of the above
+table, using the Insightful Miner Outlier Detection node.
+Figure 6 shows an I-Miner visual data and compuation flow
+diagram that accomplishes the following: the Read Text File
+node reads a user-specified text file; the Filter Columns node
+lets the user select particular variables/columns (in this ex-
+ample the first five variables); the Outlier Detection node
+implements the algorithm described in Section 4; the Table
+View provides a table of values of the variables with each
+vector observation in a row, along with a column containing
+the robust Mahalanobis distances and a column containing
+"Yes" or "No" indicating whether or not a table row was de-
+clared an outlier. The Chart node computes the histogram
+of the robust distances, as shown in Figure 7.
+Upon running the outlier detection computations in I-
+Miner, the outlier detection algorithm generated the follow-
+ing output in a report window:
+
+· Outlier Detection (12): number vats=5, threshold=0.99,
+chi square distance threshold=15.0863
+
+· Outlier Detection (12): found 61 outlier rows, 153
+non-outlier rows, 0 NA rows
+
+Note that the 99% chi-squared threshold point of 15.09 re-
+sults in declaring that approximately 29% of the data points
+are outliers, while the remaining 71% of the data represents
+a central core. The histogram in Figure 7 clearly shows a
+cluster of large distances around 850 to 900 which are much
+larger than the automatic 99% chi-squared (with 5 degrees
+of freedom) threshold of 15.1 used above.
+A visualization of the data by means of all pairwise scatter
+plots in Figure 8 reveals an interesting aspect of the mul-
+tivariate structure that is reasonably consistent with these
+observations. One sees that the data appears to have a cen-
+tral core that is roughly elliptical in the pairwise views, along
+with broadly scattered outliers and the distinctive rod-like
+structure.
+The latter is due to the fact that 41 of the ob-
+servations of the Mg variable have value zero.
+This was
+evidently because the data values were not recorded or were
+
+
+
+
+20
+
+OUTLIER.DISTANCE
+
+i...................................................................................
+
+
+
+
+Figure
+7:
+
+Distances.
+Ol. R za'W~
+
+
+
+
+Histogram
+of the
+Robust
+Mahalanobis
+
+
+
+
+!.
+·
+
+
+.....2.:.... [- .:.
+.
+::.':
+
+
+
+
+Figure
+8: Pairwise
+Plots
+for the Data
+Set Glass.
+
+
+misplaced, and zero values were substituted for the missing
+values· Although these zero's could be detected by a simple
+algorithm applied to each column, it is interesting and for-
+tunate that if this step has not been taken the robust outlier
+detection method will typically detect rows containing un-
+suspected zero's (or other unsual coding values) for further
+examination by the data miner.
+Inspection of the scatterplots in Figure 8 reveals that there
+are roughly an addition 20 diffuse outliers well separated
+from the elliptical core. So what the automatic outlier de-
+tection algorithm with a 99% chi-squared threshold of 15.1
+does is identify the diffuse outliers as well as the extreme
+outlying rod caused by the zero Mg. In other words the
+outlier detection algorithm is behaving quite as anticipated·
+What the histogram is identifying with its bimodal char-
+acter is the separation of the pure rod outlier as the most ex-
+treme set of distances, distances that are well beyond those
+of the diffuse outliers closer to central bulk of the data. If
+you use a threshold of 200 to set aside outliers you will set
+aside the pure rod, and this is not an unreasonable first step.
+In a second step you will find the remainder of the diffuse
+outliers.
+These observations suggest that one might well use robust
+covariance matrix based robust distances to iteratively clus-
+ter multivariate data by itera~ive removal of outlier groups,
+monitored by histograms or density estimates of the robust
+distances, and subsequent iteration on the sub-clusters. This
+possibility bears further investigation.
+5.2
+KDD-CUP-98 PVA Donations Data
+This data set, which we will refer to as the "PVA" data,
+represents a much more substantial data mining challenge.
+The original KDD-CUP-98 PVA data set consisted of 95, 412
+records and 479 variables. For purposes of this example we
+have used 16 of the numeric variables. The result of running
+the I-Miner version of our scalable robust eovariance matrix
+and outlier detection method, as in Figure 6, consists of the
+following report window output,
+
+· Outlier Detection (1): number var= 16, threshold=
+0.99, chi square distance threshold= 31.9999
+
+· Outlier Detection (1): found 17903 outlier rows, 44284
+non-outlier rows, 33225 NA rows
+
+the histogram of robust distances shown in Figure 9 (in
+which we have filtered out a few very extreme outlier dis-
+tances for purposes of a more detailed display), and the plot
+in Figure 10 of ordered absolute differences between the clas-
+sical and robust correlation coeffients obtained from the ro-
+bust correlation matrix.
+Figure 10 shows that while the
+vast majority of the absolute differences between the clas-
+sical and robust correlation coefficients are less than .05, a
+few differences are fairly large (three are larger than .2 and
+ten are larger than .1).
+In order to more fully test the capabilities of the robust
+outlier detection method, we modified a subset of the PVA
+data as follows. We took a subset of 10,000 records from the
+PVA data set. Then we added 1,000 rows - each identical
+to the second row except that the value for the variable
+"minramnt" was changed to 1 and the value of the variable
+"avggift" was changed to 50. While this does not result in
+very extreme outliers, it does result in outliers that are well
+detached from the bulk of the data.
+The results for this
+modified data set are shown in the I-Miner report window
+output provided below, and in Figure 11 (in which we have
+filtered out a few very extreme outlier distances for purposes
+of a more detailed display) and in Figure 12.
+
+· Outlier Detection (1): number vars= 16, threshold=
+0.99, chi square distance threshold= 31.9999
+
+· Outlier Detection (1): found 3618 outlier rows, 7382
+non-outlier rows, 0 NA rows
+
+In this case the outliers show up as a clear bump in the
+histogram bar located near 225. This suggests further in-
+vestigation of the data by deleting all outliers with robust
+distances greater than 175--200. The over-all shape in Fig-
+ure 12 is similar to that of Figure 10, except now the largest
+difference is .5 rather than .35, and several more in the .2-.3
+range, reflecting the impact of the added outliers.
+
+
+
+
+21
+
+(AIII dural)
+i
+
+
+
+
+Figure 9: Histogram of Robust Distances for the
+PVA Data.
+
+
+
+
+\
+
+
+\
+
+
+40
+~
+nO
+1¢~
+I~
+140
+
+
+
+
+Figure 10: Differences between Classical and Robust
+
+Correlations for PVA Data.
+
+
+
+..........................
+O U ~ R : O ~ ' T ~ C ~
+- ......................
+~i
+(Aim SaM
+i
+
+i ...........................................................................................................................................
+!
+
+
+
+e',eol
+
+
+
+
+Bin Ra'~Q
+
+
+
+
+Figure 11: Histogram of Robust Distances for
+
+ified PVA Data with Outliers.
+Mod-
+0.~
+
+
+
+
+i
+0.2
+
+
+
+
+ol
+AE,~.UTE DIFFERIENCE8 BETWEEN ROGUST AND CLASS:~*AL COR~ELATICeI5
+
+
+I
+I
+I
+I
+I
+I
+I
+
+
+
+
+I
+
+
+%
+
+
+
+
+Figure 12: Differences between Classical and Robust
+Correlations for Modified PVA Data.
+6.
+REFERENCES
+[1] M. B. Abdullah. On a Robust Correlation Coefficient.
+In The Statistician, 39, pp. 455-460, 1990.
+[2] P. Davies. Asymptotic Behavior of S-Estimates of
+Multivariate Location Parameters and Dispersion
+Matrices. In The Annals of Statistics, 15, pp.
+1269--1292, 1987.
+[3] S. J. Devlin, R. Gnanadesikan and J. R. Kettenring.
+Robust Estimation of Dispersion Matrices and
+Principal Components. In Journal of the American
+Statistical Association, 76, pp. 354-362, 1981.
+[4] D. L. Donvho. Breakdown Properties of Multivariate
+Location Estimators. Ph.D. Qualifying Paper. Dept.
+of Statistic, Harvard University, 1982.
+[5] R. Gnanadesikan and J. R. Kettenring. Robust
+Estimates, Residuals, and Outlier Detection with
+Multiresponse Data. In Biometrics, 28, pp. 81-124,
+1972.
+[6] F. Hampel, P. Ronchetti, P. Rousseeuw and W.
+Stahel. Robust Statistics: The Approach Based on
+Influence Functions. John Wiley & Sons, 1986.
+[7] P. J. Huber. Robust Statistics. John Wiley & Sons,
+1981.
+[8] G. S. Manku, S. Rajagopalan and B. Lindsay.
+Random Sampling Techniques for Space Efficient
+Online Computation of Order Statistics of Large
+Data Sets. In ACM SIGMOD Record, 28, 1999.
+[9] A. Marazzi and C. Ruffieux. Implementing
+M-Estimators of the Gamma Distribution, in Robust
+Statistics. :Data Analysis and Computer Intensive
+Methods, in Honor of Peter J. Huber's 60th
+Birthday, Springer Verlag, 1996.
+[10] R. Maronna. Personal Communication. In
+International Conference on Robust Statistics, 2002.
+[11] R. Maronna. Robust M-Estimators of Multivariate
+Location and Scatter. In The Annals of Statistics, 4,
+pp. 51-67, 1976.
+[12] R. A. Maronna, W. A. Stahel and V. Yohai.
+Bias-Robust Estimation of Multivariate Scatter
+Based on Projections. In Journal off Multivariate
+Analysis, 42, pp. 141-161, 1992.
+[13] R. Maronna and V. Yohai. The Behaviour of the
+Stahel-Donoho Robust Multivariate Estimator. In
+Journal o] the American Statistical Association, 90
+(429), pp. 330-341, 1995.
+
+
+
+
+22
+
+[14] R. Maronna and R. Zamar. Robust Estimates of
+Location and Dispersion for High Dimensional Data
+Sets. In Technometrics, to appear, 2002.
+[15] D.M. Rocke and D.L. Woodruff. Identification of
+Outliers in Multivariate Data. In Journal of the
+American Statistical Association, 91 (435), pp.
+1047-1061, 1996.
+[16] P. Rousseeuw. Least Median of Squares Regression.
+In Journal of the American Statistical Association,
+79, pp. 871--880, 1984.
+[17] P. Rousseeuw. Multivariate Estimation with High
+Breakdown Point. Mathematical Statistics and
+Applications, pp. 283-297, Reidel Publishing, 1985.
+[18] P. Rousseeuw and V. Driessen. A Fast Algorithm for
+the Minimum Covariance Determinant Estimator. In
+Technometrics, 41, pp. 212-223, 1999
+[19] P. Rousseeuw and A. Leroy. Robust Regression and
+Outlier Detection. John Wiley & Sons, 1987.
+[20] W. A. Stahel. Breakdown of Covariance Estimators.
+Research report, 31, Fachgruppe fur Statistik, ETH,
+Zurich, 1981.
+
+
+
+
+23
+

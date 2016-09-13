@@ -1,0 +1,1838 @@
+Predicting Rare Classes:
+Can Boosting Make Any Weak Learner Strong?
+
+
+It/
+Mahesh V. Joshi
+IBM T. J. Watson Research
+Center and
+Universityof Minnesota,
+Minneapolis
+joshim @ us.ibm.com
+Ramesh C. Agarwal
+IBM Almaden Research
+Center
+650 Harry Road
+San Jose, CA
+ragarwal @ us.ibm.com
+Vipin Kumar t
+Universityof Minnesota
+Department of Computer
+Science
+Minneapolis, MN 55455
+kumar@cs.umn.edu
+
+
+ABSTRACT
+
+Boosting is a strong ensemble-based learning algorithm with
+the promise of iteratively improving the classification accu-
+racy using any base learner, as long as it satisfies the con-
+dition of yielding weighted accuracy > 0.5. In this paper,
+we analyze boosting with respect to this basic condition on
+the base learner, to see if boosting ensures prediction of
+rarely occurring events with high recall and precision. First
+we show that a base learner can satisfy the required con-
+dition even for poor recall or precision levels, especially for
+very rare classes.
+Furthermore, we show that the intelli-
+gent weight updating mechanism in boosting, even in its
+strong cost-sensitive form, does not prevent cases where the
+base learner always achieves high precision but poor recall
+or high recall but poor precision, when mapped to the orig-
+inal distribution. In either of these cases, we show that the
+voting mechanism of boosting falls to achieve good overall
+recall and precision for the ensemble. In effect, our analy-
+sis indicates that one cannot be blind to the base learner
+performance, and just rely on the boosting mechanism to
+take care of its weakness. We validate our arguments em-
+pirically on variety of real and synthetic rare class problems.
+In particular, using AdaCost as the boosting algorithm, and
+variations of PNrule and RIPPER as the base learners, we
+show that if algorithm A achieves better recall-precision bal-
+ance than algorithm B, then using A as the base learner in
+AdaCost yields significantly better performance than using
+B as the base learner.
+
+
+*Contact Author
+tThis work was supported in part by the Army High Perfor-
+mance Computing Research Center cooperative agreement
+number DAAD19-01-2-0014, the content of which does not
+necessarily reflect the position or the policy of the govern-
+ment, and no official endorsement should be inferred.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributedfor profit or commercial advantage and that copies
+bear this notice and the full citationon the first page. Tocopy otherwise, to
+republish, to post on serversor to redistributeto lists, requires prior specific
+permission and/or a fee.
+SIGKDD '02 Edmonton, Alberta, Canada
+Copyright 2002 ACM 1-58113-567-X/02/0007/_.$5.00.
+1.
+INTRODUCTION AND MOTIVATION
+In many domains such as fraud detection, network intru-
+sion detection, text categorization, and web mining, it is
+important to be able to learn effective predictive models for
+some critical events that usually occur very rarely. For ex-
+ample, in network intrusion detection domain, the number
+of past attacks on a server or a network is very small as
+compared to the number of normal connections. It is cru-
+cial to build good models which capture large number of
+the occurrences of the future attacks with small false posi-
+tive rate. In another example, it is important to predict the
+successful or actionable web sessions, that usually occur in
+relatively much smaller proportion in the sea of thousands
+of sessions occurring at a web-site on a given day. In many
+domains, past experience is usually available in the form of
+a set of records labeled with the category of that occurrence.
+In such cases, classification is a natural and promising choice
+of method.
+Some work has started to emerge in the field of building
+descriptive and predictive classifier models for rare events [8,
+3, 9]. Boosting [12, 4, 13, 6] is a promising meta-technique
+with a theoretically justified ability to improve the perfor-
+mance of any weak classification algorithm 1. All boosting
+algorithms work in iterations.
+In each iteration, a classi-
+fier model is learned via a weak learning algorithm on a
+weighted distribution of training records. After each itera-
+tion, the weights of all examples are updated in a manner
+that forces the weak classifier to focus more on the incor-
+rectly classified examples in the next iteration. The precise
+form of weight update differs across algorithms [10]. The al-
+gorithm stops either after a number of iterations computed
+via cross-validation or after some metric of quality starts de-
+teriorating. Usually, former method is chosen. The process
+of classifying a new example uses the ensemble of all the
+classifier models learned in all the iterations.
+Each model
+votes for a class. The vote is monotonic with the model's
+accuracy. The example is predicted to belong to a class with
+the largest vote.
+We assume a binary classification problem for illustrating
+the concepts of this paper. The boosting theory imposes a
+
+
+1In terms of PAC learning theory [11], weak learner is de-
+fined as an algorithm that, given e < 1/2 - '7 ('7 > 0) and
+6 > 0, can achieve an error rate of e, that is at least slightly
+better than than random guessing, with a probability of at
+least
+(1
+-
+J).
+
+
+
+
+297
+
+simple restriction on the accuracy of the base learner; that
+it should be better than 50% on any weighted distribution
+of training examples presented to it. Then, using the intel-
+ligent weight adaptation and the ensemble nature, boosting
+promises to achieve lower overall error rates as it progresses.
+Achieving better overall accuracy is the traditional goal of
+boosting. However, for rare classes, overall accuracy is not
+a meaningful metric, because for a problem with only 17o
+population of rare class, one can achieve good accuracy by
+just predicting everything to be of the non-rare class. It is
+more meaningful to achieve high recall and high precision2
+for the rare class of interest. Our primary goal in this pa-
+per is to evaluate boosting mechanism with respect to this
+objective. There are four components to boosting: the ac-
+curacy condition, the ensemble-based voting, the process of
+updating weights after each iteration, and the base learner
+algorithm. The effect of the voting process was analyzed
+in [2] with respect to the traditional goal of accuracy, to
+show that the key to the boosting performance is the intel-
+ligent weight update mechanism and not any specific form
+of voting (weighted vs. unweighted). The effect of vari-
+ous weight update mechanisms in the context of rare classes
+was compared in [10]. It was shown that the difference in
+the weight update mechanism significantly affects the per-
+formance. However, the choice of the base learner was kept
+fixed in that work. The question we ask in this paper is: for
+a given weight update mechanism and a simple unweighted
+form of the voting process, can boosting improve the perfor-
+mance of any base learner for the rare class, provided that
+the base learner satisfies the condition on weighted accuracy
+in every iteration? The insight we obtain will be useful to-
+wards extracting the best performance from a given boosting
+algorithm.
+We present detailed analysis to show three things. First,
+the accuracy condition can be satisfied despite having the
+recall and precision of the rare class vary in a wide range.
+Secondly, we show that the ensemble-based voting nature
+of boosting can fail to achieve overall good recall and pre-
+cision levels if the base learner always achieves poor recall
+or poor precision with respect to the original distribution
+of the training data. This is related to the nature of the
+voting process, which requires that for an example to get
+a correct prediction from the ensemble, total number of the
+base learners predicting that example to be correct should be
+more than the total number of base learners making incor-
+rect predictions. For example, if each base learner achieves
+poor recall, then the total number of classifiers predicting a
+class C example to be of class C, will be less, which indi-
+cates that the recall of the ensemble will also be poor. On
+the other hand, if each base learner achieve poor precision,
+then many base learners will erroneously predict an exam-
+ple not belonging to C to belong to C, thus reducing the
+precision of the ensemble also.
+The only safeguard that boosting provides against such
+cases, is the weight update mechanism. Third and more
+important thing we show, via detailed mathematical analy-
+sis, is that the weight update mechanism does not provide
+any guarantees of preventing the base learner from always
+
+2Given that a classifier detects total m examples to be of
+class C, out of which ! are indeed of class C, then precision of
+the classifier for class C is l/m. If there are total n examples
+of class C in the set, then the classifier has a recall of l/n
+for class C.
+achieving poor recall or poor precision, especially as the tar-
+get class becomes rare. In particular, we perform an incre-
+mental analysis of a generic boosting mechanism to show
+that the weight update mechanism does not force two con-
+secutive base learners to have significant overlap for low re-
+call or low precision values, under the condition that the
+weighted accuracy of both learners remains > 50~.
+Once we show these things, it follows that the performance
+achieved by the boosting algorithm is strongly tied to the
+choice of the base learning algorithm. Thus, if the chosen
+base learner always achieves poor recall or poor precision,
+then boosting performs poorly. More interesting outcome of
+our analysis is that, if an appropriate algorithm is chosen
+as the base learner, especially the one that always tries to
+achieve a good tradeoif between recall and precision on a
+given weighted distribution, then boosting performance can
+be significantlyimproved.
+We validate our arguments on various synthetic and real
+data sets, using AdaCost as the boosting algorithm, and
+variations of RIPPER [5] and PNrule [9] as the base learn-
+ers. In particular, we show that if the base learner of one
+kind performs better than the other on its own, then Ada-
+Cost using the better base learner performs better. Some-
+times, the performance improvement achieved by using an
+appropriate base learner is seen to be better than factor of
+two.
+
+Contributions:
+
+· Detailed generic analysis of boosting mechanism with
+respect to the accuracy condition imposed by boost-
+ing, in the context of achieving higher recail-precision
+balance for the rare classes.
+
+· An insight that choice of the appropriate base learner
+is crucial when it comes to predicting rare classes ef-
+fectively.
+
+· Use of the above insight to achieve significantlybetter
+performance from boosting.
+
+The rest of the paper is organized as follows. Section 2
+gives a brief overview of a generic boosting algorithm. Sec-
+tion 3 analyzes the accuracy condition in context of rare
+classes, and shows the inadequacy of boosting to guarantee
+good recall-precision performance. Section 4 presents var-
+ious supporting results, and Section 5 concludes the paper
+with the summary and some remarks.
+
+
+2.
+BOOSTING OVERVIEW
+Boosting algorithms work in iterations. In each iteration,
+base learning algorithm is invokedon a weighted distribution
+of the training data. The key idea in boosting is to modify
+the weights on the examples so that the weak learner in the
+next iteration tbcuses on correctly classifying the examples
+that were misclassified by most of the earlier weak learners.
+To achieve this, boosting algorithm increases the weights
+of the incorrect decisions made by the weak learner of the
+present iteration, and suppresses the weights of the correct
+decisions. The factors used for boosting or suppressing the
+weights depend on the accuracy of the weak learner in gen-
+eral and differ across algorithms. However, the boosting the-
+ory ensures that all these factors are > 1 (i.e. factors used
+for boosting weights indeed increase the weights and factors
+
+
+
+
+298
+
+next
+·
+
+itmfi~
+
+
+
+N
+
+
+
+
+O)
+(II)
+
+
+
+Figure 1: Consecutive iterations of a boosting algo-
+rithm. TP and TN denote true positive and negative
+predictions with respect to C for classifier C1. FP
+and FN denote false positive and negative predic-
+tions.
+
+
+used for suppressing weights indeed decrease the weights),
+by imposing a condition that the weak learner should do bet-
+ter than random guessing; i.e. its accuracy on the weighted
+distribution from which it learns should be > 0.5.
+The boosting process is illustrated in Figure 1, which
+shows consecutive iterations of a boosting algorithm oper-
+ating on a binary classification problem with rare class C
+and non-rare class NC. The net effect of the weight update
+mechanism is that the next weak learner for a class, say C,
+tries to predict more of the false negative predictions of C
+and less of the false positive predictions of C as belonging
+to C. However, because of the reduction in weight on true
+predictions, some of them will get predicted incorrectly by
+the next base learner. Overall, if one looks at the models
+learned in the consecutive iterations, the picture will look
+similar to that shown in Figure 1. Here the circles indicated
+by C1 and C2 indicate the boundary of the classifier for
+class C; i.e. everything within these circles is predicted as
+C and everything outside is predicted as NC. The key thing
+to observe is how C2 is shifted from C1 to cover more false
+negatives of C1 and less false positives of C1. If the process
+continues beyond C2, then a boundary similar to C3 will be
+learned.
+This process is common across all algorithms, what is dif-
+ferent is the factors by which each of the four types of exam-
+ples, TP, FP, TN, FN, shown in left part of the Figure, get
+updated to form the distribution from which C2 is learned.
+We give details of these factors for AdaCost later in Sec-
+tion 3.3. A comprehensive comparison can be found in [10].
+
+
+3.
+EFFECT OF BASE LEARNER
+The goal of this paper is to formally analyze the inade-
+quacy of the only condition imposed by boosting algorithms
+on the weak learner; i.e. its weighted accuracy should be
+> 50%, when it comes to rare classes, and make a case that
+the nature of weakness of the base learner matters when it
+comes to predicting rare classes effectively. We do this step
+by step in following subsections.
+
+3.1
+Analyzing the Weakness Condition
+The first step in our analysis will show how a weak learner
+accuracy condition translates into the conditions on recall
+and precision of the base learner with respect to the rarer
+class. Let us first show a relationship between overall accu-
+racy and recall, precision values of the rare class. We will
+assume the confusion matrix of Table 1 for all our discus-
+sions. Note that the total weight on all the examples in the
+training set is assumed to be 1, at the beginning of each
+l[ predict C
+predict NC
+11Total
+actualC
+I r(TP )
+p-v(FN)
+[
+~
+actual NC
+¢ (FP)
+1 - p- ¢ (TN)
+1
+p
+
+
+Table 1: Confusion Matrix in terms of the true pos-
+itive predictions (7-), false positive predictions (¢),
+and the proportion of C's examples in the training
+set (p).
+
+
+iteration. In fact, boosting has a step of normalizing the
+weights after they are modified at the end of every itera-
+tion. Let us denote the sum of the weights on all the true
+positives (TPs), true negatives (TNs), false positives (FPs),
+and false negatives (FNs) by 7-, rn, ¢, and Cn, respectively.
+For all the discussion, let C be the original rare class and
+let NC represent all the other examples (may include all the
+classes other than C, when a multi-class problem is trans-
+lated to binary problem for modeling C).
+Recall of C, denoted by R, is defined as how many of
+the total C's examples are predicted correctly; i.e., R =
+TP/(TP + FN). For our confusion matrix, R = "r/p. Pre-
+cision with respect to C, denoted by P, is defined as how
+many of the examples predicted as C indeed belong to C;
+i.e., P = TP/(TP + FP). For our confusion matrix, P =
+~/(7-+ ¢).
+Overall accuracy, denoted by u, is v = 7-+ 7-n. For our
+confusion matrix, 7-n = 1 - p - ¢. Hence, v = 1 + 1"- p -
+¢. Using substitutions 7- = Rp and ~b = 7-((l/P) - 1) =
+Rp((1/P) - 1), v can be expressed in terms of R and P as
+u =
+1 + Rp
+-
+p -
+Rp((1/P)
+-
+1).
+For the accuracy to be greater than 50%; i.e., for e > 0.5
+to hold, following limits on R must hold, since C is the rare
+class (i.e. p < 0.5):
+
+R
+<
+((0.51p) - 1)/((l/P)
+- 2), for P < 0.5
+
+>
+((0.5/p) -
+DI((IlP)
+-
+2) = -6,
+for
+P > 0.5,
+
+where ~ > 0. As these limits indicate, for P > 0.5, any R
+value can satisfy the accuracy constraint, provided p < 0.5;
+i.e. recall of the rarer class can assume any value provided
+that its precision is > 50%. For P < 0.5, one can make
+following observations on the upper limit on recall. As both
+p and P tend towards 0.5, the upper limit on recall tends
+towards 0.5. This indicates that for similar distributions of
+classes, if precision is closer to 50%, so should be the re-
+call. In fact, for similar distributions of classes, recall and
+precision are closely coupled and there is not much freedom
+in choosing value of one for a fixed value of the other, es-
+pecially as the precision starts getting poorer. However, as
+the rarity increases, upper limit on recall tends towards 1 as
+long as P > 1/((0.5/p) +1). As an example, ifp = 0.05 (5%
+population of C), for any value of precision > 9.1%, recall
+can assume any value (from 0 to 100%) still maintainingthe
+accuracy value to be > 0.5. Similarly, for p = 0.01 (1% pop-
+ulation of C), for any value of precision > 1.96%, recall can
+range from 0% to 100%. Thus both precision and recall can
+basically assume almost any values as the target class pro-
+portion decreases significantly. This discussion shows that
+when it comes to rare classes, the condition on accuracy
+imposed by the boosting algorithms, allows one to choose
+a wide range of learning algorithms as the base learner, ir-
+respective of their recall-precision performance on the rare
+
+
+
+
+299
+
+(TypeA)
+(TypeB)
+C
+
+
+
+
+N
+
+
+
+(TypeC)
+
+
+Figure 2: Three types of weak learners: A. Weak learner with over-emphasis on precision (e.g. RIPPERO with
+unit weight).
+B. Weak learner with over-emphasis on recall (e.g.
+RIPPERO with weight stratification).
+C.
+Weak learner with similar emphasis on recall as well as precision (e.g. PNrule). Example X belongs to C, and
+Y belongs to NC. Refer to text for how X and Y's prediction is affected by boosting a given type of the base
+learner.
+
+
+class.
+So, the natural question is, does the boosting performance
+as a whole depend on the choice of the base learner, when
+it comes to effectively predicting rare classes? Or does the
+boosting mechanism have an ability to overcome the poor
+performance of the weak learner to achieve an overall good
+performance for the rare class? In the next two subsections,
+our attempt isto show qualitativelyand formally that boost-
+ing mechanism does not offerany guarantee of such ability.
+
+3.2 Effect of the Ensemble Voting
+The second step of our analysis makes a case that there
+can exist at least three different types of base learners, for
+which the effect of ensemble-based voting can be signifi-
+cantly different. In particular, we consider three types of
+classifiers: A. the one geared toward achieving high preci-
+sion irrespective of how much recall it achieves, B. the one
+that is geared towards achieving high recall without caring
+much for the precision, and C. the one that can achieve a
+good tradeoff between recall and precision simultaneously.
+For these three types of classifiers, Figure 2 shows how the
+classifier boundaries for C in different boosting iterations
+will look like. A point to note is that each classifier learned
+from a different distribution, so to put them all in single per-
+spective, the Figure is drawn in the original weight space.
+The figure may look cluttered, but focusing on how many
+classifiers predict the indicated examples X and Y as belong-
+ing to C, will help in understanding the following discussion.
+The type A classifier tries to achieve good precision in
+every iteration, but in the process may achieve very poor
+recall. The weight update scheme shifts the classifier focus
+to capturing less of correctly predicted examples and more
+of incorrectly predicted examples. Thus its primary effect
+to keep shifting the classifier boundary all over the region of
+C, such that every positive example of C gets covered by at
+least some classifier. If the recall in each iteration is limited
+because of the type of the weak learner, then in a given
+number of iterations, each X example may get predicted as
+C only by a few number of classifiers. Thus, the ensemble-
+based prediction may assign it a class of NC, thus achieving
+a overall poor recall.
+The problem with type B classifiers is the opposite, as
+shown in Part II of Figure 2. If every base learner focuses
+only on the recall, and inherently achieves poor precision
+in the process, then many X examples will get covered by
+many classifiers. Thus, the overall ensemble can achieve
+very good recall levels. However, in the process, sufficiently
+large number of Y examples can also get covered within C's
+boundaries. Remember that the total number of X examples
+is rare, so even if a small fraction of total number of Y
+examples get captured by sufficiently many classifiers, the
+precision will suffer. This is shown in the figure by various
+regions in the NC part that fall within the boundaries of
+sufficiently many base learners. All these will be predicted
+as C's, thus causing false positive rate to go up and suffering
+on precision.
+Finally, the type C classifiers try to achieve the best fea-
+tures of types A and B (higher recall and higher precision)
+in every iteration of the boosting algorithm. An example
+of it is depicted part III for Figure 2. Thus, the final en-
+semble can achieve good recall by having many classifiers
+covering any given X example, and good precision as well
+by not having many classifiers cover many Y examples.
+
+3.3
+Effect of Weight Update
+The final step of our analysis is to basically find the con-
+ditions under which all the scenarios presented in Figure 2
+are possible. In other words, we want to find out if the un-
+desirable situations, such as those of types A and B base
+learners, can be avoided. After the analysis of voting pro-
+cess and the accuracy condition presented so far, the only
+mechanism boosting offers is its intelligent weight updating
+process. We want to see if this mechanism provides any
+safeguard against type A and B situations. For example,
+scenario A can be avoided in couple of ways. One is by en-
+suring that each weak learner progressively covers more and
+more part of the target class (i.e. achieves higher recall) in
+the original weight space. Second is by forcing two consec-
+utive weak learners to have significant overlap in their true
+positives. In either of the cases, there will be enough over-
+lap among classifiers for a given example to achieve overall
+good recall. Scenario B can be avoided by forcing each base
+learner to have higher precision; i.e. less number of false
+positives, for a given recall, so examples of Y kind will have
+less number of classifiers covering them, achieving overall
+good precision. Here is the approach we take to show that
+
+
+
+
+300
+
+C
+C
+
+
+
+
+Figure 3: Two consecutive iterations of a boosting
+algorithm. The figure also embodies the parameters
+and assumptions used in our analysis.
+
+
+
+none of these solutions can be forced by boosting.
+Our analysis is similar to the proof-by-contradictionstrat-
+egy. We first enforce that the recall and precision of the
+base learner follow a fixed pattern from one iteration to the
+next. Then we show that a particular case where each weak
+learner achieves identical recall and precision in the origi-
+nal weight space is allowed by weight update mechanism,
+especially for the combinations of low recall, high preci-
+sion (type A learner) and low precision, high recall (type
+B learner). What this effectively means is that the weight
+update does not enforce the weak learner to achieve pro-
+gressively higher recall or precision levels. Also, if we can
+show that the overlap among true and false positives al-
+lowed between two consecutive base learners is not restricted
+especially for these recall-precision combinations, then the
+second solution above to avoid situation A is not enforced.
+Moreover, we want to show that these issues become relevant
+especially for rare classes.
+We show all these points by presenting a generic analysis
+of two consecutive iterations of boosting. We parameter-
+ize our requirement that recall and precision follow a fixed
+pattern and also use a parameter to describe the overlap be-
+tween two consecutive learners. The key is to find what are
+the conditions required to assure that the next base learner
+achieves a weighted accuracy of > 50% given that the cur-
+rent base learner has weighted accuracy of > 50%. We keep
+our analysis very general in the sense that it can be applied
+to most boosting algorithms.
+Let us start with Figure 3 to illustrate various parame-
+ters and assumptions of our analysis. The first part of the
+figure shows an arbitrary iteration (t) and uses the same no-
+tation as given in 'I~able 1. The second part illustrates the
+next iteration (t + 1) and embodies different parameters and
+assumptions that we describe next.
+Let D ~ denote the distribution from which C1 is learned,
+and D t+1 denote the weighted distribution from which C2
+is learned. Figure 3 is drawn in the Dt space and all the
+parameters are also defined with respect to the D ~distribu-
+tion. The key to our analysis, as will be clear later, is to
+map all the weights in the/9 ~+1 distribution to those in the
+D ~distribution.
+The two consecutive classifiers are assumed to have an
+overlap of w (0 < w < 1) in their TP and FP predictions.
+Ideally, one can assume different overlap factors for each, but
+assuming them equal simplifies the analysis without much
+loss of generality, especially for smaller values of w.
+The non-overlappingpart of TPs of C2 is assumed to be
+B times the non-overlappingpart of the TPs of C1; hence,
+the figure shows a total weight of 8(1 - w)v for C2's non-
+overlapping TPs. Similarly, non-overlappingpart of the FPs
+of C2 is assumed to be/~ times the non-overlappingpart of
+the FPs of C1; hence the total weight of ~3(1- w)¢ for C2's
+non-overlappingFPs.
+In fact, 0,/3, and w parameters together allow us to enforce
+a pattern on the recall and precision of the base learners
+from iteration to iteration, because recall and precision of
+C2 (denoted by Re2 and Pc2, resp.) depend on the recall
+and precision of C1 (R and P, resp.) and these parameters.
+The exact expressions are presented later.
+One more set of parameters is the weight update factors.
+Let 7 > 1 be the factor by which weight on each TP or
+TN example is reduced, q,p > 1 be the factor by which FPs
+are boosted, and 7,~ > 1 be the factor by which FNs are
+boosted. In general, the factors for TP and TN can also be
+different, but for simplifyingthe presentation of our analysis
+we assume them to be identical. In fact for many boosting
+algorithms including AdaBoost [12] and AdaCost [6], this is
+true I10].
+Using these parameters and the notations of Table 1 and
+Figure 3, our goal is to express the accuracy of C2, vc2,
+in terms of weights of distribution D ~. We start with the
+conjecture that the weighted accuracy of C1 is um:
+0.5+6,
+where 6 > O.
+Note that boosting ensures that each iteration starts on a
+distribution of weights; i.e. the sum of all weights is equal to
+1. This allows us to express accuracy of C1 or C2 as the sum
+of their respective true positives and true negatives. Using
+notations of section 3.1, vcl = 7-+ v·. Let us denote the
+sum of weights on the true positives, true negatives, and
+false positives of C2 with respect to the D ~+1 distribution,
+by r ~, v~, and ¢', respectively3. Hence, vc2 = r' + ~'~.
+We now express 1-t and v~ in terms of the parameters of
+C1 and weights of distribution D ~. One can decompose 7~as
+v~,o+v~.... where ~'~,ocorresponds to the true positives of C2
+that overlap with true positive predictions of C1, and 7~,no
+corresponds to the non-overlappingpart. The reason for this
+decomposition is that the weights on each of these parts were
+updated with different factors. Now, using the parameters
+of weight update mechanism, we can write 7~,o = vp,o/(Tz),
+where 1-r,o is the overlapping part of the TPs of C1. This
+expression comes from the fact that the weights of TPs of C1
+were suppressed by a factor 7 and normalized by the z factor
+to achieve a sum of 1 on weights of distribution Dt+l (it can
+be verified that z = ((r + rn)/7) + 7p¢ + 7-¢,~). Using
+Figure 3, we can further conclude that rv,o = wv.
+Thus,
+r~,o = rw/(Tz). The non-overlappingpan of r' corresponds
+to the false negative predictions of C1, which were boosted
+by a factor of 7n and normalized by z; hence, it can be
+expressed as v~,no = ¢n,oTn/z, where Cn,o is the part of Cl's
+FNs that overlap with C2's TPs. Again, using Figure 3, we
+can write ~'~,no= tO(1 - w)vn/z.
+Overall, one can express
+
+
+'
+T(O(I-- W)'7~+ ~)/Z.
+(1)
+T
+
+
+Using same arguments as for 7', it can be verified that
+false positives of C2, ¢' = ¢(-~-~-~ + wT~)/z.
+This uses
+the fact that the weight on overl-~pping false positives in-
+
+3Parameter for false negatives of C2 is not specifically de-
+fined because it is not explicitly required in our analysis.
+Also, given that sum of all weights is 1, it is not a free pa-
+rameter.
+
+
+
+
+301
+
+creases by a factor of %z, and non-overlapping part weight
+decreases by a factor of 7z, after C1 is learned.
+Now, r~n can be expressed as n' - ¢*, where n' is the total
+weight of NC's examples in distribution D ~+1, which is n' =
+((r,/7) + ¢fffp)/z, following the weight update mechanism.
+Using ~'cz = rn + v = 0.5 + 6(~ > 0), and expression for ¢'
+above, we can express r~n as
+
+
+r.=~
+3'
+7
+
+From the formulae
+1 and
+2, r,ca = r' + r'n can be ex-
+pressed as,
+
+
+
+
+Using this, and expressing r and ¢ in terms of recall (R)
+and precision (P) of C1 as r = Rp and ¢ = ((l/P) - 1)Rp,
+some simple algebraic manipulations prove the following the-
+orem:
+
+THEOREM 1. Forthe weighted accuracy of C$ to be > 0.5,
+under the assumptions that 01 's accuracy is 0.5 + ~ (5 > 0),
+the overlap factor between C1 and C~'s positive predictions
+must satis~
+
+
+to<l
+-0"5(7z-1)-6,
+i/Tz>l+26,Q>O,
+Q7
+(3)
+
+or
+
+
+
+
+to>l
+0.5(7z-1)--6
+Q7
+, if 7~ < x + 2,~,Q < o,
+(4)
+
+where Q is defined as
+
+
+
+
+and z is defined as
+
+
+
+
+If the conditions 7z > 1 + 2~ and Q < 0 are both satis-
+fied simultaneously, no solution exists for w; implying some
+parameter values are infeasible.
+If 7z < 1 + 2~ and Q > O, then every possible value of to
+can make weighted accuracy of C2 > 0.5. []
+
+This theorem essentially offers a tool to analyze the tol-
+erance allowed on the overlap between the two consecutive
+classifiers, for given values of p, R, and P, in order to achieve
+the condition on base learner's weighted accuracy imposed
+by the boosting mechanism. Note that p corresponds to the
+proportion of class C according to D t distribution.
+At first sight, it may seem that there are too many free
+parameters in the theorem to make it practical. However,
+one can make use of some more information to reduce the
+number of free parameters.
+First thing to note is that the range of to is also naturally
+limited by the choice of 8 and fL Because, from Figure 3,
+0 < 8(1-to)r _< (p-r)
+and0 < 3(1-to)¢ _< 1- p- qt hold.
+Thus, choice of O and 3 values impose following limits on w:
+to~_,toe;too= 1- (z-fie -¢ )
+(8)
+
+If Theorem 1 imposes a lower limit of toth on to, then ulti-
+mately we can verify that to > max(toth,too,toB).
+The values of di, R, P, and p are interrelated via different
+equations: 6 = 0.5 - Rp((1/R) + (l/P) - 2), ¢ <_ 1 - p, and
+P > 1/(1 + (1- p)/(Rp)). A specific boosting algorithm can
+be assumed, such as AdaCost [6], to determine the values of
+the parameters % 7p, and 7n. For AdaCost, if the cost fac-
+tor associated with FNs is f, the parameters are defined as
+follows [10]: 7Ac,t =
+e aAe't
+, 7n,Aest
+=
+"T~tc, t,
+and 7p.Acst
+"~"
+
+7(AI~)/I, where ,UAc,t = 1/2 In ((1 + rAest)/(1 -- roe,t)), rt
+is the cost- and sign-weighted sum of all the examples; i.e.,
+rAe,t = 0.5(r + r~) -- 0.5¢n(1 + f) -- ¢.
+Finally, we show a relationship between recall and preci-
+sions of C2 in terms of the recall (R) and precision (P) of
+C1. Using Figure 3, the recall and precision values of C2
+with respect to the distribution D t, are:
+
+~2
+= R(to + 0(1 - to))
+(9)
+
+(to+0(l-to)
+)
+Pc2
+=
+P
+to +
+(1 -
+to)(f~ + PCe - f~))
+(zo)
+
+From these, one can see how the choice of 0,/~, and to affect
+the relationships between R (resp. P) and Rc2 (resp. Pc2).
+For example, if 0 = f~, then Pc2 = P; i.e. we are seeking
+the existence of weak learners that maintain their precision
+across iterations with respect to the original distribution. If
+O=f~=l,
+thenRc2 =RaswellasPc2
+=P;i.e.
+we are
+seeking the existence of weak learners that maintain identi-
+cal recall and precision throughout the boosting iterations.
+In general, the choice of 8 and f~determines the class of weak
+learners allowed to be generated in the boosting process.
+From this point on, we deviate from the rigorous mathe-
+matical analysis, and conduct some simulation experiments
+to show what we started off to show; i.e., the situations of
+type A and B (Figure 2), cannot be avoided for a specific
+case of keeping recall and precision identical in all iterations;
+i.e. the case of 0 =/~ = 1.
+
+3.3.1
+Analysis for AdaCost for 0 = 1~= 1
+
+Let us see how the overlap allowed between two consecu-
+tiveclassifiersvarieswith the variationin rarity,recall,and
+precision numbers of a given classifier.We present simula-
+tion resultsfor AdaCost, one of the best performing algo-
+rithms from recall-precisionperspective [10].
+The variationin tom,n, minimum limit on to,for various
+values of R, P, and p is shown in Figure 4(a). The figure
+is for f = 1 (cost-factorin AdaCost). Each graph shows
+for a given value of P and p, how torni, varies with R. A
+point with torsi, = 1 implies that combination of R, P,
+and p corresponding to that point is infeasible to satisfy the
+requirement that vc2 > 0.5. Such points correspond to the
+failure of one of the requirements: 6 > 0, 7 > 1, ~b< (l-p),
+or the one stated in Theorem 1.
+The key observation from this figure is this: for a wide
+range of combinations of R and P, the to value is unre-
+stricted, especially for lower p values; i.e.
+the more rare
+classes. This implies that one can have any kind of base
+learner, and still maintain that each of them achieves an
+accuracy better than random guessing. Especially a base
+learner that has low recall (much less than 50%) and high
+precision (e.g., plot for P = 0.8, p -- 0.01), is allowed to
+
+
+
+
+302
+
+be used by the weight update mechanism. Note that this
+is the precise description of the type A classifiers of Fig-
+ure 2.
+Base learner that has sufficiently high recall and
+low precision is also allowed, as is evident from the plot for
+P = 0.1, p = 0.01. This corresponds to the type B classi-
+tiers of Figure 2. Note that a recall of around 50% is also
+very high when looking at each individual base learner. We
+can see that Wmin is 0 (i.e. w can range from 0 to 1) es-
+pecially for//<
+0.5 and lower values of p. So, within this
+range all the three types of classifiers are allowed (plot for
+P = 0.4, p = 0.01 can be thought of as corresponding to the
+type C learner).
+Even for R > 0.5, it can be verified that the value of to
+becomes unrestricted within the naturally allowed range, as
+p becomes smaller and precision becomes higher. This nat-
+ural limitation is imposed by the specific choice of # and/~.
+For example, for p = 0.01, the curves for R > 0.5 are identi-
+cal across all precision levels, and this curve is precisely the
+one dictated by equations ? and 8. This essentially indicates
+that type B and C classifiers are allowed even for their recall
+values of > 0.5.
+Second observation from this plots is that as the rarity of
+the class decreases from top to bottom, wmin starts getting
+closer to 1; i.e., less and less variation is allowed in w. This is
+especially seen for lower values of P, which means that type
+B classifiers (high recall, low precision) will not be allowed
+for very low values of P (e.g. plot for P = 0.1, p = 0.1).
+Also, type A classifiers (low recall, high precision) will not
+be allowed (e.g.
+plot for P = 0.1, p = 0.25).
+However
+for relatively higher values of P, both types of classifiers,
+especially those of type A (plot for P = 0.8 and p = 0.25),
+are allowed for not-so-rare classes also.
+Third observation to make is regarding the validity of
+incremental analysis for more than just two iterations for
+which the plots are drawn. Each graph also shows in dashed
+line the Pnew value; i.e. the proportion of C in distribution
+D t+l. The proportion does not change much from p, espe-
+cially for lower values of p. This illustrates that this incre-
+mental analysis is also valid if one does it going from the
+(t + 1)8t to (t + 2)nd iteration, and most probably for many
+iterations after that.
+Final observation is that as the f value increases in Ada-
+Cost, as shown in Figure 4(b); the range of overlap starts
+getting smaller, but still for rare classes (e.g.
+p = 0.01)
+and higher precision values, there is a wide choice of to al-
+lowed. Thus, type A classifiers (high precision) can exist
+for a wider range of f values also. Type B classifiers (low
+precision, high recall) can also exist if the precision becomes
+lower and lower.
+We also analyzed the more general cases. /9 > 1, ~3= 1 al-
+lows recall to increase progressively (left part of Figure 4(c)).
+As 0 increases, the threshold on R beyond which the natu-
+ral limitation starts applying decreases (its around 0.33 for
+= 2 and 0.17 for ~ = 5, as against 0.5 for # = 1), but within
+this naturally limited range, to can assume any value. The
+effect of 0 = 1,/~ > 1 is shown in the right part of Fig-
+ure 4(c). As/~ value increases, tomi,~ increases more sharply
+after the R threshold. This implies that the to value gets
+more restricted. For O =/~ > 1 (that allows constant pre-
+cision with variable recall), the sharper rise in w,ni,~ curve
+is accompanied by the lowering of threshold. There is still
+a wide variation allowed in the w values, especially as p be-
+comes smaller; i.e. for rarer classes.
+P..o.1
+
+,ilol
+
+0
+0.5
+1
+
+
+
+
+0
+0.5
+1
+
+
+
+
+. . . . . .
+
+0
+
+0
+0,5
+1
+
+
+ilo.i '~'",
+,,,o,,,~
+
+0
+05
+1
+R
+
+
+
+
+I:hO.~
+
+
+
+
+o
+ols
+i
+
+
+
+~0.5
+"
+r ,,0.1
+
+I|
+0
+--
+. . . .
+
+0
+015
+1
+
+
+
+
+o
+o's
+;
+
+I
+| 1
+~\
+
+
+
+~1 oJ
+,
+"-,
+P*,,o.4
+
+
+
+0.
+.oi
+
+
+
+0
+05
+1
+0
+0.5
+1
+
+
+
+
+O.
+.1
+O.
+.I
+
+
+
+0
+0.5
+1
+0
+0.5
+1
+
+1
+1
+
+
+
+
+0
+0.5
+1
+0
+0.5
+t
+
+
+
+
+O.
+~ -
+"~ ~r.o.,I.S
+O.
+.~
+
+
+
+0
+0,5
+1
+R
+
+q=l,b=l,f=l
+0
+0.5
+1
+R
+
+
+
+
+~.4
+Pto.I
+
+
+
+O.
+.ol
+0.
+Ot
+
+
+
+
+O
+0.5
+1
+
+
+
+
+0,:
+,
+.1
+0
+0.5
+1
+
+
+
+
+0.:
+.!
+
+
+
+0
+0.5
+1
+0
+0.5
+1
+
+
+-
+~
+
+
+
+0
+O,5
+I
+
+
+
+
+O.
+r ,,~.45
+0
+0.5
+1
+!j---
+O.
+tEA5
+
+
+
+
+q=l,b=l,f=lO
+0
+0.5
+I
+0
+0.5
+1
+O
+O,5
+I
+R
+R
+R
+
+
+
+
+(b)
+
+
+
+
+(c)
+
+
+Figure
+4:
+How
+to,nin (solid Hne) and pnew (dashed
+llne) vary with
+R, P, and p.
+(a) 0 = 1,/~=
+1, f = 1,
+(b) 0 = 1,/~=
+1, f = 10, (c) Left:
+8 = 5,/~ = 1, f = 1.
+Right:
+8 = 5,/~ = 5, f = 1.
+P increases
+from left to
+right, p increases
+from top to bottom,
+and R varies
+within each graph,
+i.....
+pDF vl.....
+plot. m~ .h.w.i.
+place of~,
+r for p, q for O, and
+b for ~.
+
+
+
+
+303
+
+3.3.2 Summary
+From the simulation results shown above, and the theo-
+retical tools developed earlier, we can conclude that weight
+update mechanism does not provide any safeguard against
+making a base learner achieve identical recall and precision
+values in many iterations, and thereby having situations of
+types A, B, C of Figure 2, when the class becomes more
+and more rare. This argument can be extended for other
+patterns of recall-precision values also, such as precision re-
+maining the same with recall increasing steadily. The gen-
+eral understanding is that the three types of classifiers can
+exist under different patterns, especially for rare classes.
+
+4.
+RESULTS
+In this section, we attempt to validate the arguments
+presented in the previous sections further. In particular,
+we illustrate how the choice of different base learning al-
+gorithms affects the performance of AdaCost [6], a cost-
+sensitive boosting algorithm. The experimental setting is
+as follows.
+We use three different forms of base learners: RIP0-S,
+PJP0-M, and PN-S. RIP0-S is the R.IPPER0 (= IREP* [5])
+algorithm which builds a single model for the given rare
+class. KIP0-M learns two models with RIPPER0, one for
+the rare class and other for the non-rare class. PN-S is the
+PNrnle algorithm [9] that builds single model for the rare
+class. We use PNrule parameters of rp = 0.7 and rn = O.
+Details of AdaCost, KIPPER, and PNrule can be found in
+the respective papers: [6], [5], and [9], but it suffices to know
+that we are using a strong boosting algorithm and weak
+forms of base learner algorithms.
+Our performance criterion is based on Fl-measure [14],
+which for a class C is 2 * (R * P)/(R + P), where R and P
+are recall and precision of C. F1 (0 < F1 < 1) is high if both
+R and P are high, and is dominated by the smaller of the
+two. Given no a-priori knowledge of costs associated with
+R and P, use of F1 seeks a balance between the two.
+For AdaCost, we use various values for f: 1, 2, 5, 10. For
+each f value, we run AdaCost for 25 iterations with PJP0-
+M and PN-S, and 50 iterations with RIP0-S. After every
+iteration, we monitor recall, precision, and Fl-measure on
+the validation data which is a one-third random sample of
+the training data. We choose parameters f and number of
+iterations, that give the best F1 value on this data as the
+optimal values, and report results of AdaCost using these
+values on the test data.
+
+4.1
+Datasets Used
+We have conducted experiments on many different syn-
+thetic and real datasets. Here, we just present the key re-
+sults.
+We generate different synthetic datasets from the model
+described in Figure 5, which shows class distributions over
+different types of attributes. For example, attributes of type
+ACb have distinguishing signature peaks for the subclasses
+of type Cb. Ca and Cb are the subclasses of the rare class
+C, and all subclasses of types NCa and NCi, form non-rare
+class NC. Note that there is a correlation between in the
+attributes ACORR~ and ANCa for every subclass of type
+NCa. Different parameters of the models are the number of
+subclasses of each type, the widths of the signature peaks,
+number of signature peaks for each type of attribute, and of
+course, the proportion of C vs. NC (the rarity). We vary
+ACORR_e
+ACb
+
+
+_a _ ,
+_| .J
+I
+[
+NC_rest
+NCrest ~
+C
+bCb C_bC_b C_b
+C.i
+C_re~t
+C~st
+
+we
+p~C
+p_C
+
+ANC_B
+ANC_b
+
+
+~
+NC.jest ~N
+C
+_
+~
+t
+N
+C
+aNC_a
+NCaNC_iNC_~ Crat
+NC_bNCbNCbNCbNCb Cresl
+
+
+
+
+p_NC
+p_NO
+
+
+Figure 5: Description of the model generating syn-
+thetic datasets udth correlations among attributes.
+
+
+
+these parameters to vary the learning difficulty in terms of
+achieving high recall and precision values. For example, if
+the peaks of ACb are wider, number of false positives cap-
+tured (i.e., the examples of NCa and NCb) will be more.
+So, an algorithm's ability to achieve higher precision for
+a given recall will be tested. Also, the difficulty increases
+as the peaks of ANCa and ANCb becomes wider, because
+precision of C suffers (especially for algorithms PN-S and
+RIP0-M, which learn explicit models for NC).
+We generate two main datasets from this model: sc-0 and
+sc-1. Each one has a 10% population of class C out of 22,000
+total examples, sc-0 has parameters nACORRa = O, nACb
+3, nANCa
+= 0, hANG b = 7, whereas so-1 has parameters
+RACORRa
+~- 3, nACb ~ O, nANCa
+~- 3, hANG b -~- 4. Here
+nA indicates number of attributes of type A. These Both
+these datasets have 4 signature peaks in subclasses of C and
+8 peaks in subclasses of NC. The widths as defined in figure
+are Wv = 0.2, WNC = 2, which should be compared against
+the attribute value range of 50.
+We formulate a set of real-world problems from the OHSU
+Mediine document corpus of medical abstracts from years
+1990 and 1991 [7]. Each document has multiple topics as-
+signed to it such as Infant, Infection, Cell_Line, etc. There
+are around 148,000 documents with 73,700 words remaining
+after stemming and stop-word removal. We select a few of
+the topics which have 300 more documents (> 0.2% popula-
+tion). For each topic, we select top 75 distinguishing words
+according to two different evaluation metrics, and take their
+intersection to choose the final set of feature words. This
+way, we form a different binary classification problem for
+each topic.
+We form the final set of problems using the king-rook-king
+dataset of the UCI machine learning repository [1]. In par-
+ticular we form binary problems for different classes appear-
+ing in the data,set. Almost all the classes have a proportion
+< 15%.
+
+4.2 Comparing Base Learner Effect
+Here, we present results that compare the effect of base
+learner on the Fl value. We use ACst-RS, ACst-RM, and
+ACst-PN to denote the AdaCost algorithm formed by using
+PdP0-S, R.IP0-M, and PN-S as the base learners. We want
+to see if the relative performance of base learners reflects in
+
+
+
+
+304
+
+the same relative performance of AdaCost based on them.
+The results shown in Table 2 show the effect of having
+correlations in the synthetic model (sc-0 vs. sc-1).
+We also varied various parameters of sc-1 dataset to see
+how the relative performance is affected (Table 3). In most
+cases, for this data-set, PN-S performs better than the other
+two base learners. As the results for ACst indicates, ACst-
+PN is also significantly better than ACst-RS and ACst-RM.
+Sometimes, the performance improvement obtained by using
+the right base learner is more than factor of 2 (e.g. datasets
+with PNC = 20, WG = 0.001, Wc = 0.04). From the maxi-
+mum achievable Fi value in all these datasets, one can see
+that the relative performance of base learners and their ef-
+fect on boosting is valid for a wide range of datasets.
+We also show the effect of varying the target class propor-
+tion (Table 4). As the rarity decreases, the effect of choosing
+a particular base learner diminishes. For example, for 50%
+population of the target class, all the variations of ACst are
+equally well.
+On the OHSU Medline corpus, the results are shown in
+Table 5. Though not as dramatic as synthetic datasets, these
+datasets also show that base learner choice matters, some-
+times significantly (HIV, Colon, Adenocaxcinoma). A point
+to observe is that: when two base learners are comparable
+by themselves, boosting performance based on them may ei-
+ther be comparable or significantly better for one (Anoxia).
+This still supports our point that choice of the base learner
+matters.
+Table 6 shows results on the various binary problems formed
+from the king-rook-king dataset. The base learner's effect
+here is again quite significant for many cases (observe classes
+nine, ten, eleven, thirteen, fourteen). When base learners
+are comparable, boosting performance is either comparable
+(class eight) or significantly better (class five).
+Overall, our results indicate: if one chooses a base learner
+that performs better in a stand-alone comparison among
+such learners, the the boosting algorithm based on it will
+in general give comparable or significantly better (but very
+rarely poor) performance.
+
+5.
+CONCLUSION
+Boosting has emerged as a strong classificationtechnique
+is recent years. It is claimed that it can improve'the per-
+formance of any weak learner. In this paper, we attempt to
+critically evaluate this claim in the context of an important
+data mining problem of achieving better recalland precision
+balance for the given rare or infrequently occurring classes.
+Using strong mathematical and qualitative arguments, we
+show that for rare class scenarios, the ability of a boost-
+ing algorithm is critically dependent on the abilitiesof its
+base learner. We analyze each component of the boosting:
+the accuracy condition, the voting process, and the weight
+update mechanism, and also show empirical evidence on dif-
+ferent synthetic, real, and benchmark data sets, in order to
+support our claim. We
+show that in many cases, the per-
+formance improvement obtained with the right base learner,
+can be dramatic, such as better than factor of two. We also
+demonstrate that as the rarity disappears, boosting perfor-
+mance depends less on the choice of the base learner. A
+very practical outcome of our analysis and results is that for
+rare class problems, one can decide which base learner to
+.... hy just comparing their stand-alone performance.
+Us-
+~he best base learner extracts the best or comparable to
+the best performance out of boosting. This we believe is a
+very valuable insight.
+Acknowledgments:
+The authors would liketo thank Aleksan-
+dar Lazarevic and Pusheng (Alex) Zhang of Army HPC Center,
+University of Minnesota, for theirvaluable comments.
+
+
+6.
+REFERENCES
+[1] C. Blake and C. Merz. UCI repository of machine
+learning databases, 1998.
+http://www.ics.uci.edu/,,~mlearn/MLRepository.html.
+[2] L. Breiman. Arcing classifiers. The Annals of
+Statistics, 26(3):801-849, 1998.
+[3] P. Chan and S. Stolfo. Towards scalable learning with
+non-uniform class and cost distributions: A case study
+in credit card fraud detection. In Proc. of Fourth
+International Conference on Knowledge Discovery and
+Data Mining (KDD.98), pages 164-168, New York
+City, 1998.
+[4] W. Cohen and Y. Singer. A simple, fast, and effective
+rule learner. In Proc. of Annual Conference of
+American Association for Artificial Intelligence, pages
+335-342, 1999.
+[5] W. W. Cohen. Fast effective rule induction. In Proc.
+of Twelfth International Conference on Machine
+Learning, Lake Talaoe, California, 1995.
+[6] W. Fan, S. J. Stolfo, J. Zhang, and P. K. Chan.
+AdaCost: Misclassification cost-sensitive boosting. In
+Pvoc. of Sixth International Conference on Machine
+Learning (ICML-99), Bled, Slovenia, 1999.
+[7] W. Hersh, C. Buckley, T. Leone, and D. Hickam.
+Ohsumed: An interactive retrieval evaluation and new
+large test collection for research. In In Proceedings of
+the 17th Annual ACM SIGIR Conference, pages
+192-201, 1994.
+[8] R. C. Holte, N. Japkowicz, C. X. Ling, and S. M.
+(eds.). Learning from imbalanced data sets (papers
+from aaai workshop). Technical l~eport WS-00-05,
+AAAI Press, Menlo Park, CA, 2000.
+[9] M. V. Joshi, R. C. Agarwal, and V. Kumar. Mining
+needles in a haystack: Classifying rare classes via
+two-phase rule induction. In Proc. of A CM SIGMOD
+Conference, pages 91-102, Santa Barbara, CA, 2001.
+[10] M. V. Joshi, V. Kumar, and R. C. Agarwal.
+Evaluating boosting algorithms to classify rare classes:
+Comparison and improvements. In Proc. of The First
+IEEE International Conference on Data Mining
+(ICDM), San Jose, CA, Nov 2001.
+[11] M. J. Kearns and U. V. Vazirani. An Introduction to
+Computational Learning Theory. The MIT Press,
+1994.
+[12] R. Schapire and Y. Singer. Improved boosting
+algorithms using confidence-rated predictions.
+Machine Learning, 37(3):297-336, 1999.
+[13] K. M. Ting. A comparative study of cost-sensitive
+boosting algorithms. In Proc. of 17th International
+Conf. on Machine Learning, pages 983-990, Stanford
+University, CA, 2000.
+[14] C. J. van Rijsbergen. Information Retrieval.
+Butterworths, London, 1979.
+
+
+
+
+305
+
+DS
+P
+II RIP0-S I RIP0"M I PN-S II ACst-RS [ ACst-RM
+sc-0 9.137% [ 85.45
+50.48
+88.45
+88.93
+I
+89.08
+sc-1 9.137%
+2.33
+41.65
+59.55
+35.86
+41.65
+ACst-PN II
+88.45
+I
+77.58
+
+
+
+Table 2: Comparing classifiers on synthetic datasets
+
+
+
+
+DS
+PNC = 2
+PNC = 4
+PNC = 8
+PNC = 12
+PNC = 20
+p
+RIP0-S
+RIP0-M
+PN-S
+9.149 %
+0.00
+67.75
+61.45
+9.137 %
+7.69
+32.11
+51.53
+9.137 %
+2.33
+41.65
+59.55
+13.043 %
+41.17
+19.94
+53.94
+9.091%
+2.12
+3.90
+34.10
+ACst-RS
+ACst-RM
+ACst-PN
+54.56
+72.00
+86.29
+60.96
+58.23
+81.25
+35.86
+41.65
+77.58
+47.40
+71.07
+28.57
+50.13
+27.94
+60.68
+
+iwo:000110137
+801
+177
+,778
+3 00
+33.7o
+83.28
+I
+Wc
+= 0.004
+9.137 %
+2.33
+41.65
+59.55
+35.86
+41.65
+77.58
+Wc = 0.04
+9,137 %
+0.20
+0.00
+44.74
+24.33
+25.58
+49.52
+
+
+
+Table 3: Comparing
+classifiers on variations of so-1 parameters
+
+
+
+
+p
+RIP0-S
+RIP0-M
+PN-S
+ACst-RS
+2.452 %
+0.00
+0.00
+12.60
+2.45
+4,787 %
+1.55
+0.00
+20.18
+15.38
+9.137 %
+2.33
+41.65
+59.55
+35.86
+16.667 %
+3.22
+0.39
+79.73
+45.80
+28.571%
+2.70
+23.09
+80.48
+60.95
+50,000 %
+65.01
+63.70
+78.53
+78.44
+ACst-KM
+ACst-PN
+0.76
+51.02
+11.44
+48.48
+41.65
+77.58
+44.56
+81.98
+59.89
+84.17
+78.44
+78.53
+
+
+
+Table 4: Comparing classifiers when target class proportion changes in sc-1 dataset
+
+
+
+
+DS
+p
+RIP0-S
+R,IP0-M
+PN-S
+ACst-RS
+Anoxia
+1.252
+40.29
+40,58
+47.93
+47.06
+HIV
+1,376
+0.00
+4.05
+15.01
+3,51
+Internship_and_Residency
+2.178
+57.29
+55.91
+53.98
+57.29
+Adenocarcinoma
+2.267
+43.72
+51.92
+53.75
+52.65
+Heart
+2.748
+2.11
+1.28
+31.84
+34.83
+Colon
+4.878
+7.92
+7.92
+37.50
+42.39
+Molecular_Sequence_Data
+7.136
+60.43
+59.91
+66.06
+ACst-RM
+43.71
+ACst-PN
+51.71
+12.55
+15.53
+55.91
+54.07
+55.61
+56.93
+33.91
+36.39
+37.58
+45.56
+
+
+
+
+Table 5: Comparing
+classifiers on some topics from OHSU Medline corpus
+
+
+
+
+DS
+p
+RIP0-S
+RIP0-M
+PN-S
+ACst-RS
+krkopt-1_sixteen
+1.404
+25.71
+50.92
+56.35
+47,87
+krkopt-l_five
+1.861
+2.26
+2.26
+63.48
+56.01
+krkopt-l_eight
+5.182
+5.51
+5.05
+52.74
+52.34
+krkopt-l_nine
+5.988
+4.15
+31.48
+43.35
+48.88
+krkopt-l_ten
+6.808
+0.21
+0.00
+42.08
+44,92
+krkopt-1..fifteen
+7.685
+17.26
+61.89
+66.07
+53,26
+krkopt-1_eleven
+10,372
+0.82
+0.00
+49.00
+46,17
+krkopt-l_thirteen
+15,227
+12.38
+44.54
+58.51
+48,80
+krkopt-1_fourteen
+16.317
+26.66
+61.73
+61.73
+51.76
+ACst-RM
+ACst-PN
+66.67
+70.17
+64.24
+65.84
+52.97
+61.84
+51.31
+59.11
+48,79
+54.63
+66.03
+72.09
+49.59
+58.62
+52.27
+61.56
+64.47
+72.90
+
+
+
+Table 6: Comparing
+classifiers on king-rook-king problem from UCI Repository
+
+
+
+
+306
+

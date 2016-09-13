@@ -1,0 +1,259 @@
+Optimization
+of Collection Efforts in Automobile
+Financing
+-A KDD supported Environment
+H. Kauderer, G. Nakhaeizadeh
+DaimlerChrysler
+AG
+Research and Technology
+P.O. Box 23 60, D-89013 Ulm, Germany
+harald.kauderer@daimlerchtysler.com
+rheza.nakhaeizadeh@daimlerchtysler.com
+
+ABSTRACT
+
+This paper presents a project realized in the domain of risk
+managementat afinancial servicessubsidiaryof DaimlerChrysler.
+The project resultedin the implementationof an innovative KDD
+approachdesignedto optimize the collection efforts in automobile
+financing. In contrast with the conventional "credit scoring" -
+which is mainly gearedtowards assessinga customer's credit
+worthiness at the time when she/heapplies for a loan - in this
+project we followed the credit life cycle downstreamand focused
+on how to bestdeal with delinquent customersin an actual credit
+portfolio. The resulting DataMining solution wasimplementedin
+the finance company's systems environment and in daily
+operations.
+Keywords
+Scoring, collections, credit risk, vehicle financing, automobile
+lending
+
+1. INTRODUCTION
+In traditional automotive lending "collections" generally refersto
+all the processes,tools and activities carried out to deal with
+delinquent customers.Strategiesto "collect the money" usually
+extend from sending a letter, making phone calls to repossessing
+vehicles or any (sequential)combination thereof. The selectionof
+the "right" strategy or treatment though is a function of the
+individual riskinessof eachcustomerat aparticular point in time.
+In this project the businessobjective was to optimize the risk-
+adjustedallocation of delinquent customers/accountsto different
+collections treatments and levels of collector experience in a
+phone collections department.The departmentis divided into 3
+collection groupsfor different risk levels (low, medium,high risk)
+andis staffedaccordingly with collectors with different skills and
+experience(i.e. part time employees/ full time employees/ full
+time specialists). The most critical step in solving this business
+problem is assessingthe individual riskiness of each newly or
+previously delinquent customereveryday.
+
+
+pe-mission
+to n&e
+digital
+or hard copies ol'ali
+or part of this work fix
+persona, or c~assroon~llSe is granted without fee provided that CoPiCs
+arc not made or distributed for profit or commercial advantage and that
+copies heAl this notice ~II(I the full citation OII the first page. To COPY
+ot,ler\vise, to republish, to
+post
+on servers or to redisu-ihute to lists-
+rcquircs prior specific permission and/or a fw.
+KDD-99
+San Diego CA USA
+Copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+F. At-tiles, H. Jeromin
+Services by DaimlerChrysler
+(debis) AG
+Financial Services
+Eichhornstr. 3, D-10875 Berlin, Germany
+fedor-at-tiles @mbcc.com
+holger.jeromin@?finance.debis.com
+
+A simpleapproachto the problem is to assigneachcustomerto a
+different collection group basedon his/her current stateof "days
+delinquent" or "dayspastdue" (DPD):
+If
+0 < DPD <= 30 thenLevel 1 collections (low risk)
+elseif 30 < DPD <= 60 thenLevelIcollections
+(mediumrisk)
+else
+60< DPD
+thenLevel-3-collections (high risk)
+The implicit assumptionis that a customer'spaymentability and
+behavior is perfectly correlated with his/her current state of
+delinquency. Pastexperienceshows that this approachmay be a
+sub-optimalsolution.
+The basic idea of the advancedapproachwas to use historical
+customer information, which is accessible and periodically
+updated, to develop a predictive decisioning system for the
+allocation of collection resources.Including recent information
+about a customer'spast paymentbehavior is especially valuable
+for this purpose.
+We assumedthat moredetailed andrich information on customer
+behavior would allow an earlier and more accuratedetermination
+of expectedrisksthan only the DPD variable.
+
+2. DATA
+The sourceof the data we used for this project was the billing
+systemof the finance companywhich holds customerinformation
+about the contract (amount financed, monthly payment, term,
+etc.), about the vehicle (make,type, model, etc.) and about the
+currentandpastseverityof delinquenciesandpaymentbehavior.
+
+3. PREPROCESSING
+AND MODELING
+3.1 Definition
+of the target variable
+In the first phase of model development we viewed the
+optimization of collections as a classification problem. Since the
+classesarenot representedin the data,we had to derive a target
+variable by observing the "days-delinquent"-variable of a
+delinquent customer over the current and following 3 billing
+cycles(by moving thetime window on historical data).
+Figure 1 illustrates the basic methodology used to derive the
+discretevalues of the class variable from the "days delinquent"
+variable in consecutivemonths. From a credit risk management
+standpoint there aretwo "magic" thresholds: The 30 and the 60
+daysdelinquency line. The classvariable aggregatesthe values of
+days delinquent in the following three months into one of three
+classvalues:
+
+
+
+
+414
+
+Level 1: Today's delinquent customerhas to stay under the 30
+daysdelinquency threshold in all of the following threemonths.
+Level 2: else.
+Level 3: ,Today's delinquent customer violates the 60 days
+delinquency threshold at least in one of the following three
+months.
+
+
+
+
+-?3
+
+Figure 1
+Our first results applying C5.0 to learn a classification model
+delivered promising accuracyrates but also huge trees and rule
+sets,which were not suitable for a manual implementationin the
+software environment. Therefore, we researched alternative
+approachesthat would not have this shortcoming. Our past
+experiences using M6.1 in other domains had shown less
+complexity in the resulting models. It is well known, however,
+that M6.1 and other regression tree approaches require a
+continuous-valuetargetvariable. Sowe hadto gothrough the pre-
+processingphaseagainanddefine numericaltargetvariables.
+Similar to the derivation of the classvariable shown in figure 1,
+the continuous-value target variables were derived from the
+delinquency over the three following months, too. The applied
+methodis illustrated in figure 2.
+
+
+
+
+Figure 2
+Line A showsa linear transformationfrom daysdelinquent into a
+risk equivalent interval [O;l] for one particular month, Line B
+shows a non-linear transformation. Using a non-linear
+transformation takes into account that (from a credit risk
+managementstandpoint) moving from 2 to 5 days delinquent is
+not asbadasmoving from 43 to 46 daysdelinquent. Aggregation
+and weighting of the three following months led to the final
+continuous-valuetargetvariables.
+
+3.2 Final Data Access and Preparation
+For model developmentand evaluation we accessed12 datasets
+of consecutive,monthly periods, each a snapshotof the current
+portfolio(non-delinquent accountsincluded). For eachmonth the
+delinquent accountswere matchedwith their performanceover
+the next threemonths.
+
+3.3 Modeling and Evaluation
+Using C5.0 [l] asa benchmark,we evaluatedthe performanceof
+three alternative modeling techniques: Linear regression,
+regressiontree M6.1 [2] and neural networks. Furthermore,we
+used three different continuous-value target variables basedon
+linear andnon-linear transformations(seefigure 2).
+We ended up training a few hundred models with varying
+parametersettingsduring the whole model developmentprocess.
+In order to transform the continuous-value model outputs back
+into discreteclasses,we had to setcutoffs in a way that madethe
+resultscomparableto the resultsof 0.0. The 3 tablesbelow show
+the predictive power (accuracyrates)of eachmodeling technique
+for eachrisk level (1, 2 and 3) as testedon unseendata Num
+TargetI, II andIII designatethe alternativeapproacheswe usedto
+constructthe continuous-valuetargetvariables.
+Trivial:
+88.7%
+
+
+
+
+Trivial:
+55.6%
+
+
+
+
+Table 3
+Summarizing the results we can say that the regression tree
+outperformsother solutions in Level-2 and Level-3, C5.0 shows
+the best accuracy in Level 1. Neural networks did not reach
+satisfactoryresults.Whenu&g the trivial classification (DPD) as
+a benchmark,we sawthat the new modelsoutperformedit in the
+high-risk classes(Level-2 andLevel-3).
+The results achieved were very sensitive to the type of
+continuous-value target variable used, a phenomenonworthy of
+further detailedanalysisin the future.
+
+
+
+
+415
+
+4. WORKFLOW
+INTEGRATION
+Basedon the encouraging results of the evaluation process,the
+regressiontreemodel wasimplementedinto the phonecollections
+workflow of the finance company. In addition to the good
+performance,the lower overall-complexity of this model type
+(compacttree with underlying linear regressionmodels) met the
+constraintsimposedby the needfor manual programmingduring
+implementationin the collections softwareenvironment.
+
+The implementation of the predictive model wasprecededby the
+implementation of a decision engine software.This softwarewas
+"inserted" betweenthe billing systemand the collections system
+to generatearisk scorefor every delinquent accountthat is passed
+from the billing systeminto the collections system.
+
+Added functionality of this system gave us the ability to run
+competing collection strategies against each other on random
+samplesof delinquent accounts.This methodology of controlled
+testing is generally known as champion-challengertesting in the
+finance industry.
+A part of the delinquent portfolio is still managedusing the trivial
+allocation strategyin order to allow a continuous monitoring of
+the decision model's performance via such a champion -
+challenger comparisons. The experience after 12 months in
+operation shows a stableperformanceof the model and enough
+robustnessto allow for score cut-off adjustments to address
+fluctuating workload andcapacityconstraints.
+
+5. REFERENCES
+[I]
+Quinlan, J.R., C4.5: Programsfor Machine Learning, San
+Mateo,California: Morgan Kaufmamr,1993.
+[2] Quinlan, J.R., Learning with continuous classes. In:
+ProceedingsAI `92, Singapore:World Scientific, 1992.
+
+
+
+
+416
+

@@ -1,0 +1,396 @@
+Origami: A New Data Visualization Tool
+Dr. Jen Que Louie
+Tom Kraay
+Nautilus Systems, Inc.
+3887 Aider Woods Court
+Fairfax, VA 22033-2441
+(703) 385-8582
+Nautilus Systems, Inc.
+3887 Alder Woods Court
+Fairfax, VA 22033-2441
+(703) 385-8582
+jqlouie@nautiIus-systems.com
+ABSTRACT
+Experienced analysts are remarkable at visually recognizing
+unusual patterns, however, current tools have not efficiently
+cateredto these abilities. Progressin information visualization
+algorithms,display techniques,and usercontrols hasmadea new
+generationof software tools possible. This paper will presenta
+new hybrid datamining tool, Origamim, designedand developed
+by Mr. Thomas Kraay. OrigamiTM can be used to identify
+complex, latent relationships presentin large quantities of data.
+Theserelationshipscanbeusedto interactively exploreuseful and
+strategicinformation that would otherwisebeintractable.
+Keywords
+data cartography, data mining, data visualization, autonomous
+analysis.
+
+INTRODUCTION
+Imagine that you have never beento the United Statesand that
+you have never even seen a map of the US. Supposeyou ask
+someoneto describe its shape and its geography.Perhapsthe
+simplestandmostusell responseto your inquiry would bea map
+of theUS.
+
+
+In addition to the map,it might be helpful to know the distances
+betweena numberof importantcities in the US. In fact, it is quite
+common to have this data available in the form of a distance
+matrix which is displayedalongwith the map.The distancematrix
+consistsof a numberof cities which are listed acrossthe top and
+downthe side.Eachentry in the matrix is the distancebetweenthe
+cities that correspondto the particular row and column of the
+matrix. The resulting matrix is symmetric(sincethe distancef?om
+city A to city B is the sameasthe distancebetweencity B andcity
+A) and the diagonal elementsare all zero. The distancebetween
+two cities canbeviewed asarelationshipbetweenthetwo cities.
+
+
+Now, imagine trying to picture the United Statesif all you had
+was the distancematrix without the map. Obviously it is much
+moredifficult to obtain an accurate"picture" of the shapeandthe
+geographyof the US using only the distancematrix without the
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies
+are not made or distributed for profit or commercial advantage and that
+copies hear this notice and the full citation on the first page. To copy
+othcrwisc, to republish, to post on servers or to redistribute to lists,
+requires prior specific permission andior a fee.
+KDD-90
+San Diego CA USA
+Copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+accompanyingmap.
+
+
+Unfortunately, in many real-world applications, the information
+available correspondsmuch moreclosely to the "distancematrix"
+without the moreinformative map.Also, the amountof datamay
+befar morethan the small numberof cities presentin a table that
+accompanies a map. Thus, developing useful information,
+important insights, and answersto specific questions tim
+raw
+datacanbea far moredifficult problem.
+
+
+Attempts to solve these types of problems have traditionally
+involve using "DataMining" techniquessuchasthe useof queries
+or link analysis methods.For large data setsthese methodsare
+often impractical andreadily overwhelmed.What is really needed
+may be describedas a "Data Cartography" schemecapable of
+producing an accurateand informative "Map" of the data. This
+map would be enable the user to identify latent relationships
+among the data elements from which use&l information and
+practical insightsmaybeextracted.
+
+
+In many practical problemsthe number N of data elements(i.e.
+"cities" in the aboveexample)is extremelylarge(on the order of
+thousandsor tens of thousands). Relationshipsbetweenthe data
+elements areexpressednumerically by the "distancematrix".
+
+
+Like the distancematrix involving cities, we shall assumethat the
+matrix is symmetric and the diagonal elementsare all 0. Thus,
+there are Nx(N-1)/2 meaningfi.d "distances". We make no
+assumptionthat the distancesare "consistent" (which they would
+beif derivedfrom amap).
+
+
+The problem is to map each data element into a point in the
+xy-plane such that the Euclidean distancesbetweenthe points in
+the planepreservesthe distancesin the matrix. Becausethere are
+N dataelements,thereareN points in the plane.Eachpoint in the
+plane hasan x coordinateand a y coordinate(hencethereare2N
+possibilities for the coordinates).
+
+
+As noted above,there are Nx(N-1)/2 distancesin the table that
+mustbepreserved.SinceNx(N-1)/2 is ordersof magnitudelarger
+than 2N (for large N), the result is a highly over-determined
+system(i.e. a systemwith far moreconditions to be satisfiedthan
+thereare.degreesof tieedom which could be usedto satisfy those
+conditions).
+
+
+
+
+405
+
+In general, such over-determinedsystemsdo not have an exact
+solution. That is, there is no setof N pairs of xy-coordmatesthat
+preservesall of the distancesin the matrix. The standardapproach
+to solve this type of problem is to construct the "best" solution
+possibleusinga leastsquaresapproximation.That is,
+
+
+Minimize:
+
+N-l
+N
+
+H=C C ((xi-xj)2+ (yi-yj)' - dj)2
+Pl
+1=1+1
+
+In which:
+xi = the unknown x-coordinate of the i* dataelement
+yi = the unknown y-coordinate of the i* dataelement
+dd= the presenteddistancebetween the i* andj& data
+element
+Solving this problem using conventional methodsrequires O(N3)
+operationsand O@?) storage. (Note: O(N3)meansthat thereare
+orderN3 operationsrequiredto solve the problem.Hence,if N is
+doubled, it takesabout 23= 8 times asmany operationsto solve
+the problem.) For small values of N, this is acceptable,but even
+supercomputersbalk when N approachesvalues of 10,000 or
+mom.
+
+
+The key mathematicalfeatureof the Data Cartographyschemeis
+the developmentof an approximationto the leastsquaressolution
+which requiresonly O(N) operations.This meansthat even very
+largeproblemscanbesolvedon PCs.
+This paperdemonstratesthe utility and the effectivenessof Data
+Cartographyasa meansof using the datato constructa mapthat
+enables the user to visualize useful information based on
+relationships amongthe data elements.It also demonstratesthat
+large problems can be solved on very modest (inexpensive)
+computers.
+
+
+Consider a data set consisting of l,SOO,OOOtelephone calls
+involving slightly morethan 10,000telephonenumbers.A second
+dataset includes subscriberinformation (namesand addressesof
+the ownersof the telephonenumbers).A third datasetconsistsof
+about 1,000 telephone numbers of individuals suspected of
+engagingin criminal behavior. Thesetelephonenumbersinvolve
+wire taps or PEN registers (records of calls to and from the
+telephonenumberof a potential suspect).Note that datasetstwo
+and three may contain telephone numbers not involved in the
+l,SOO,OOOtelephonecall database.
+
+
+The sourceof the data for this problem was a law enforcement
+agency.This agencyhad beenusing traditional link analysis and
+datamining techniquesfor severalyearswithout obtaining useful
+information dueto the largequantity of dataavailable. The agency
+was interested in finding a new method of analyzing and
+extracting useful information from this complex set of raw data.
+Early efforts using previous state-of-the-art methods required
+intensive human involvement in adjusting computer suggested
+arrangements,dependenceuponhaving to issuethe "right queries"
+in the "right sequence",non-responsivecomputer rumimes, and
+demandingstorageand memoryrequirements.Thesewerejust a
+few of the challengesconfronting the agency.
+
+
+Becauseof the novel demandsof this agency, the concept of
+constructing a "Map" from the given data becamean intriguing
+possibility. In this case, instead of "cities", we use "telephone
+numbers". The "distance" between two telephone numbers is
+computedusing a function whose value is inversely proportional
+to their frequency of communication. If two numbers never
+communicate,the distanceis not defined, and the position in the
+plane correspondingto that number is determinedby the other
+dataelements(telephonenumbers).
+
+
+
+
+Figure 1. Initial entry into database is depicted by blue phone
+number in the list (upper right) and by the blue filled circle.
+The blue phone number of interest interacts with the green
+phone numbers, the greens talk with the black ones, and the
+black with the reds.
+
+
+This idea seemedsensible, but mapping 10,000 points into the
+planeseemedlike a daunting problemwhich could only be solved
+using a supercomputer. However, this problem inspired the
+invention of a software package called "Origami", a pending
+patentheld jointly by Mr. Chuck Brisbin, former Deputy Director
+of the Office of Law Enforcement,U.S. Departmentof Treasury,
+Dr. Ralph Carlson, a mathematician,co-author, and founder of
+MMEI Corporation, and Tom Kraay of MMEI and consultant to
+Nautilus Systems,Inc.
+The centerpieceof the invention is over 25 pagesof mathematics
+deriving an amazingly accurateapproximation to the solution of
+the least squaresapproximation, but which involves only O(N)
+operations and O(N) storage. Ita implementation on a 33MHz,
+8MB RAM 486 computerrequired about an hour to convert the
+supplied raw data to "maps". Custom interface software was
+
+
+
+
+406
+
+written for virtually instant exploitation of the results. Telephone
+numbersof interest(i.e. telephonenumbersinvolved in wire taps
+andPEN registers)were depictedassolid small circles while the
+remaining circles were hollow (much like major cities are
+differentiatedon atypical map). The usercould mouseclick on a
+circle representing any telephone number in order to obtain
+subscriber information and, via automatic color alterations,
+quickly discern its connectivity patterns. This eliminated the use
+of drawing lines which could easily decimatethe viewability and
+affordableinformation of populousmaps.
+
+
+
+
+0
+0
+
+
+Figure 2.
+Same data entry point as figure 1, showing
+subscriber information . Subscription data for others can
+easily be retrieved
+
+
+
+
+,oo..@
+eo
+O 0
+.' ,q.?
+OO
+oo~~o~8a
+0
+0
+0
+OO
+0
+0
+
+Figure 3. Origami allows an observer to easily specify at least
+three, non-colinear points creating a least-squares circle to
+down select from the entire database all necessaryentries to
+focus analysis on clusters that attract interest.
+
+
+In the given dataset,six independentmapsresulted. By this we
+mean that telephones depicted on any single map have no
+communication with any telephone in any of the other maps.
+Also, the maps sharedseveral curious traits. All six maps all
+manifesteda group of tightly clusteredtelephonesnearthe center
+portion (which wererichly populatedwith phonesof interest). A
+largely vacant region surroundedthe center cluster. Beyond the
+vacant region was a scattering of phones which were also
+positioned in ring-like fashion. All of theseresults were obtained
+with no humanguidance,input, or a queryof anykind.
+
+
+
+
+Figure 4. Individual connectivity rays from the observation
+data point.
+
+
+
+
+Figure 5. Rays of all connectivity data points
+
+
+The agency supplying the data had randomly shuffled court
+sanctioned PEN register data collected tirn
+six independent
+investigations. "Telephone numbers of Interest" belonged to
+known criminals and suspects. The cluster in the centerof each
+mapcorrespondedto all the membersof the criminal organization.
+The numbers clustered near the center involve the telephone
+numbers which frequently communicate with the suspected
+criminal organization. This observationled to many high quality
+leadsfor agencyinvestigators.
+
+
+
+
+407
+
+The outer ring of phones belonged to persons rarely or
+occasionally communicating with members of the central
+organization. Many seasonedlaw enforcementpersonnel have
+commentedthat what "Qrigami" autonomously unfolded on a
+small computerin one hour would haverequired monthsto years
+usingtraditional techniques.
+
+
+The underlying mathematicaltechniquescan be applied to many
+other novel schemesthat can be applied to solving various other
+problems,such as: Mailing Data, Single PEN registerresults, IP
+Address Activity on Sniffers, Free Text, Bioinformatics, Credit
+CardTransactions,and ComputerForensics
+
+About the Authors
+Dr. JenQ. ("Ed") Lottie is Presidentof Nautilus Systems.He is a
+consultant for several commercial companies and is active in
+artificial intelligence, large databasesystems,datawarehousing,
+data mining and competitive intelligence conferences and
+committees.He has designedand implemented medical system
+diagnostic and analysis programs; knowledge and rules based
+businesssystems;workflow systems;image storageand retrieval
+systems;and emergencyinformation systems. He has designed
+and developed systemssupporting the military and intelligence
+communities. Dr. Louie holds M. S. and Ph.D. degrees in
+Biomedical Engineering tirn CaseInstitute of Technology and a
+M. D. from WesternReserveUniversity.
+
+
+Dr. JenQueLouie
+Nautilus Systems,Inc.
+3867Alder WoodsCourt
+Fairfax, VA 22033-2441
+(703) 385-8582Voice
+(703) 385-0965FAX
+jqlouie@nautilus-systemscorn.
+Mr. Kraay, the developerof origami, received a B.S. degreein
+Mathematicsfrom the United StatesAir Force Academy and an
+M.S.
+degree in
+Mathematics from the University
+of
+Massachusetts.Mr. Kraay has over 25 years experience in
+computer science, parallel
+algorithm
+development and
+implementation, signal processing image processing, system
+engineering, astrophysics, data base analysis and retrieval
+methods, and law enforcement related technical investigative
+techniques. His experience covers a broad range of scientific,
+intelligence, and law enforcementapplications and management.
+Mr. Kmay's national reputation in parallel processinghas earned
+him severalinvitations as a keynote speaker.He also acts in an
+advisory capacity at the highest levels for two major parallel
+computervendorsregardingpathsof future products.Becauseof
+his achievements in law enforcement in the area of money
+laundering,he hasbeeninvited to deliver presentationsat theU.S.
+National Institute of Economic Crime. He hasalso addressedthe
+National Homicide Investigators Association on Investigative
+methodsrelevantto serial murdercases.
+
+
+Mr. ThomasKraay
+MMEI Corporation
+c/oNautilus Systems,Inc.
+3867Alder WoodsCourt
+Fairfax, VA 22033-2441
+(703) 385-8582Voice
+(703) 385-0965FAX
+
+
+Origami *
+is atrademarkof MMEI.
+
+
+Authors Special Note:
+The datausedto generatethe figures for this paperwere not real
+individuals, addresses,or phonenumbers
+
+
+
+
+408
+

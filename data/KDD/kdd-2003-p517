@@ -1,0 +1,1749 @@
+Experiments with Random Projections for Machine
+Learning
+
+
+Dmitriy Fradkin
+Division of Computer and Information Sciences
+Rutgers University Piscataway, NJ
+
+dfradkin@paul.rutgers.edu
+David Madigan
+Department of Statistics Rutgers University
+Piscataway, NJ
+madigan@stat.rutgers.edu
+
+
+ABSTRACT
+Dimensionality reduction via Random Projections has at-
+tracted considerable attention in recent years. The approach
+has interesting theoretical underpinnings and offers compu-
+tational advantages. In this paper we report a number of
+experiments to evaluate Random Projections in the context
+of inductive supervised learning.
+In particular, we com-
+pare Random Projections and PCA on a number of differ-
+ent datasets and using different machine learning methods.
+While we find that the random projection approach pre-
+dictively underperforms PCA, its computational advantages
+may make it attractive for certain applications.
+
+Categories and Subject Descriptors
+G.3 [Probability and Statistics]: Probabilistic algorithms;
+I.5.m [Pattern Recognition]: Miscellaneous
+
+General Terms
+Experimentation, Performance
+
+Keywords
+random projection, dimensionality reduction
+
+1. INTRODUCTION
+Inductive supervised learning infers a functional relation
+y = f(x) from a set of training examples
+
+T = {(x1, y1), . . . , (xn, yn)}.
+In what follows the inputs are vectors
+ 
+
+
+
+
+xi1 , . . . , xi
+p
+¡
+in
+p
+,
+y  {-1, 1}, and we refer to f as a classifier. The objective
+of this exercise is usually to produce a classifier that makes
+accurate predictions for future input vectors.
+Applications where p is large pose particular challenges.
+The computational complexity of many algorithms is quadratic
+or even exponential in p. Furthermore, large p usually re-
+quires some sort of complexity control to avoid over-fitting
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA
+Copyright 2003 ACM 1-58113-737-0/03/0008 ...$5.00.
+the training data. A standard and widely used approach
+to dealing with large p is to first apply a dimensionality re-
+duction procedure. Principal Components Analysis (PCA)
+is a popular choice. PCA's main drawback is its computa-
+tional complexity which precludes its use in truly large-scale
+applications. In the 1990's, an alternative approach based
+on Random Projections (RP) received some attention in the
+literature. The computational cost of RP is low but it en-
+joys distance-preserving properties that make it an attrac-
+tive candidate for certain dimensionality reduction tasks.
+In this paper we describe experiments that examine the
+efficacy of RP for supervised learning and compare it with
+PCA. Previous papers have explored RP for clustering, mix-
+ture models, and other applications, but not, as far as we
+know, for supervised learning. We first discuss the theoreti-
+cal background of PCA and, at some more length, Random
+Projections. We also present a short survey of the literature
+on Random Projections. We then proceed to describe the
+datasets we've used and the setup of the experiments we
+conducted. We finish by discussing the results
+1
+.
+
+2. METHODS
+
+2.1 Principal Component Analysis (PCA)
+
+2.1.1
+Theoretical Background
+Here we follow [11] in describing PCA as a dimensional-
+ity reduction / data approximation method. Given n data
+points in
+p
+, as an n × p matrix X, we want to find the best
+(in least squares sense) q-dimensional approximation for the
+data (q < p). That is, we want to define f() = µ + Vq
+where µ is a location vector in
+p
+, V is a p × q matrix with
+q orthogonal unit vectors as columns and  is a q vector of
+parameters, so as to minimize
+¢
+N
+i=1
+||xi - µ - Vq||2.
+If we first centralize X, then minimizing this sum leads to
+Vq being the first q columns of matrix V in a singular value
+decomposition (SVD) of data matrix X: X = UDV
+T
+, where
+U is an n×p orthogonal matrix (U T U = Ip), whose columns
+are left singular vectors, V is a p × p orthogonal matrix
+(V
+T
+V = Ip) whose columns are right singular vectors, and
+U is a p × p diagonal matrix with diagonal elements d1 
+d2...  dp  0 which are singular values of X.
+In our experiments, we normalize the data. This way we
+don't need to worry about µ and relative scale of compo-
+nents. Then, given a data point Xi (a row of matrix X), we
+
+1
+This
+paper
+was
+shortened
+for
+reasons
+of
+space.
+For
+complete
+version
+of
+this
+paper
+please
+see
+http://www.stat.rutgers.edu/madigan/PAPERS/
+
+517
+
+can project it into a q-dimensional space spanned by rows
+of Vq as follows: Xi = XiVq.
+
+2.1.2
+Complexity
+The computational complexity of PCA is O(p2n)+O(p3).
+Computing the SVD decomposition, as we do, is somewhat
+more efficient. Performing the projection itself is just a ma-
+trix multiplication and takes O(npq). We note that project-
+ing to a dimension greater than the rank r of the original
+matrix is pointless, since values of attributes after r-th will
+all be zero.
+
+2.2 Random Projections
+
+2.2.1
+Theory of Random Projections
+A theorem due to Johnson and Lindenstrauss (JL Theo-
+rem) states that for a set of points of size n in p-dimensional
+Euclidean space there exists a linear transformation of the
+data into a q-dimensional space, q  O(
+-2
+log(n)) that pre-
+serves distances up to a factor 1 ± ([1]).
+Dasgupta and Gupta [8], present a simpler proof of the
+JL Theorem, giving tighter bounds on
+and q, as follows:
+
+q  4  (
+2
+
+2
+-
+3
+
+3
+)-1ln(n).
+(1)
+
+In that paper the authors also indicate that a matrix whose
+entries are normally distributed represents such a mapping
+with probability at least 1/n. Therefore doing O(n) projec-
+tions will result in projection with an arbitrarily high prob-
+ability of preserving distances.
+Achlioptas [1] shows that there are simpler ways of pro-
+ducing Random Projections. He also explicitly incorporates
+probability into his results:
+
+Theorem 1. Given n points in
+p
+(in form of an n × p
+matrix X), choose
+,  > 0 and q 
+4+2
+2
+
+2
+-
+3
+
+3
+ln(n), and let
+
+E =
+1
+q
+XP , for projection matrix P . Then mapping from
+X to E preserves distances up to factor 1 ± for all rows in
+X with probability (1 - n-). Projection matrix P , p × q,
+can be constructed in one of the following ways:
+
+· rij = ±1 with probability 0.5 each
+· rij =
+3
+ (±1 with probability 1/6 each, or 0 with
+probability 2/3)
+
+These projections have an added benefit of being easy to
+implement and to compute.
+We chose to implement the first of the methods suggested
+by Achlioptas.
+Since we are not concerned with preserv-
+ing distances per se, but only with preserving separation
+between points, we do not scale our projection by
+1
+q
+.
+
+2.2.2
+Complexity and Theoretical Effectiveness
+The computational complexity of RP is easy to compute:
+projection of n points from
+p
+to
+q
+requires constructing
+an p × q projection matrix, which takes O(pq). Performing
+the projection itself is just a matrix multiplication and takes
+O(npq).
+We can use Theorem 1 to compute theoretical limitations
+on dimensionality of a random projection.
+We limit our-
+selves to examining case  = 1, allowing a deviation by a
+factor greater than
+with probability
+1
+n
+. Figure 1 shows a
+graph of this bound on q for different sizes (n) of dataset
+and different values of .
+0
+2000
+4000
+6000
+8000
+10000
+
+
+
+
+0
+500
+1000
+1500
+2000
+2500
+3000
+3500
+4000
+4500
+5000
+Lower
+bound
+on
+q
+
+
+
+
+Number of points
+
+
+
+
+Figure 1: Plot of lower bound q of dimensionality
+of random projections as a function of number of
+points. Upper curve corresponds to
+= 0.1, middle
+one - to
+= 0.2, lowest one to
+= 0.5
+
+
+2.2.3
+Applications and Experiments
+In this section we mention some results from the literature
+on Random Projections.
+A paper by Kaski [14] on random mappings that pre-
+serve similarity (defined as a cosine of the angle between
+vectors), describes how Random Projections were used on
+textual data in WEBSOM, a program that organizes docu-
+ment collections into Self-Organizing Map.
+In a recent paper by Magen [15], the author shows how
+volumes and affine distances can be preserved. This result
+includes Kaski's observations as a special case (since pre-
+serving volume in 2D is equivalent to preserving distances
+and angles).
+Bingham and Manilla [4] compare several dimensionality
+reduction methods, such as PCA ( based on data covariance
+matrix), SVD (PCA performed directly on the data ma-
+trix), RP (using the second method of construction projec-
+tion described in [1]) and Discrete Cosine Transform (DCT)
+on large-dimensional noiseless and noisy image data and on
+the Newsgroups text dataset (available from UCI archives).
+Their experiments involve comparing computational com-
+plexity and similarity preservation. Their results indicate
+that random projections are computationally simple while
+providing a high degree of accuracy. They note that JL The-
+orem and results in [1] and other papers give much higher
+bounds than those sufficing for good results.
+Dasgupta [6], [7] describes experiments on learning mix-
+tures of Gaussians in high dimensions using Random Projec-
+tions and PCA. His results show that data from a mixture of
+k Gaussians can be projected into O(log k) dimensions while
+retaining the approximate level of separation. He also con-
+cludes that RPs result in more spherical clusters than those
+in the original dimension.
+RPs also do better than PCA
+on eccentric data (where PCA might fail completely). Das-
+gupta also combines RP with the Expectation Maximiza-
+tion (EM) algorithm and applies it to a hand-written digit
+dataset, achieving good results.
+Indyk and Motwani [12] apply Random Projections to the
+nearest neighbor problem. This leads to an algorithm with
+polynomial preprocessing and query time polynomial in p
+and log n. However, according to authors, since the expo-
+nent depends on 1/ , this result is purely theoretical for
+small . This paper also gives another proof of the JL Theo-
+rem and the first tight bounds on the quality of randomized
+dimensionality reduction.
+Engebretsen, Indyk and O'Donnell [9] present a deter-
+ministic algorithm for constructing mappings of the type
+
+
+518
+
+Table 1: Description of Datasets
+Name
+# Instances
+# Attributes
+Ionosphere
+351
+34
+Colon
+62
+2000
+Leukemia
+72
+3571
+Spam
+4601
+57
+Ads
+3279
+1554
+
+
+described in the JL lemma (by use of the method of condi-
+tional probabilities) and use it to derandomize several ran-
+domized algorithms, such as MAXCUT and coloring.
+Thaper, Guha, Indyk and Koudas also use Random Pro-
+jections to enable their method of computing dynamic mul-
+tidimensional histograms [16]. RPs are used there to per-
+form approximate similarity computations between different
+histogram models, represented as high dimensional vectors.
+A similar application of Random Projections in a different
+area is suggested in [2]. Authors argue for using Random
+Projections as a way of speeding up kernel computations in
+methods such as Kernel Principal Components analysis.
+
+3. DESCRIPTION OF DATA
+Table 1 describes the datasets that we have used in our
+experiments. Ionosphere, Spambase and Internet Ads were
+taken from UCI repository [5]. Datasets Colon and Leukemia
+were first used in [3] and [10] respectfully.
+Datasets are used without modifications, except for the
+Ads dataset that originally contained 3 more attributes with
+missing values. These attributes were removed.
+A two-class classification problem is of primary substan-
+tive interest in each of these datasets. The attributes in each
+case are real-valued with the exception of the ads dataset;
+this dataset features binary attributes which we treat as con-
+tinuous in the experiments. Our goal was to select datasets
+representing different "shapes." Ionosphere and Spam have
+many more instances than attributes. Colon and Leukemia
+are the other way around.
+Ads is somewhat in between.
+Each of the datasets has enough attributes that dimension-
+ality reduction is of practical interest.
+
+4. EXPERIMENTAL SETUP
+We compare PCA and RP using a number of standard ma-
+chine learning tools, such as decision trees (C4.5 - [17]), near-
+est neighbor methods and linear SVM (SVMLight - [13]).
+We are using the default settings with all of these methods.
+Our purpose is not to compare the performance of these
+methods to each other, but to see the differences in their
+performance when using PCA or RP.
+The setup of the experiments is given by Algorithm 1.
+For a given dataset we keep the size of the test set constant
+over different splits. These size are as follows: Ionosphere
+- 51, Spambase - 1601, Colon - 12, Leukemia - 12, Ads -
+1079. For small datasets we try to leave sufficient number
+of instances for training, while for larger datasets we take
+approximately a third of instances.
+We note that such size of test sets also sets upper bound
+on the rank of training data matrix. Therefore PCA pro-
+jections to spaces of higher dimensions will not yield better
+results.
+In this respect PCA is quite different from RP,
+where projection to dimension lower than O(ln(n)) is con-
+sidered ineffective. Since our purpose it to compare them,
+Algorithm 1 Experiment Pseudocode
+Require: Dataset D, projection dimensions {d1, . . . , dk},
+number of test/training splits s to be done (we perform
+30 splits for Ads and 100 splits for other datasets)
+1: for i = 1, . . . , s do
+2:
+split D into training set and test set
+3:
+normalize the data (estimating mean and variance
+from the training set)
+4:
+for d = d1, . . . , dk do
+5:
+do a PCA on training set, project both training and
+test data into
+d
+
+6:
+create a random projection matrix as described
+above, project both training and test data into
+d
+
+7:
+train learning methods on training sets and then
+apply them to respective test sets to evaluate per-
+formance
+8:
+end for
+9: end for
+
+
+
+we perform projection to both low-dimensional and (rela-
+tively) high dimensional spaces. The theoretical quality of
+distance preservation with RP is quite low for all of these
+(compare with Figure 1). However, the literature shows that
+the theoretical bounds are quite conservative ([4]).
+Colon and Leukemia datasets are of a high dimensionality
+but have few points. Thus we would expect RP to high di-
+mensions to lead to good results, while PCA results should
+stop changing after some point. For these dataset we per-
+form projections into spaces of dimensionality 5, 10, 25, 50,
+100, 200 and 500.
+Ionosphere and Spam are relatively low-dimensional but
+have many more points than Colon and Leukemia datasets.
+Such combination in theory leaves little space for RP to
+improve, while PCA should be able to do well. We project
+to dimensions 5, 10, 15, 20, 25 and 30.
+Ads dataset is both large and high-dimensional, and seems
+to fall somewhere between the others. We perform projec-
+tions are done to 5, 10, 25, 50, 100, 200 and 500.
+
+
+5. RESULTS
+The results of experiments can be seen in the left part of
+Table 3. All the column entries contain average (over all
+splits) accuracies for the specified methods and projections.
+The standard deviations are given in the full version of the
+paper. The last row in each subtable contains results for the
+original dimension and therefore is only given once.
+In order to demonstrate differences in performance of PCA
+and RP with different methods, we also plot accuracies using
+PCA and RP for each dataset and learning method (Figures
+in Table 2). Accuracy of the learning method in the original
+space is drawn as a straight line on each graph for compar-
+ison (even though it is not a function of dimension).
+Nearest Neighbor Methods are least affected by reduction
+in dimensionality through PCA or RP - their performance
+deteriorates less than that of C4.5 or of SVM. In some cases
+PCA projection into a low dimensional space actually im-
+proves NN's accuracy (on Ionosphere and Ads datasets).
+NN results with RP approach those in the original space
+(or PCA) quite rapidly. Such behavior of NN methods is
+to be expected since they rely on distance computations for
+their performance and are not concerned with separation of
+
+
+519
+
+classes or informativeness of individual attributes. Thus one
+might expect that Nearest Neighbor methods would stand
+to benefit most from Random Projections.
+Both RP and PCA adversely affect the performance of
+SVM. While PCA does outperfom RP at lower dimensions,
+the difference diminishes as the dimensionality of projections
+increases. We kept track of the number of support vectors
+(nsv) used in each projection (the averages are given in the
+right part of Table 3), since nsv can serve as an indicator
+of the complexity of the data. Using PCA on Ads, Colon
+and Leukemia datasets led to fewer support vectors, while
+on Spam and Ionosphere data nsv was somewhat higher for
+PCA than in the original space. Using RP led to about the
+same nsv on Colon and Leukemia Datasets but resulted in
+much higher numbers on Ads, Spam and Ionosphere. The
+nsv was always less when using PCA than when using RP
+in lower dimensions, indicating that the data produced with
+RP is more difficult to separate. However, both for PCA
+and RP, as the dimensionality of the projections approached
+the original dimensionality, the nsv approached that in the
+original space.
+C4.5 does very well with low-dimensional PCA projec-
+tions (on Ionosphere, Colon and Leukemia datasets), but
+its performance deteriorates after that and doesn't improve.
+Its performance with RP is also poor: after some initial im-
+provement it seems to level out. Since decision trees rely on
+informativeness of individual attributes and construct axis-
+parallel boundaries for their decision, they don't always deal
+well with transformations of the attributes, and can also be
+quite sensitive to noise ([11]). These characteristics of de-
+cision trees indicate that Random Projections and decision
+trees might not be a good combination.
+
+6. CONCLUSION
+In this paper we compared the performance of different
+learning methods in conjunction with the dimensionality re-
+duction techniques PCA and RP. While PCA is known to
+give good results and has a lot of useful properties, it is
+computationally expensive and is not feasible on large, high-
+dimensional data.
+Random Projections are much cheaper computationally
+and also possess some desirable theoretical properties. In
+our experiments PCA predictively outperformed RP. Nonethe-
+less RP offers clear computational advantages. Furthermore,
+some trends in our results indicate that the predictive per-
+formance of RP does improve with increasing dimension,
+particularly in combination with specific learning methods.
+Our results indicate that RPs are best suited for use with
+Nearest Neighbor methods. They also combine well with
+SVM. However decision trees with RP were less satisfactory.
+We hope that these results demonstrate the potential use-
+fulness of Random Projections in a supervised learning con-
+text and will encourage further experimentation.
+
+
+7. ACKNOWLEDGMENTS
+We would like to thank Andrei Anghelescu for providing
+the kNN code.
+
+8. REFERENCES
+[1] D. Achlioptas. Database-friendly random projections.
+In Symposium on Principles of Database Systems
+(PODS), pages 274­281, 2001.
+[2] D. Achlioptas, F. McSherry, and B. Sch¨olkopf.
+Sampling techniques for kernel methods. In S. B.
+T. G. Dietterich and Z. Ghahramani, editors,
+Advances in Neural Information Processing Systems.
+[3] U. Alon, N. Barkai, D. A. Notterman, K. Gish,
+S. Ybarra, D. Mack, and A. J. Levine. Broad patterns
+of gene expression revealed by clustering of tumor and
+normal colon tissues probed by oligonucleotide arrays.
+In Proc. Natl. Acad. Sci. USA, volume 96, pages
+6745­6750, June 1999.
+[4] E. Bingham and H. Mannila. Random projection in
+dimensionality reduction: applications to image and
+text data. In Knowledge Discovery and Data Mining,
+pages 245­250, 2001.
+[5] C. Blake and C. Merz. (uci) repository of machine
+learning databases, 1998.
+[6] S. Dasgupta. Learning mixtures of gaussians. In IEEE
+Symposium on Foundations of Computer Science
+(FOCS), 1999.
+[7] S. Dasgupta. Experiments with random projections.
+In In Proc. 16th Conf. Uncertainty in Artificial
+Intelligence (UAI), 2000.
+[8] S. Dasgupta and A. Gupta. An elementary proof of
+the johnson-lindenstrauss lemma. Technical Report
+TR-99-006, International Computer Science Institute,
+Berkeley, California, USA, 1999.
+[9] L. Engebretsen, P. Indyk, and R. O'Donnell.
+Derandomized dimensionality reduction with
+applications. In Proceedings of the 13th Symposium on
+Discrete Algorithms. IEEE, 2002.
+[10] T. R. Golub, D. K. Slonim, P. Tamayo, C. H. M.
+Gaasenbeek, J. P. Mesirov, H. Coller, M. L. Loh, J. R.
+Downing, M. A. Caligiuri, C. D. Bloomfield, and E. S.
+Lander. Molecular classification of cancer: class
+discovery and class prediction by gene expression
+monitoring. In Science, volume 286, pages 531­537,
+1999.
+[11] T. Hastie, R. Tibshirani, and J. Friedman. The
+Elements of Statistical Learning. Data Mining,
+Inference, and Prediction. Springer, New York, 2001.
+[12] P. Indyk and R. Motwani. Approximate nearest
+neighbors: towards removing the curse of
+dimensionality. In Proceedings of the 30th Annual
+ACM STOC, pages 604­613, 1998.
+[13] T. Joachims. Making large-scale svm learning
+practical. In B. Schlkopf, C. Burges, and A. Smola,
+editors, Advances in Kernel Methods - Support Vector
+Learning. MIT-Press, 1999.
+[14] S. Kaski. Dimensionality reduction by random
+mapping: Fast similarity computation for clustering.
+In Proceedings of IJCNN'98, volume 1, pages 413­418.
+IEEE Service Center, Piscataway, NJ, 1998.
+[15] A. Magen. Dimensionality reductions that preserve
+volumes and distance to affine spaces, and their
+algorithmic applications.
+[16] P. I. N. Thaper, S. Guha and N. Koudas. Dynamic
+multidimensional histograms. In Proc. ACM
+SIGMOD, pages 428­439, May 2002.
+[17] J. R. Quinlan. C4.5: Programs for machine learning,
+1993.
+
+
+
+
+520
+
+C4.5
+1NN
+5NN
+SVM
+
+
+
+
+Ion
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+5
+10
+15
+20
+25
+30
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+5
+10
+15
+20
+25
+30
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+5
+10
+15
+20
+25
+30
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+5
+10
+15
+20
+25
+30
+Original
+
+PCA
+
+RP
+
+
+
+
+Spam
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+5
+10
+15
+20
+25
+30
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+5
+10
+15
+20
+25
+30
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+5
+10
+15
+20
+25
+30
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+5
+10
+15
+20
+25
+30
+Original
+
+PCA
+
+RP
+
+
+
+
+Ads
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+
+
+
+
+Colon
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+
+
+
+
+Leuk
+emia
+
+
+
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+60
+65
+70
+75
+80
+85
+90
+95
+100
+
+
+
+
+50
+100
+150
+200
+250
+300
+350
+400
+450
+500
+Original
+
+PCA
+
+RP
+
+
+
+
+Table 2: Accuracy (Y-axis) using PCA and RP, compared to performance in the original dimension, plotted
+against the projection dimension (X-axis)
+
+
+
+
+521
+
+Ads
+C4.5
+1NN
+5NN
+SVM
+PCA
+RP
+PCA
+RP
+PCA
+RP
+PCA
+RP
+5
+95.8
+87.8
+95.3
+89.1
+95.5
+88.7
+94.1
+86.0
+10
+95.9
+89.0
+95.2
+92.7
+95.5
+91.6
+94.5
+86.0
+25
+95.9
+89.6
+95.8
+95.1
+95.9
+93.9
+94.5
+87.6
+50
+95.6
+90.0
+96.0
+95.6
+95.8
+94.6
+94.3
+90.9
+100
+95.5
+90.2
+95.9
+95.7
+95.6
+94.8
+94.8
+93.6
+200
+95.5
+90.5
+95.9
+95.9
+95.6
+94.8
+96.1
+95.4
+500
+94.7
+90.7
+95.8
+95.8
+94.9
+94.8
+96.6
+96.5
+1554
+96.0
+95.8
+94.7
+96.8
+Ads
+PCA
+RP
+5
+323.6
+629.9
+10
+316.8
+635.6
+25
+320.1
+623.3
+50
+347.2
+548.6
+100
+347.6
+453.3
+200
+345.2
+402.7
+500
+432.8
+386.4
+1554
+404.3
+
+
+Colon
+C4.5
+1NN
+5NN
+SVM
+PCA
+RP
+PCA
+RP
+PCA
+RP
+PCA
+RP
+5
+76.2
+61.8
+67.2
+58.1
+72.8
+62.8
+74.8
+65.0
+10
+73.7
+63.8
+68.8
+64.6
+75.4
+67.1
+78.8
+67.3
+25
+71.3
+61.7
+70.2
+68.0
+71.2
+70.0
+79.3
+72.7
+50
+72.2
+66.2
+73.3
+70.0
+74.8
+70.4
+80.5
+75.8
+100
+72.2
+66.1
+73.3
+71.0
+74.8
+72.1
+80.5
+77.6
+200
+72.2
+67.1
+73.3
+71.3
+74.8
+73.6
+80.5
+78.8
+500
+72.2
+65.3
+73.3
+72.0
+74.8
+73.3
+80.5
+80.1
+2000
+75.5
+73.3
+74.8
+80.5
+Colon
+PCA
+RP
+5
+33.4
+36.3
+10
+33.5
+36.2
+25
+35.7
+36.5
+50
+37.6
+36.9
+100
+37.6
+37.3
+200
+37.6
+37.5
+500
+37.6
+37.4
+2000
+37.6
+
+
+Leuk.
+C4.5
+1NN
+5NN
+SVM
+PCA
+RP
+PCA
+RP
+PCA
+RP
+PCA
+RP
+5
+85.3
+63.2
+96.9
+62.4
+94.9
+67.1
+96.9
+69.1
+10
+83.9
+68.2
+95.6
+69.5
+93.4
+73.4
+98.5
+73.2
+25
+82.8
+71.4
+94.3
+77.2
+96.8
+81.6
+99.2
+83.2
+50
+82.3
+71.7
+96.7
+85.4
+96.2
+86.2
+99.0
+88.3
+100
+82.1
+73.0
+95.7
+89.3
+96.3
+90.8
+99.1
+92.9
+200
+82.1
+72.7
+95.7
+91.9
+96.3
+93.5
+99.1
+95.7
+500
+82.1
+75.8
+95.7
+94.5
+96.3
+95.2
+99.1
+98.3
+3572
+84.0
+95.7
+96.3
+99.1
+Leuk.
+PCA
+RP
+5
+18.1
+38.5
+10
+20.4
+35.4
+25
+26.2
+34.0
+50
+37.2
+34.2
+100
+39.8
+34.6
+200
+39.8
+36.4
+500
+39.8
+38.4
+3572
+39.8
+
+
+Ion.
+C4.5
+1NN
+5NN
+SVM
+PCA
+RP
+PCA
+RP
+PCA
+RP
+PCA
+RP
+5
+88.5
+83.7
+87.6
+85.9
+88.7
+84.5
+86.4
+78.1
+10
+87.7
+85.5
+88.5
+86.4
+86.5
+83.7
+87.4
+82.9
+15
+88.2
+86.6
+88.7
+86.5
+84.5
+83.9
+88.1
+85.3
+20
+87.9
+86.3
+88.4
+86.7
+84.2
+83.8
+88.4
+86.0
+25
+87.9
+87.4
+87.9
+87.1
+84.3
+83.3
+88.1
+86.5
+30
+88.1
+86.7
+87.2
+86.4
+84.2
+84.1
+87.5
+86.9
+34
+88.7
+86.6
+84.7
+87.8
+Ion.
+PCA
+RP
+5
+120.8
+174.2
+10
+114.6
+149.1
+15
+112.2
+134.0
+20
+112.2
+128.6
+25
+112.7
+127.2
+30
+113.7
+123.6
+34
+114.2
+
+
+Spam
+C4.5
+1NN
+5NN
+SVM
+PCA
+RP
+PCA
+RP
+PCA
+RP
+PCA
+RP
+5
+89.1
+74.7
+89.2
+79.0
+90.1
+78.0
+88.0
+69.8
+10
+89.6
+81.7
+90.5
+86.4
+91.1
+85.7
+90.0
+77.8
+15
+89.5
+83.4
+90.6
+88.2
+91.2
+87.8
+90.7
+81.2
+20
+89.4
+84.4
+90.6
+89.1
+91.2
+88.8
+91.0
+84.3
+25
+89.4
+85.1
+90.5
+89.5
+91.2
+89.2
+91.3
+86.4
+30
+89.3
+85.4
+90.4
+89.7
+90.9
+89.5
+91.4
+88.0
+57
+92.3
+90.5
+90.3
+92.3
+Spam
+PCA
+RP
+5
+979.9
+2058.1
+10
+892.0
+1684.9
+15
+862.5
+1476.4
+20
+845.6
+1292.4
+25
+834.5
+1169.1
+30
+835.8
+1090.5
+57
+802.0
+
+
+Table 3: Accuracies (left) and number of Support
+Vectors (nsv) (right) for each dataset and projection
+
+
+
+
+522
+

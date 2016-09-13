@@ -1,0 +1,1826 @@
+Efficient Decision Tree Construction on Streaming Data
+ 
+
+Ruoming Jin
+Department of Computer and Information
+Sciences
+Ohio State University, Columbus OH 43210
+jinr@cis.ohio-state.edu
+Gagan Agrawal
+Department of Computer and Information
+Sciences
+Ohio State University, Columbus OH 43210
+agrawal@cis.ohio-state.edu
+
+
+
+ABSTRACT
+Decision tree construction is a well studied problem in data min-
+ing. Recently, there has been much interest in mining streaming
+data. Domingos and Hulten have presented a one-pass algorithm
+for decision tree construction. Their work uses Hoeffding inequal-
+ity to achieve a probabilistic bound on the accuracy of the tree con-
+structed.
+In this paper, we revisit this problem. We make the following two
+contributions: 1) We present a numerical interval pruning (NIP) ap-
+proach for efficiently processing numerical attributes. Our results
+show an average of 39% reduction in execution times. 2) We ex-
+ploit the properties of the gain function entropy (and gini) to reduce
+the sample size required for obtaining a given bound on the accu-
+racy. Our experimental results show a 37% reduction in the number
+of data instances required.
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications - Data Min-
+ing; I.2.6 [Artificial Intelligence]: Learning
+
+
+Keywords
+Streaming Data, Decision Tree, Sampling
+
+
+1. INTRODUCTION
+Decision tree construction is an important data mining problem.
+Over the last decade, decision tree construction over disk-resident
+datasets has received considerable attention [7, 9, 15, 16]. More
+recently, the database community has focused on a new model of
+data processing, in which data arrives in the form of continuous
+streams [2, 3, 5, 8]. The key issue in mining on streaming data
+is that only one pass is allowed over the entire data. Moreover,
+there is a real-time constraint, i.e. the processing time is limited by
+the rate of arrival of instances in the data stream, and the memory
+available to store any summary information may be bounded. For
+ 
+This work was supported by NSF grant ACR-9982087, NSF CA-
+REER award ACR-9733520, and NSF grant ACR-0130437.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA
+Copyright 2003 ACM 1-58113-737-0/03/0008 ...$5.00.
+most data mining problems, a one pass algorithm cannot be very
+accurate. The existing algorithms typically achieve either a deter-
+ministic bound on the accuracy [10], or a probabilistic bound [6].
+Data mining algorithms developed for streaming data also serve as
+a useful basis for creating approximate, but scalable, implementa-
+tions for very large and disk-resident datasets.
+Domingos and Hulten have addressed the problem of decision
+tree construction on streaming data [6, 13]. Their algorithm guar-
+antees a probabilistic bound on the accuracy of the decision tree
+that is constructed. In this paper, we revisit the problem of decision
+tree construction on streaming data. We make the following two
+contributions:
+
+Efficient Processing of Numerical Attributes: One of the chal-
+lenges in processing of numerical attributes is that the total number
+of candidate split points is very large, which can cause high compu-
+tational and memory overhead for determining the best split point.
+The work presented by Domingos and Hulten is evaluated for cat-
+egorical attributes only. We present a numerical interval pruning
+(NIP) approach which significantly reduces the processing time for
+numerical attributes, without any loss of accuracy. Our experimen-
+tal results show an average of 39% reduction in execution times.
+
+Using Smaller Samples Size for the Same Probabilistic Bound:
+Domingos and Hulten use Hoeffding's bound [11] to achieve a
+probabilistic bound. Hoeffding's result relates the sample size, the
+desired level of accuracy, and the probability of meeting this level
+of accuracy, and is applicable independent of the distribution of in-
+put data. In this paper, we show how we can use the properties
+of the gain function entropy (and gini) to reduce the sample size
+required to obtain the same probabilistic bound. Again, this result
+is independent of the distribution of input data. Our experimental
+results show that the number of samples required is reduced by an
+average of 37%.
+Overall, these two contributions increase the efficiency of pro-
+cessing streaming data, where a real-time constraint may exist on
+the processing times, and only limited memory may be available.
+Our work also has important implications for analysis of streaming
+data beyond decision tree construction. We will be exploring these
+further in our future work.
+
+
+2. DECISION TREE CONSTRUCTION
+This section provides background information on the decision
+tree construction problem.
+
+2.1 Decision Tree Classifier
+Assume there is a data set
+¡£¢¥¤§¦©¨§¦¦"!
+, where
+¦#$¢&%
+'( )1032 '46587
+.
+'(@9©ACB¢D%
+( ¨(FE 0
+is the data associated
+
+
+571
+
+with the instance and
+)
+is the class label. Each
+(¡ 
+is called a field
+
+or an attribute of the data instance.
+'4
+9©ACB¢ 4 ¨ 5 4 E
+is the
+domain of data instances and
+4
+ 
+is the domain of the attribute
+(¢ 
+.
+The domain of an attribute can either be a categorical set, such as
+¤¤£¦¥¤§ ©¨¥ ©¡¥
+
+3!
+, or a numerical set, such as !#"
+"¤$¦$%
+.
+7
+is the
+domain of class labels. In this paper, our discussion will assume
+that there are only two distinct class labels, though our work can be
+easily extended to the general case.
+The classification problem is to find a computable function &('
+'40)1
+7
+, such that for any instance
+¦
+extracted from the same distri-
+bution as
+¡
+, &32
+¦©'(54
+will give an as accurate as possible prediction
+of
+¦©)
+. Decision tree classifiers are frequently used for achieving the
+above functionality. A decision tree classifier is typically a binary
+tree, where every non-leaf node
+¦
+is associated with a predicate 6 .
+A predicate partitions the set of data instances associated with node
+based upon the value of a particular attribute
+( #
+. If
+( #
+belongs to a
+categorical domain, 6 is a subset predicate, for example, 6
+¢ ¦7£8¥
+if
+( # 2 ¤£8¥¤§ ©¨9@¥!
+. If
+( #
+belongs to a numerical domain, 6 is a
+range predicate, for example, 6
+¢ ¦A£
+¥
+if
+( #CBED$
+. Here,
+D
+$ is
+called the cutting or the split point.
+
+2.2 Entropy Function
+An impurity function gives a measurement of the impurity in the
+dataset. Originally proposed in the information theory literature,
+entropy has become one of the most popular impurity functions.
+Suppose, we are looking at a training dataset
+¡
+. Let 6
+¨
+and 6
+
+be
+the proportion of instances with class labels " and F , respectively.
+Clearly, 6
+¨HG
+6
+ ¢
+" .
+Entropy function is defined as
+IQP
+F¦A£
+
+6
+
+2
+¡
+4
+¢SR
+6
+¨ 5HTVU8W
+6
+¨
+R
+6
+ 5XTYU¦W
+6
+
+¢SR
+6
+¨ 5`TYU¦W
+6
+¨aR
+2A"
+R
+6
+¨4 5`TYU¦W
+2A"
+R
+6
+¨4
+Now, suppose we split the node using a split predicate
+)
+and cre-
+ate two subsets
+¡cb
+and
+¡cd
+, which are the left and right subsets,
+respectively. Let 6
+b
+denote the fraction of the data instances in
+¡
+that are associated with
+¡cb
+. Then, the gain associated with split-
+ting using the predicate
+)
+is defined as
+e8f
+¢
+e
+2
+¡cb ¡gd
+4
+¢hIQPF¦A£
+
+6
+
+2
+¡
+4
+R
+2©2#6
+b
+5iIQPF¦A£
+
+6
+
+2
+¡
+b
+4©4
+G
+2#6
+d
+5iIQPF¦A£
+
+6
+
+2
+¡
+d
+4©4©4
+
+Further, let 6
+¨pb
+be the proportion of instances with the class label
+" within
+¡cb
+, and let 6
+¨pd
+be the proportion of instances with the
+class label " within
+¡
+d
+. Because
+IQP
+¦7£86
+
+2
+¡
+4
+is a constant, we
+can treat
+e¦f
+as a function of three variables, 6
+b
+, 6
+¨pb
+, and 6
+¨pd
+.
+e f
+¢
+e
+2#6
+b
+6 ¨pb 6 ¨pd
+4
+¢qIQPF¦A£
+
+6
+
+2
+¡
+4
+R
+6
+b
+5
+2
+R
+6
+¨pb 5HTYU8W
+6
+¨pbXR
+2A"
+R
+6
+¨pb
+4
+5HTYU¦W
+2A"
+R
+6
+¨pb
+4©4
+R
+2A"
+R
+6
+b
+4
+5
+2
+R
+6
+¨pd 5XTYU¦W
+6
+¨pd
+R
+2A"
+R
+6
+¨pd
+4
+5HTVU8W
+2A"
+R
+6
+¨pd
+4©4
+
+For a given attribute
+( #
+, let
+e
+2
+( #4
+denote the best gain possible
+using this attribute for splitting the node. If we have r attributes,
+we are interested in determining s , such that
+e
+2
+( #4ut
+vuwx
+ y
+¨©
+   
+E9
+
+#
+e
+2
+(¢ 4
+
+3. STREAMING DATA PROBLEM
+In this section, we focus on the problem of decision tree con-
+struction on streaming data. We give a template of the algorithm,
+which will be used as the basis for our presentation in the next two
+sections. Moreover, we describe how sampling is used to achieve a
+probabilistic bound on the quality of the tree that is constructed.
+3.1 Algorithm Template
+
+
+StreamTree Stream 
+global i¤3¤9Aedfgd¡ihjpklhnm
+local ol9prq@9pm
+local id s¢tuAm
+hwvxogyiz3z{m@klh|vxogyiz3zim
+}
+pp~u¤9A7khi©m
+while not s¡7he and emptyuklhe
+vl AAm
+q@9pevt
+}¦g
+¢99Ap©m
+if q9pnkh
+}
+pp~q9p 
+}
+s¡tV pAm
+if q@9p
+}
+
+
+
+
+As gq@p
+
+
+
+q
+¤gg8q9p 7khi©m
+if q@9pq@d¡ 
+}
+Cs¢tV
+
+
+d
+
+
+
+s¢t
+
+
+
+d¢q@©
+
+qQ{ gf¢r©
+
+
+
+s¢t
+
+Am
+uq@9p
+¨7q9pvq@9p
+©¤
+}
+Am
+¤gg8q9p 7khi©m
+}
+ppuq@9p
+¨q@9p©heAm
+while qd¢  ggg9¡uklhChe
+ Auq@p 9hi©m
+}
+ppuq@p AklheAm
+
+
+
+
+Figure 1: StreamTree Algorithm
+
+
+
+We first list the issues in analyzing streaming data. The total size
+of the data is typically much larger than the available memory. It
+is not possible to store and re-read all data from memory. Thus,
+a single pass algorithm is required, which also needs to meet the
+real-time constraint, i.e. the computing time for each item should
+be less than the interval between arrival times for two consecutive
+items.
+A key property that is required for analysis of streaming data is
+that the data instances arriving follow an underlying distribution.
+It implies that if we collect a specific interval of streaming data,
+we can view them as a random sample taken from the underlying
+distribution. It may be possible for a decision tree construction
+algorithm to adjust the tree to changes in the distribution of data
+instances in the stream [13], but we do not consider this possibility
+here.
+Figure 1 presents a high-level algorithm for decision tree con-
+struction on streaming data. This algorithm forms the basis for
+our presentation in the rest of the paper. The algorithm is based
+upon two queues,  and X . X stands for active queue and de-
+notes the set of decision tree nodes that we are currently working
+on expanding.  is the set of decision tree nodes that have not yet
+been split, but are not currently being processed. This distinction
+is made because actively processing each node requires additional
+memory. For example, we may need to store the counts associated
+with each distinct value of each attribute. Therefore, the set AQ is
+constructed from the set  by including as many nodes as possible,
+till sufficient memory is available.
+The algorithm, as presented here, is only different from the work
+by Domingos and Hulten [6] in not assuming that all nodes at one
+level of the tree can be processed simultaneously. The memory re-
+quirements for processing a set of nodes is one of the issues we are
+optimizing in our work. If the memory requirements for processing
+a given node in the tree are reduced, more nodes can be fit into the
+set X , and therefore, it is more likely that a given data instance
+can be used towards partitioning a node.
+
+
+572
+
+3.2 Using Sampling
+Here, we review the problem of selecting splitting predicate based
+upon a sample. Our discussion assumes the use of entropy as the
+gain function, though the approach can be applied to other func-
+tions such as gini.
+Let
+ 
+be a sample taken from the dataset
+¡
+. We focus on the gain
+e8f
+associated with a potential split point
+)
+for a numerical attribute
+( #
+. If 6
+¨
+and 6
+
+are the fractions of data instances with class labels
+1 and 2, respectively, 6
+¨
+and 6
+
+are the estimates computed using
+the sample. Similarly, we have the definitions for 6
+b
+6 ¨pb
+, 6
+¨pd
+,
+e8f
+,
+and
+IQP
+F¦A£
+
+6
+
+2
+¡
+4
+.
+We have,
+e f
+¢
+e
+2 6
+b
+6 ¨pb 6 ¨pd
+4
+¢
+IQP
+F¦A£
+
+6
+
+2
+¡
+4
+
+R
+6
+b
+2A"
+R
+6
+¨pb
+TYU8W
+6
+¨pb
+R
+2A"
+R
+6
+¨pb
+4
+TYU¦W
+2A"
+R
+6
+¨pb
+4©4
+
+R
+2A"
+R
+6
+b
+4
+2 6
+¨pdlTYU¦W
+6
+¨pd
+R
+2A"
+R
+6
+¨pd
+4
+TYU8W
+2A"
+R
+6
+¨pd
+4©4
+
+The value of
+e¦f
+serves as the estimate of of
+e¦f
+. Note that we do
+not need to compute
+IQP
+¦7£86
+
+2
+¡
+4
+, since we are only interested in
+the relative values of the gain values associated with different split
+points.
+Now, we consider the procedure to find the best split point using
+the above estimate of gains. Let
+e
+2
+( #4
+be the estimate of the best
+gain that we could get from the attribute
+( #
+. Assuming there are r
+attributes, we will use the attribute
+( #
+, such that
+e
+2
+( #4
+R
+vuw x
+ ¤y¢
+¨©
+   
+E
+ 
+#
+e
+2
+(¢ 4t¢¡
+
+where
+¡
+is a small positive number. The above condition (called the
+statistical test) is used to infer that
+( #
+is likely to satisfy the original
+test for choosing the best attribute, which is
+e
+2
+( #4ut
+vuwx
+ y
+¨©
+   
+E9
+
+#
+e
+2
+(¢ 4
+
+To describe our confidence of above statistical inference, a param-
+eter
+£
+is used.
+£
+is the probability that the original test holds if the
+statistical test holds, and should be as close to 1 as possible.
+¡
+can
+be viewed as a function of
+£
+and sample size
+¤ ¥¤,
+i.e.
+¡
+¢
+&32
+¦£
+¤ §¤4
+Domingos and Hulten use the Hoeffding bound [11] to construct
+this function. The specific formula they use is
+¡©¨
+¢ 
+
+T
+
+2A"
+¡2A"
+R
+£
+4©4
+F
+5
+¤ §¤
+where
+
+is the spread of the gain function. In this context, where
+there are two classes and entropy is used as the impurity function,
+
+¢
+F . In Section 5, we will describe an alternative approach,
+which reduces the required sample size.
+Based upon the probabilistic bound on the splitting condition for
+each node, Domingos and Hulten derive the following result on
+the quality of the resulting decision tree. This result is based on
+the measurement of intensional disagreement. The intensional dis-
+agreement
+
+#
+between two decision trees
+¡ ¨
+and
+¡ 
+is the
+probability that the path of an example through
+¡ ¨
+will differ
+from its path through
+¡ 
+.
+
+
+THEOREM 1. If
+"!
+is the tree produced by the algorithm
+for streaming data with desired accuracy level
+£
+,
+¡
+ 
+is the tree
+produced by batch processing an infinite training sequence, and
+6 is the leaf probability, i.e., the probability that a given example
+reaches a leaf node at any given level of the decision tree, then
+I
+!
+
+#2
+#
+$! ¡
+ %
+B
+2A"
+R
+£
+4
+6
+where
+I
+!
+
+#2
+#
+$! ¡
+ 4%
+is the expected value of
+
+#2
+#
+$! ¡
+ 4
+taken over an infinite training sequence.
+
+
+4. A NEW ALGORITHM FOR HANDLING
+NUMERICAL ATTRIBUTES
+In this section, we present our numerical interval pruning ap-
+proach for making decision tree construction on streaming data
+more memory and computation efficient.
+
+4.1 Problems and Our Approach
+One of the key problems in decision tree construction on stream-
+ing data is that the memory and computational cost of storing and
+processing the information required to obtain the best split gain
+can be very high. For categorical attributes, the number of distinct
+values is typically small, and therefore, the class histogram does
+not require much memory. Similarly, searching for the best split
+predicate is not expensive if number of candidate split conditions is
+relatively small.
+However, for numerical attributes with a large number of distinct
+values, both memory and computational costs can be very high.
+Many of the existing approaches for scalable, but multi-pass, de-
+cision tree construction require a preprocessing phase in which at-
+tribute lists for numerical attributes are sorted [15, 16]. Preprocess-
+ing of data, in comparison, is not an option with streaming datasets,
+and sorting during execution can be very expensive. Domingos and
+Hulten have described and evaluated their one-pass algorithm fo-
+cusing only on categorical attributes [6]. It is claimed that numer-
+ical attributes can be processed by allowing predicates of the form
+"
+( #3% ( # 
+", for each distinct value
+( # 
+. This implies a very high
+memory and computational overhead for determining the best split
+point for a numerical attribute.
+We have developed a Numerical Interval Pruning (NIP) approach
+for addressing these problems. The basis of our approach is to
+partition the range of a numerical attribute into intervals, and then
+use statistical tests to prune these intervals. At any given time, an
+interval is either pruned or intact. An interval is pruned if it does
+not appear likely to include the split point. An intact interval is an
+interval that has not been pruned. In our current work, we have
+used equal-width intervals, i.e. the range of a numerical attribute is
+divided into intervals of equal width.
+In the numerical interval pruning approach, we maintain the fol-
+lowing sets for each node that is being processed.
+
+Small Class Histograms: This is primarily comprised of class his-
+tograms for all categorical attributes. The number of distinct ele-
+ments for a categorical attribute is not very large, and therefore, the
+size of the class histogram for each attribute is quite small. In ad-
+dition, we also add the class histogram for numerical attributes for
+which the number of distinct values is below a threshold.
+
+Concise Class Histograms: The range of numerical attributes which
+have a large number of distinct elements in the dataset is divided
+into intervals. For each interval of a numerical attribute, the con-
+cise class histogram records the number of occurrences of instances
+with each class label whose value of the numerical attribute is within
+that interval.
+
+Detailed Information: The detailed information for an interval can
+be in one of the two formats, depending upon what is efficient. The
+first format is class histogram for the samples which are within the
+
+
+573
+
+interval. When the number of samples is large and the number of
+distinct values of a numerical attribute is relatively small, this for-
+mat is more efficient. The second format is to simply maintain the
+set of samples with each class label. It is not necessary to pro-
+cess the detailed information in the pruned interval to get best split
+point.
+
+The advantage of this approach is that we do not need to pro-
+cess detailed information associated with a pruned interval. This
+results in a significant reduction in the execution time, but no loss
+of accuracy.
+
+
+
+NIP-Classifier Node
+ 
+, Stream C
+while not
+}
+
+
+
+
+As qp
+
+
+
+q  w
+¡
+* Get Some Samples from Stream  *
+¢
+£
+}
+s¢tu¥¤`v0  ApAm
+y3s¢p
+}
+
+£
+
+}
+tVt ¦et
+}8¨§l
+A©¤r©m
+y3s¢p
+}
+ ¦eq@
+
+ ¦et
+}8¨§l
+A©¤r©m
+y3s¢p
+}
+ 
+}
+tup ¤q
+
+9
+}
+
+
+q ¤ Am
+¡
+* Find the best gain *
+¢
+@v Find Best Gain(ClassHist)m
+v
+y qe9d¢q
+
+qu   Concise ClassHistAm
+¡
+* Split *
+¢
+if
+£
+
+}
+
+
+
+
+
+}
+tutY  
+
+ 
+}
+q
+¦
+£
+s¢t
+
+ ol9p   |Am
+A¤
+}!
+m
+¡
+* Pruning *
+¢
+e9d¢q
+
+q
+
+Concise ClassHistAm
+
+
+
+
+Figure 2: NIP Algorithm for Numerical Attributes Handling
+
+
+The main challenge in the algorithm is to effectively but correctly
+prune the intervals. Over-pruning is a situation occurring when an
+interval does not appear likely to include the split point after we
+have analyzed a small sample, but could include the split point after
+more information is made available. Under-pruning means that an
+interval does not appear likely to include the split point but has
+not yet been pruned. We refer to over-pruning and under-pruning
+together as false pruning.
+The pseudo-code for our Numerical Interval Pruning (NIP) algo-
+rithm is presented in Figure 2. Here, after collecting some samples,
+we use small class histograms, concise class histograms, and the
+detailed information from intact intervals and get an estimate of
+the best (highest) gain. This is denoted as
+e
+. Then, by using
+e
+ ,
+we unprune intervals that look promising to contain the best gain,
+based upon the current sample set. The best gain "
+e
+can come from
+e
+ or a newly unpruned intervals. Then, by performing a statisti-
+cal test, we check if we can now split this node. If not, we need
+to collect more samples. Before that, however, we check if some
+additional intervals can be pruned.
+Further details of the above approach are available in a technical
+report from the authors [14].
+
+THEOREM 2. The best gain "
+e
+computed using our numerical
+interval pruning approach is the same as the one computed by an
+algorithm that uses full class histograms, provided the two algo-
+rithms use the same sample set.
+
+In the algorithm presented here, unpruning intervals is a require-
+ment for provably achieving the same accuracy as in an algorithm
+that does not do any pruning. Therefore, we need to maintain and
+continue to update the detailed information associated with pruned
+intervals. However, the probability of over-pruning can be shown
+to be very small. Therefore, we can modify our original algorithm
+to not store the detailed information associated with pruned inter-
+vals. This optimization has two benefits. First, the memory require-
+ments are reduced significantly. Second, we can further save on the
+computational costs by not having to update detailed information
+associated with a pruned interval.
+
+
+5. A NEW SAMPLING APPROACH
+This section introduces a new approach for choosing the sam-
+ple size. As compared to the Hoeffding inequality [11] based ap-
+proach used by Domingos and Hulten [6], our method allows the
+same probabilistic accuracy bound to be achieved using signifi-
+cantly smaller sample sizes.
+
+5.1 Exploiting Gain Functions
+As we have mentioned previously, the one-pass decision tree
+construction algorithm by Domingos and Hulten uses Hoeffding
+inequality to relate the bound on the accuracy
+¡,
+the probability
+£
+,
+and the sample size
+¤ §¤.
+Hoeffding bound based result is indepen-
+dent of the distribution of the data instances in the dataset. Here,
+we derive another approach, which is still independent of the dis-
+tribution of the data instances, but uses properties of gain functions
+like entropy and gini.
+We use the following theorem, also known as the multivariant
+delta result [4]. Here, the symbol
+I
+2
+(4
+denotes the expected value
+of a variable
+(
+,
+7C
+$#
+2
+( A
+4
+denotes the covariance of the two vari-
+ables
+(
+and
+
+, and %j2$
+'&
+4
+is the normal distribution with the
+mean 0 and the variance (or the square of the standard deviation)
+&
+
+.
+
+THEOREM 3. (Multivariate Delta Method) Let
+4 ¨§§4)(
+be
+a random sample. Let
+4 # ¢ 4 ¨C#©410#
+. Further, let
+I
+2
+4 # 4 ¢
+2
+#
+and
+7C
+!#
+2
+4 #  4
+ 43 4
+¢65F# 
+. Let
+4 #
+be the mean of
+4 #¨4 #§
+4 #7(
+and let
+'2 ¢
+2
+2
+¨§2
+0
+4
+. For a given function
+e
+with con-
+tinuous first partial derivatives, we have
+e
+2
+4 ¨§4
+0
+4
+R
+e
+2
+'2
+4
+1
+%w2$
+'&
+P
+4
+
+where,
+&
+
+¢98@8A5 # 
+CB
+e
+2
+'2
+4
+B
+2
+#ED
+B
+e
+2
+'2
+4
+B
+2  
+
+Proof:See the reference [4], for example. F
+Below, we show the application of the above result on the gain
+function entropy. This could similarly be applied on the gain func-
+tion gini, but we do not present the details here.
+In applying the above result on the entropy function, we consider
+the following. The function
+e
+is a function of three measurements,
+6
+b
+, 6
+¨pb
+, and 6
+¨pd
+. The three values or measurements are indepen-
+dent of each other, i.e. the covariance
+7C
+!#
+2
+( A
+4
+is 0 if
+(EG¢
+
+.
+
+LEMMA 1. Let
+P
+be the sample size of
+ 
+, % be the normal
+distribution. Then, for the entropy function
+e
+, we have
+eIH
+¢
+e
+2 6
+b
+6 ¨pb 6 ¨pd
+4
+1
+%w2
+e
+2
+(54P&
+H
+
+P
+4
+
+where,
+&
+H
+¢
+2
+B
+e
+B
+6
+b
+4
+
+D 6
+b
+2A"
+R
+6
+b
+4
+
+
+G
+2
+B
+e
+B
+6
+¨pb
+4
+
+D 6
+¨pb
+2A"
+R
+6
+¨pb
+4
+G
+2
+B
+e
+B
+6
+¨pd
+4
+
+D 6
+¨pd
+2A"
+R
+6
+¨pd
+4
+
+
+
+574
+
+Proof:The proof follows from the application of the multivari-
+ate delta result (presented above), and the observation that the first
+derivatives for entropy are continuous functions (details are omitted
+here). F
+Next, we focus on the following problem. Assume there is a
+point
+
+belonging to the attribute
+4
+ 
+s
+G
+¢¡ 
+. We need to determine
+if
+e H
+0
+e
+£¢
+or
+e H
+%
+e
+¤¢
+, using just the sample
+ 
+. Because
+
+also
+satisfies the Lemma 1, and
+(
+and
+
+are independent, we have
+e
+¢
+1
+%w2
+e
+¢
+P&
+¢
+
+P
+4
+
+Therefore,
+e H
+R
+e
+¢
+1
+%w2
+eIH
+R
+e
+¢
+2&
+H
+G9&
+¢
+4
+
+P
+4
+
+This leads to the following lemma.
+
+LEMMA 2. Let
+¡(
+¢¦¥!
+D
+§
+&
+H
+G &
+¢
+¨
+P
+
+where
+¥ !
+is the 2A"
+R
+£
+4
+th percentile of the standard normal distri-
+bution. If
+e H
+R
+e
+¤¢
+t
+¡(
+, then with probability
+£
+, we have
+e H t e
+£¢
+.
+If
+eIH
+R
+e
+¢
+B R
+¡(
+, then with probability
+£
+, we have
+e
+¢
+the H
+.
+
+Proof:The above lemma follows from the application of well known
+results on simultaneous statistical inference [12]. F
+We call the above test the Normal test.
+
+5.2 Sample Size Problem
+Once a desired level of accuracy
+£
+is chosen, the key issue with
+the performance of a one-pass algorithm is the sample size selec-
+tion problem, i.e. how large a sample is needed to find the best split
+point with the probability
+£
+. Specifically, we are interested in the
+sample size that could separate
+e H
+©
+and
+e
+¢,
+where
+(
+and
+(
+are
+the points that maximize the gain of split function for the top two
+attributes
+4 
+and
+4 
+.
+Let
+eIH
+©
+R
+e
+¢©
+¢ ¡
+. Thus, by normal distribution, the required
+sample size is
+
+%
+(
+¢
+¥
+!
+§
+&
+H
+G &
+¢
+¡
+
+The required sample size from Hoeffding bound is
+
+%
+¨
+¢ 
+
+T
+
+2A"
+¡2A"
+R
+£
+4©4
+F
+¡
+
+Comparing the above two equations, we have the following re-
+sult.
+
+THEOREM 4. The sample size required using the normal test
+will always be less or equal to the sample size required for the
+Hoeffding test, i.e.,
+%
+( B
+%
+¨
+Proof:This follows from comparing the two equations above. F
+
+6. EXPERIMENTAL RESULTS
+In this section, we report on a series of experiments designed
+to evaluate the performance of our new techniques. Particularly,
+we are interested in evaluating 1) the advantages of using Numer-
+ical Interval Pruning (NIP), and 2) the advantages of using normal
+distribution of the estimate of entropy function, as compared to Ho-
+effding's bound.
+The datasets we used for our experiments were generated using a
+tool described by Agrawal et al. [1]. There were two reasons for us-
+ing these datasets. First, these datasets have been widely used for
+evaluating a number of existing efforts on scalable decision con-
+struction [9, 7, 15, 16]. Second, the only real datasets that we are
+aware of are quite small in size, and therefore, were not suitable
+for our experiments. The datasets we generated had 10 million
+training records, each with 6 numerical attributes and 3 categorical
+attributes. We used the functions 1, 6, and 7 for our experiments.
+For each of these functions, we generated separate datasets with
+0%, 2%, 4%, 6%, 8%, and 10% noise.
+The results from experiments designed to evaluate the NIP ap-
+proach and the benefits of using normal distribution of the estimate
+of entropy function are reported together. We created 4 different
+versions, all based upon the basic StreamTree algorithm presented
+in Figure 1. Sample-H is the version that uses Hoeffding bound,
+and stores samples to evaluate candidate split conditions.
+ClassHist-H uses Hoeffding bound and creates full class his-
+tograms. NIP-H and NIP-N use numerical interval pruning, with
+Hoeffding bound and the normal distribution of entropy function,
+respectively. The version of NIP that we implemented and eval-
+uated creates intervals after 10,000 samples have been read for
+a node, performs interval pruning, and then deletes the samples.
+Thus, unpruning is not an option here, and therefore, the accuracy
+can be lower than an approach that uses full class histograms. Our
+implementation used a memory bound of 60 MB for all four ver-
+sions. Consistent with what was reported for the implementation
+of Domingos and Hulten, we performed attribute pruning, i.e., did
+not further consider an attribute that appeared to show poor gains
+after some samples were analyzed.
+Figure 3 shows the average number of nodes in the decision tree
+generated using functions 1, 6, and 7, and using noise levels of
+0%, 2%, 4%, 6%, 8%, and 10%, respectively. This number does
+not change in any significant way over the four different versions
+we experimented with. As expected, the size of the decision tree
+increases with the level of noise in data.
+One interesting question is, what inaccuracy may be introduced
+by our version of NIP-H, since it does not have the option of un-
+pruning. Figure 4 shows the increase in inaccuracy for NIP-H,
+as compared to the average of inaccuracy from Sample-H and
+ClassHist-H. As can be seen from the figure, there is no sig-
+nificant chance in inaccuracy. Note that whenever a different set
+of data instances are used to split a node, the computed inaccuracy
+value can be different. Similarly, Figure 5 shows the increase in
+inaccuracy for NIP-N, as compared to the average of inaccuracy
+from Sample-H and ClassHist-H. Again, there is no signifi-
+cant change, and the average value of the difference is very close to
+zero.
+For the remaining part of this section, we only report results from
+the use of function 6. Results from functions 1 and 7 are available
+in a technical report [14].
+Figure 6 shows the execution times for decision tree construction
+with the four versions and different levels of noise, for function
+6. Through-out, we will focus on comparing the performance of
+NIP-N and NIP-H with the better one between Sample-H and
+ClassHist-H, which we denote by existing. The execution
+times of NIP-H are between 40% and 70% of the execution time of
+existing. Moreover, NIP-N further reduces the execution time
+by between 7% and 80%.
+We next compare these four version using two metrics we con-
+sider important. These metrics are, total instances read (TIR), and
+instances actively processed (IAP). TIR is the number of samples
+or data instances that are read before the decision tree converges.
+When a sample is read, it cannot always be used as part of the al-
+gorithm. This is because it may be assigned to a node that does
+not need to be expanded any further, or is not being processed cur-
+
+
+
+575
+
+0
+100
+200
+300
+400
+500
+600
+700
+800
+
+
+
+
+0
+0.02
+0.04
+0.06
+0.08
+0.1
+Number
+of
+Nodes
+
+
+
+
+Noise Factor
+F1
+F6
+F7
+
+
+
+
+Figure 3: Concept Size
+-4
+-2
+0
+2
+4
+6
+8
+10
+
+
+
+
+0
+0.02
+0.04
+0.06
+0.08
+0.1
+Relative
+Inaccuracy
+(%)
+
+
+
+
+Noise Factor
+NIP-H-F1
+NIP-H-F6
+NIP-H-F7
+
+
+
+
+Figure 4: Inaccuracy with NIP
+-4
+-2
+0
+2
+4
+6
+8
+10
+
+
+
+
+0
+0.02
+0.04
+0.06
+0.08
+0.1
+Relative
+Inaccuracy
+(%)
+
+
+
+
+Noise Factor
+NIP-N-F1
+NIP-N-F6
+NIP-N-F7
+
+
+
+
+Figure 5: Inaccuracy with Normal
+
+
+
+
+0
+100
+200
+300
+400
+500
+600
+
+
+
+
+0
+0.02
+0.04
+0.06
+0.08
+0.1
+Running
+Time
+(Seconds)
+
+
+
+
+Noise Factor
+ClassHist-H
+Sample-H
+NIP-H
+NIP-N
+
+
+
+
+Figure 6: Running Time: F6
+0
+20
+40
+60
+80
+100
+
+
+
+
+0
+0.02
+0.04
+0.06
+0.08
+0.1
+Number
+of
+Instances
+(Millions)
+
+
+
+
+Noise Factor
+ClassHist-H
+Sample-H
+NIP-H
+NIP-N
+
+
+
+
+Figure 7: TIR: F6
+0
+1
+2
+3
+4
+5
+6
+
+
+
+
+0
+0.02
+0.04
+0.06
+0.08
+0.1
+Number
+of
+Instances
+(Millions)
+
+
+
+
+Noise Factor
+ClassHist-H
+Sample-H
+NIP-H
+NIP-N
+
+
+
+
+Figure 8: IAP: F6
+
+
+rently because of memory considerations. Therefore, we measure
+IAP as the number of data instances that were used for evaluating
+candidate split conditions. Figure 7 shows TIR for the four versions
+and for the function 6. The use of class histograms results in high
+memory requirements, which results in very high values of TIR. In
+all cases, the values of TIR for Sample-H and NIP-H are almost
+identical. This shows the main performance advantage of the NIP
+approach comes because of the reduction in computational costs,
+and not because of memory. Moreover, the reduction in execution
+time with the use of NIP approach shown earlier is actually a re-
+duction in processing time per data instance, which is an important
+issue in processing of data streams. Comparison between NIP-
+H and NIP-N versions shows the benefits of exploiting the normal
+distribution of the estimated entropy function. The reduction in TIR
+is between 18% and 60% for function 6. Figure 8 shows the val-
+ues of IAP. The three versions, Sample-H, ClassHist-H, and
+NIP-H have almost identical values of IAP. This is because they
+are using the same statistical test to make decisions. The reduction
+in IAP for the NIP-N version is quite similar to the reduction seen
+in the values of TIR for this version.
+
+
+7. CONCLUSIONS AND FUTURE WORK
+This paper has focused on a critical issue arising in decision tree
+construction on streaming data, i.e., the space and time efficiency.
+This includes processing time per data instance, memory require-
+ments (or the number of data instances required), and the total time
+required for constructing the decision tree. We have developed and
+evaluated two techniques, numerical interval pruning and exploit-
+ing the normal distribution property of the estimated value of the
+gain function.
+In the future, we will like to expand our work in many directions.
+First, we want to consider other ways of creating intervals, besides
+the equal-width intervals we are currently using. Second, we want
+to extend our work to drifting data streams [13]. Another area will
+be to apply the ideas behind our normal test to other mining prob-
+lems, such as k-means and EM clustering.
+
+
+8. REFERENCES
+[1] R. Agrawal, T. Imielinski, and A. Swami. Database mining: A performance perspective. IEEE Transactions on
+Knowledge and Data Eng., 5(6):914-925,, December 1993.
+[2] A. Arasu, B. Babcock, S. Babu, J. McAlister, and J. Widom. Characterizing memory requirements for queries
+over continuous data streams. In Proc. of the 2002 ACM Symp. on Principles of Database Systems. ACM Press,
+June 2002.
+[3] B. Babcock, S. Babu, M. Datar, R. Motwani, and J. Widom. Models and Issues in Data Stream Systems. In
+Proceedings of the 2002 ACM Symposium on Principles of Database Systems (PODS 2002) (Invited Paper).
+ACM Press, June 2002.
+[4] George Casella and Roger L. Berger. Statistical Inference, 2nd. Edition. DUXBURY Publishers, 2001.
+[5] A. Dobra, J. Gehrke, M. Garofalakis, and R. Rastogi. Processing complex aggregate queries over data streams. In
+Proc. of the 2002 ACM SIGMOD Intl. Conf. on Management of Data, June 2002.
+[6] P. Domingos and G. Hulten. Mining high-speed data streams. In Proceedings of the ACM Conference on
+Knowledge and Data Discovery (SIGKDD), 2000.
+[7] J. Gehrke, V. Ganti, R. Ramakrishnan, and W. Loh. Boat­ optimistic decision tree construction. In Proc. of the
+ACM SIGMOD Conference on Management of Data, June 1999.
+[8] J. Gehrke, F. Korn, and D. Srivastava. On computing correlated aggregates over continual data streams. In Proc.
+of the 2001 ACM SIGMOD Intl. Conf. on Management of Data, pages 13­24. acmpress, June 2001.
+
+[9] J. Gehrke, R. Ramakrishnan, and V. Ganti. Rainforest - a framework for fast decision tree construction of large
+datasets. In VLDB, 1998.
+
+[10] S. Guha, N. Mishra, R. Motwani, and L. O'Callaghan. Clustering Data Streams. In Proceedings of 2000 Annual
+IEEE Symp. on Foundations of Computer Science (FOCS), pages 359­366. ACM Press, 2000.
+[11] W. Hoeffding. Probability inequalities for sums of bounded random variables. Journal of the American Statistical
+Association, pages 58:18­30, 1963.
+[12] Jason C. Hsu. Multiple Comparisons, Theory and methods. Chapman and Hall, 1996.
+
+[13] G. Hulten, L. Spencer, and P. Domingos. Mining time-changing data streams. In Proceedings of the ACM
+Conference on Knowledge and Data Discovery (SIGKDD), 2001.
+[14] Ruoming Jin and Gagan Agrawal. Efficient Decision Tree Construction on Streaming Data. Technical Report
+OSU-CISRC-6/03-TR34, Department of Computer and Information Sciences, The Ohio State University, June
+2003.
+[15] M. Mehta, R. Agrawal, and J.Rissanen. Sliq: A fast scalable classifier for data mining. In In Proc. of the Fifth
+Int'l Conference on Extending Database Technology, Avignon, France, 1996.
+[16] J. Shafer, R. Agrawal, and M. Mehta. SPRINT: A scalable parallel classifier for data mining. In Proceedings of
+the 22nd International Conference on Very Large Databases (VLDB), pages 544­555, September 1996.
+
+
+
+
+576
+

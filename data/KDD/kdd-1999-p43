@@ -1,0 +1,1442 @@
+Efficient Mining of Emerging Patterns:
+Discovering TrendsandDifferences
+
+Guozhu Dong
+Department of CSE
+Wright State University
+gdong@cs.wright.edu
+
+
+Abstract
+We introduce a new kind of patterns, called emerging patterns
+(EPs), for knowledge discovery from databases. EPs are defined
+as itemsets whose supports increase significantly from one dataset
+to another.
+EPs can capture emerging trends in timestamped
+databases, or useful contrasts between data classes. EPs have been
+proven useful: we have used them to build very powerful classifiers,
+which are more accurate than C4.5 and CBA, for many datasets.
+We believe that EPs with low to medium support, such as 1%-20%,
+can give useful new insights and guidance to experts, in even "well
+understood" applications.
+The efficient mining of EPs is a challenging problem, since
+(i) the Apriori property no longer holds for EPs, and (ii) there
+are usually too many candidates for high dimensional databases
+or for small support thresholds such as 0.5%. Naive algorithms
+are too costly.
+To solve this problem, (a) we promote the
+description of large collections of itemsets using their concise
+borders (the pair of setsof the minimal and of the maximal itemsets
+in the collections).
+(b) We design EP mining algorithms which
+manipulate only borders of collections (especially using our multi-
+border-differential algorithm), and which represent discovered EPs
+using borders. All EPs satisfying a constraint can be efficiently
+discovered by our border-based algorithms, which take the borders,
+derived by Max-Miner,
+of large itemsets as inputs.
+In our
+experiments on large and high dimensional datasets including the
+US census and Mushroom datasets, many EPs, including some with
+large cardinality, are found quickly. We also give other algorithms
+for discovering general or special types of EPs.
+
+
+Permission
+to make digital
+or hard copies of all or part ol`this
+work Iht
+personal
+or classroom
+USCis granted
+without
+fee provided
+that copies
+are not made or distributed
+for profit
+or commercial
+advantage
+and that
+copies bear this notice and the full citation
+on the lirst page. To copy
+otherwise,
+to republish,
+to post on servers or to redistribute
+to lists.
+requires
+prior specific
+permission
+and/or a fee.
+KDD-99 San Diego CA USA
+Copyright
+ACM 1999l-58113-143-7/99/08...$5.00
+Jinyan Li
+Department of CSSE
+The University of Melbourne
+jyli@cs.mu.oz.au
+
+
+1
+Introduction
+In this paper we introduce a new kind of patterns, called
+emerging patterns (EPs), which capture significant changes
+and differences between datasets.
+EPs are defined as
+itemsets whose supports increase significantly
+from one
+dataset, Z?r, to another, ?)z.
+More specifically, EPs are
+itemsets whose growth rates -
+the ratios of their supports
+in 2X2over that in Vt -
+are larger than a given threshold p.
+When applied to timestamped databases, EPs can capture
+emerging trends in business or demographic data. When
+applied to datasets with classes (male vs female, poisonous
+vs edible, cured vs not cured), EPs can capture useful
+contrasts between the classes.
+
+Example 1.1 Many EPs were found in the Mushroom Data
+(from the UC1 repository) for the growth rate threshold 2.5.
+The following are two typical EPs consisting of 3 items:
+
+X = {(ODOR = none), (GILL-SIZE = broad),
+(RING-NUMBER = one)}
+Y = {(BRUISES
+= no), (GILL-SPACING
+= close),
+(VEIL-COLOR = white)}
+
+EP
+suppinpoisonous
+suppin-edible
+growth_rate
+X
+0%
+63.9%
+Y
+81.4%
+3.8%
+El
+
+Those EPs with very large growth rates are notable differ-
+entiating characteristics between the edible and poisonous
+Mushrooms, and they have been useful for building powerful
+classifiers [7, 131. Interestingly, none of the following sin-
+gletonitemsets {ODOR
+= none},
+{GILL-SIZE
+= broad},
+and {RING-NUMBER
+= one} is an EP. Moreover, among
+the discovered EPs, some contain more than 8 items and they
+played a key role in building accurate classifiers cited above.
+
+
+Example 1.2 We discovered about 120 EP groups contain-
+ing up to 13 items from the U.S. census dataset, PUMS
+(from wwwcensusgov,
+more details in Section 7). These
+EPs are derived from the population of Texas to that of
+Michigan using the growth rate threshold 1.2. A typical EP
+
+
+
+
+43
+
+is: {Disabll:2, Langl:2, Means:l, Mobilili:2, Perscar:2,Rlabor:1,
+Travtim:[1..59], Work89:l); the items are about disability, lan-
+guage at home, means of transport, personal care, employ-
+ment status, travel time to work, and working or not in 1989.
+Such EPs can describe differences of population characteris-
+tics between different social groups. Clearly, domain experts
+can analyze similar EPs, and select the useful ones for fur-
+ther attention in their applications.
+I
+
+Example 1.3 Suppose in 1985 there were 1000 purchases
+of {COMPUTER, MODEMS, EDU-SOFTWARES} out of 20
+million transactions, and in 1986 there were 2100 such
+purchases out of 21 million transactions.
+This purchase
+pattern is an EP with a growth rate of 2 from 1985 to 1986.
+Observe that the support for this itemset is very small even in
+1986. If companies understood the significance of such EPs
+and took the opportunities, then they would have benefited
+greatly in the long run.
+I
+
+We believe that EPs with low to medium support, such as
+l%-20%,
+can give very useful new insights and guidance
+to experts, in even "well understood" applications.
+This
+is because, using traditional
+statistics and computation
+methods, scientists have been confined to discovering EPs
+with very few (e.g. one to four) variables, or confined to
+known EPs which are typically folklore and have very high
+supports; in other words, the applications have been well
+understood only about contrasts which are either strong
+folklore or small in number of items.
+
+Example 1.4 Consider an application about cancer patients,
+where one dataset contains records of patients who were
+cured and another dataset of patients who were not cured.
+A hypothetical useful EP {Sl ,Sz, Tl, Tz, Ts}, with growth
+rate of 9 from the not-cured to cured, may say that, among
+all cancer patients who had both symptoms of S1 and
+5'2 and who had received all treatments of TI, Tz, and
+T3, the number of cured patients is 9 times the number
+of patients who were not cured; this may suggest that
+the treatment combination should be applied whenever the
+symptom combination occurs (if there are no better plans).
+The EP may have low support, such as 1% only; such EPs
+may be new knowledge to the medical field because they
+did not have efficient methods to find EPs with such low
+support and such long length. This EP may even contradict
+the prevailing knowledge about the effect of each treatment
+Tj on each symptom Si . A selected set of such EPs can be
+a useful guide to doctors in deciding what treatment should
+be used for a given medical situation.
+I
+
+1.1
+Difficulties
+and challenges
+Since EPs with large supports are perhaps folklore already,
+an interesting problem is to discover EPs with small supports
+(e.g. 5% or even 0.1%). This is a challenge due to these
+two reasons: (i) the useful Apriori property no longer holds
+for EPs (as can be seen from Example 1.1); (ii) there are
+usually too many candidates. These make naive algorithms
+too costly. Consider the naive algorithm which examines
+all itemsets on the PUMS dataset. Since there are more
+than 350 items, this naive algorithm would need to process
+2350 itemsets (to find their supports in both ZJ1 and D2
+and then determine their growth rates). Obviously, this is
+an impossible task. We will see later that even a clever
+naive algorithm which conducts an exhaustive search over a
+reduced candidate collection (but still too large, e.g. having
+240
+--
+lOI itemsets `) of itemsets will also take too long.
+
+1.2
+Main contributions
+In addition to introducing the new data mining problem of
+EPs, we make the following
+main contributions to solving
+this problem.
+(Some other algorithms for discovery of
+general or special EPs are also given in this paper.)
+
+Set intervals and their border description:
+In the mining of EPs, we frequently need to deal with very
+large collections of sets. As shown above, naive handling of
+such collections usually requires unbearably long processing
+time.
+However, these collections of itemsets may have
+some nice properties that can be utilized in devising ways
+to efficiently
+process them.
+Previous data mining work
+observed and utilized some aspects of such nice properties,
+for example [1,3, 161.We go one step further by formalizing
+the notion of set intervals, defined as collections S of sets
+that are interval closed - if X and 2 are in S and Y is a
+set such that X E Y C 2, then Y is in S. For example,
+collections of all large itemsets for given thresholds are
+interval closed.
+Importantly,
+we describe large interval-
+closed collections of itemsets using their borders, defined
+as the pair of the sets of the minimal itemsets and of the
+maximal ones. (Previous data mining research [l, 3, 161
+only used one-sided borders on subset-closed collections,
+seediscussion on related work.) Clearly, borders are usually
+much smaller than the collections they represent.
+The concept of borders lays the foundation for our next
+contribution.
+
+EP discovery by border manipulation:
+We propose a suite of EP mining algorithms which
+discover a class of EPs by manipulating ofily borders of
+some two colIections.
+(The backbone operation is our
+border differential procedure.) This avoids the long process
+required by naive algorithms to get the counts of all itemsets
+in a large collection of candidates.
+Our algorithms can
+derive all EPs whose support satisfies a minsup threshold
+in V2, where minsup
+is the smallest possible threshold
+that Bayardo's Max-Miner
+succeeds, from borders of large
+itemsets. The discovered EPs are also represented using
+borders, and thus our algorithms may finish quickly even
+when the number of EPs is large. (For mushroom, there are
+
+' Bayardogotlargeitemsetsof length38at 10%supportthresholdand
+oflength40at5%,onahousingdatasetextractedfromPUMS.
+
+
+
+44
+
+about 228EPs for the growth rate threshold of 2.5; these are
+represented by about half a million borders.)
+
+1.3
+Related work and paper organization
+Although EPs are also similar to discriminant rules [lo]
+(assertions true on instances of a given class but untrue on
+other instances) and evolution rules [lo] in that they are all
+about different datasets/classes, EPs are different because
+they are not limited by the exclusiveness constraint and
+because the extra information of growth rate is attached.
+Because our EPs are not restricted by the exclusiveness
+constraints, the value-merge based induction method of [lo]
+is not applicable. We note that jumping EPs (cf. Section 5)
+are special types of discriminant rules.
+Our definition and ways of using borders are different
+from those used in most of previous investigations.
+Our
+borders are defined to represent interval closed collections
+by their boundary elements, whereas borders of [16] are
+limited to subset closed collections.
+The two bounds of
+our borders are subcollections of the given collections,
+consisting of respectively their minimal (maximal) elements;
+one bound of borders of [16], the negative border, consists
+however of minimal elements not in the original collections.
+To eliminate the need to examine too many candidates,
+we introduce and use novel algorithms such as border
+differential, whereas [16] uses borders directly to control
+level-wise search over the candidate space. Max-Miner [3]
+only usesone bound (the right-hand) of our large borders.
+We obtained all the results without knowing [8], which
+is concerned with efficiency issues of ATMS (assumption-
+based truth maintenance system). Interestingly, that paper
+contained some ideas similar to ours, including the repre-
+sentation of interval-closed collections (called convex space
+there) using borders (called boundaries there), and some op-
+erations for extracting the border of the difference of two
+collections from their borders. We have made several main
+new contributions to borders: (a) Regarding the algebra of
+borders, our backbone operation of border d@erential is
+new. However, for the difference operation [8] only dis-
+cussed how to find the maximal (respectively, minimal) el-
+ements of the difference of two subset-closed (respectively,
+superset-closed) collections from the maximal (respectively,
+minimal) elements of the two collections.
+It is interesting
+to see if our border-differential operation can be applied to
+ATMS's. (b) We have brought the use of (two sided) bor-
+ders to the field of data mining, and we hope that this tool
+will be used more widely in this field. We are really happy
+to seethat our investigations and [8], from very different ar-
+eas,sharethe use of the tool of borders, which indicates that
+these tools are really powerful.
+Our work is also related to the mining of regularities in
+time series [9, 11, 18,2, 17, 14,4, 121.Our work is different
+in that we look for abnormal growth, instead of regularities.
+The rest of the paper is organized as follows: Section 2
+formally defines the EP mining problem and gives a decom-
+position of it. Section 3 discusses the border description of
+interval-closed collections of itemsets, and the efficient dis-
+covery of borders using Max-Miner.
+Section 4 presents our
+main algorithms on discovering EPs by border manipulation.
+Section 5 gives an overview of other algorithms. Section 6
+presents a performance evaluation of the algorithms. Finally,
+Section 7 offers some concluding remarks.
+
+2
+The EP mining problem and its
+decomposition
+Let 1 = {iiris,...
+, iN} be a set of items. A transaction
+is a subset T of I. A dataset is a set V of transactions. A
+subset X of I is called a k-itemset (or simply an itemset),
+where k = IX 1.We say a transaction T contains an itemset
+X, if X E T. The support of an itemset X in a dataset
+V, denoted as suppn(X),
+is w,
+where count=(X)
+is the number of transactions in 2) containing X. Given a
+positive number u, we say an itemset X is a-large in 2)
+if suppn(X)
+> cr, and X is a-small in 2) otherwise. Let
+LARGE,(D) (resp. SMALL,(D))
+denote thecollection of all
+g-large (resp. a-small) itemsets.
+Assume that we are given an ordered pair of datasets
+Vr and 2)s and let suppi
+denote supp~,(X).
+The
+growth rate of an itemset X from VI to Vs, denoted as
+GrowthRate(
+is defined as
+
+0,
+
+
+1
+'
+if suppI
+= 0 and supp2(X)
+= 0
+
+
+O"+
+if suppI
+= 0 and supp2(X)
+# 0
+SUPPZ x
+SUPPl Xl'
+otherwise
+
+Definition 2.1 Given p > 1 as a growth-rate threshold, an
+itemset X is said to be an p-emerging pattern (PEP or
+simply EP) from 291to 2)s if GrowthRate
+2 p.
+
+Example EPs were given in Section 1. Our interest in EPs
+is mainly on the degree of change in supports, but not on
+their actual supports.
+
+Definition 2.2 The EP mining problem is, for a given
+growth-rate threshold p, to find all p-EPs.
+
+A 2-D pictorial support plane (Figure 1) is helpful for
+describing our decomposition of the EP mining problem. We
+identify a point (61, us) in this plane with all itemsets X
+such that (suppl(X),
+supp:!(X))
+= (gi, crs). Observe that,
+given p, the supports of all p-EPs from VI to V2 must fall
+onto (theregion enclosed by) the triangle AACE.
+The point
+G = (Lin,
+4nin) .is
+important to our analysis. We require
+that 6,,,i, x p = emin, and that this point should be as near
+the origin as possible. The exact value of &in
+is chosen so
+that the best algorithm can discover all 6,i,-large
+itemsets
+in 231and all Bmin-large itemsets in Vs, within allowed time.
+(Actually, we do not need to find all these large itemsets;
+we only need to find their descriptions using "borders".)
+For many applications, the best algorithm should be Max-
+Miner, which was designed to work efficiently even when
+
+
+
+45
+
+.(X> = &nin
+
+
+
+
+Figure 1: The support plane.
+
+
+
+long patterns are present. Now, the EP mining problem can
+be divided into three sub-problems.
+
+1. Finding EPs in the BCDG
+rectangle.
+In this paper,
+we will concentrate our effort on this subproblem. From
+Figure 1, we see that the EPs in the BCDG
+rectangle are
+precisely those itemsets whose supports in 2?2are 2 &in
+but in VI are < bnain.
+The basic ideas of our novel algorithms are as fol-
+lows:
+We use the borders
+of LARGE~~,JD~)
+and of
+LARGE@,,, (Dz), instead of using LARGEB,,, (D1) and
+LARGEB,~,(&)
+themselves, as inputs to our algorithms.
+The algorithms derive the EPs by manipulating only the two
+given borders and produce the border representation of the
+derived
+EPs. The high efficiency
+of these algorithms
+comes
+from their avoiding handling exponentially many candidates
+and avoiding printing a large number of EPs. As a result,
+our algorithms are efficient, even for discovering long EPs
+which the naive algorithms and Apriori-like
+algorithms may
+fail to find.
+We now briefly describe a semi-naive algorithm and
+analyze why it is usually inefficient:
+It will try to first
+find the supports, in Dl and in 2)~. of all itemsets in
+LARGE@,,, (Dz), and check if their growth rates are greater
+than p. While this is smarter than the naive algorithm given
+earlier and it may be quite fast for "small" applications,
+it is still too inefficient to be of use in "large and wide"
+applications. Indeed, for reasonable &in,
+LARGER,,,;,,
+can contain around 240itemsets in the PUMS dataset. When
+the datasetsare big, finding the counts of those large itemsets
+will also take too long.
+2. Finding emerging patterns in AGDE.
+A candidate
+set of EPs in this region is the set of all itemsets whose
+supports in 2)1 are >_Smin and in V2 are 2 emin. This set of
+candidates is exactly LARGE~,JD~)
+II LARGE~~,,,@~).
+When the intersection is relative small we can find the EPs
+by checking the supports of all candidates in the intersection.
+Observe that the approximate size of this candidate set can
+be quickly estimated from its border description. When the
+intersection is large, we solve this subproblem by recursively
+applying the border algorithm used for the BCDG
+rectangle
+within .AACE,
+to this new triangle AGDE
+(by creating
+a new corresponding rectangle in AGDE),
+until we have
+found a.ll EPs (or almost all).
+The details are in the full
+paper.
+3. Finding emerging patterns in AABG.
+This is a very
+hard case,asEPs in this region may have very small supports
+in 2)1 and D2 or both. There are simply too many itemsets X
+such that suppl(X)
+< &in
+(or supp~(X)
+< 6',&.
+In the
+full paper we offer some methods, which reduce the number
+of candidates using border manipulations, to find some EPs
+in this region. It is still a challenge to discover all EPs in this
+triangle.
+In summary, we present in this paper algorithms to find
+all EPs in all but the AABG
+triangle, based on efficient
+algorithms for the BCDG
+rectangle.
+We conclude this section with a few words on preprocess-
+ing. In real datasets collected from different periods of time
+or different regions, there can be items which only occur in
+one dataset but not the other. All itemsets containing such
+items will have the growth rate of 0 or 00, depending on
+whether these are new items in Da or discontinued items in
+VI. Such information can be collected in two passesof the
+two datasets. Henceforth, we will assume that all such items
+are removed from the transactions.
+
+
+3
+Borders and their efficient discovery
+
+The key notion of borders is introduced for efficiently
+representing large collections of itemsets (or other types of
+sets), and it plays a central role in our main algorithms for
+discovering EPs. Collections of large itemsets for a given
+support threshold can be concisely described by borders, and
+such borders can be efficiently
+discovered by Max-Miner
+r31.
+
+
+3.1
+Using borders to represent large collections
+
+In the mining of EPs, we frequently need to deal with very
+large collections of itemsets. These collections may have
+some nice properties that can be utilized in devising ways
+to efficiently process them. Previous data mining research
+observed and utilized mainly one of such nice properties,
+namely the subset-closedness of collections of large item-
+sets; representatives of such research are Apriori's candidate
+generation [I], Max-Miner's
+look-ahead technique [3] and
+levelwise search [161. We observed that collections of large
+itemsets are inter&-closed,
+and will make use of this prop-
+erty, in the efficient mining of EPs.
+A collection S of sets is called interval
+closed if, for all
+X, 2 E S and for all Y, it is the case that Y E S whenever
+X
+C Y C 2.
+A concrete example of interval-closed
+
+
+
+46
+
+collections is
+
+s = w3,
+{2,3},{l,2,3},{1,2,4},
+{2,3,41,w,3,4H.
+
+Proposition 3.1 The collection of all large itemsets w.r.t. any
+fixed threshold is interval closed.
+
+Borders are introduced for succinct representation of very
+large interval-closed collections.
+
+Definition 3.2 An ordered pair <C, R> is called a border,
+L the lef-hand bound of this border and R the right-hand
+bound, if (a) each of C and R is an antichain' collection of
+sets, and (b) each element of C is a subset of some element
+in `R and each element of R is a superset of some element in
+L. The collection of sets represented by, or the set interval
+of, a border <,C,R>,
+is [C, R] = {Y 1 3X E C, 32 E
+R such that X c Y c 2). The collection [C, R] is said to
+have <L, R> as border.
+
+Example3.3
+Thesetintervalof<{{1},{2,3}},{{1,2,3},
+{2,3,4~~>is~~l~,~1,2~~~1,3~~~1,2,3~,~2,3~,~2,3,4~~.
+Thesetintervalof<{{1,2}},{{1,2,3,4,5},{1,2,4,5,6}}>
+consists of 12 itemsets: all sets that are both supersets of
+{1,2} and subsets of either {1,2,3,4,5}
+or {1,2,4,5,6}.
+Many simple borders' setintervals are very large collections;
+e.g. there are 211 itemsets in the set interval of <{{l}},
+{{1,2,3,4,5,6,7,8,9,10,11,12}}>.
+I
+
+A border <L, R>
+is a syntactic object consisting of
+the two collections L and R, and its semantics is [L,R]
+consisting of the interval of setsbounded by the setsin L (72)
+from below (above). Conditions (a) and (b) in the definition
+ensure that borders areminimal in size. Observe that <8,8>
+is a valid border, and its set interval is [a, 01= 0, the empty
+collection. A set interval can be viewed as a generalization
+of intervals over linearly ordered domains (e.g. the reals) to
+partially ordered domains, especially the partially ordered
+domain of sets.
+There is a one-to-one correspondence between borders
+and interval-closed collections:
+
+Proposition 3.4 Each interval-closed collection S of sets
+has a unique border <L, `R>, where L is the collection of
+minimal setsin S and R is the collection of maximal setsin
+S.
+
+In this paper, we prefer the "rooted" borders, to non-
+rooted ones, for their conceptual simplicity.
+A border
+CL, R> is called left-rooted if L is a singleton set, right-
+rooted if R is a singleton set, and rooted if it is left-
+rooted or right-rooted or both.
+It is easy to see that the
+set interval of a border is the union of the set intervals
+of a number borders which are all left rooted (or all right
+rooted). Our algorithms will aim to produce such outputs as
+representations of emerging patterns. The following result
+makes borders useful in this work.
+`A collectionS of setsis ananrichainif X andY arcincomparablesets
+(i.e. X g Y andY e X) for all X, Y E S.
+Proposition 3.5 The collection of all large (resp., small)
+itemsets, LARGEJ(D)(resp., SMALLS)),
+with respect to
+any fixed threshold S in a dataset 2, has a left(resp., right)-
+rooted border. More specifically, the left-hand bound of the
+border of LARGER
+is (8) and its right-hand bound is
+the set of maximal large itemsets. Similarly, the left-hand
+bound of the border of the S-small itemsets in D is the set of
+minimal small itemsets and its right-hand bound is {I}.
+
+We will call the border of LARGE&(D)
+a large bor-
+der, denoted as LARGEBORDERJ(D), and the border of
+SMALLS
+a small border. As the left-hand bound of all
+large borders is always { 0}, any two large borders differ only
+in their right-hand bounds.
+The sizes of borders <Cc,R> of such collections of large
+(or small) itemsets, in practical situations, in terms of IL1 +
+1121,are bounded by some polynomial of N = ]I], although
+the worst case bound can be the exponential function Cg
+
+(which happens when all itemsets of cardinality $ are in 2
+or R).
+
+3.2
+Discovering large borders
+We will use Max-Miner
+for the efficient discovery of large
+borders. Max-Miner
+was introduced in [3]. It derives the
+set of maximal large itemsets from a dataset for a given
+support threshold, which is, in our notation, the right-hand
+bound of the large border of all large itemsets. Compared to
+other mining algorithms such asApriori or its variants, Max-
+Miner is able to discover longer patterns in high dimensional
+data because it uses a look-ahead technique in addition
+to the Apriori candidate generation technique.
+Roughly
+speaking, the look-ahead technique finds the counts of
+some candidate itemsets that are not generated by Apriori's
+candidate generation method (from the currently known
+large itemsets), and uses those counts to filter out the need to
+get counts of many candidate itemsets that might be needed
+using Apriori.
+This technique is useful since, on knowing
+that these look-ahead itemsets are large, we know that all
+sub-itemsets of these large itemsets are large and hence there
+is no need to find their counts. It uses the set-enumeration
+trees (SE-trees) of [19] as the framework for this "look-
+ahead" search strategy.
+
+
+4
+Border-based
+discovery of emerging
+patterns
+Our border-based algorithms can discover all EPs in the
+BCDG
+rectangle of Figure 1, and they do this without
+enumerating elements of very large collections. In fact, the
+entire process of discovering EPs in this rectangle only needs
+to deal with borders: They will take borders, that represent
+collections of large itemsets, asinputs; they only manipulate
+borders in the internal process; and they produce as output
+borders that represent EPs. As a consequence, the running
+time of this process is short for most practical situations,
+
+
+
+47
+
+Figure 2: Border differential.
+
+
+
+even when the number of EPs in the BCDG
+rectangle is
+huge.
+We concentrate our discussion on the situation when two
+large borders, one from VI and one from 2)s, are available.
+We will briefly discuss the other combinations in the next
+section. The differential procedure, called BORDER-DIFF,
+is given in the first subsection. Then the main algorithm,
+MBD-LLBORDER,
+using BORDER-DIFF as a subroutine,
+is given in the second subsection for discovering EPs
+themselves.
+
+4.1
+Differential
+between borders
+BORDER-DIP
+aims to derive the differential
+between a
+pair of borders with a special form:
+Given a pair of
+borders c(0),
+{V}>
+and <{ld},Ri>,
+BORDER-DIFF de-
+rives another border <L2, {U}>
+such that [L2, {U}]
+=
+[{0}, {V}]
+- [{0),X1]
+(see Figure 2).
+Importantly,
+it
+achieves this by manipulating only the itemsets in the bor-
+ders. We give two versions of the algorithm; the first version
+is more declarative and thus easier to understand, and the
+second version is more procedural and more efficient.
+
+BORDER-DIFF(<{~},
+{V}>,
+<{0}, {S1, SZ,
+. , Sk}>)
+;; first version
+;;rerurnborderof[{0},{U}]-[{0},{S1,S2,~~~,Sk}]
+1>L +{{s1,s2,...,
+Sk}l& E u - si, 1 5 i 5 k};
+2) remove from L all non-minimal itemsets;
+3) return <L, {U}>;
+
+Example 4.1 We now illustrate how BORDER-DIFF works
+ontheargumentsof<{0},{1,2,3,4}>and<{0},{{3,4},
+{2,4}, {2,3}}>.
+(See Figure 3.)
+BORDER-DIFF first derives the set
+
+L
+=
+((11, {1,4), {1,31, {1,3,4),
+{1,21,{1,2,41,
+{1,2,3)> {2,3,4)).
+
+(The set { 1) is the result of "removing duplicates from the
+multiset { 1, 1, l}".) Then it removes the non-minimal setsin
+Ltoproduce<{{1},{2,3,4}},{{1,2,3,4}}>.Inessence,
+this algorithm generates the whole "Cartesian products" of
+u - s1;..
+, U - Sk before eliminating the non-minimal
+elements.
+I
+
+We argue that the algorithm is correct using Example 4.1.
+Let U
+=
+{1,2,3,4},
+S1 =
+{3,4},
+Sz =
+{2,4},
+and Ss =
+{2,3}.
+Let Z denote [{0},{{1,2,3,4}}]
+-
+Figure 3: [{0},
+{{I, 2,3,4]]]
+-
+[{0],
+{{3,4],
+{2,4],
+{2,3}}1 = [{{ll?
+{2,3> 4117{{l, 2>3,4)11.
+
+
+
+[{S}, {{3,4},
+{2,4}, {2,3}}].
+Observe that1 consists of all
+subsets X of U where X is not subset of any of 4, Sa, and
+Sa. Therefore, each such X contains some zi E U - Si
+for each 1 5 i 5 3, and so X is a superset of {zi ,~a, ~a}.
+{zi,22,zs}
+belongs to the L produced by step 1, and it is
+clearly a superset of some itemset in the final L produced by
+step 2. So X is contained in the set interval of the border
+produced by BORDER-DIFF.
+The inverse containment is
+proven roughly by reversing the above proof.
+Hence the
+border produced is indeed the desired one.
+As can be seen from the above example, the way the
+current BORDER-DIFF finds L may not be very efficient
+if /Cis large and many U - Si (say .! of them) have two
+or more elements (since it then needs to enumerate at least
+2l sets). The following improved BORDER-DIFF algorithm
+uses a more efficient method for deriving L.
+
+BORDER-DIFF(<{~},
+{U}>,
+c(0),
+{SI, S2,. . ., Sk}>)
+;; improved version
+;;returnborderof[{0},{U}]-[{0},{S1,S2,~~~,Sk}]
+1) initialize L to {{z}
+] z E U - Si};
+2) for i = 2 to Icdo
+3)
+L+{xu{z}~
+XEL,xEU-Si};
+4)
+remove all Y in L that are not minimal;
+5) return CL, {U}>;
+
+Example 4.1 (cont'd) The improved BORDER-DIFF algo-
+rithm works as follows: It first initializes L to ((1)) { 2}}
+since U - S1 = {1,2}.
+Then it updates L to {{l},
+{1,2},
+{1,3},
+{2,3}}
+since U - ,572=
+{1,3},. and reduces it
+to {{1},{2,3}}.
+Finally it updates L to {{l},
+{1,2,3},
+11,417 {2,3>4)1
+.
+since U - Sa = { 1,4}, and reduces it to
+ill),
+{2,3,41).
+n
+The improved BORDER-DIFF is more efficient than the
+first version because it iteratively
+removes non-minimal
+elements in the intermediate result for U - S1, . . . , U - Si
+before processing U - $+I,
+thus avoiding generating large
+intermediate results in general, and avoiding generating
+the whole "Cartesian products" of U - SI, . . . , U -
+Sk
+in
+particular.
+We can seethat BORDER-DIFF is more efficient than the
+naive algorithms. Using naive algorithms, we need to enu-
+merate all itemsets covered by the border < { 0)) { 1,2,3,4}>
+
+
+
+
+48
+
+and remove those itemsets covered by the border < {0},
+{{3,4},
+{2,4},
+{2,3}}>.
+On the other hand, BORDER-
+DIFF is more clever by examining the border bounds only.
+
+4.2
+Emerging patterns by MBD-LLBORDER
+We are now ready to present the main algorithm, namely
+MBD-LLBORDER,
+of this paper.
+This algorithm can
+discover all EPs in the BCDG
+rectangle of Figure 1, and
+it achieves this goal by manipulating only its input borders.
+Procedurally, this algorithm derives the EPs in the BCDG
+rectangle by calling BORDER-DIFF a multiple number of
+times. Each call will use one itemset in the right-hand bound
+of the large border of 2)~ and the whole right-hand bound of
+the large border of Vr asthe two argument values.
+Assume that we have found LARGEBORDERS
+and
+LARGEBORDERB(Da) for some 6 and 19satisfying 6'= p*6.
+Suppose
+
+
+
+
+We first describe the basis of this algorithm. Since all EPs in
+the BCDG rectangle must have support 2 19in 2)s but < S
+in VI, they are exactly the elements of the following set3:
+
+UjPowSet(Dj) - UzrPowSet(Ci)
+
+=
+Uj(PowSet(Dj)
+- UErPowSet(Ci)).
+
+Given j,
+1 _< j
+<
+n, the collection
+(PowSet
+-
+UEIPowSet(Ci))
+consists of those sets that are subsets of
+Dj but not subsets of any Ci (1 5 i 5 m); equivalently,
+the collection consists of those sets that are subsets of Dj
+but not subsets of any Ci (1 5 i 2 m), where Ci denotes
+Ci II Dj ; again equivalently, the collection consists of those
+sets that are subsets of Dj but not subsets of any of the
+maximalC,!samongC~,...,C~.Suppose{C~,C~,~~~,C~}
+is an enumeration of these maximal itemsets (k 5 m).
+NOW,(PowSet
+- U,k,,PowSet(C;I)) is the collection of
+all itemsets covered by a border, and that border is precisely
+the one derived by
+
+BORDER-DIFF(<{~},
+{Dj}>,
+c(0), {Ci, Ci,.
+, CL}>).
+
+Therefore, the collection of all EPs in the BCDG rectangle
+is the union of up to n set intervals of all the borders derived
+by calling BORDER-DIFF in this way for all j.
+The above approach is now formulated as our algorithm
+MBD-LLBORDER.
+
+MBD-LLBORDER(LARGEBORDERJ(ZJ~),
+LARGEBORDER@&))
+;; return all EPs in the BCDG
+rectangle
+~)EPBORDERS+ {};
+2) for j from 1 to n do
+3)
+if some Ci is a superset of Dj then continue;
+
+3PowSet(S)(resp.SupSet(
+denote the collection of all subsets
+(resp. supersets) of S.
+4)
+{Ci,...,
+C~}`{ClnDj,...,C,nDj};
+5)
+RIGHTBOUND +- the set of all maximal
+itemsets in { Ci,
+. . , CA};
+6)
+add BORDER-DIFF(<{~},
+Dj>,
+<{~},RIGHTBouND>)
+into EPBORDERS;
+7) return EPBORDERS;
+
+Example4.2
+F~~LARGEBoRDER~(ZJ~)
+= <{0},{{2,3,5},{3,4,6,7,8},{2,4,5,8,9}}>and
+LARGEBORDERo(&)
+= <{8},{{l,2,3,4},{6,7,8}}>,
+the EPs in the BCDG
+rectangle are the union of the two
+setsrepresented by the following two differences:
+
+PowSet({l,2,3,4})
+-
+PowSet({2,3,5})
+-
+PowSet({3,4,6,7,8})
+-
+PowSet({2,4,5,8,9})
+
+and
+
+PowSet({6,7,8})
+-
+PowSet({2,3,5})
+-
+PowSet({3,4,6,7,8})
+-
+PowSet({2,4,5,8,9}).
+
+The (intersection step of the) algorithm now updates the first
+difference to
+
+PowSet({l,2,3,4})
+-
+PowSet({2,3})
+-
+PowSet({3,4})
+-
+PowSet({2,4}).
+
+ItthencallsB~~~~~-D1~(<{0},{{1,2,3,4}}>,
+<{0}, {{3,4},
+{2,4}, {2,3}}>)
+to produce the border
+
+
+
+(discussed above).
+Since {6,7,8}
+C {3,4,6,7,8}
+(this
+Ci is a superset of Dj), MBD-LLBORDER
+does not call
+BORDER-DIFF for the second difference since it is empty.
+I
+
+One can find out an estimate of the number of the
+discovered EPs from their border description.
+If there are
+too many EPs, it will be more sensible to examine the
+border representation, as this avoids the tedious process of
+enumerating the EPs. One can also use this representation
+for membership test to see if an itemset is an EP, which
+can be done very efficiently (needing at most 2 * n * m set
+containment tests). If there are only a small number of EPs in
+the rectangle, the EPs themselves can be easily enumerated,
+either through the SE-tree enumeration method [19] or the
+dec-SE-tree enumeration method given in our full paper.
+In our experiments the MBD-LLBORDER
+algorithm is
+very fast in producing all EPs in the BCDG
+rectangle for
+many practical situations.
+We also give some alternative
+techniques to find some EPs in this rectangle for the other
+rare casesin the full paper.
+
+
+
+49
+
+5
+Other algorithms
+by many users of the University of Melbourne.
+
+In the previous section we only discussed how to find EPs
+from two large borders. In this section we will give sketches
+(due to space limitation) of other algorithms detailed in the
+full paper or elsewhere. The other algorithms consider other
+border combinations, or discover "strong" EPs, or discover
+"jumping" EPs.
+Recall that SMALLS
+denotes the set of S-small item-
+setsin ;D, and that we call the border of SMALLJ(;T)) a small
+border. Similar to large itemsets, small itemsets are also in-
+terval closed.
+6.1
+MBD-LLBORDER
+on PUMS
+The US. census dataset is publically accessible at the US
+Census Bureau's homepage (www.census.gov), through its
+data extraction system under the entry "(PUMS) Decennial
+Census Public Use Microdata Samples". PUMS contains
+a 5-percent sample of records on persons from the 1981-
+1990 decennial census. We intended to discover the regional
+differences hidden in these data.
+
+
+In the full paper we discuss how to find EPs from other
+border combinations: One large and one small borders, and
+two small borders. There we present border conversion algo-
+rithms, which can translate a large border to the correspond-
+ing small border and vice versa. (Recall that a large border
+w.r.t. a support threshold S and the small border w.r.t. 6 are
+complementary.) Since Max-Miner
+and SE-trees cannot be
+used to discover small borders, in the full paper we also in-
+troduce Min-Miner
+and decreasing SE-trees for discovering
+small borders directly.
+In our experiment, 10,000 person records of the Texas
+dataset are selected as 2)1 and 10,000 of the Michigan
+dataset selected as2)~. Each person record of the raw dataset
+from the Web site consists of 75 attributes. We discretized
+the attributes by partitioning quantitative attributes into in-
+tervals of varying lengths. After discretizing, each transac-
+tion still contains 7.5items. After some encoding, where we
+discarded those items which are the smallest value of their
+corresponding attributes, there are a total of 295 items (now
+binary attributes), and the average size of the transactions is
+around 35.
+
+The discovery of strong EPs (defined as those EPs all of
+whose subsets are also EPs) can be done in a way similar to
+Apriori, by using the subset closure property.
+Another method was introduced in [6] for discovering
+another special type of EPs, called jumping
+EPs. Jumping
+EPs are special EPs whose supports increase abruptly from
+zero support in one dataset to non-zero support in another.
+In that method, we do not use Max-Miner to find the needed
+large borders. Instead, we use a new algorithm, HORIZON-
+MINER, to find the large border of all itemsets with non-zero
+support. Then we useMBD-LLBORDER
+to find the jumping
+EPs, using the two large borders derived by HORIZON-
+MINER asinput. These jumping EPs were used to build very
+powerful classifiers [7, 131.
+Max-Miner
+was used to find the large borders for the
+support thresholds of 25%, 30%, 40%, and 50% in l&,
+and for the support thresholds of 20%, 30%, 40%, and
+50% in 2)~.
+With each pair (one from VI,
+and one
+from 2)~) of large borders with different supports, we use
+the MBD-LLBORDER
+algorithm to discover EPs from the
+dataset (with a smaller support threshold) to the dataset (with
+a larger support threshold).
+MBD-LLBORDER
+found the
+EPs almost instantly.
+With the above large borders in 2)1
+and V2, EPs were only found from 3 pairs of them (and no
+EPs were found for the other combinations). These 3 pairs
+are listed in the table below.
+From
+1
+To
+1 CT
+1 NB 1 MS
+Texas 25% 1 Michigan 30% 1 20s 1 122 1 13
+
+
+6
+Performance evaluation
+I
+Texas 30%
+Michigan40%
+0.28s I 8
+8
+Texas 40%
+Michigan 50%
+0.08s 1 9
+7
+t
+I
+I
+I
+CT: CPU time
+We now report a performance evaluation of the algorithms
+proposed in this paper, showing their efficiency.
+NB : Number of Borders of EPs
+MS: Max EP Size
+We carried out experiments on many datasets, includ-
+ing two high dimensional datasets, namely the mushroom
+dataset and the U.S. Census dataset. The performance re-
+port will concentrate on our MBD-LLBORDER
+algorithm,
+and show that it is very efficient on these datasets. The
+large borders can be discovered very quickly4 either using
+Bayardo's Max-Miner
+(even for very small support thresh-
+old such as 0.1%) or using our HORIZON-MINER [6]; con-
+sequently, we will not include the timing of Max-Miner or
+HORIZON-MINER used in discovering the large borders.
+The following
+is a right-rooted border of the 1.2-EPs
+between the population of Texas and of Michigan (obtained
+from the large border of 25%-large itemsets of Texas and
+that of 30%-large itemsets of Michigan):
+
+<
+{{26,116,125,147,158,216,272,278},
+{26,116,125,158,272,278,280}},
+{{26,28,116,125,147,158,164,166,216,
+272,278,280,287}}>
+All experiments were conducted on a 1SOMHz Sun
+SPARCstation- 10machine with 160M bytes of RAM, shared
+
+*See Figure 9 of [3]: CPU time is 10 secondsfor support threshold
+of lo%, 20 secondsfor support threshold of 5%, 40 secondfor support
+thresholdof 2.5%,and 100secondfor supportthresholdof 0.1%.
+These numbers correspond to the notations in PUMS asfol-
+lows: 26 for Disabll:2, 28 for Disab12:2, 116 for Langl:2, 125
+for Means:l, 147for Mobilili:2, 158 for Perscar:2,164for Pow-
+puma:[l..99899],
+166 for Powstat:[1..56], 272 for Travtim:[1..59],
+278 for Work89: 1, 280 for Worklwk: 1,287 for Yearwrk: 1.
+
+
+
+
+50
+
+6.2
+MBD-LLBORDER
+on Mushroom
+The mushroom dataset (available from the UC1 Machine
+Learning Repository) consists of two classes of data: the
+edible class containing 4208 instances and the poisonous
+class containing 3916 instances.
+The encoded dataset
+contains 121 binary items after each attribute (22 in total)
+is mapped to a certain number of items. The large border
+in the edible class of data w.r.t the support threshold of
+l/4500 has a right-hand bound consisting of 4208 itemsets,
+and the large border in the poisonous class of data has a
+right-hand bound consisting of 3916 itemsets. These were
+discovered using HORIZON-MINER. Taking these two large
+borders, MBD-LLBORDER
+has found a huge number of
+EPs using about 30 minutes. We need 299811 borders to
+represent all such EPs from the poisonous class to the edible
+class and 271715 borders to represent all such EPs from the
+edible class to the poisonous class. On average, each border
+represents around 2l8 = 262144 sets. Obviously, without
+the border mechanism, it is impossible to enumerate the
+complete EPs. Without the border mechanism, it would be
+very time consuming to mine the EPs. Even using the semi-
+naive algorithm, we would need to examine approximately
+232 itemsets, requiring at least 2' iterations over the data.
+(Each itemset needs 25 bytes, assuming one byte per integer.
+160Mbytes is 228bytes; so 160M can hold 223itemsets. The
+232itemsets thus would require 2' iterations. The CPU time,
+which is dominant for high dimensional datasets, would be
+very very long.) Among the discovered EPs, some of them
+are singleton itemsets; some of them can reach a cardinality
+of 22; many of them have a cardinality around 18.
+
+6.3
+Other datasets
+In our investigations into building EP-based classifiers [7],
+we applied MBD-LLBORDER
+to large borders extracted
+from a large number of datasets including breast-w, iris,
+pima, sonar, and wine from the UC1 machine learning
+repository.
+The time needed for MBD-LLBORDER
+is
+always very short (in fact less than 30 seconds).
+
+
+7
+Concluding remarks
+
+We have introduced the data mining problem of emerging
+patterns (EPs). EPs can capture emerging trends in times-
+tamped databases, or capture differentiating characteristics
+between classesof data. EPs have been useful: we have used
+EPs to build very powerful classifiers, including the Mush-
+room dataset, which are more accurate than C4.5 and CBA
+[151. We believe that they are useful in many other applica-
+tions.
+These patterns can be large in size, and may have very
+small support (e.g. a trend at the forming stage).
+We
+observed that naive algorithms are too costly, because the
+useful Apriori property no longer holds for EPs and because
+there are usually too many candidates. Indeed, since there
+are large itemsets with 40 items even for the 5% support
+threshold for some PUMS datasets, even EPs with such
+support threshold cannot be found using naive algorithms.
+We studied the efficient mining of EPs and made the fol-
+lowing major contributions: (a) We promoted the description
+of large collections of itemsets using their borders, which are
+usually much smaller. (b) We designed our EP mining al-
+gorithms which manipulate only borders of two collections,
+and which represent discovered EPs using borders. The ma-
+jor border operation we used is our border differential op-
+eration. Analysis and experiment show that our approach
+works well for large datasetsand for dense high dimensional
+datasets. These algorithms can find all EPs in the BCDG
+rectangle and all in the GDE triangle. We believe that the
+border-based algorithms are useful in many other areas of
+research and applications, besides data mining.
+Regarding future work, it is worthwhile to parallelize the
+MBD-LLBORDER
+algorithm, and to discover other classes
+of EPs in the AAGB
+triangle.
+
+Acknowledgements
+We are very grateful to Xiuzhen Zhang, for her tremendous
+help with the implementation of the algorithms proposed in
+this paper; Richard Tse helped in the early stages of this
+project.
+We are grateful to Limsoon Wong for bringing
+to our attention the paper [8], to Roberto Bayardo for
+sharing information about experiments of his Max-Miner
+on the housing dataset, and to members of Jiawei Han's
+Data Mining Lab at Simon Fraser University for feedback
+received when the first author gave a seminar there.
+
+References
+HI
+
+
+VI
+
+
+f.31
+
+
+
+
+[41
+
+
+
+
+[51
+
+
+
+
+[61
+
+
+
+
+51
+R. Agrawal and R. Srikant. Fast algorithms for mining
+association rules. In Proc. Int. Conf: Very Large Data
+Bases (VLDB), 1994.
+R. Agrawal and R. Srikant. Mining sequential patterns.
+In Proc. 1995 Int. Con5 Data Engineering (ICDE),
+1995.
+Roberto J. Bayardo. Efficiently
+mining long patterns
+from databases. In Proc. of 1998 ACM-SIGMOD In-
+tern `I Conference on Management ofData (SIGMOD),
+1998.
+C. Bettini, X. Sean Wang, and S. Jajodia.
+Mining
+temporal relationships with multiple granularities in
+time sequences. Data Engineering Bulletin, 21132-38,
+1998.
+G. Dong and J. Li. Interestingness of discovered as-
+sociation rules in terms of neighborhood-based unex-
+pectedness. In X Wu and K Ramamohanarao, editors,
+Paci$c Asia Conference on Knowledge Discovery from
+Databases, LNAI, 1998.
+G. Dong, J. Li and X. Zhang. Discovering Jumping
+Emerging Patterns and Experiments on Real Datasets.
+Proc. of 9th International
+Database Conference on
+Heterogeneous and Internet Databases (IDC99), Hong
+Kong, 1999.
+
+[7] G. Dong, X. Zhang, L. Wong, and J. Li. CAEP: Classi-
+fication by Aggregating Emerging Patterns. Technical
+report, March 1999.
+[8] Carl A. Gunter, Teow-Hin Ngair, and Devika Subrama-
+nian. The common order-theoretic structure of version
+spaces and atms's. Artijicial
+Intelligence, 95(2):357-
+407,1997.
+[9] J Han, G Dong, and Y Yin. Efficient mining of partial
+periodic patterns in time series database. In ICDE,
+1999.
+[lo] J. Han and Y. Fu. Exploration of the power of attribute-
+oriented induction in data mining.
+In U.M. Fayyad,
+G. Piatetsky-Shapiro, P. Smyth, and R. Uthurusamy,
+editors, Advances in Knowledge Discovery and Data
+Mining, pages 399-421. AAAIIMIT
+Press, 1996.
+[ll]
+J. Han, W. Gong, and Y. Yin. Mining segment-wise
+periodic patterns in time-related databases. In Proc.
+1998 Int'l Con$ on Knowledge Discovery and Data
+Mining (KDD), 1998.
+[121 B Lent, R Agrawal, and R Srikank. Discovering trends
+in text databases. In KDD 1997.
+[13] J. Li, G. Dong, and K. Ramamohanarao.
+JEP-
+Classifier:
+Classification
+by Aggregating Jumping
+Emerging Patterns. Technical report, February 1999.
+[14] H. Lu, J. Han, and L. Feng.
+Stock movement and
+n-dimensional inter-transaction association rules.
+In
+Proc. 1998 SIGMOD Workshop on Research Issues on
+Data Mining and Knowledge Discovery (DMKD'98),
+1998.
+[151 B Liu, W Hsu, and Y Ma. Integrating classification and
+association rule mining. In KDD 1998.
+[16] H. Mannila,
+and H. Toivonen.
+Levelwise search
+and borders of theories in knowledge discovery. Data
+Mining and Knowledge Discovery l(3):
+241 - 258,
+November 1997.
+[17] H. Mannila, H Toivonen, and A. I. Verkamo. Discov-
+ering frequent episodes in sequences. In KDD 1995.
+[181 B. Ozden, S. Ramaswamy, and A. Silberschatz. Cyclic
+association rules. In ICDE 1998.
+[191 Ron Rymon. Search through systematic set enumera-
+tion. In Proceedings of the Third International Confer-
+ence on Principles of Knowledge Representation and
+Reasoning, 1992.
+
+
+
+
+52
+

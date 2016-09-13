@@ -1,0 +1,768 @@
+Data-driven Validation, Completion and Construction of
+Event Relationship Networks
+
+
+Chang-Shing Perng
+1
+David Thoenen
+Genady Grabarnik
+Sheng Ma
+Joseph Hellerstein
+
+IBM T. J. Watson Research
+1
+IBM Advanced Technical Support
+{perng,genady,shengma,hellers}@us.ibm.com
+thoenen@us.ibm.com
+
+
+
+ABSTRACT
+Event management is a focal point in building and main-
+taining high quality information infrastructures. We have
+witnessed the shift of the paradigm of event management in
+practice from root cause analysis (RCA) to action-oriented
+analysis (AOA). IBM has developed a pioneer event manage-
+ment methodology (EMD) based on the AOA paradigm and
+applied it to more than two hundred production sites with
+success. Foreseeably, more and more event management
+professionals will apply AOA in different incarnations in
+building proactive management facilities. By that, building
+correct and effective Event Relationship Networks (ERNs)
+becomes the dominating activity in AOA service design pro-
+cess. Currently, the quality of ERNs and the cost of building
+them largely depend on the knowledge of domain experts.
+We believe that we can utilize historical event logs in short-
+ening the ERNs design process and perfecting the quality
+of ERNs. In this paper, we describe in detail how to apply
+this data-driven approach in ERN validation, completion
+and construction.
+
+
+Keywords
+Event Relationship Networks, Action Oriented-Analysis, Root
+Cause Analysis, Event Management Methodology, Proactive
+Management, ERN Validation, ERN Construction
+
+
+1. INTRODUCTION
+In this paper, we propose a method of applying recently
+developed data mining techniques in validating, completing
+and constructing event relationship networks (ERNs).
+
+1.1 Background
+High quality event management has long been seen as
+the cornerstone of a healthy business and IT operation en-
+vironment. As every business is becoming e-business, the
+demand from IT service customers has evolved from reac-
+tive management toward proactive management. Enormous
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA
+Copyright 2003 ACM 1-58113-737-0/03/0008 ...$5.00.
+academic research and commercial products have attempted
+to achieve proactive management by root cause analysis
+(RCA). However, what RCA can provide does not match
+well with the need of the two primary goals of event man-
+agement:
+
+1. Rapid detection of problems and a fast response to
+exceptional situations, and
+
+2. Precise and accurate identification of the problem scope
+(hosts, networks, people, etc.)
+
+In response to these real-world operational demands, David
+Thoenen [11] proposed action-oriented analysis (AOA) as a
+new paradigm for event management. In the paper, the
+concepts of AOA is concretized as the Event Management
+Design (EMD) methodology which contains four activities:
+
+1. Select the event sources
+
+2. Take inventory of all events
+
+3. Document event policies and processing decisions
+
+4. Construct ERNs for correlation analysis
+
+By examining these activities, we can see that activity 1 is
+pretty straightforward for system administrators since im-
+portant event sources (Unix servers, NT servers, NetWare
+Severs, hubs, routers, ATM switches, UPS systems, appli-
+cations, web servers, database servers, etc) are very easy to
+identify. Activity 2 mostly relies on the quality and cover-
+age of service providers' event source repertoires and their
+domain knowledge. Activity 3 is to customize policy specifi-
+cation and make processing decisions for the particular oper-
+ation environment based on its special requirements. Activ-
+ity 4 is to construct Event Relationship Networks (ERNs), a
+graphical representation of how events are correlated. IBM
+Global Service has developed a software tool that translates
+a set of ERNs along with a default action template to event
+correlation rules ready to be used in event correlation en-
+gines like Tivoli Enterprise Console. So activity 4 is the
+pivotal step of the EMD methodology. Proportional to the
+significance, activity 4 usually requires the most time and
+domain expertise in our experience.
+ERN construction can be significantly speeded up if the
+service providers have corresponding ERNs in their knowl-
+edge base. However, there are roughly too many types of
+event sources currently working in business environments
+that might be taken into event management. Considering
+the tremendous diversity of event sources, such advantage
+
+
+
+729
+
+should not be expected. Furthermore, the same type of
+event sources may be configured very differently in differ-
+ent operation environments. Also, the decisions on event
+processing policies may invalidate ERNs constructed under
+different policies. These constraints indicate that revising
+and constructing ERNs are unavoidable in most cases. Con-
+sider a typical operation environment containing 20 event
+sources and 100 enterprise significant event types (event
+types that are important in problem determination) for each
+event source, domain and device experts have to mentally
+figure out all the autonomous events among the 2000 event
+types and the correlations among the rest, and document
+them into ERNs. The time and cost for constructing ERNs
+is enormous.
+Beside the cost of constructing ERNs, the correctness and
+effectiveness of ERNs also have a great impact to the per-
+formance of event management. On one hand, incomplete
+ERNs cause correlation engines fail to correlate events that
+are symptoms of the same problem and initiate more than
+enough notifications or actions, and thus deteriorate the sec-
+ond goal of event management. On the other hand, incorrect
+ERNs cause correlation engines fail to take proper actions
+or notify right people, and thus violate the first goal of event
+management. The worst of all, ERNs can be both incom-
+plete and incorrect. The need of a method to validate and
+construct ERNs based on true and complete correlations is
+apparent.
+Conceptually, true and complete event correlations are
+impossible to obtain because operational environments are
+always changing. However, the past is still the best indi-
+cator of the future. It is the de facto capability of event
+correlation servers and middle layer managers to maintain
+event repositories, typically in relational databases. This
+historical event data provides the most reliable evidences of
+how a type of event is temporally correlated to other types
+of events. Our experience shows the correlation implied in
+event data is very useful in confirming domain experts' hy-
+potheses and, sometimes, providing surprising facts.
+
+1.2 Event Data
+
+Time
+Host
+Event Type
+Feb 25 00:40:59
+host1
+Node Up
+Feb 25 00:40:59
+host2
+Interface Up
+Feb 25 00:40:59
+host2
+Node Marginal
+Feb 25 00:40:59
+host3
+Interface Up
+Feb 25 00:40:59
+host3
+Node Up
+Feb 25 00:40:59
+host4
+Interface Up
+Feb 25 00:40:59
+host4
+Node Marginal
+Feb 25 00:40:59
+host5
+Segment Down
+Feb 25 00:40:59
+host5
+Network Up
+Feb 25 00:41:00
+host6
+Interface Down
+Feb 25 00:41:00
+host6
+Node Down
+
+Table 1: An event log (sanitized)
+
+
+Table 1 shows a typical segment of IBM NetView recep-
+tion logs. By examining the NetView event log, we can see
+evidences that support some commonly believed correlations
+like those between Node Up and Interface Up and those be-
+tween Node Down and Interface Down. We can also see cer-
+tain correlations that might somewhat surprise ERN design-
+ers. For example, we can see there are two cases (host2 and
+host 4) that Interface Up is correlated with Node Marginal
+while Interface Up is commonly regarded as an indicator
+that the host has been restored from non-operational status
+but a Node Marginal event indicates the host is likely over-
+loaded. Provided such observation, domain experts can look
+into the phenomena and determine the meaning of the cor-
+relation. It is most likely to be the case that Node Marginal
+is simply a transient state when a host is restoring the con-
+nection of the inte rface so host2 and host4 are working
+normally after 00:40:59. If an ERN designer erroneously
+consider every Node Marginal as a problem, the consequence
+is twofold. First, many unnecessary trouble tickets will be
+issued. Second, the produced correlation rules could cause
+the correlation engine to keep those events in local cache all
+the time hence degrade the pattern matching performance.
+Based on the above observations, we believe a data-driven
+ERN validation, completion and construction tool is not
+only convenient but essential to fast deployment of AOA
+event management.
+
+1.3 Organization
+The rest of the paper is organized as follows: Section 2
+is a brief review of ERNs. In Section 3, the event statisti-
+cal correlation model is defined. In Section 4, we present
+the data-driven approach and the statistics of correlation
+strength. The algorithms of ERN VCC (Validation, Com-
+pletion, Construction) systems are discussed in Section 5. A
+case study is presented in Section 6. In Section 7, we discuss
+the related work. Section 8 concludes the paper.
+
+
+2. A BRIEF REVIEW OF ERN
+Our approach to describing correlation logic uses a con-
+ceptual framework called Event Relationship Networks (ERNs).
+An ERN is a directed acyclic graph. Nodes are events and
+are labeled with the roles of the events within the case. Arcs
+from one event to the next indicate that the latter is asso-
+ciated with the former. A simple event relationship net-
+work for a Cisco router is shown in Figure 1. The Cisco
+Environment Monitoring agent emits temperature warning,
+critical, and shutdown events as temperature incidents es-
+calate. As temperature readings return to acceptable ranges
+the agent emits a normal event.
+
+
+
+
+Figure 1: ERN for Cisco Temperature Notification
+
+We now introduce a key concept: event roles. An event
+plays a primary role (is a primary event) if it provides an
+immediate, often unambiguous, indication as to the correc-
+
+
+
+730
+
+tive action to take. For example, if a warning trap is the
+first event in the correlation case, then it is a primary event.
+Proactive management uses the receipt of a primary event
+to trigger a first level of response. Referring to Figure 1, the
+role of the ciscoEnvMonTemperatureNotificationWarning
+event is primary within the context of this example correla-
+tion case.
+An event plays a secondary role (is a secondary event) if it
+is always extraneous in terms of selecting the corrective ac-
+tion in an exceptional situation. Although secondary events
+do not affect the choice of correct action, they may invoke
+actions of their own.
+If events were always either primary or secondary, then
+correlation would be much less complex. However, in a large
+number of cases, the role of an event depends on context
+within the correlation case. Events that may be either a pri-
+mary or a secondary are called primary/secondary events.
+Within our example correlation case two events act in the
+role of primary/secondary, the
+ciscoEnvMonTemperatureNotificationCritical and the
+ciscoEnvMonTemperatureNotificationWarning events. The
+last event role is to identify the end of an incident, we refer
+to these as clearing events.
+CiscoEnvMonTemperatureNotificationNormal acts in the
+role of the clearing event in the example above.
+
+3. EVENT CORRELATION
+
+3.1 Correlation Models
+The operational purpose of constructing ERNs is to in-
+struct correlation engines a proper way to process events.
+So the semantics of the links in ERNs should be interpreted
+as the way correlation servers work. Correlation servers can
+be modeled as a rule-based triggering system with an event
+cache. At any moment, the event cache contains events
+received during the last period of a predefined duration.
+The rule-based triggering system examines the content of
+the event cache and determines whether any trigger rule
+should fire. In this model, event correlation is a tempo-
+ral relationship. Such correlation capabilities are at the
+heart of systems management, as indicated by the popular-
+ity of the products such as the Tivoli Event Console (TEC),
+Boole's Command Post, Computer Associate's Unicenter,
+and Hewlett Packard's OpenView.
+
+3.2 Correlation Semantics
+We propose two types of semantics for ERNs based on cor-
+relation strength: weak correlation and strong correlation.
+
+An ERN is valid in weak correlation if all
+links have confidences higher than a given
+threshold.
+
+The confidence of a link is the likelihood that the two linked
+events are emitted together and in that order. We will soon
+see more rigorous definitions of the statistics we use to de-
+note link confidence.
+However, the sum of pairwise correlation does not nec-
+essary show the whole picture, especially when the given
+threshold is low. Hence we introduce the notion of strong
+correlation.
+
+An ERN is valid in strong correlation if the
+links between any node and all its transi-
+tive successors are valid.
+Both semantics require a way to compute link confidences.
+Here we define the confidences in statistics terms. Given
+a reasonable window length w that will be set as the time
+window of the event cache. For each link (A,B), we compute
+the following statistics ConfAB = NA,P(B|A),2AB .
+
+· NA: the total number occurrences of event type A.
+NA indicates whether the event type A as well as the
+link worth to be included in an ERN. In a sense, NA
+represents the possible cost of applying ERNs without
+this link. As previously stated, incomplete ERN can
+cause unnecessary trouble tickets. The cost of process-
+ing these redundant trouble tickets caused by missing
+link (A,B) is proportional to NA. So for large NA, it
+is suggested to include the link if other statistics also
+indicate high correlation. For small NA, the cost of
+the decision is up to domain experts' judgments.
+
+· P(B|A): The conditional probability that an occur-
+rence of event type A is followed by an occurrence of
+event type B within time no later than w. This is
+defined as:
+number of windows containing both A and B
+the number of windows contain A
+.
+
+
+· 2AB: The 2 test score of A-B coupling which indi-
+cates the deviation of A and B's distribution from ran-
+dom distribution. High 2AB score indicate it is likely
+that the two events happen not due to randomness.
+
+The 2AB test score is defined through the following statis-
+tics. The probability of observing an event A in a window is
+PA = NA/T where T is the time covered in the log. The ex-
+pected probability of finding both event A and event B in a
+window with event A occurring before event B is E(PAB) =
+PA × PB/2. The actual probability of finding both event
+A and event B in a window with event A occurring before
+event B is P(B|A) =
+NAB
+2T
+where NAB is the number of
+(A,B) event pairs. The variance of co-occurrences of event
+A and event B is defined as V ARAB =
+PAB(1-PAB)
+T
+. The
+2 test score is defined as 2AB =
+(P(B|A)-E(PAB))2
+V ARAB
+.
+Thresholds of link confidence are also in the form of a
+triple Nt,Pt,2t such that a link (A,B) is valid if NA  Nt,
+PAB  Pt, and 2AB  2t.
+Note that it is possible that both links (A,B) and (B,A)
+are valid. In such cases, we suggest the direction of link
+(A,B) should be from A to B if P(B|A) > P(A|B), other-
+wise, the direction should be from B to A.
+
+
+4. ERN VALIDATION, COMPLETION AND
+CONSTRUCTION
+
+4.1 ERN Validation
+As we mentioned in Section 1, occasionally ERNs con-
+structed in different installations or different time may be
+used as starter sets. In such case, the task is to validate
+whether the correlations specified in the existing ERNs are
+valid in the environment of interest. The validation of weak
+correlation is straightforward. Users specify the window
+length w and the event log file. Then the ERN VCC system
+annotates the nodes and links. The annotation format will
+be soon clear in following examples.
+
+
+
+731
+
+Example 1. Figure 2 shows a simple ERN with three
+nodes (event types) annotated by statistics obtained from an
+event log of 90 days with specified window size 60 seconds.
+The count of an event types is placed near the corresponding
+node, e.g. Cisco link Down has 1014 occurrences. Each link
+with arrow direct from A to B is annotated with two pairs
+of probabilities and 2 score, namely (P(B|A),2AB) and
+(P(A|B),2BA). For example, the link from Cisco Link Up
+to Cisco Link Down has conditional probability 0.18 and 2
+score 278. The reversed link has conditional probability 0.23
+and 2 score 54. These statistics can be interpreted in the
+following way. The forward conditional probability, 0.18,
+is smaller than the backward conditional probability. Usu-
+ally, this mean the direction of the link should be set re-
+versed. However, since Cisco Link Up is a clearing event.
+The link direction should remain unless the forward confi-
+dence is smaller than threshold. Although the conditional
+probabilities do not look significant at the first glance, the 2
+scores, however, indicate other way. Consider the log his-
+tory contain 129,600 non-overlapping windows, conditional
+probabilities 0.18 and 0.23 are actually very high. This fact
+is indicated by the 2 scores which imply the two events are
+correlated with more than 99% confidence. The risk of miss-
+ing the link (A,B) can be calculated as 1014  0.23 = 242.
+Also, it is very clear that Cisco Cold Start should not be in-
+cluded in this ERN because both the conditional probabilities
+and 2 scores are 0.
+
+
+
+
+Figure 2: An Annotated ERN
+
+
+Validation of strong correlation is comparatively more com-
+plicated and contains the following three steps:
+
+1. Split the ERN to correlation paths. For every source
+node, nodes with no incoming link, find paths to every
+reachable sink node, nodes with no outgoing link.
+
+2. For every correlation path, remove the node that has
+the least number of correlated nodes, upstream or down-
+stream, until every node has full correlation with every
+other node.
+
+3. Merge correlation paths to ERNs with a constraint
+that every path in the result ERNs is a valid path in
+step 2.
+
+As implied by the definition of strong correlation, an ERN
+might be split to several ERNs after strong correlation val-
+idation.
+4.2 ERN Completion
+For a given ERN, the validation method just discussed
+can identify incorrect links. But identifying missing nodes
+and links from ERNs requires searching all event types to
+find those correlated event types already in ERNs. This
+completion process is done in an iterative manner. In each
+iteration, all event types correlated to any event types in
+current ERNs are attached with corresponding links. The
+process proceeds till no more event type can be added.
+
+Example 2. Our experience shows even very simple com-
+pletion procedure can be very helpful to ERN designers. In
+this case, as shown in Figure 3, we take an event type,
+chassisMajorAlarmPS2, from a real production environment,
+which does not seem to be correlated to other event types in
+existing ERNs. However, by computing its correlation with
+all event types shown in an event log, we found there are
+22 event types that show strong pairwise correlation with the
+event type. Among the 22 event types, 15 are clearing events,
+one tends to occur before the target event and 6 tend to oc-
+cur after the target event. The large number of event types
+that were missing in the original ERNs is rather surprising
+consider the event management teams, both consultants and
+subject matter experts of the client side, are among the best
+in the industry.
+
+
+
+
+Figure 3: ERN Completion
+
+
+4.3 ERN Construction
+In situations where no existing ERN can be used for starter
+sets, the ERN VCC system is responsible for generating
+ERNs for subject matter experts to review. ERN construc-
+tion can be treated as a special case of ERN completion
+where no ERN is available. However, the corresponding
+computation is more expensive because the system has to
+start with computing all pairwise correlations instead of
+with only those contain at least one event in existing ERNs.
+
+
+5. ALGORITHM
+Two major algorithms are needed in ERN VCC process:
+network construction and link instance counting. The net-
+work construction algorithm is the upper level algorithm
+that decides the structure of ERNs based on link instance
+counts. This algorithm for strong correlation has been dis-
+cussed in Section 3. For weak correlation, the main task is to
+
+
+
+732
+
+stratify ERNs so the path between any two nodes, if exists,
+is unique. Figure 10 shows a simple case of ERN stratifica-
+tion. The principle of ERN stratification is to eliminate any
+link two nodes that have longer paths between them. In this
+case, there is a longer path from A to B then to C, so the
+link from A to C should be eliminated. In the cases where
+there is more than one longest path, eliminate the one with
+the weakest link. In the cases where the links form a cycle,
+the weakest link should be eliminated.
+
+
+
+
+Figure 4: Stratification of ERNs
+
+The link instance counting algorithm is the lower level
+algorithm that counts for a given pair of events A and B.
+Counting occurrences of event pairs that fall in windows of
+specified length is a very fundamental issue in realization
+of the ERN link validation. However, Contrary to most
+people's first impression, counting is a very complex issue.
+Due to the limit of space, instead of presenting the detail
+algorithm, we only discuss the issues in counting.
+
+
+
+
+Figure 5: Counting instances of event pairs
+
+Figure 5 shows a situation where counting might result
+non-unique answers. Suppose the time span from the first
+event A to the first event B is less than the window length
+but not to the second B, and the second event A is close
+enough to both instances of event B. If events can be
+counted multiple times, the count of event pair is 3. If mul-
+tiple counting is not allowed, the result is 2 or 1 depending
+on the rule of associating events.
+In order to obtain unique count of event pairs, we adapt
+the following two principles.
+
+1. No reuse: every instance of event can be used only
+once.
+
+2. Earliest first: whenever there is more than one instance
+of same type of event, always choose the one with ear-
+liest timestamp.
+
+These two principles guarantee the counting result is unique.
+
+
+6. CASE STUDY
+Figure 6 shows an ERN of Cisco router power alarms with
+annotated statistics. The ERN designer regarded minor
+alarms (e.g. chassisMinorAlarmPS1) and major alarms as
+symptom reports of the same problem. Hence they assumed
+minor alarms should temporally precede major alarms and
+play the role of primary events, and major alarms are sec-
+ondary events. Clearing events are also connected to alarm
+events in the manner of their name implies. However, the
+historical event data tell a very different story:
+
+· None of the minor alarms has ever been observed al-
+though there are significant numbers of major alarms.
+A further investigate on the actual implementation
+discovered that the event name chassisMinorAlarm
+was actually assigned to a totally different problem
+than the problem associated with chassisMajorAlarm.
+Hence the event data shows there is no correlation be-
+tween these two types of events at all. This fact sug-
+gests two possible changes to the event management
+environment. First, the event name of minor alarms
+should be changed to reflect the real problem. Second,
+the alarms currently called minor alarms are probably
+implemented incorrectly so they couldn't be observed.
+
+· Although there is no occurrence of minor alarms, event
+chassisMinorAlarmOff has 769 instances. Clearly, this
+event has no effect in the correlation rule. This may
+due to the same reason in the previous point. Or, this
+clearing event is also implemented incorrectly.
+
+· The clearing event Cisco Cold Start does not have
+any correlation with other events and should be re-
+moved form the ERN.
+
+
+
+
+Figure 6: ERN of Cisco Power Alarms
+
+
+
+7. RELATED WORK
+In the past, event management has been largely depen-
+dent on model-based approaches, in which domain knowl-
+edge is acquired and translated into rules used for real time
+monitoring. Two broad approaches are used in general to
+obtain correlation rules: the model-based approach and the
+knowledge-based approach. The first is based on having a
+dependency model, such as topology information to make
+inferences about connectivity problems[7, 8, 9] and device
+dependency and models [2, 4, 6]. If such information is avail-
+able and can be maintained in a cost-effective way, there is
+tremendous advantage in its exploitation. Unfortunately,
+for many problems (e.g., software errors), this is not the
+case. The second approach to constructing left-hand sides
+acquires knowledge from domain experts such as expert sys-
+tem [5] and the action oriented analysis [11]. In general, to
+
+
+
+733
+
+acquire models from domain experts can be a time-consuming
+and expensive task. Three factors contribute to this. First,
+domain experts are scarce in virtually all installations. Sec-
+ond, in large installations, a group of experts is often re-
+quired (since no one person has the requisite knowledge), but
+it is often difficult to synthesize an answer from the opinions
+of many experts. Finally, even if knowledge can be acquired,
+knowledge maintenance is problematic due to the dynamics
+of network systems. We note that both approaches require
+experts to supply knowledge. The difference is when this
+knowledge is supplied. In the first case, it is supplied during
+development of the management system. In the second case,
+it is supplied during installation customization.
+To reducing the cost and the time of the both approaches,
+our previous work [1, 10, 3] develops a data-driven, discovery-
+based approach that discovers correlation rules by mining
+historical event logs. Although this approach can be effec-
+tive, it often results in a large amount of correlation pat-
+terns. Although patterns found are statistical significant,
+they may not actionable and represent problematic situa-
+tions, or their correlation is due to other factor. Very often,
+a large fraction of found patterns represent known correla-
+tion or normal correlation. This makes it difficult to sort
+out actionable, unknown patterns from many patterns.
+To overcome the problems of both knowledge-based and
+discovery-based approaches, this work develop a hybrid ap-
+proach that combines the knowledge-based approach and the
+data-driven approach. In particular, we develop algorithms
+and systems that utilize existing knowledge and historical
+event logs by validating and extending the correlation knowl-
+edge based on historical data, and constructing knowledge
+based on historical data if there is no knowledge available.
+Our work is done through the integration with the event
+relationship networks (ERNs).
+
+
+8. CONCLUSION
+Action-oriented analysis (AOA) stemmed from a very dif-
+ferent view toward event management than the well studied
+but less effective paradigm of root cause analysis (RCA)
+and has gradually became the event management paradigm
+of choice for most designers of system management environ-
+ments. We have seen AOA deployed in hundreds of large-
+scale production sites with great success. The success of
+AOA can be ascribed to its direct attack to the needs of
+proactive management and its incorporation of correlation
+servers' operational model. The gist of IBM's AOA imple-
+mentation is the event relationship network (ERN), graphi-
+cal tool for documenting temporal correlation of events. The
+quality of ERNs, correctness and completeness, has direct
+impact to the effectiveness of AOA deployments. Up to date,
+the designing processes of ERNs are largely depended on do-
+main expertise solely. In this paper, we show event mining
+techniques can provide invaluable information to ERN de-
+sign.
+We started from reviewing the basic definition of ERN.
+Then we introduced the notion of pairwise event correla-
+tion. Based on pairwise event correlation, we proposed two
+semantics of ERN: weak correlation and strong correlation.
+In the following sections, we discussed three scenarios that
+ERN VCC system can be applied. First, the system can
+verify whether an existing ERN is valid by showing the con-
+fidence of each link in the ERN. Second, the system can find
+all event types that show high correlation with event types
+in the ERN and hence complete the ERN. Third, when there
+is no existing ERN, the system can generate an initial set of
+ERNs for subject matter experts to start with.
+We explained the pairwise correlation counting algorithm
+and why counting co-occurrence is a non-trivial issue.
+This paper reports the first step of a series of research that
+aims to bring data mining techniques into action-oriented
+analysis. Ongoing and future research issues include event
+source identification, event repertoire completion, excessively
+frequent event removal, correlation server simulation, ERN
+maintaining, host behavior profiling, etc. We also plan to
+develop online event mining system that can automatically
+response to changes of system behaviors.
+
+
+9. REFERENCES
+[1] Burns, L., Hellerstein, J.L., Ma, S., Perng, C. -S.,
+Rabenhorst, D.A.and Tayler, D., A Systematic
+Approach to Discovering Correlation Rules For Event
+Management, International Symposium on Integrated
+Network Management, 2001.
+[2] Finkel, A., Houck, K., Calo, S., Bouloutas, A.,An
+Alarm Correlation System for Heterogeneous Networks,
+Network Management and Control, Vol. 2, Plennum
+Press, 1994.
+[3] J.L. Hellerstein and S. Ma. Mining event data for
+actionable patterns. International Conference for the
+resource management and performance evaluation of
+enterprise computing systems, 2000.
+[4] Houck, K., Calo, S., Finkel, A., Towards a Practical
+Alarm Correlation System, Fourth International
+Symposium on Integrated Network management, Santa
+Barbara, CA, May, 1995.
+[5] Jakobson, G., Weihmayer, R., Weissman, M., A
+Domain-Oriented Expert System Shell for
+Telecommunications Network Alarm Correlation,
+Network Management and Control, Vol. 2, Plennum
+Press, 1994.
+[6] Kato, NeiOhta and Tomohiro KoheiIka, Proposal of
+Event Correlation for Distributed Network Fault
+Management and Its Evaluation, IEICE Transactions
+on Communications, Vol E92-B, number 6, 1999.
+[7] Kliger, S., Yemini, S., Yemini, Y., Ohlse, D, Stolfo, S.,
+A Coding Approach to Event Correlation, Fourth
+International Symposium on Integrated Network
+Management, Santa Barbara, CA, May, 1995.
+[8] Lewis, L., A Case-based Reasoning Approach to the
+Resolution of Faults in Communications Networks, in
+Proceedings Third International Symposium on
+Integrated Network Management, North Holland, 1993.
+[9] Liu, G., Mok, A.K., and E.J. Yang., Composite Events
+for Network Event Correlation, International
+Symposium on Integrated Network Management,
+Boston, MA, May, 1999
+[10] Ma, S., and Hellerstein, J.L., EventBrowser: A
+Flexible Tool for Scalable Analysis of Event Data.
+Distributed Operations and Management, 1999.
+[11] Thoenen D., Riosa, J. And Hellerstein, J.L., Event
+Relationship Networks: A Framework for Action
+Oriented Analysis For Event Management,
+International Symposium on Integrated Network
+Management, 2001.
+
+
+
+
+734
+

@@ -1,0 +1,2430 @@
+IDR/QR: An Incremental Dimension Reduction Algorithm
+via QR Decomposition
+
+
+Jieping Ye
+Qi Li
+Hui Xiong
+Haesun Park
+Ravi Janardan
+Vipin Kumar
+
+
+
+
+ABSTRACT
+Dimension reduction is critical for many database and data
+mining applications, such as efficient storage and retrieval of
+high-dimensional data. In the literature, a well-known di-
+mension reduction scheme is Linear Discriminant Analysis
+(LDA). The common aspect of previously proposed LDA
+based algorithms is the use of Singular Value Decompo-
+sition (SVD). Due to the difficulty of designing an incre-
+mental solution for the eigenvalue problem on the product
+of scatter matrices in LDA, there is little work on design-
+ing incremental LDA algorithms. In this paper, we pro-
+pose an LDA based incremental dimension reduction algo-
+rithm, called IDR/QR, which applies QR Decomposition
+rather than SVD. Unlike other LDA based algorithms, this
+algorithm does not require the whole data matrix in main
+memory. This is desirable for large data sets. More impor-
+tantly, with the insertion of new data items, the IDR/QR
+algorithm can constrain the computational cost by apply-
+ing efficient QR-updating techniques. Finally, we evaluate
+the effectiveness of the IDR/QR algorithm in terms of clas-
+sification accuracy on the reduced dimensional space. Our
+experiments on several real-world data sets reveal that the
+accuracy achieved by the IDR/QR algorithm is very close
+to the best possible accuracy achieved by other LDA based
+algorithms. However, the IDR/QR algorithm has much less
+computational cost, especially when new data items are dy-
+namically inserted.
+
+Categories and Subject Descriptors: H.2.8 [Database
+Management]: Database Applications - Data Mining
+
+General Terms: Algorithms
+
+Keywords: Dimension reduction, Linear Discriminant Anal-
+ysis, incremental learning, QR Decomposition
+
+
+Department of Computer Science & Engineering, Uni-
+versity of Minnesota, Minneapolis, MN 55455, U.S.A.
+{jieping,huix,hpark,janardan,kumar}@cs.umn.edu
+
+Department of Computer Science, University of Delaware,
+Newark, DE, U.S.A. qili@cis.udel.edu
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD'04, August 22­25, 2004, Seattle, Washington, USA.
+Copyright 2004 ACM 1-58113-888-1/04/0008 ...$5.00.
+1. INTRODUCTION
+Efficient storage and retrieval of high-dimensional data is
+one of the central issues in database and data mining re-
+search. In the literature, many efforts have been made to
+design multi-dimensional index structures [2], such as R-
+trees, R -trees, X-trees, SR-tree, etc, for speeding up query
+processing. However, the effectiveness of queries using any
+indexing schemes deteriorates rapidly as the dimension in-
+creases, which is the so-called curse of dimensionality. A
+standard approach to overcome this problem is dimension
+reduction, which transforms the original high-dimensional
+data into a lower-dimensional space with limited loss of in-
+formation. Once the high-dimensional data is transfered
+into a low-dimensional space, indexing techniques can be ap-
+plied effectively to organize this low-dimensional space and
+facilitate efficient retrieval of data [14].
+A well-known dimension reduction scheme is Linear Dis-
+criminant Analysis (LDA) [7, 9], which computes a linear
+transformation by maximizing the ratio of the between-class
+distance to the within-class distance, thereby achieving max-
+imal discrimination. LDA has been applied to many appli-
+cations such as text retrieval [3] and face recognition [1, 17,
+21]. In the past, many LDA extensions have been developed
+to deal with the singularity problem encountered by clas-
+sical LDA. There are three major extensions: regularized
+LDA, PCA+LDA, and LDA/GSVD. The common point of
+these algorithms is the use of Singular Value Decomposi-
+tion (SVD) or Generalized Singular Value Decomposition
+(GSVD). The difference among these LDA members is as
+follows: Regularized LDA increases the magnitude of the
+diagonal elements of the scatter matrix by adding a scaled
+identity matrix; PCA+LDA first applies PCA on the raw
+data to get a more compact representation so that the singu-
+larity of the scatter matrix is decreased; LDA/GSVD solves
+a trace optimization problem using GSVD.
+The above LDA algorithms have certain limitations. First,
+SVD or GSVD requires that the whole data matrix is stored
+in main memory. This requirement imposes difficulties on
+making the LDA algorithms scalable to large data sets. Also,
+the expensive computation of SVD or GSVD can signifi-
+cantly degrade the computational performance of the LDA
+algorithms when dealing with large data sets. Finally, since
+it is difficult to design an incremental solution for the eigen-
+value problem on the product of scatter matrices, little ef-
+fort has been made to design incremental LDA algorithms.
+However, in many practical applications, acquisition of rep-
+resentative training data is expensive and time-consuming.
+It is thus common to have a small chunk of data available
+
+
+
+
+364
+Research Track Paper
+
+over a period of time. In such settings, it is necessary to de-
+velop an algorithm that can run in an incremental fashion
+to accommodate the new data.
+The goal of this paper is to design an efficient and in-
+cremental dimension reduction algorithm while preserving
+competitive performance. More precisely, when queries are
+conducted on the reduced dimension data from the proposed
+algorithm, the query accuracy should be comparable with
+the best possible query accuracy achieved by other LDA
+based algorithms.
+To resolve these issues, we design an LDA based incremen-
+tal dimension reduction algorithm, called IDR/QR, which
+applies QR Decomposition rather than SVD or GSVD. This
+algorithm has two stages. The first stage is to maximize the
+separability between different classes. This is fulfilled by QR
+Decomposition. The distinct property of this stage is its low
+time and space complexity. The second stage incorporates
+both between-class and within-class information by applying
+LDA on the "reduced" scatter matrices resulting from the
+first stage. Unlike other LDA based algorithms, IDR/QR
+does not require the whole data matrix in main memory.
+This is desirable for large data sets. Also, our theoreti-
+cal analysis indicates that the computational complexity of
+IDR/QR is linear in the number of the data items in the
+training set as well as the number of dimensions. More im-
+portantly, the IDR/QR algorithm can work incrementally.
+When new data items are dynamically inserted, the compu-
+tational cost of the IDR/QR algorithm can be constrained
+by applying efficient QR-updating techniques.
+Finally, we have conducted extensive experiments on sev-
+eral well-known real-world datasets. The experimental re-
+sults show that the IDR/QR algorithm can be an order of
+magnitude faster than SVD or GSVD based LDA algorithms
+and the accuracy achieved by IDR/QR is very close to the
+best possible accuracy achieved by other LDA based algo-
+rithms. Also, when dealing with dynamic updating, the
+computational advantage of IDR/QR over SVD or GSVD
+based LDA algorithms becomes more substantial while still
+achieving comparable accuracy.
+Overview: The rest of this paper is organized as follows.
+Section 2 introduces related work. In Section 3, we give a
+review of LDA. The batch implementation of the IDR/QR
+algorithm is presented in Section 4. Section 5 describes the
+incremental implementation of the IDR/QR algorithm. A
+comprehensive empirical study of the performance of the
+proposed algorithms is presented in Section 6. We conclude
+in Section 7 with a discussion of future work.
+
+
+
+2. RELATED WORK
+Principal Component Analysis (PCA) is one of the stan-
+dard and well-known methods for dimension reduction [13].
+Because of its simplicity and ability to extract the global
+structure of a given data set, PCA is used widely in com-
+puter vision [22].
+Most previous work on PCA and LDA requires that all
+the training data be available before the dimension reduc-
+tion step. This is known as the batch method. There is some
+recent work in vision and numerical linear algebra litera-
+ture for computing PCA incrementally [4, 11]. Despite the
+popularity of LDA in the vision community, there is little
+work for computing it incrementally. The main difficulty is
+the involvement of the eigenvalue problem on the product
+Notations
+Descriptions
+n
+number of training data points
+ni
+number of data points in i-th class
+d
+dimension of the training data
+c
+number of classes
+G
+transformation matrix
+A
+data matrix
+Ai
+data matrix of the i-th class
+Sb
+between-class scatter matrix
+Sw
+within-class scatter matrix
+C
+centroid matrix
+m
+global centroid of the training set
+mi
+centroid of the i-th class
+
+Table 1: Notations
+
+
+
+of scatter matrices, which is hard to maintain incrementally.
+Although iterative algorithms have been proposed for neural
+network based LDA [5, 16], they require O(d2) time for each
+update, where d is the dimension of the data. This is still
+expensive, especially when the data has high dimension.
+
+
+3. LINEAR DISCRIMINANT ANALYSIS
+For convenience, we present in Table 1 the important no-
+tations used in the paper.
+This section gives a brief review of classical LDA, as well
+as its three extensions: regularized LDA, PCA+LDA, and
+LDA/GSVD.
+Given a data matrix A  IRd
+×n
+, we consider finding a
+linear transformation G  IRd
+×
+that maps each column aj
+of A, for 1  j  n, in the d-dimensional space to a vector
+yj = GTaj in the -dimensional space.
+Classical LDA aims to find the transformation G such
+that class structure of original high-dimensional space is
+preserved in the reduced space. Let the data matrix A be
+partitioned into c classes as A = [A1,A2, ··· ,Ac], where
+Ai  IRd
+×ni
+, and
+Èc
+i=1
+ni = n.
+Let Ii be the set of column indices that belong to the ith
+class, i.e., aj, for j  Ii, belongs to the ith class.
+In general, if each class is tightly grouped, but well sep-
+arated from the other classes, the quality of the cluster is
+considered to be high. In discriminant analysis, two scatter
+matrices, within-class and between-class scatter matrices are
+defined to quantify the quality of the cluster, as follows [9]:
+
+
+Sw =
+c
+
+
+i=1 jIi
+(aj - mi)(aj - mi)T,
+
+
+Sb =
+c
+
+
+i=1 jIi
+(mi - m)(mi - m)T
+
+
+=
+c
+
+
+i=1
+ni(mi - m)(mi - m)T,
+
+
+where mi is the centroid of the ith class and m is the global
+centroid. Define the matrices
+
+Hw = [A1 - m1 · eT1 ,··· ,Ac - mc · eTc ]  IRd
+×n
+, (1)
+Hb = [n1(m1 - m),··· ,nc(mc - m)]  IRd
+×c
+,(2)
+
+where ei = (1,··· , 1)T  IRni.
+
+
+
+365
+Research Track Paper
+
+Then the scatter matrices Sw and Sb can be expressed as
+Sw = HwHT
+w
+, Sb = HbHT
+b
+. The traces of the two scatter
+matrices can be computed as follows,
+
+
+trace (Sw) =
+c
+
+
+i=1 jIi
+||aj - mi||2
+
+
+trace (Sb) =
+c
+
+
+i=1
+ni||mi - m||2.
+
+
+Hence, trace (Sw) measures the closeness of the vectors within
+classes, while trace (Sb) measures the separation between
+classes.
+In the lower-dimensional space resulting from the linear
+transformation G, the within-class and between-class scatter
+matrices become
+
+SL
+w
+= (GTHw)(GTHw)T = GTSwG,
+SL
+b
+= (GTHb)(GTHb)T = GTSbG.
+
+An optimal transformation G would maximize trace (SL
+b
+)
+and minimize trace (SL
+w
+). A common optimization in clas-
+sical LDA [9] is
+
+G = arg
+max
+gT
+i
+Swgj=0,i=j
+trace (GTSwG)-
+1
+(GTSbG) , (3)
+
+
+where gi is the ith column of G.
+The solution to the optimization in Eq. (3) can be ob-
+tained by solving the eigenvalue problem on S-
+1
+w
+Sb, if Sw is
+non-singular, or on S-
+1
+b
+Sw, if Sb is non-singular. There are
+at most c - 1 eigenvectors corresponding to nonzero eigen-
+values, since the rank of the matrix Sb is bounded above by
+c-1. Therefore, the reduced dimension by classical LDA is
+at most c-1. A stable way to solve this eigenvalue problem
+is to apply SVD on the scatter matrices. Details on this can
+be found in [21].
+Classical LDA requires that one of the scatter matrices
+be non-singular. For many applications involving under-
+sampled data, such as text and image retrieval, all scatter
+matrices are singular. Classical LDA is thus not applicable.
+This is the so-called singularity or undersampled problem.
+To cope with this challenge, several methods, including two-
+stage PCA+LDA, regularized LDA, and LDA/GSVD have
+been proposed in the past.
+A common way to deal with the singularity problem is
+to apply an intermediate dimension reduction stage, such
+as PCA, to reduce the dimension of the original data be-
+fore classical LDA is applied. The algorithm is known as
+PCA+LDA, or subspace LDA. In this two-stage PCA+LDA
+algorithm, the discriminant stage is preceded by a dimension
+reduction stage using PCA. A limitation of this approach is
+that the optimal value of the reduced dimension for PCA is
+difficult to determine.
+Another common way to deal with the singularity problem
+is to add some constant value to the diagonal elements of Sw,
+as Sw + µId, for some µ > 0, where Id is an identity matrix
+[8]. It is easy to check that Sw + µId is positive definite,
+hence non-singular. This approach is called regularized LDA
+(RLDA). A limitation of RLDA is that the optimal value of
+the parameter µ is difficult to determine. Cross-validation
+is commonly applied for estimating the optimal µ [15].
+The LDA/GSVD algorithm in [12, 23] is a recent work
+along the same line. A new criterion for generalized LDA
+was presented in [23]. The inversion of the matrix Sw is
+avoided by applying the Generalized Singular Value Decom-
+position (GSVD). LDA/GSVD computes the solution ex-
+actly without losing any information. However, one limita-
+tion of this method is the high computational cost of GSVD,
+which limits its applicability for large datasets, such as im-
+age and text data.
+
+
+4. BATCH IDR/QR
+In this section, we present the batch implementation of
+the IDR/QR algorithm. This algorithm has two stages. The
+first stage maximizes the separation between different classes
+via QR Decomposition [10]. Without the concern of min-
+imizing within-class distance, this stage can be used inde-
+pendently as a dimension reduction algorithm. The second
+stage addresses the concern on within-class distance, while
+keeping low time/space complexity.
+The first stage of IDR/QR aims to solve the following
+optimization problem,
+
+G = arg max
+GT G=I
+trace(GTSbG).
+(4)
+
+Note that this optimization only addresses the concern of
+maximizing between-class distance. The solution can be ob-
+tained by solving the eigenvalue problem on Sb. The solution
+can also be obtained through QR Decomposition on the cen-
+troid matrix C, which is the so-called Orthogonal Centroid
+Method (OCM) [19], where
+
+C = [m1,m2,··· ,mc]
+(5)
+
+consists of the c centroids. More specifically, let C = QR be
+the QR Decomposition of C, where Q  IRn
+×c
+has orthonor-
+mal columns and R  IRc
+×c
+is upper triangular. Then
+
+G = QM
+(6)
+
+solves the optimization problem in Eq. (4), for any orthog-
+onal matrix M. Note the choice of orthogonal matrix M is
+arbitrary, since trace(GTSbG) = trace(MTGTSbGM), for
+any orthogonal matrix M. In OCM [19], M is set to be the
+identity matrix for simplicity.
+The second stage of IDR/QR refines the first stage by
+addressing the concern on within-class distance. It incor-
+porates the within-class scatter information by applying a
+relaxation scheme on M in Eq. (6) (relaxing M from an or-
+thogonal matrix to an arbitrary matrix). Note that the trace
+value in Eq. (3) is the same for an arbitrary non-singular M,
+however the constraints in Eq. (3) will not be satisfied for
+arbitrary M. In the second stage of IDR/QR, we look for
+a transformation G such that G = QM, for some M. Note
+that M is not required to be orthogonal. The original prob-
+lem on computing G is equivalent to computing M. Since
+
+GTSbG = MT(QTSbQ)M,
+GTSwG = MT(QTSwQ)M,
+
+the original optimization on finding optimal G is equivalent
+to finding M, with B = QTSbQ and W = QTSwQ as the
+reduced between-class and within-class scatter matrices, re-
+spectively. Note that B has much smaller size than the
+original scatter matrix Sb (similarly for W).
+The optimal M can be computed efficiently using many
+existing LDA based methods, since we are dealing with ma-
+trices B and W of much smaller size c by c. A key obser-
+vation is that the singularity problem of W will not be as
+
+
+
+366
+Research Track Paper
+
+Algorithm 1: Batch IDR/QR
+Input:
+data matrix A;
+Output: optimal transformation matrix G;
+/* Stage I: */
+1. Construct centroid matrix C;
+2. Compute QR Decomposition of C as C = QR;
+where Q  IRd
+×c
+, R  IRc
+×c
+;
+/* Stage II: */
+3. Z  HT
+w
+Q;
+4. Y  HT
+b
+Q;
+5. W  ZTZ; /*Reduced within-class scatter matrix*/
+6. B  Y
+T
+Y ; /*Reduced between-class scatter matrix*/
+7. Compute the c eigenvectors i of (W + µIc)-
+1
+B,
+with decreasing eigenvalues;
+8. G  QM, where M = [1, ··· ,c].
+
+
+Methods
+Time Complexity
+Space Complexity
+IDR/QR
+O(ndc)
+O(dc)
+PCA+LDA
+O(n2d)
+O(nd)
+LDA/GSVD
+O((n + c)2d)
+O(nd)
+OCM
+O(nd + c2d)
+O(dc)
+PCA
+O(n2d)
+O(nd)
+
+Table 2: Complexity comparison: n is the number
+of training data points, d is the dimension, and c is
+the number of classes.
+
+
+
+severe as the original Sw, since W has much smaller size
+than Sw. We can compute optimal M by simply apply-
+ing regularized LDA, that is, we compute M, by solving a
+small eigenvalue problem on (W + µIc)-
+1
+B, for some posi-
+tive constant µ. The pseudo-code for this algorithm is given
+in Algorithm 1.
+
+4.1 Time and space complexity
+We close this section by analyzing the time and space
+complexity of the IDR/QR algorithm.
+It takes O(dn) for the formation of the centroid matrix C
+in Line 1. The complexity for QR Decomposition in Line 2
+is O(c2d) [10]. Lines 3 and 4 take O(ndc) and O(dc2) respec-
+tively for matrix multiplications. It then takes O(c2n) and
+O(c3) for matrix multiplications in Lines 5 and 6, respec-
+tively. Line 7 computes the eigen-decomposition of a c by
+c matrix, hence takes O(c3) [10]. The matrix multiplication
+in Line 8 takes O(dc2).
+Note that the dimension, d, and the number, n, of points
+are usually much larger, compared with the number, c, of
+classes. Thus, the most expensive step in Algorithm 1 is in
+Line 3, which takes O(ndc). Therefore, the time complexity
+of IDR/QR is linear in the number of points, linear in the
+number of classes, and linear in the dimension of the dataset.
+It is clear that only the c centroids are required to reside in
+the main memory, hence the space complexity of IDR/QR is
+O(dc). Table 2 lists the time and space complexity of several
+dimension reduction algorithms discussed in this paper. It
+is clear from the table that IDR/QR and OCM are more
+efficient than other methods.
+
+
+5. INCREMENTAL IDR/QR
+The incremental implementation of the IDR/QR algo-
+rithm is discussed in details in this section. We will adopt
+the following convention: For any variable X, its updated
+version after the insertion of a new instance is denoted by
+~
+X. For example, the number, ni, of elements in the ith class
+is changed to ~
+ni, while centroid mi is changed to ~
+mi.
+With the insertion of a new instance, the centroid ma-
+trix C, Hw and Hb will change accordingly, as well as W
+and B. The incremental updating in IDR/QR proceeds in
+three steps: (1) QR-updating of the centroid matrix C =
+[m1, ··· ,mk] in Line 2 of Algorithm 1; (2) Updating of
+the reduced within-class scatter matrix W in Line 5; and
+(3) Updating of the reduced between-class scatter matrix B
+in Line 6.
+Let x be a new instance inserted, which belongs to the
+ith class. Without loss of generality, let us assume we have
+data from the 1st to the kth class, just before x is inserted.
+In general, this can be done by switching the class labels
+between different classes. In the rest of this section, we con-
+sider the incremental updating in IDR/QR in two distinct
+cases: (1) x belongs to an existing class, i.e., i  k; (2) x
+belongs to a new class, i.e., i > k. As will be seen later, the
+techniques for these two cases are quite different.
+
+5.1 Insertion of a new instance from an exist-
+ing class (i  k)
+Recall that we have data from the 1st to kth classes, when
+a new instance x is being inserted. Since x belongs to the ith
+class, with 1  i  k, the insertion of x will not create a new
+class. In this section, we show how to do the incremental
+updating in three steps.
+
+5.1.1 Step 1: QR-updating of the centroid matrix C
+Since the new instance x belongs to the ith class,
+~
+C =
+[m1, ··· ,mi+f,··· ,mk], where f =
+x-mi
+~
+ni
+, and ~
+ni = ni+1.
+
+Hence,
+~
+C can be rewritten as
+~
+C = C + f · gT, for g =
+(0,··· , 1,··· ,0)T, where the 1 appears at the ith position.
+The problem of QR-updating of the centroid matrix C can
+be formulated as follows: Given the QR Decomposition of
+the centroid matrix C = QR, for Q  IRd
+×k
+and R  IRk
+×k
+,
+compute the QR Decomposition of
+~
+C.
+Since
+~
+C = C + f · gT, the QR-updating of the centroid
+matrix C can be formulated as a rank-one QR-updating.
+However, the algorithm in [10] cannot be directly applied,
+since it requires the complete QR Decomposition, i.e., the
+matrix Q is square. While in our case, we use the skinny QR
+Decomposition, i.e. Q is rectangular. Instead, we apply a
+slight variation of the algorithm in [6] via the following two-
+stage QR-updating: (1) A complete rank-one updating as in
+[10] on a small matrix; (2) A QR-updating by an insertion
+of a new row. Details are given below.
+Partition f into two parts: the projection onto the orthog-
+onal basis Q, and its orthogonal complement. Mathemati-
+cally, f can be partitioned into f = QQTf +(I -QQT)f. It
+is easy to check that QT(I -QQT)f = 0, i.e. (I -QQT)f is
+orthogonal to, or lies in the orthogonal complement of, the
+subspace spanned by the columns of Q. It follows that
+
+~
+C = C + f · gT
+= QR + QQTf · gT + (I - QQT)f · gT
+= Q(R + f1 · gT) + f2 · gT,
+
+where f1 = QTf, f2 = (I - QQT)f. Next, we show how
+to compute the QR Decomposition of
+~
+C in two stages. The
+
+
+
+367
+Research Track Paper
+
+first stage updates the QR Decomposition of Q(R+f1 ·gT).
+It corresponds to a rank-one updating and can be done at
+O(kd) [10]. This results in the updated QR Decomposition
+as Q(R+f1·gT) = Q1R1, where Q1 = QP1, and P1  IRk
+×k
+
+is orthogonal.
+Assume ||f2|| = 0. Denote q =
+f2
+||f2||
+. Since q is orthogonal
+to the subspace spanned by the columns of Q, it is also
+orthogonal to the subspace spanned by the columns of Q1 =
+QP1, i.e. [Q1,q] has orthonormal columns.
+The second stage computes QR-updating of
+
+
+~
+C = [Q1,q]
+R1
+||f2||gT
+,
+
+
+which corresponds to the case that ||f2||gT is inserted as a
+new row. This stage can be done at O(dk) [10]. The updated
+QR Decomposition is
+
+
+[Q1,q]
+R1
+||f2||gT
+= [
+~
+Q, ~
+q]
+~
+R
+0
+=
+~
+Q
+~
+R,
+
+
+where [
+~
+Q, ~
+q] = [Q1,q]P2, for some orthogonal matrix P2.
+Combining both stages, we have
+
+
+~
+C = Q1R1 + ||f2||q · gT = [Q1,q]
+R1
+||f2||gT
+=
+~
+Q
+~
+R
+
+
+as the updated QR Decomposition of
+~
+C, assuming ||f2|| = 0.
+If ||f2|| = 0, then
+~
+C = Q1R1 is the updated QR Decompo-
+sition of
+~
+C. Note that f2 can be computed efficiently as
+f2 = f - (Q(QTf)), by doing matrix-vector multiplication
+twice. Hence, the total time complexity for the QR-updating
+of the centroid matrix C is O(dk).
+
+5.1.2 Step 2: Updating of W
+Next we consider the updating of the reduced within-class
+scatter matrix W = QTHwHT
+w
+Q (Line 5 of Algorithm 1).
+Let
+~
+W =
+~
+QT
+~
+Hw
+~
+HT
+w
+~
+Q be its updated version.
+Note that Hw = [A1 -m1 ·eT1 , ··· ,Ak -mk ·eTk ]  IRd
+×n
+.
+Its updated version
+~
+Hw differs from Hw on the ith block.
+Let the ith block of Hw be Hi = Ai - mi · eTi . Then the ith
+block of its updated version
+~
+Hw is
+
+~
+Hi =
+~
+Ai - ~
+mi · ~
+eTi = [Ai,x] - ~
+mi · ~
+eTi
+= [Ai - mi · eTi ,x - mi] - ( ~
+mi - mi) · ~
+eTi
+= [Hi,u] - v · ~
+eTi ,
+(7)
+
+
+where u = x - mi, v = ~
+mi - mi and ~
+ei =
+ei
+1
+ IRni+1.
+
+The product
+~
+Hi
+~
+HT
+i
+can be computed as
+
+~
+Hi
+~
+HT
+i
+= ([Hi,u] - v · ~
+eTi )([Hi,u] - v · ~
+eTi )T
+
+= [Hi,u]
+HT
+i
+uT
+- v · ~
+eTi
+HT
+i
+uT
+
+- [Hi,u]~
+ei · vT + (v · ~
+eTi )(~
+ei · vT)
+= HiHT
+i
++ u · uT - v · uT - u · vT + (ni + 1)v · vT
+= HiHT
+i
++ (u - v) · (u - v)T + niv · vT,
+(8)
+
+where the third equality follows, since (Hi,u)~
+ei =
+È
+jIi
+(aj-
+mi)+u = u, and (v·~
+eTi )(~
+ei·vT) = vvT(~
+eTi ·~
+ei) = (ni+1)vvT.
+Since HwHT
+w
+=
+Èk
+j=1
+HjHT
+j
+, we have
+
+
+~
+Hw
+~
+HT
+w
+=
+k
+
+
+j=1
+~
+Hj
+~
+HT
+j
+
+
+
+=
+1jk,j=i
+~
+Hj
+~
+HT
+j
++
+~
+Hi
+~
+HT
+i
+
+
+
+
+=
+k
+
+
+j=1
+HjHT
+j
++ (u - v) · (u - v)T + niv · vT.
+
+
+It follows that
+
+~
+W =
+~
+QT
+~
+Hw
+~
+HT
+w
+~
+Q
+
+=
+~
+QTHwHT
+w
+~
+Q +
+~
+QT(u - v) · (u - v)T
+~
+Q + ni
+~
+QTv · vT
+~
+Q
+
+=
+~
+QTHwHT
+w
+~
+Q + (~
+u - ~
+v) · (~
+u - ~
+v)T + ni~
+v · ~
+vT
+ QHwHT
+w
+Q + (~
+u - ~
+v) · (~
+u - ~
+v)T + ni~
+v · ~
+vT
+
+= W + (~
+u - ~
+v) · (~
+u - ~
+v)T + ni~
+v · ~
+vT,
+(9)
+
+where ~
+u =
+~
+QTu, and ~
+v =
+~
+QTv. The assumption of the
+approximation in Eq. (9) is that the updated
+~
+Q with the
+insertion of a new instance is close to Q.
+The computation of ~
+u and ~
+v takes O(dk). Thus, the com-
+putation for updating W takes O(dk).
+
+5.1.3 Step 3: Updating of B
+Finally, let us consider the updating of the reduced between-
+class scatter matrix B = QTHbHT
+b
+Q (Line 6 of Algorithm 1).
+Its updated version is B =
+~
+QT
+~
+Hb
+~
+HT
+b
+~
+Q.
+The key observation for efficient updating of B is that
+
+~
+Hb = [
+
+~
+n1( ~
+m1 - ~
+m),··· ,
+
+~
+nk( ~
+mk - ~
+m)]
+
+can be rewritten as
+
+~
+Hb = [ ~
+m1, ~
+m2,··· , ~
+mk, ~
+m]F = [
+~
+C, ~
+m]F,
+
+
+where F =
+D
+-hT
+, D = diag(
+
+~
+n1,··· ,
+
+~
+nk), and h =
+
+[
+
+~
+n1,··· ,
+
+~
+nk]T.
+By the updated QR Decomposition
+~
+C =
+~
+Q
+~
+R, we have
+
+~
+QT
+~
+Hb = [
+~
+QT
+~
+C,
+~
+QT ~
+m]F = [
+~
+R,
+~
+QT ~
+m]F =
+~
+RD -
+~
+QT ~
+m · hT.
+
+It is easy to check that ~
+m =
+1
+~
+n
+~
+C·r, where r = (~
+n1,··· , ~
+nk)T.
+Hence,
+~
+QT ~
+m =
+~
+QT
+1
+~
+n
+~
+C · r =
+1
+~
+n
+~
+R · r. It follows that
+
+~
+B =
+~
+QT
+~
+Hb
+~
+HT
+b
+~
+Q = (
+~
+RD -
+~
+QT ~
+m · hT) · (
+~
+RD -
+~
+QT ~
+m · hT)T
+
+=
+~
+RD -
+1
+~
+n
+~
+R · r · hT
+~
+RD -
+1
+~
+n
+~
+R · r · hT
+T
+
+.
+
+Therefore, it takes O(k3) time for updating B.
+Overall, the total time for QR-updating of C and updating
+of W and B with the insertion of a new instance from an
+existing class is O(dk + k3). The pseudo-code is given in
+Algorithm 2.
+
+5.2 Insertion of a new instance from a new
+class (i > k)
+Recall that we have data from the 1st to kth classes, upon
+the insertion of x. Since x belongs to ith class, with i > k,
+the insertion of x will result in a new class. Without loss
+of generality, let us assume i = k + 1. Hence the (k + 1)th
+centroid ~
+mk
++1
+= x. Then the updated centroid matrix
+~
+C =
+[m1,m2,··· ,mk,x] = [C,x]. In the following, we focus on
+
+
+
+368
+Research Track Paper
+
+Algorithm 2: Updating Existing Class
+Input:
+centroid matrix C = [m1,m2,··· ,mk], its
+QR Decomposition C = QR, the matrix W,
+the size nj of the j-th class for each j, and a
+new point x from the i-th class, i  k
+Output: updated matrix
+~
+W, updated centroid matrix
+~
+C, its QR Decomposition
+~
+C =
+~
+Q
+~
+R, and
+updated matrix
+~
+B;
+1. ~
+nj  nj, for j = i; ~
+ni  ni + 1; f 
+x-mi
+~
+ni
+;
+2. ~
+mi  mi + f; ~
+mj  mj, for each j = i;
+3.
+~
+C  [ ~
+m1,··· , ~
+mi,··· , ~
+mk];
+4. f1  QTf; f2  (I - QQT)f;
+5. do rank-one QR-updating of Q(R + f1 · gT)
+as Q(R + f1 · gT) = Q1R1;
+6. if ||f2|| = 0
+7.
+~
+Q  Q1;
+~
+R  R1;
+8. else
+
+9.
+q 
+(I-QQT )f
+||(I-QQT)f||
+; g  (0,··· , 1,··· ,0)T;
+
+10.
+do QR-updating of [Q1,q]
+R1
+||f2||gT
+as
+
+[Q1,q]
+R1
+||f2||gT
+= Q2R2;
+
+11.
+~
+Q  Q2;
+~
+R  R2;
+12. endif
+13. u  x - mi; v  ~
+mi - mi;
+14. ~
+u 
+~
+QTu; ~
+v 
+~
+QTv;
+15.
+~
+W  W + (~
+u - ~
+v)(~
+u - ~
+v)T + ni~
+v~
+vT;
+16. D  diag(
+
+~
+n1,··· ,
+
+~
+nk); h = [
+
+~
+n1,··· ,
+
+~
+nk]T;
+17. r  (~
+n1,··· , ~
+nk)T; ~
+r 
+1
+~
+n
+~
+R · r;
+18.
+~
+B  (
+~
+RD - ~
+r · hT)(
+~
+RD - ~
+r · hT)T;
+
+
+
+the case when x does not lie in the space spanned by the k
+centroids {mi}ki
+=1
+.
+
+5.2.1 Step 1: QR-updating of the centroid matrix C
+Given the QR Decomposition C = QR, it is straightfor-
+ward to compute the QR Decomposition of
+~
+C as
+~
+C =
+~
+Q
+~
+R
+by the Gram-Schmidt procedure [10], where
+~
+Q = [Q,q], for
+some q. The time complexity for this step is O(dk).
+
+5.2.2 Step 2: Updating of W
+With the insertion of x from a new class (k + 1), the
+(k + 1)th block
+~
+Hk
++1
+is created, while Hj, for j = 1,··· ,k
+keep unchanged. It is easy to check that
+~
+Hk
++1
+= 0. It
+follows that
+~
+Hw
+~
+HT
+w
+= HwHT
+w
+. Hence
+
+~
+W =
+~
+QT
+~
+Hw
+~
+HT
+w
+~
+Q =
+~
+QTHwHT
+w
+~
+Q = [Q,q]THwHT
+w
+[Q,q]
+
+
+QTHwHT
+w
+Q 0
+0
+0
+=
+W 0
+0
+0
+.
+
+The assumption in the above approximation is that W is
+the dominant part in
+~
+W.
+
+5.2.3 Step 3: Updating of B
+The updating of B follows the same idea as in the previous
+case. Note that
+
+~
+Hb = [
+
+~
+n1( ~
+m1 - ~
+m),··· ,
+Ô
+~
+nk
++1
+( ~
+mk
++1
+- ~
+m)]
+
+can be rewritten as
+
+~
+Hb = [ ~
+m1, ~
+m2,··· , ~
+mk
++1
+, ~
+m]F,
+Algorithm 3: Updating New Class
+Input:
+centroid matrix C = [m1,m2,··· ,mk],
+its QR Decomposition C = QR, the size
+nj of the j-th class for each j, and a
+new point x from the (k + 1)-th class
+Output: updated matrix
+~
+W, updated centroid matrix
+~
+C, its QR Decomposition
+~
+C =
+~
+Q
+~
+R, and
+updated matrix
+~
+B;
+1. ~
+nj  nj, for j = 1,··· ,k; ~
+nk
++1
+ 1; ~
+n  n + 1;
+2. do QR-updating of
+~
+C = [C,x] as
+~
+C =
+~
+Q
+~
+R;
+
+3.
+~
+W 
+W 0
+0
+0
+;
+
+4. D  diag
+ 
+~
+n1,··· ,~
+nk
++1
+¡
+; h 
+ 
+~
+n1,··· ,~
+nk
++1
+¡T
+;
+5. r  (~
+n1,··· , ~
+nk
++1
+)T; ~
+r 
+1
+~
+n
+~
+Rr;
+6.
+~
+B  (
+~
+RD - ~
+r · hT)(
+~
+RD - ~
+r · hT)T;
+
+
+
+
+where the matrix F =
+D
+-hT
+, and D is an diagonal ma-
+trix D = diag(n1,··· , nk
++1
+), and h = [n1,··· , nk
++1
+]T.
+By the updated QR Decomposition
+~
+C =
+~
+Q
+~
+R, we have
+
+~
+QT
+~
+Hb =
+~
+QT[
+~
+C, ~
+m]F = [
+~
+QT
+~
+C,
+~
+QT ~
+m]F
+
+= [
+~
+R,
+~
+QT ~
+m]F =
+~
+RD -
+~
+QT ~
+m · hT.
+
+Since ~
+m =
+1
+~
+n
+~
+C · r, where r = (~
+n1,··· , ~
+nk
++1
+)T, we have
+~
+QT ~
+m =
+~
+QT
+1
+~
+n
+~
+C · r =
+1
+~
+n
+~
+R · r.
+Then
+~
+B can be computed by similar arguments as in the
+previous case. Therefore, it takes O(k3) for updating B.
+Thus, the time for QR-updating of C and updating of W
+and B with the insertion of a new instance from a new class
+is O(dk + k3). The pseudo-code is given in Algorithm 3.
+
+5.3 Main algorithm
+With the above two incremental updating schemes, the
+incremental IDR/QR works as follows: For a given new in-
+stance x, determine whether it is from an existing or new
+class; If it is from an existing class, update the QR Decom-
+position of the centroid matrix C and W and B by applying
+Algorithm 2; otherwise update the QR Decomposition of
+the centroid matrix C and W and B by applying Algo-
+rithm 3; The above procedure is repeated until all points
+are considered. With the final updated
+~
+W and
+~
+B, we can
+compute the
+~
+k eigenvectors {i}~ki
+=1
+of (
+~
+W + µI~k)-
+1
+~
+B, and
+assign [1,··· ,~k] to M, where
+~
+k is the (updated) number
+of classes (~
+k equals k, if x is from an existing, and k + 1
+otherwise). Then the transformation G =
+~
+QM, assuming
+~
+C =
+~
+Q
+~
+R is the updated QR Decomposition.
+The incremental IDR/QR proposed obeys the following
+general criteria for an incremental learning algorithm [20]:
+(1) It is able to learn new information from new data; (2) It
+does not require access to the original data; (3) It preserves
+previously acquired knowledge; (4) It is able to accommo-
+date new classes that may be introduced with new data.
+
+
+6. EMPIRICAL EVALUATION
+In this section, we evaluate both the batch version and
+the incremental version of the IDR/QR algorithm. The per-
+formance is mainly measured by the computational cost in
+terms of the classification accuracy and execution time. In
+
+
+
+369
+Research Track Paper
+
+0.4
+0.45
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+
+
+
+
+1
+3
+5
+10
+15
+Accuracy
+
+
+
+
+K-Nearest Neighbors
+IDR/QR
+OCM
+PCA+LDA
+PCA
+LDA/GSVD
+
+
+
+
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+
+
+
+
+1
+3
+5
+10
+15
+Accuracy
+
+
+
+
+K-Nearest Neighbors
+IDR/QR
+OCM
+PCA+LDA
+PCA
+LDA/GSVD
+
+
+
+
+AR (image)
+ORL (image)
+
+
+
+
+0.82
+0.84
+0.86
+0.88
+0.9
+0.92
+0.94
+0.96
+0.98
+
+
+
+
+1
+10
+15
+30
+50
+Accuracy
+
+
+
+
+K-Nearest Neighbors
+IDR/QR
+OCM
+PCA+LDA
+PCA
+LDA/GSVD
+
+0.76
+0.77
+0.78
+0.79
+0.8
+0.81
+0.82
+0.83
+0.84
+0.85
+0.86
+
+
+
+
+1
+10
+15
+30
+50
+Accuracy
+
+
+
+
+K-Nearest Neighbors
+IDR/QR
+OCM
+PCA+LDA
+PCA
+LDA/GSVD
+
+
+
+
+tr41 (text)
+re0 (text)
+
+
+Figure 1: Comparison of classification accuracy on four test data sets
+
+
+the experiment, we applied the K-Nearest Neighbor (K-NN)
+method [7] as the classification algorithm and classification
+accuracies are estimated by 10-fold cross validation.
+Experimental Platform: All experiments were per-
+formed on a PC with a P4 1.8GHz CPU and 1GB main
+memory running a Linux operating system.
+Experimental Data Sets: Our experiments were per-
+formed on the following four real-world data sets, which are
+from two different application domains, including face recog-
+nition and text retrieval. Some characteristics of these data
+sets are shown in Table 3.
+
+1. AR1 is a popular face image data set [18]. The face
+images in AR contain a large area of occlusion, due to
+the presence of sun glasses and scarves, which leads to
+a relatively large within-class variance in the data set.
+In our experiments, we use a subset of the AR data
+set. This subset contains 1638 face images of entire
+face identities (126). The image size of this subset is
+768×576. We first crop the image from row 100 to 500,
+column 200 to 550, and then subsample the cropped
+images down to a size of 101 × 88 = 8888.
+
+2. ORL2 is another popular face image data set, which
+includes 40 face identities, i.e., 40 classes. The face
+images in ORL only contain pose variation, and are
+perfectly centralized/localized. The image size of ORL
+is 92 × 112 = 10304. All dimensions (10304) are used
+to test our dimension reduction algorithms.
+
+1
+http://rvl1.ecn.purdue.edu/aleix/aleix face DB.html
+2
+http://www.uk.research.att.com/facedatabase.html
+Data set
+Size
+Dim
+# of classes
+
+AR
+1638
+8888
+126
+ORL
+400
+10304
+40
+tr41
+878
+7454
+10
+re0
+1504
+2886
+13
+
+Table 3: Statistics for our test data sets
+
+
+
+3. tr41 document data set is derived from the TREC-5,
+TREC-6, and TREC-7 collections
+3
+.
+
+4. re1 document data set is derived from Reuters-21578
+text categorization test collection Distribution 1.0
+4
+.
+
+
+6.1 The performance of batch IDR/QR
+In this experiment, we compare the performance of the
+batch IDR/QR with several other dimension reduction algo-
+rithms including PCA+LDA, LDA/GSVD, OCM, and PCA.
+Note that IDR/QR applies regularization to the reduced
+within-class scatter, i.e., W + µIc. We chose µ = 0.5 in our
+experiments, while it produced good overall results.
+
+6.1.1 Classification Accuracy
+Figure 1 shows the classification accuracies on our four
+test data sets using five different dimension reduction algo-
+rithms. Main observations are as follows:
+
+3
+http://trec.nist.gov
+4
+http://www.research.att.com/lewis
+
+
+
+370
+Research Track Paper
+
+0.1
+1
+10
+100
+1000
+
+
+
+
+ORL
+AR
+tr41
+re0
+Time
+(Seconds)
+
+
+
+
+Datasets
+IDR/QR
+OCM
+PCA+LDA
+PCA
+LDA/GSVD
+
+
+
+
+Figure 2: Comparing the efficiency of computing the
+transformation (measured in seconds in log-scale)
+
+
+· The most interesting result is from the AR data set.
+We can observe that batch IDR/QR, PCA+LDA and
+LDA/GSVD significantly outperform other two dimen-
+sion reduction algorithms, PCA and OCM, in terms of
+the classification accuracy. Recall that the face images
+in the AR data set contain a large area of occlusion,
+which results in the large within-class variance in each
+class. The effort of minimizing of the within-class vari-
+ance achieves distinct success in this situation. How-
+ever, neither PCA nor OCM has the effort in minimiz-
+ing the within-class variance. This explains why they
+have a poor classification performance on AR.
+
+· Another interesting observation is that OCM performs
+well on text data sets. This observation is likely due
+to the fact that text data sets tend to have relatively
+small within-class variances. This observation suggests
+that OCM is a good choice in practice if the data is
+known to have small within-class variances.
+
+6.1.2 Efficiency in computing the transformation
+Figure 2 shows the execution time (in log-scale) of differ-
+ent tested methods for computing the transformation. Even
+with log-scale presentation, we can still observe that the ex-
+ecution time for computing the transformation by IDR/QR
+or OCM is significantly smaller than that by PCA+LDA,
+LDA/GSVD, and PCA.
+
+6.1.3 The Effect of Small Reduced Dimension
+Here, we evaluate the effect of small reduced dimension
+on the classification accuracy using the AR data set. Recall
+that the reduced dimension by the IDR/QR algorithm is c,
+where c is the number of classes in the data set. If the value c
+is large (such as AR, which contains 126 classes), the reduced
+representation may not be suitable for efficient indexing and
+retrieval. Since the reduced dimensions from IDR/QR are
+ordered by their discriminant powers (see Line 7 of Algo-
+rithm 1), an intuitive solution is to choose the first few
+dimensions in the reduced subspace from IDR/QR. The ex-
+perimental results are shown in Figure 3. As can be seen,
+the accuracy achieved by keeping the first 20 dimensions
+only is still sufficiently high.
+
+6.2 The Performance of incremental IDR/QR
+In this experiment, we compare the performance of incre-
+mental IDR/QR with that of batch IDR/QR in terms of
+0.4
+0.45
+0.5
+0.55
+0.6
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+
+
+
+
+20
+25
+30
+35
+40
+Accuracy
+
+
+
+
+Number of dimensions
+IDR/QR
+OCM
+PCA+LDA
+PCA
+LDA/GSVD
+
+
+
+
+Figure 3: The effect of small reduced dimension on
+classification accuracy using AR
+
+
+
+classification accuracy and the computational cost. We ran-
+domly order the data items in the data set and insert them
+into the training set one by one incrementally with the given
+order. The remaining data is used as the test set. Initially,
+we select the first 30% data items as the training set. Incre-
+mental updating is then performed with the remaining data
+items inserted one at a time.
+Figure 4 shows the achieved classification accuracies by
+batch IDR/QR and incremental IDR/QR on four data sets.
+In the figure, the horizontal axis shows the portion of train-
+ing data items, and the vertical axis indicates the classifica-
+tion accuracy (as a percentage). We observe a trend that the
+accuracy increases when more and more training data items
+are involved. Another observation is that the accuracy by in-
+cremental IDR/QR is quite close to that by batch IDR/QR.
+Indeed, on four data sets, the maximal accuracy deviation
+between incremental IDR/QR and batch IDR/QR is within
+4%. Recall that incremental IDR/QR is carried through
+QR Decomposition in three steps: (1) QR-updating of the
+centroid matrix C; (2) Updating of the reduced within-class
+scatter W; and (3) Updating of the reduced between-class
+scatter B. The first and third steps are based on the exact
+scheme, while the second step involves approximation. Note
+that the main rationale behind our approximation scheme
+in updating W is that the change of Q matrix is relatively
+small and can be neglected for each single updating, where
+C = QR is the QR Decomposition of C.
+To give a concrete idea of the benefit of using incremental
+IDR/QR from the perspective of efficiency, we give a com-
+parison on the compuational cost between batch IDR/QR
+and incremental IDR/QR. The experimental results are given
+in Figure 5. As can be seen, the execution time of incre-
+mental IDR/QR is significantly smaller than that of batch
+IDR/QR. Indeed, for a single updating, incremental IDR/QR
+takes O(dk+k3), while batch IDR/QR takes O(ndk), where
+k is the number of classes in the current training set and n
+is the size of the current training set. The time for a sin-
+gle updating in incremental IDR/QR is almost a constant
+O(dc + c3), when all classes appear in the current training
+set, and the speed-up of incremental IDR/QR over batch
+IDR/QR keeps increasing when more points are inserted
+into the training set. Note that we only count the time
+for Lines 1­6 in Algorithm 1, since each updating in in-
+cremental IDR/QR only involves the updating of the QR
+Decomposition (Line 2), W (Line 5) and B (Line 6).
+
+
+
+371
+Research Track Paper
+
+0.65
+0.7
+0.75
+0.8
+0.85
+0.9
+0.95
+1
+
+
+
+
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Accuracy
+
+
+
+
+Percentage of the training data
+batch IDR/QR
+incremental IDR/QR
+
+
+
+
+0.91
+0.92
+0.93
+0.94
+0.95
+0.96
+0.97
+0.98
+0.99
+1
+
+
+
+
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Accuracy
+
+
+
+
+Percentage of the training data
+batch IDR/QR
+incremental IDR/QR
+
+
+
+
+AR (image)
+ORL (image)
+
+
+
+
+0.92
+0.93
+0.94
+0.95
+0.96
+0.97
+0.98
+0.99
+
+
+
+
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Accuracy
+
+
+
+
+Percentage of the training data
+batch IDR/QR
+incremental IDR/QR
+
+
+
+
+0.68
+0.7
+0.72
+0.74
+0.76
+0.78
+0.8
+0.82
+
+
+
+
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Accuracy
+
+
+
+
+Percentage of the training data
+batch IDR/QR
+incremental IDR/QR
+
+
+
+
+tr41 (text)
+re0 (text)
+
+
+Figure 4: Comparison of classification accuracy between incremental IDR/QR and batch IDR/QR
+
+
+7. CONCLUSIONS
+In this paper, we have proposed an LDA based incremen-
+tal dimension reduction algorithm, called IDR/QR, which
+applies QR Decomposition rather than SVD. The IDR/QR
+algorithm does not require whole data matrix in main mem-
+ory. This is desirable for large data sets. More importantly,
+the IDR/QR algorithm can work incrementally. In other
+words, when new data items are dynamically inserted, the
+computational cost of the IDR/QR algorithm can be con-
+strained by applying efficient QR-updating techniques. In
+addition, our theoretical analysis indicates that the compu-
+tational complexity of the IDR/QR algorithm is linear in
+the number of the data items in the training data set as
+well as the number of classes and the number of dimen-
+sions. Finally, our experimental results show that the accu-
+racy achieved by the IDR/QR algorithm is very close to the
+best possible accuracy achieved by other LDA based algo-
+rithms. However, the IDR/QR algorithm can be an order
+of magnitude faster. When dealing with dynamic updat-
+ing, the computational advantage of IDR/QR over SVD or
+GSVD based LDA algorithms becomes more dramatic while
+still achieving the comparable accuracy.
+As for future research, we plan to investigate the appli-
+cations of the IDR/QR algorithm on searching extremely
+high-dimenional multimedia data, such as video.
+
+
+Acknowledgement
+
+This research was sponsored, in part, by the Army High
+Performance Computing Research Center under the aus-
+pices of the Department of the Army, Army Research Lab-
+oratory cooperative agreement number DAAD19-01-2-0014,
+and the National Science Foundation Grants CCR-0204109,
+ACI-0305543, IIS-0308264, and DOE/ LLNL W-7045-ENG-
+48. The content of this work does not necessarily reflect
+the position or policy of the government and the National
+Science Foundation, and no official endorsement should be
+inferred. Access to computing facilities was provided by the
+AHPCRC and the Minnesota Supercomputing Institute.
+
+
+8. REFERENCES
+
+[1] P.N. Belhumeour, J.P. Hespanha, and D.J. Kriegman.
+Eigenfaces vs. Fisherfaces: Recognition using class
+specific linear projection. IEEE Trans. Pattern
+Analysis and Machine Intelligence, 19(7):711­720,
+1997.
+[2] C. B¨ohm, S. Berchtold, and D. A. Keim. Searching in
+high-dimensional spaces: Index structures for
+improving the performance of multimedia databases.
+ACM Computing Surveys, 33(3):322­373, 2001.
+[3] S. Chakrabarti, S. Roy, and M. Soundalgekar. Fast
+and accurate text classification via multiple linear
+discriminant projections. In VLDB, pages 658­669,
+Hong Kong, 2002.
+[4] S. Chandrasekaran, B. S. Manjunath, Y. F. Wang,
+J. Winkeler, and H. Zhang. An eigenspace update
+algorithm for image analysis. Graphical Models and
+Image Processing: GMIP, 59(5):321­332, 1997.
+[5] C. Chatterjee and V. P. Roychowdhury. On
+self-organizing algorithms and networks for
+class-separability features. IEEE Trans. Neural
+Networks, 8(3):663­678, 1997.
+
+
+
+372
+Research Track Paper
+
+0
+2
+4
+6
+8
+10
+
+
+
+
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Time
+(Seconds)
+
+
+
+
+Percentage of the training data
+batch IDR/QR
+incremental IDR/QR
+
+
+
+0
+0.2
+0.4
+0.6
+0.8
+1
+
+
+
+
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Time
+(Seconds)
+
+
+
+
+Percentage of the training data
+batch IDR/QR
+incremental IDR/QR
+
+
+
+
+AR (image)
+ORL (image)
+
+
+
+
+0
+0.1
+0.2
+0.3
+0.4
+0.5
+
+
+
+
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Time
+(Seconds)
+
+
+
+
+Percentage of the training data
+batch IDR/QR
+incremental IDR/QR
+
+
+-0.05
+0
+0.05
+0.1
+0.15
+0.2
+0.25
+0.3
+
+
+
+
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Time
+(Seconds)
+
+
+
+
+Percentage of the training data
+batch IDR/QR
+incremental IDR/QR
+
+
+
+
+tr41 (text)
+re0 (text)
+
+Figure 5: Comparison of computional cost between incremental IDR/QR and batch IDR/QR.
+
+
+[6] J.W. Daniel, W. B. Gragg, L. Kaufman, and G. W.
+Stewart. Reorthogonalization and stable algorithms
+for updating the gram-schmidt QR factorization.
+Mathematics of Computation, 30:772­795, 1976.
+[7] R.O. Duda, P.E. Hart, and D. Stork. Pattern
+Classification. Wiley, 2000.
+[8] J. H. Friedman. Regularized discriminant analysis.
+Journal of the American Statistical Association,
+84(405):165­175, 1989.
+[9] K. Fukunaga. Introduction to Statistical Pattern
+Classification. Academic Press, USA, 1990.
+[10] G. H. Golub and C. F. Van Loan. Matrix
+Computations. The Johns Hopkins University Press,
+Baltimore, MD, USA, third edition, 1996.
+[11] P. Hall, D. Marshall, and R. Martin. Merging and
+splitting eigenspace models. IEEE Trans. Pattern
+Analysis and Machine Intelligence, 22(9):1042­1049,
+2000.
+[12] P. Howland, M. Jeon, and H. Park. Structure
+preserving dimension reduction for clustered text data
+based on the generalized singular value decomposition.
+SIAM Journal on Matrix Analysis and Applications,
+25(1):165­179, 2003.
+[13] I. T. Jolliffe. Principal Component Analysis.
+Springer-Verlag, New York, 1986.
+[14] K. V. Ravi Kanth, D.t Agrawal, A. E. Abbadi, and
+A. Singh. Dimensionality reduction for similarity
+searching in dynamic databases. Computer Vision and
+Image Understanding: CVIU, 75(1­2):59­72, 1999.
+[15] W.J. Krzanowski, P. Jonathan, W.V McCarthy, and
+M.R. Thomas. Discriminant analysis with singular
+covariance matrices: methods and applications to
+spectroscopic data. Applied Statistics, 44:101­115,
+1995.
+[16] J. Mao and K. Jain. Artificial neural networks for
+feature extraction and multivariate data projection.
+IEEE Trans. Neural Networks, 6(2):296­317, 1995.
+[17] A. Martinez and A. Kak. PCA versus LDA. In IEEE
+Trans. Pattern Analysis and Machine Intelligence,
+volume 23, pages 228­233, 2001.
+[18] A.M. Martinez and R. Benavente. The AR face
+database. Technical Report No. 24, 1998.
+[19] H. Park, M. Jeon, and J.B. Rosen. Lower dimensional
+representation of text data based on centroids and
+least squares. BIT, 43(2):1­22, 2003.
+[20] R. Polikar, L. Udpa, S. Udpa, and V. Honavar.
+Learn++: An incremental learning algorithm for
+supervised neural networks. IEEE Trans. Systems,
+Man, and Cybernetics, 31:497­508, 2001.
+[21] D. L. Swets and J.Y. Weng. Using discriminant
+eigenfeatures for image retrieval. IEEE Trans. Pattern
+Analysis and Machine Intelligence, 18(8):831­836,
+1996.
+[22] F.D.L. Torre and M. Black. Robust principal
+component analysis for computer vision. In ICCV,
+volume I, pages 362­369, 2001.
+[23] J. Ye, R. Janardan, C.H. Park, and H. Park. An
+optimization criterion for generalized discriminant
+analysis on undersampled problems. IEEE Trans.
+Pattern Analysis and Machine Intelligence,
+26(8):982­994, 2004.
+
+
+
+
+373
+Research Track Paper
+

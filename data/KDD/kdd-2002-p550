@@ -1,0 +1,1003 @@
+Finding Surprising Patterns in a Time Series Database
+in Linear Time and Space
+
+
+Eamonn Keogh
+Stefano Lonardi
+Bill 'Yuan-chi' Chiu
+eamonn@cs, ucr. edu
+stelo@cs, ucr. edu
+ychiu~cs, ucr.
+edu
+Departmentof Computer Scienceand Engineering
+Universityof California
+Riverside, CA 92521
+
+
+ABSTRACT
+The problem of finding a specified pattern in a time se-
+ries database (i.e. query by content) has received much
+attention and is now a relatively mature field. In con-
+trast, the important problem of enumerating all sur-
+prising or interesting patterns has received far less at-
+tention. This problem requires a meaningful definition
+of "surprise", and an efficient search technique. All pre-
+vious attempts at finding surprising patterns in time
+series use a very limited notion of surprise, and/or do
+not scale to massive datasets.
+To overcome these lim-
+itations we introduce a novel technique that defines a
+pattern surprising if the frequency of its occurrence dif-
+fers substantially from that expected by chance, given
+some previously seen data.
+
+Categories and Subject Descriptors
+H.2.8
+[Database Management]:
+Database Applica-
+tions-Data Mining
+
+Keywords
+Time series, Suffix Tree, Novelty Detection, Anomaly
+Detection, Markov Model, Feature Extraction.
+
+1.
+INTRODUCTION
+The problem of finding a specified pattern in a time
+series database (i.e.
+query by content) has received
+much attention and is now a relatively mature field [8,
+18, 15, 17]. In contrast, the problem of enumerating all
+surprising or interesting patterns has received far less
+attention. The utility of such an algorithm is quite ob-
+vious. It would potentially allow a user to find surpris-
+ing patterns in a massive database without having to
+specify in advance what a surprising pattern looks like.
+
+
+
+
+Permission to make digital or hard copies of all or part of
+this work for personal or classroom use is granted without fee
+provided that copies are not made or distributed for profit
+or commercial advantage and that copies bear this notice
+and the full citation on the first page. To copy otherwise,
+or republish, to post on servers or to redistribute to lists,
+requires prior specific permission and/or a fee.
+SIGKDD '02, July, 23-26 2002, Edmonton, Alberta, Canada.
+Copyright 2002 ACM 1-58113-567-X/02/0007...$5.00.
+Note that this problem should not be confused with
+the relatively simple problem of outlier detection. Hawkins'
+classic definition of an outlier is "... an observation that
+deviates so much from other observations as to arouse
+suspicion that it was generated from a different mech-
+anism" [14]. However we are not interested in finding
+individually surprising datapoints, we are interested in
+finding surprising patterns, i.e., combinations of data-
+points whose structure and frequency somehow defies
+our expectations. The problem is referred to under var-
+ious names in the literature, including novelty detection
+[6] and anomaly detection [28].
+The problem requires a meaningful definition of "sur-
+prise". The literature contains several such definitions
+for time series; however they are all too limited for a
+useful data-mining tool. Consider for example the no-
+tion introduced by Shahabi et al. [24]. They define sur-
+prise in time series as "...sudden changes in the original
+time series data, which are captured by local maximums
+of the absolute values of (wavelet detail coefficients)".
+However it is not difficult to think of very surprising
+patterns that defy this rule.
+Several other definitions of surprise for time series ex-
+ist, but all suffer from similar weaknesses [4, 28, 29, 6].
+To overcome these limitations we introduce a novel def-
+inition that defines a pattern surprising if the frequency
+of its occurrence differs substantially from that expected
+by chance, given some previously seen data.
+This no-
+tion has the advantage of not requiring an explicit defi-
+nition of surprise, which may in any case be impossible
+to elicit from a domain expert. Instead the user simply
+gives the algorithm a collection of previously observed
+data, which is considered normal. The measure of sur-
+prise of a newly observed pattern is considered relative
+to this data collection, and thus eliminates the need for
+a specific model of normal behavior.
+Note that unlike all previous attempts to solve this
+problem, the measure of surprise of a pattern is not
+tied exclusively to its structure. Instead it depends on
+the departure of the frequency of the pattern from its
+expected frequency.
+This is the crucial distinction of
+our approach :from all the others.
+Our definition of surprise would be of little utility to
+the data mining community without a technique that al-
+lowed efficient determination of the expected frequency
+
+
+
+
+550
+
+Symbol
+R
+the reference time series database
+(consisting of real numbers)
+the time series database (to be mined
+for surprising patterns)
+r
+the discrete version of R
+x
+the discrete version of X
+ll
+g~,.J~rnnntr~rn~ r.~,~4111
+I~11~h9raviniitotow~tmv.4,r
+a
+the alphabet size
+
+Table 1: A summary
+of the major notation use
+in the work. More complete definitions are given
+in the relevant sections
+
+
+of a pattern. We demonstrate how a suffix tree can be
+used to efficiently encode the frequency of all observed
+patterns. Since it is possible that a pattern observed in
+the new data was not observed in the training data, we
+demonstrate a technique based Markov models to cal-
+culate the expected frequency of previously unobserved
+patterns.
+Once the suffix tree has been constructed,
+the measure of surprise for all the patterns in a new
+database can be determined in time linear in the size of
+the database.
+
+
+2.
+DISCRETIZING TIME SERIES
+For concreteness we more formally define our intuition
+of surprise as follows.
+
+DEFINITION 2.1. A time series pattern P, extracted
+from database X is surprising relative to a database R,
+if the frequency of its occurrence is greatly different to
+that expected by chance, assuming that R and X are
+created by the same underlying process.
+
+In order to compute this measure, we must calculate
+the probability of occurrence for the pattern of interest.
+Here we encounter the familiar paradox that the prob-
+ability of a particular real number being chosen from
+any distribution is zero [11]. Since a time series is an
+ordered list of real numbers the paradox clearly applies.
+The obvious solution to this problem is to discretize the
+time series into some finite alphabet ~. Using a finite al-
+phabet allows us to avail of Markov models to estimate
+the expected probability of occurrence of a previously
+unseen pattern.
+The problem of discretizing time series into a finite
+alphabet has received much attention in diverse fields,
+including astronomy, medicine, chemistry, etc. (See [7]
+for an exhaustive overview).
+The representation has
+also captured the attention of the data mining commu-
+nity who use discretized time series to support similarity
+search [15] and to enable change point detection [12].
+Below we give a generic algorithm to discretize a time
+series dataset such that each symbol is equiprobable.
+A table of notation used in this, and subsequent algo-
+rithms is given in Table 1.
+The inputs are a reference time series database R,
+the feature window length and the size of the desired
+string DISCRETIZE_TIME_SERIES (time_seriesX,
+int 11,int a)
+for i = 1,1XI-lx +1
+let features{q
+=
+EXTRACT_FEATURE(X[Li+tl])
+let sorted.features = SORT(features)
+for j= l,a
+let pointer = j Ifeatures[ / a
+let boundaries[j] = sorted.features[pointer]
+for i = 1, [features[
+let x[i} =
+MAP_.REAL_TO_INT(boundaries, features[i])
+return x
+
+
+Table 2:
+Outline of the algorithm for the dis-
+cretization of the time series: t is the time series
+data, 11 is the feature window length, a is the
+alphabet size
+
+
+
+alphabet. The feature window length is the length of
+a sliding window that is moved across the time series.
+At each time step, the portion of data falling within
+the window is examined, and a single real number, de-
+scribing some feature of the data is extracted.
+After
+the features have been extracted, they are sorted so the
+boundaries that contain an equal number of extracted
+features can be determined. At this point the unsorted
+features are scanned, each feature is tested to see which
+range it maps to, and matching symbol is assigned. An
+outline of the algorithm is shown in Table 2.
+Note that the one element of the algorithm we did
+not specify is the EXTRACT_FEATUREsubroutine. Here
+we have been deliberately vague. The best feature ex-
+traction technique may be domain dependent. Possible
+features include the mean of the data [17], the slope of
+the best-fitting line [12, 18], the second wavelet coef-
+ficient, the second real Fourier coefficient [8], etc. For
+simplicity we will consider only the slope of the best-
+fitting line for the rest of this paper.
+We also have not stated how the two parameters, the
+feature window length and the size of the desired alpha-
+bet, are chosen. As emphasized in [5] and elsewhere,
+data mining is an iterative activity, and "discovery al-
+gorithms should be run several times with different pa-
+rameter settings".
+Alternatively, techniques that use
+maximum entropy based methods can be used to decide
+reasonable parameters to discretize time series [22].
+The time complexity for the above algorithm is dom-
+inated by the need to sort the features to allow de-
+termination of the feature boundaries. However these
+feature boundaries are very stable, and can be reliably
+estimated from a subsample of the data [5]. For large
+databases we can determine the feature boundaries from
+a subsample of size s = v/~
+[5]. Since s log(s) < [R[,
+the feature extraction algorithm is O([R[).
+
+
+3.
+BACKGROUND ON STRING
+PROCESSING
+We use ~ to denote a nonempty alphabet of symbols.
+
+
+
+
+551
+
+A string over E is an ordered sequence of symbols from
+the alphabet. Given a string x, the number of symbols
+in x defines the length Ixl of x. Henceforth, we assume
+Ix[ = n. The empty string has length zero, and is de-
+noted by e.
+Let us decompose a text x in uvw, i.e., x = uvw where
+u,v and w are strings over ~.
+Strings u,v and w are
+called substrings, or words, of x. Moreover, u is called
+a prefix of x, and w is called a sufflx of x.
+We write x[i], 1 < i < Ix[ to indicate the i-th sym-
+bol in x. We use x[ij] as shorthand for the substring
+x[i]x[i+l]...xij] where 1 < i < j < n, with the con-
+vention that x[i,q = x[i]. Substrings in the form x[1jl
+corresponds to the prefixes of x, and substrings in the
+form x[i,n] to the suffixes of x.
+We say that a string y has an occurrence at position
+i of a text x if y[l] = x[i], Y[2] = x[i+l], ..., Ytm] =
+x[i+,~-l], where m = [y[. For any substring y of x, we
+denote by f~(y) the number of occurrences of y in x.
+Throughout this document, variables y and w usually
+indicate substrings of the text x. Unless otherwise spec-
+ified, we assume the generic term m as the length of any
+of these words.
+
+3.1
+Markov models
+We consider a string generated by a stationary Markov
+chain of order M >_ 1 on the finite alphabet E.
+Let
+x = x[1]x[2] ...x[n] be an observation of the random
+process and y = y[1]Y[2]...Y[m] an arbitrary but fixed
+pattern over ~ with m < n.
+The stationary Markov chain is completely determined
+by its transition matrix H = (Tr(y[1,M], c))u[l] .....U[M],Ce~
+where
+
+7r(y[1,M], c) = P(Xi+i
+= c IX[i_M+l,i]
+= Y[1,M])
+
+are called transition probabilities, with Y[1],. · ·, Y[M],c E
+and M < i < n- 1. The vector of the stationary prob-
+abilities # of a stationary Markov chain with transition
+matrix H is defined as the solution of/z = ~H.
+We now introduce the random variable which describes
+the occurrences of the word y. We define Zi, 1 < i <
+n - m + 1 to be 1 if y occurs in x starting at position
+i, 0 otherwise. We set Zu
+V'"-'~+l Zi,u so that Zu is
+= £-~i=1
+the random variable for the total number of occurrences
+f~(y).
+In the stationary M-th order Markovian model the
+expectation of Zi, which represents the probability that
+y occurs at a given position i, is given by
+
+m-M
+E(Z,)
+=
+~(Ytl,MI)I] ~(Ut,,,+M-~I,Yt'+MI)'
+i=1
+
+The expected count of the occurrences y under the Markov
+model is therefore
+
+E(Z~) = (n - m + 1)E(Z,)
+(1)
+m-M
+
+=
+(n - m
++ 1)#(y[1,M])rI ~(Y[i,i+M-1],Y[i+M])
+i=l
+
+because the distribution of the Zi's does not depend on
+i.
+When the true model is unknown, the transition and
+stationary probabilities have to be estimated from the
+observed sequence x. Let y be a substring of x, where
+m = lYl >- M + 2. The transition probability can be
+estimated by tile maximum likelihood estimator [23]
+
+fx(Y[1,M]C)
+~'(Y[1,M], C) ~-- fx(U[1,M])
+(2)
+
+and the stationary probability by the maximum likeli-
+hood estimator
+
+A(Utl,MI)
+P(Y[1,M]) = n -- M + 1"
+(3)
+
+Substituting in equation (1) for the estimators (2) and
+(3) we obtain an estimator of the expected count of y
+
+~(z~) = I]I'~sMfx(Yt,,~+MJ)
+~--M
+I-L2 A(Yli,~+M-1])
+A precise relationship between the expectation of y
+and the expectation of its prefix and suffix is established
+in the following fact.
+
+LEMMA 3.1. Let y be a substring of x and wl = y[2,m],
+w2 = Y[1,m-E. Then
+
+
+=
+-.~ 1Zig
+~
+f(Y[l-n-M,m])
+$(z~)
+Y(YI~,M+~I)k(Z~,)
+
+
+3.2
+Suffix Trees
+A simple method to count the number of occurrences
+of each substring in a sequence is to create a look-up
+table. The table has an entry for each word. Given a
+word w, a one-to-one hash function returns the index in
+the table. The hash table is a convenient data structure
+as long as m is bounded by a relatively small constant.
+If we allow m to grow as a function of n, for example
+m cx log(n), then the time and space required to build
+the hash table would be exponential in the size of the
+input.
+A more space-efficient data structure to organize a
+dictionary of words is to use a su2~.z tree (see, e.g., [13]
+and references therein).
+The suffix tree is a type of
+digital search tree that represents a set of strings over
+a finite alphabet ~. It has n leaves, numbered 1 to n.
+Each internal node, other than the root, has at least
+two children and each edge is labeled with a nonempty
+substring of x. No two edges outgoing from a node can
+have labels beginning with the same character. The tree
+has the property that for any leaf i, the concatenation
+of the labels on the path from the root the the leaf i
+spells out exactly the suffix of x that starts at position
+i, that is xli,,q.
+The substrings of x can be obtained
+by spelling out the words from the root to any internal
+node of the tree or to any position in the middle of an
+edge.
+In order to achieve overall linear-space allocation, the
+labels on the edges are described implicitly: for each
+word, it suffices to save an ordered pair of integers in-
+dexing one of' the occurrences of the label in the text.
+Each edge label requires thus constant space, which, in
+
+
+
+
+552
+
+a ~
+ba
+aba
+ba
+aba aba,.$
+
+
+ba
+aba aba..$
+
+ba$
+
+aba
+~ ~ a b a
+aba..$
+
+
+
+~ $ a b b ~ a $ . b aaba
+ba
+aba
+aba..$
+
+
+
+
+Figure 1:
+The
+suffix tree
+Tx for the
+string
+x = abaababaabaababaababa$,
+with internal nodes
+storing the number of occurrences
+
+
+
+conjunction with the fact that total number of nodes
+and edges is bounded by O(n), results in the overall
+linear space for the tree.
+Several clever O(n log IZI) constructions are available
+(see, e.g., [21, 27]). More recent linear-time algorithms
+are by Ukkonen [25] which is on-line, and by Farach [9]
+which is optimal for large alphabets. The large majority
+of these constructions exploit the presence of suffix links
+in the tree. The existence of suffix links is based on the
+following fundamental fact.
+
+LEMMA 3.2. If w = ay, a 6 ~ has a proper locus in
+Tx, then so does y.
+
+Accordingly, suffix links are maintained in the tree
+from the locus of each string ay to the locus of its suffix
+y, for all a 6 E.
+Having built the tree, some additional processing make
+it possible to count and locate all the distinct instances
+of any pattern in O(m) time, where m is the length of
+the pattern. In fact, the computation of the statistics of
+all substrings of a string is a direct application of suffix
+trees.
+We first need some definitions.
+We define the
+leaf-list LL(u) of a node u as the ordered set of indices
+stored in the leaves of the subtree rooted at u. We re-
+fer to the unique string on the path from the root to a
+node u of the tree as the path-label L(u) of u. Vertex u
+is also called the proper locus of L(u). Some strings do
+not have a proper locus because their paths end in the
+middle of an arc.
+Given a word w, we denote by <w> its proper locus, if
+it exists. If instead w ends in the middle of an arc then
+< w > denotes the node corresponding to the shortest
+extension of w that has a proper locus. Clearly, L(<w>
+
+
+By the structure of a suffix tree, the number of oc-
+currences f~ (w) of any string w is given by the num-
+ber of leaves in the subtree rooted at <w>,
+that is,
+f(w) = ]LL(<w>)I. In Figure 1, the number of occur-
+rences is stored in the internal nodes. "The algorithm
+that annotates the tree with the value f(w) takes linear
+time and space in the size of x.
+
+
+4.
+COMPUTING SCORES BY
+COMPARING TREES
+Let r be the reference sequence, and x the sequence
+under analysis. A preprocessing phase takes care of an-
+notating the suffix tree Tx with the scores of each sub-
+string of x. Although the algorithm does not require to
+bound the size of the substrings, it is reasonable to as-
+sume that we will never consider substrings longer that
+lOgl~In symbols.
+It is well known that words longer
+than log[~In symbols have an expected count which
+tend to a constant instead of growing to infinity when
+n goes to infinity. They are therefore of little interest
+to us.
+In the first step of the preprocessing phase we build
+the trees T~ and % and we annotate the internal nodes
+of both trees with the number of occurrences. This step
+requires linear time and space.
+In the second step of preprocessing, we visit in a
+breadth-first order each node u of T~. For each string
+w = L(u) we search for the node <w> in Tr, if it ex-
+ists. In the ease it exists, we compute directly the score,
+assuming cuff(w) to be the expected number of occur-
+rences of w in the reference string, where o~=
+irl_m+
+1 ·
+The scale factor o~takes care of of adjusting the occur-
+rences based on the length of x and r.
+For example,
+if r is two times longer than x we scale the number of
+occurrence observed in r by roughly 1/2.
+If otherwise the substring w does not occur in Tr then
+we look for the largest I in the interval [1..... Iwl - 1]
+such that all the strings w[jd+~] occur in T~, for j =
+1,..., Iwl - l. In other words, we look for the longest
+set of strings from T,. that cover w as it is done for
+the estimator of the expectation for Markov chains (see
+Section 3.1). This strategy corresponds to the idea of
+trying first the higher Markov orders, and falling back to
+lower orders whenever the information to compute the
+estimator of the expectation are insufficient. If every
+possible choice does not meet the requirements, we use
+the probability of the symbols from Tr to compute the
+estimate.
+Finally, we set the surprise z(w) to be the differ-
+ence between the observed number of occurrences f= (w)
+and E(w). The preprocessing algorithm is sketched in
+Figure 3.
+The time complexity depends on the time
+taken to compute/~(w). If the algorithm would be im-
+plemented as in Figure 3, the time com~exity would
+be superlinear.
+To compute efficiently E(w) we use
+Lemma 3.1 and the suffix links of Lemma 3.2. We de-
+fer the algorithmic and combinatorial analysis to the
+journal version of this paper.
+
+
+5.
+"TARZAN" ALGORITHM
+Having reviewed extensive material on feature extrac-
+tion, Markov models and suffix trees, we now give a con-
+cise description of the proposed algorithm, which we call
+TARZAN1. The basic algorithm is sketched in Table 4.
+
+1TARZAN is not an acronym.
+It is a pun on the fact
+
+
+
+
+553
+
+suffix_tree PREPROCESS (string r, string x)
+let T~ = SUFFIX_TREE(r)
+let T~ = SUFFIX_TREE(x)
+
+letup= Ixl-m+l
+{r{ - m + 1
+ANNOTATE_f(w)(Tr)
+ANNOTATE_f(w)(Tx)
+visit T~ in breadth-first traversal, for each node u do
+let w = i(~),m
+= Iwl
+if w occurs in T~ then
+let E(w) = o~fr(w)
+else
+find the largest 1 < 1 < m - 1 such that
+~'t--l
+I-I,=~ f~(wt~,~+~l)> 0
+using the suffix tree T~
+if such l exists then
+m--l
+IF[~=~h(wlJ,J+ll)
+let/~(w) ----c~
+m-l
+
+else
+
+let k(~)
+= (1~1 - m + 1) I]=l
+~[,1
+let ~(~) = y~(~) - k(~)
+store z(w) in the node u
+return T~
+
+
+Table 3: Outline of the preprocessing algorithm
+for the computation
+of the scores obtained com-
+paring the trees of a reference string r against
+the string under analysis x
+
+
+
+The inputs are the reference database R, the database
+to be examined X, and the three parameters which con-
+trol the feature extraction and representation. The al-
+gorithm begins by discretizing the data to the desired
+granularity. The two resultant strings are passed to the
+PREPROCESS algorithm which constructs the annotated
+suffix tree T~. After this has been accomplished, the
+surprise of each substring found in x can determined.
+Those substrings which have surprising ratings exceed-
+ing a certain user defined threshold (as defined by the
+absolute value of z(w)) can be returned and examined
+by the user.
+The length 12 of the sliding window is connected with
+the feature window length 11 and the alphabet size a
+(which have been discussed in Section 2).
+We sug-
+gest choosing 12 < lOgl~I [x[ because words longer than
+loglnI {x[ have extremely small expectations and belong
+to a different probabilistic regime. In fact, scores z(w)
+are asymptotically Gaussian distributed when ]w[ <
+logln IxI and Poisson distributed for longer words [23]
+I
+The threshold c can be identified by gathering statistics
+about the distribution of the scores and/or assuming
+the distribution of the scores to be normal.
+
+
+6.
+EXPERIMENTAL
+EVALUATION
+
+that the heart of the algorithm relies on comparing two
+suffix trees, "tree to tree". Tarzan (R) is a registered
+tradermark owned by Edgar Rice Burroughs, Inc.
+void TARZAN (time_series R, time_series X,
+int 11, int a, int 12, real c)
+let x = DISCRETIZE_TIME_SERIES (X, 11, a)
+let r = DISCRETIZE_TIME_SERIES (R, 11, a)
+let Tx = PREPROCESS (r,x)
+for i = l, lxl -12 + l
+let w = x[i,i+t2_l]
+retrieve z(w) from Tx
+if [z(w)[ > c then print i, z(w)
+
+
+Table 4: Outline of the Tarzan algoritm:
+ll is
+the feature window length, a is the alphabet size
+for the discretization, 12 is the scanning window
+length and c is the threshold
+
+
+
+We compare our approach with the TSA-tree Wavelet
+based approach of Shahabi et al. [24] and to the Im-
+munology (IMM) inspired work of Dasgupta and Forrest
+[6], which are the only obvious candidates for compari-
+son. More details about these approaches are contained
+in Section 7.
+We begin with a very simple experiment as a reality
+check. We constructed a reference dataset by creating a
+sine wave with 800 datapoints and adding some Gaus-
+sian noise (each complete sine wave is 32 datapoints
+long). We then built a test dataset using the same pa-
+rameters as the reference set, however we also inserted
+an artificial anomaly by halving the period of the time
+series in the region between the 400th and 432th dat-
+apoints.
+In other words, that small subsection of the
+test time series has two short sine waves instead of one.
+We compared all three approaches under consideration.
+The results are shown in Figure 2. We used a feature
+window of length ll = 12 for TARZAN and IMM, and an
+alphabet of size a = 4 for TARZAN.
+The IMM approach was unable to find the anomaly,
+and it introduced some false alarms.
+The TSA ap-
+proach also failed to find the anomaly.
+In contrast
+to the other techniques TARZAN shows a strong peak
+for the duration of the anomaly. Note that for consis-
+tency with the other techniques we flipped the results
+for TARZAN upside down, so the low expectation for the
+anomaly shows as a peak.
+Testing the ability of the algorithms to find surprising
+patterns on real data is a greater challenge, since the
+results may be subjective. To address this problem we
+consider a dataset that contains the power demand for
+a Dutch research facility for the entire year of 1997 [26].
+The data is sampled over 15 minute averages, and thus
+contains 35,040 points. The nice feature of this dataset
+is that although it contains great regularity, as shown in
+Figure 3, it also contains regions that could objectively
+he said to be surprising or anomalous.
+In particular,
+there are several weeks on which one or more days were
+national holidays, and thus the normal pattern of five
+weekday peaks, followed by a relatively fiat weekend, is
+disturbed.
+We used from Monday January 6th to Sunday March
+23"d as reference data.
+This time period is devoid of
+
+
+
+
+554
+
+A
+
+B
+
+
+c
+I,
+,ii
+t
+
+D
+lllhlllllllllhllllld|flllilllllUtll|llulllllttl
+
+
+
+LA
+
+Figure 2: A comparison of three anomaly de-
+tection algorithms on the same task.
+A) The
+training data, a slightly noisy sine wave. B) A
+time series containing a synthetic "anomaly",
+it is a noisy sine wave that was created with
+the same parameters as the training sequence.
+Then the period of the sine wave between the
+400 th and 432th points (denoted by the gray bar)
+was halved. C) The IMM anomaly detection aN
+gorithm failed to find the anomaly, and intro-
+duced some false alarms. D) The TSA-Tree ap-
+proach is also unable to detect the anomaly. E)
+Tarzan shows a strong peak for the duration of
+the anomaly
+
+
+
+
+Figure 3: The first three weeks of the power de-
+mand dataset.
+Note the repeating pattern of a
+strong peak for each of the five weekdays, fol-
+lowed by relatively quite weekends
+:
+
+
+
+
+Tarzan
+T~; Tre~i
+IIWI
+
+
+Figure 4: The three most surprising weeks in
+the power demand dataset,
+as determined by
+Tarzan, TSA-Tree and IMM
+national holidays. We processed the remainder of the
+year with TARZAN, with a window size equivalent to
+4 hours (11 = 16 datapoints), and an alphabet of size
+a = 4. Because of the size of the dataset we will just
+show the three most surprising sequences found by each
+algorithm. For each of the three approaches we show
+the entire week (beginning Monday) in which the three
+largest values of surprise fell. The results are shown in
+Figure 4.
+Both TSA-tree and IMM returned sequences that ap-
+pear to be normal workweeks, however TARZANreturned
+three sequences that correspond to the weeks that con-
+tain national holidays in the Netherlands.
+These re-
+sults present strong visual evidence that TA1RZANis able
+to find surprising patterns in time series.
+
+
+
+7.
+RELATED WORK
+The task of finding surprising patterns in data has
+been an area of active research, which has long attracted
+the attention of researchers in biology, physics, astron-
+omy and statistics, in addition to the more recent work
+by the data miningcommunity. The problem, and closely
+related tasks are variously referred to as the detection of
+"Aberrant Behavior" [19], "Novelties" [6], "Faults" [29],
+"Surprises" [24, 4], "Deviants" [16], "Temporal Change"
+[3, 10], and "Outliers" [14].
+Jagadish et al. [16] introduced a technique for min-
+ing deviants in time series, however deviants are simply
+':.. points with values that differ greatly from that of
+surrounding points", and thus this work may be consid-
+ered more of a generalization of classic outlier detection
+[14].
+In [24] and several follow up papers, Shahabi et aL
+suggest a method to find both trends and "surprises" in
+large time series datasets. The authors achieve this us-
+ing a wavelet-based tree structure (TSA-Tree) that can
+represent the data at different scales, e.g., the weather
+trend in last month vs. last decade. However the defini-
+tion of surprise used seems limited to dramatic shifts in
+the signal. In particular, this approach is not suitable
+for detecting unusual data patterns that hide inside the
+normal signal range. For example, the system would not
+be able to detect if we give it an EEG time series that we
+had flipped upside down, since the wavelet-based "sur-
+prise" features are invariant to this transformation of
+the data.
+The immunological based approach of Dasgupta and
+Forrest [6], is inspired by the negative selection mech-
+anism of the immune system, which discriminates be-
+tween self and non-self. In this case self is the model
+of the time series learned from the reference dataset, and
+non-self are any observed patterns in the new dataset
+that do not conform to the model within some toler-
+ance. A major limitation of the approach is that it is
+only defined when the space of self is not exhaustive.
+However, if you examine enough random walk data (or
+financialdata, which is closely modeled by random walk
+[8]), self rapidly becomes saturated with every possible
+pattern, and thus non-self is the null set, and nothing
+encountered thereafter is considered surprising.
+
+
+
+
+555
+
+8.
+CONCLUSIONS
+In this paper we introduced TARZAN, an algorithm
+that detects surprising patterns in a time series database
+in linear space and time. Our definition of surprising is
+general and domain independent, describing a pattern
+as surprising if the frequency with which we encounter
+it differs greatly from that expected given previous ex-
+perience. We compared it to two other algorithms on
+both real and synthetic data, and found it to have much
+higher sensitivity and selectivity.
+
+
+9.
+ACKNOWLEDGMENTS
+'
+We thank the anonymous referees for very useful com-
+ments on the paper.
+
+
+10.
+REFERENCES
+[1] A. Apostolico, M. E. Bock, and S. Lonardi. Monotony
+of surprise and large-scale quest for unusual words
+(extended abstract). In G. Myers, S. Hannenhaln,
+S. Istrail, P. Pevzner, and M. Waterman, editors, Proc.
+of Research in Computational Molecular Biology
+(RECOMB), Washington, DC, April 2002.
+[2] A. Apostolico, M. E. Bock, S. Lonardi, and X. Xu.
+Efficient detection of unusual words. J. Comput. Bio.,
+7(1/2):71-94, Jan. 2000.
+[3] H. Blockeel, J. Furnkranz, A. Prskawetz, and F. C.
+Billari. Detecting temporal change in event sequences:
+An application to demographic data. In Proc.
+Principles of Data Mining and Knowledge Discovery,
+pages 29-41, 2001.
+[4] S. Chakrabaxti, S. Sarawagi, and B. Dom. Mining
+surprising patterns using temporal description length.
+In Prec. ~4th Int. Conf. Very Large Data Bases, pages
+606---617, 1998.
+[5] G. Das, K.-I. Lin, H. Mannila, G. Renganathan, and
+P. Smyth. Rule discovery from time series. In Proc. of
+the tth International Conference of Knowledge
+Discovery and Data Mining, pages 16-22. AAAI Press,
+1998.
+[6] D. Dasgupta and S. Forrest. Novelty detection in time
+series data using ideas from immunology. In Proc. of
+The International Conference on Intelligent Systems,
+1999.
+[7] C. S. Daw, C. E. A. Finney, and E. R. 'lTracy. Symbolic
+analysis of experimental data. Review of Scientific
+Instruments ~001, Oct. 30-31 2001.
+[8] C. Faloutsos, M. Ranganathan, and Y. Manolopoulos.
+Fa~t subsequence matching in time-series databases.
+SIGMOD Record (ACM Special Interest Group on
+Management of Data), 23(2):419---429, June 1994.
+[9] M. Farach. Optimal suffix tree construction with large
+alphabets. In Proc. 38th Annual Symposium on
+Foundations of Computer Science, pages 137-143, Oct.
+1997.
+[10] T. Fawcett and F. Provost. Activity monitoring:
+Noticing interesting changes in behavior. In Prec. Fifth
+ACM SIGKDD International Conference on
+Knowledge Discovery and Data Mining, pages 53-62,
+1999.
+[11] W. Feller. An introduction to Probability Theory and
+its Applications. Wiley, New York, 1968.
+[12] X. Ge and P. Smyth. Deformable markov model
+templates for time-series pattern matching. In
+Preceedinmgs of the 6th ACM SIGKDD International
+Conference on Knowledge Discovery and Data Mining,
+pages 81-90, 2000.
+[13] D. Gusfield. Algorithms on Strings, Trees, and
+Sequences: Computer Science and Computational
+Biology. Cambridge University Press, 1997.
+[14] D. M. Hawkins. Identification of Outliers, Monographs
+on Applied .Probability ~ Statistics. Chapman and
+Hall, London, 1980.
+[15] Y.-W. Huang and P. Yu. Adaptive query processing for
+time-series data. In S. Chandhuri and D. Madigan,
+editors, Proc. Fifth ACM SIGKDD International
+Conference on Knowledge Discovery and Data Mining,
+pages 282-286. ACM Press, Aug. 15-18 1999.
+[16] H. V. Jagadish, N. Koudas, and S. Muthukrishnan.
+Mining deviants in a time series database. In Proc.
+~5th International Conference on Very Large Data
+Bases, pages 102-113, 1999.
+[17] E. Keogh, K. Chakrabarti, M. Pazzani, and
+S. Mehrotra. Locally adaptive dimensionality reduction
+for indexing large time series databases. SIGMOD
+Record (A CM Special Interest Group on Management
+of Data), 30(2):151-162, June 2001.
+[18] E. Keogh and M. Pazzani. An enhanced representation
+of time series which allows fast and accurate
+classification, clustering and relevance feedback. In
+Proc. $th International Conference on Knowledge
+Discovery and Data Mining, pages 239---241, 1998.
+[19] E. Kotsakis and A. Wolski. Maps: A method for
+identifying and predicting aberrant behaviour in time
+series. In Proc. l~th Internat. Conf. on Industrial and
+Engineering Applications of Artificial Intelligence and
+Expert Systems, 2001.
+[20] S. Lonardi. Global Detectors of Unusual Words:
+Design, Implementation, and Applications to Pattern
+Discovery in Biosequences. PhD thesis, Department of
+Computer Sciences, Purdue University, August 2001.
+[21] E. M. McCreight. A space-economical suffix tree
+construction algorithm. J. Assoc. Comput. Mach.,
+23(2):262-272, Apr. 1976.
+[22] S. Park, W. W. Chu, J. Yoon, and C. Hsu. Efficient
+searches for similar subsequences of different lengths in
+sequence databases. In Proc. International Conference
+on Data Enginesring, pages 23-32, 2000.
+[23] G. Reinert, S. Schbath, and M. S. Waterman.
+Probabilistic and statistical properties of words: An
+overview. J. Comput. Bio., 7:1-46, 2000.
+[24] C. Shahab~, X. Tian, and W. Zhao. Tsa-tree: A
+wavelet-based approach to improve the efficiency of
+multi-level surprise and trend queries. In Proc. l~h
+International Conference on Scientific and Statistical
+Database Management, 2000.
+[25] E. Ukkonen. On-line construction of suffix trees.
+Algorithmica, 14(3):249--260, 1995.
+[26] J. J. van Wijk and E. R. van Selow. Cluster and
+calendar-based visualization of time series data. In
+Proc. IEEE Symposium on Information Visualization,
+pages 4-9, Oct. 25-26 1999.
+[27] P. Weiner. Linear pattern matching algorithm. In
+Prec. 14th Annual IEEE Symposium on Switching and
+Automata Theory, pages 1-11, Washington, DC, 1973.
+[28] B. Whitehead and W. A. Hoyt. A function
+approximation approach to anomaly detection in
+propulsion system test data. In Proc.
+AIAA/SAE/ASME/ASEE ~gth Joint Propulsion
+Conference, Monterey, CA, June 1993.
+[29] T. Yairi, Y. Kato, and K. Hori. Fault detection by
+mining association rules from house-keeping data. In
+Proc. of International Symposium on Artificial
+Intelligence, Robotics and Automation in Space, 2001.
+
+
+
+
+556
+

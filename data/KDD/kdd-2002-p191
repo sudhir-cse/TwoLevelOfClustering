@@ -1,0 +1,1814 @@
+Enhanced Word Clustering for Hierarchical Text
+Classification
+
+Inderjit S. Dhillon
+Dept. of Computer Sciences
+Univ. of Texas, Austin
+inderjit @cs. utexas.edu
+Subramanyam Mallela
+Dept. of Computer Sciences
+Univ. of Texas, Austin
+manyam @cs. utexas.edu
+Rahul Kumar
+Dept. of Computer Sciences
+Univ. of Texas, Austin
+rahul @cs. utexas.edu
+
+
+ABSTRACT
+
+In this paper we propose a new information-theoretic divi-
+sive algorithm for word clustering applied to text classifica-
+tion. In previous work, such "distributional clustering" of
+features has been found to achieve improvements over fea-
+ture selection in terms of classification accuracy, especially
+at lower number of features [2, 28]. However the existing
+clustering, techniques are agglomerative in nature and re-
+sult in (i) sub-optimal word clusters and (ii) high compu-
+tational cost.
+In order to explicitly capture the optimal-
+ity of word clusters in an information theoretic framework,
+we first derive a global criterion for feature clustering. We
+then present a fast, divisive algorithm that monotonically
+decreases this objective function value, thus converging to a
+local minimum. We show that our algorithm minimizes the
+"within-cluster Jensen-Shannon divergence" while simulta-
+neously maximizing the "between-cluster Jensen-Shannon
+divergence". In comparison to the previously proposed ag-
+glomerative strategies our divisive algorithm achieves higher
+classification accuracy especially at lower number of fea-
+tures. We further show that feature clustering is an effective
+technique for building smaller class models in hierarchical
+classification. We present detailed experimental results us-
+ing Naive Bayes and Support Vector Machines on the 20
+Newsgroups data set and a 3-level hierarchy of HTML doc-
+uments collected from Dmoz Open Directory.
+
+1.
+INTRODUCTION
+Given a set of document vectors {dl, d2,... ,dn } and their
+associated class labels c(dl) E {cl,c2,..., ct}, text classifi-
+cation is the problem of estimating the true class label of a
+new document d. There exist a wide variety of algorithms
+for text classification, ranging from the simple but effec-
+tive Naive Bayes algorithm to the more computationally de-
+manding Support Vector Machines [24, 10, 29].
+A common, and often overwhelming, characteristic of text
+data is its extremely high dimensionality. Typically the doc-
+ument vectors are formed using a vector-space or bag-of-
+words model[26]. Even a moderately sized document collec-
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personalor classroomuse is granted withoutfee providedt_hatcopies are
+not madeor distributedfor profitor commercialadvantageand that copies
+bear this noticeand the full citationon the firstpage. Tocopyotherwise,to
+republish,to poston serversor to redistributeto lists,requirespriorspecific
+permissionand/ora fee.
+Paper toappear in KDD 2002 Edmonton, Alberta,CA
+Copyright2002 ACM 1-58113-567-X/02/0007...$5.00.
+tion can lead to a dimensionality in thousands, for exam-
+ple, one of our test data sets contains 5,000 web pages from
+www.dmoz.org and has a dimensionality (vocabulary size)of
+14,538. This high dimensionality can be a severe obstacle for
+classificationalgorithms based on Support Vector Machines,
+Linear Discriminant Analysis, k-nearest neighbor etc. The
+problem is compounded
+when the documents are arranged
+in a hierarchy of classes and a full-featureclassifierisapplied
+at each node of the hierarchy.
+A way to reduce dimensionality is by the distributional
+clustering of words/features [25, 2, 28]. Each word cluster
+can then be treated as a single feature and thus dimension-
+ality can be drastically reduced. As shown by [2, 28], such
+feature clustering ismore effectivethan feature selection[30],
+especially at lower number of features. Also, feature cluster-
+ing appears to preserve classification accuracy as compared
+to a full-feature classifier. Indeed in some cases of small
+training sets and noisy features, word clustering can actu-
+ally increase classificationaccuracy. However the algorithms
+given in both [2] and [28] are agglomerative in nature yield-
+ing sub-optimal word clusters at a high computational cost.
+In this paper, we firstderive a global criterion that cap-
+tures the optimality of word clustering in an information-
+theoretic framework. This leads to an objective function for
+clustering that is based on the generalized Jensen-Shannon
+divergence[20] among an arbitrary number of probability
+distributions.
+In order to find the best word clustering,
+i.e., the clustering that minimizes this objective function,
+we present a new divisive algorithm for clustering words.
+This algorithm is reminiscent of the k-means algorithm but
+uses Kullback Leibler divergences[19] instead of squared Eu-
+clidean distances.
+We prove that our divisive algorithm
+monotonically decreases the objective function value, thus
+converging to a local minimum. We also show that our al-
+gorithm minimizes "within-cluster divergence" and simulta-
+neously maximizes "between-cluster divergence". Thus we
+find word clusters that are markedly better than the ag-
+glomerative algorithms of [2, 28]. The increased quality of
+our word clusters translates to higher classification accura-
+cies, especially at small feature sizes and small training sets.
+We provide empirical evidence of all the above claims us-
+ing Naive Bayes and Support Vector Machines on the (a) 20
+Newsgroups data set, and (b) an HTML data set compris-
+ing 5,000 web pages arranged in a 3-level hierarchy from the
+Open Directory Project (www.dmoz.org).
+We now give a brief outline of the paper. In Section 2,
+we discuss related work and contrast it with our work. In
+Section 3 we briefly review some useful concepts from in-
+
+
+
+
+191
+
+formation theory such as Kullback-Leibler(KL) divergence
+and Jensen-Shannon(JS) divergence, while in Section 4 we
+review text classifiers based on Naive Bayes and Support
+Vector Machines. Section 5 poses the question of finding
+optimal word clusters in terms of preserving mutual infor-
+mation between two random variables. Section 5.1 gives
+the algorithm that directly minimizes the resulting objec-
+tive functionwhich is based on KL-divergences, and presents
+some pleasing results about the algorithm, such as conver-
+gence and simultaneous maximization of "between-cluster
+JS-divergence". In Section 6 we present experimental re-
+sults that show the superiority of our word clustering, and
+the resulting increase in classification accuracy. Finally, we
+present our conclusions in Section 7.
+A word about notation: upper-case letters such as X,
+Y, C, W will denote random variables, while script upper-
+case letters such as X, y, C, W denote sets. Individual set
+elements will often be denoted by lower-case letters such as
+x, w or a~,, wt. Probability distributions will be denoted
+by p, q, pl, p2, etc. when the random variable is obvious or
+by p(X), p(C[wt), etc. to make the random variable explicit.
+
+
+2.
+RELATED WORK
+Text cl~sification has been extensively studied, especially
+since the emergence of the internet. Most algorithms are
+based on the bag-of-words model for text [26]. A simple
+but effective algorithm is the Naive Bayes method [24]. For
+text classification, different variants of Naive Bayes have
+been used, but McCallum and Nigam [21] showed that the
+variant based on the multinomial model leads to better re-
+sults. For hierarchical text data, such as the topic hierar-
+chies of Yahoo! (www.yahoo.com) and the Open Directory
+Project (www.dmoz.org), hierarchical classification has been
+studied in [18, 5]. For more details, see Section 4.
+To counter high-dimensionalityvarious methods of feature
+selection have been proposed in [30, 18, 5]. Distributional
+clustering of words was first proposed by Pereira, Tishby ~z
+Lee in [25] where they used "soft" distributional clustering
+to cluster nouns according to their conditional verb distri-
+butions. Note that since our main goal is to reduce the num-
+ber of features and the model size, we are only interested in
+"hard clustering" where each word can be represented by its
+(unique) word cluster. For text classification, Baker ~z Mc-
+Callum used such hard clustering in [2], while more recently,
+Slonim ~ Tishby have used the so-called Information Bot-
+tleneck method for clustering words in [28]. Both [2] ~z [28]
+use similar agglomerative clustering strategies that make a
+greedy move at every agglomeration, and show that feature
+size can be aggressively reduced by such clustering without
+much loss in classification accuracy using Naive Bayes. Sim-
+ilar results have been reported for SVMs[3].
+Two other dimensionality/feature reduction schemes are
+used in latent semantic indexing (LSI) [7] and its probahilis-
+tic version [16]. Typically these methods have been applied
+in the unsupervised setting and as shown in [2], LSI results
+in lower classification accuracies than feature clustering.
+We now list the main contributions of this paper and con-
+trust them with earlier work. As our first contribution, we
+derive a global criterion that explicitly captures the optimal-
+ity of word clusters in an information theoretic framework.
+This leads to an objective function in terms of the general-
+ized Jensen-Shannondivergence between an arbitrary num-
+ber of probability distributions. As our second contribu-
+tion, we present a divisive algorithm that uses Kullback-
+Leibler divergence as the distance measure, and explicitly
+minimizes the global objective function. This is in contrast
+to [28] which considered the merging of just two word clus-
+ters at every step and derived a local criterion based on
+the Jensen-Shannon divergence of two probability distribu-
+tions. Their agglomerative algorithm, which is similar to
+Baker and McCallum's algorithm [2], greedily optimizes this
+merging criterion. Thus, their resulting algorithm can yield
+sub-optimal clusters and is computationally expensive (the
+algorithm in [28] is O(mSl) in complexity where m is the to-
+tal number of words and l is the number of classes). In con-
+trust our divisive algorithm is O(mkl) where k is the number
+of word clusters :required (typically k << m). Note that our
+hard clustering leads to a model size of O(k), whereas "soft"
+clustering in methods such as probabilistic LSI [16] leads to
+a model size of O(mk). Finally, we show that our enhanced
+word clustering leads to higher classification accuracy, es-
+pecially when the training set is small and in hierarchical
+classification of HTML data.
+3.
+INFORMATION THEORY
+In this section, we quickly review some concepts from in-
+formation theory which will be used heavily in this paper.
+For more details on some of this material see the authorita-
+tive treatment in the book by Cover & Thomas [6].
+Let X be a discrete random variable that takes on val-
+ues from the set X with probability distribution p(x). The
+(Shannon) entropy of X [27] is defined as
+
+H(p) = - Z
+p(x)logp(x).
+xeX
+
+The relative entropy or Kullback-Leibler(KL)divergence [19]
+between two distributions pl(x) and p2(x) is defined as
+
+pl(x)
+gL(pl,p:) = ~ pl(~)log
+p2(~)"
+z~X
+
+KL-divergence is a measure of the "distance" between two
+probability distributions; however it is not a true metric
+since it is not symmetric and does not obey the triangle in-
+equality [6, p.18]. KL-divergence is always non-negativebut
+can be unbounded; in particular when pl (x) ~ 0 and p2(x) =
+0, KL(pl,p2) = co. In contrast, the Jensen-Shannon(JS) di-
+vergence between pl and p2 defined by
+
+JS~(pl,p2) = ~i KL(pl, 7rlpx+Tr2p2) + Ir2KL(p2, trap1 + Ir~p2)
+
+=
+H(~rlpl + ~r2p2)- IrlH(pl) - 7r2H(T2),
+
+where ~'1 + ~'2 = 1, ~'i >_ 0, is clearly a measure that is
+symmetric in {=1,Pl} and {=2,p2}, and is bounded [20]. The
+JS-divergence can be generalized to measure the distance
+between any finite number of probability distributions as:
+
+
+JS~(~i : 1 < i < n}) = H
+Irlp,
+- ~lriH~i),
+(1)
+i=1
+i=1
+
+which is symmetric in the {Tri,Pi}'s (~i
+7ri = 1, 7ri >_ 0).
+Let Y be another random variable with probability dis-
+tribution p(y). The mutual information between X and Y,
+I(X; Y), is defined as the KL-divergence between the joint
+distribution p(x, y) and the product distribution p(x)p(y):
+
+p(x,y)
+r(x;y)
+= ZZp(~,y)log p(~)p(y).
+(2)
+x
+y
+
+
+
+
+192
+
+Intuitively, mutual information is a measure of the amount
+of information that one random variable contains about the
+other. The higher its value the less is the uncertainty of
+one random variable due to knowledge about the other.
+Formally, it can be shown that I(X; Y) is the reduction
+in entropy of one variable knowing the other: I(X; Y) =
+H(X) - H(XIY) = H(Y) - H(YIX) [6].
+
+4.
+TEXT CLASSIFICATION
+Two contrasting classifiers that perform well on text clas-
+sification are (i) the simple Naive Bayes method and (ii) the
+more complex Support Vector Machines. We now give de-
+tails on these classifiers.
+
+4.1
+Naive Bayes Classifier
+Let C = {cl,c~,... ,ct} be the set of l classes, and let
+W = {wl,..., w,~} be the set of words/features contained
+in these classes. Given a new document d, the probability
+that d belongs to class ci is given by Bayes rule,
+
+p(c~ld) = p( dlci )p(ci)
+p(d)
+
+Assuming a generative multinomial model [21] and further
+assuming'class-conditionalindependence of words yields the
+well-known Naive Bayes classifier [24], which computes the
+most probable class for d as
+
+
+c'(d) = argmaxel p(cild) = p(cl
+p(w, lc~)"(~'''a)
+(3)
+
+
+where n(wt,d) is the number of occurrences of word wt in
+document d, and the quantities p(wtlcl) are usually esti-
+mated using Laplace's rule of succession:
+
+1 + Ed~o, n(w,,dD
+P(WtlCl) = m + E~=i Edj~,i n(wt, dj)"
+(4)
+
+The class priors p(ci) are estimated by the maximum like-
+lihood estimate p(ci)
+=
+e~l'e~I. We now manipulate the
+
+Naive Bayes rule in order to interpret it in an information
+theoretic framework. Rewrite formula (3) by taking loga-
+rithms and dividing by the length of the document Idl to get
+
+m
+
+c'(d) = argmaxcl (logp(cl) + ~p(wtl d) logp(wtlci)),
+(5)
+
+t=l
+
+
+where the document d may be viewed as a probability dis-
+tribution over words: p(wtld) = n(wt,d)/ld I. Adding the
+entropy of p(WId), i.e., - Et'~l p(w, ld) logp(wdd) to (5),
+and negating, we get
+
+m
+c*(d)
+=
+argmin,, ~p(wtld )log P(wtld)
+t=x
+p(wdc, )
+logp(c,) (6)
+
+=
+argmin,, (KL(p(WId),p(WIc,)) - logp(ci)),
+
+where KL(p, q) denotes the KL-divergence between p and q
+as defined in Section 3. Note that here we have used W
+to denote the random variable that takes values from the
+set W. Thus, assuming equal class priors, we see that Naive
+Bayes may be interpreted as findingthe class which has min-
+imum KL-divergence from the given document. As we shall
+see
+again later, KL-divergence seems to appear "naturally"
+in our setting.
+By (5), we can clearly see that Naive Bayes is a linear
+classifier.
+Despite its crude assumption about the class-
+conditional independence of words, Naive Bayes has been
+found to yield surprisingly good classification performance,
+especially on text data. Plausible reasons for the success of
+Naive Bayes have been explored in [9, 12].
+
+4.2
+Support Vector Machines
+Support Vector Machines(SVMs)[29] are inductive learn-
+ing schemes for solving the two class pattern recognition
+problem. Recently SVMs have been shown to give good re-
+sults for text categorization [17]. The method is defined over
+a vector space where the classification problem is to find the
+decision surface that "best" separates the data points of the
+two classes. In the case of linearly separable data, the de-
+cision surface is a hyperplane that maximizes the "margin"
+between the two classes. This hyperplane can be written
+as ~7.ff- b = 0, where ~ is a data point and the vector
+and constant b are learned from the training set. Let
+yi E {+1,-1}(+1 for positive class and -1 for negative
+class) be the classification label for input vector a~. Finding
+the hyperplane can be translated into the following opti-
+mization problem
+
+Minimize :1131]
+subject to
+vT.xq - b_>+l
+for
+yi=+l,
+
+~.xq - b < -1
+for
+yi = -1.
+
+This minimizationproblem can be solved using quadratic
+programming techniques[29]. The algorithms for solving the
+linearly separable case can be extended to the case of data
+that is not linearly separable by either introducingsoft mar-
+gin hyperplanes or by using a non-linearmapping of the orig-
+inal data vectors to a higher dimensional space where the
+data points are linearly separahle[29].
+Even though SVM
+classifiers are described as binary classifiers they can be eas-
+ily combined to handle the multi class case. A simple, effec-
+tive combination is to train N one-versus-rest classifiers for
+the N class case and then classify the test point to the class
+corresponding to the largest positive distance to the separat-
+ing hyperplane. In all our experiments we used linear SVMs
+because they are fast to learn and classify new instances
+compared to non-linear SVMs. Further~ linear SVMs have
+been shown to do well on text classification[17].
+
+4.3
+Hierarchical Classification
+Hierarchical classification utilizes a hierarchical topic struc-
+ture such as Yahoo! to decompose the classification task into
+a set of simpler problems, one at each node in the hierar-
+chy. We can simply extend any classifier to perform hier-
+archical classification by constructing a (distinct) classifier
+at each internal node of the tree using all the documents
+in its child nodes as the training data.
+Thus the tree is
+assumed to be "is-a" hierarchy, i.e, the training instances
+are inherited by the parents. Then classification is just a
+greedy descent down the tree until the leaf node is reached.
+This way of classification has been shown to be equivalent to
+the standard non-hierarchical classification over a flat set of
+leaf classes if maximum likelihood estimates of all features
+are used[23]. However, hierarchical classification along with
+feature selection has been shown to achieve better classi-
+fication results than a fiat classifier[18].
+This is because
+each classifier can now utilize a different subset of features
+that are most relevant to the classification sub-task at hand.
+
+
+
+
+193
+
+Furthermore each node classifier requires only a small num-
+ber of features since it needs to distinguish between a fewer
+number of classes. Our proposed feature clustering strategy
+allows us to aggressively reduce the number of features as-
+sociated with each node classifier in the hierarchy. Detailed
+experiments on the Dmoz Science hierarchy are presented in
+Section 6.
+
+5.
+DISTRIBUTIONAL
+WORD
+CLUSTERING
+
+Let C be a discrete random variable that takes on val-
+ues from the set of classes C = {cl,... ,ct}, and let W
+be the random variable that ranges over the set of words
+YV= {Wl.... , win}. The joint distribution p(C, W) can be
+estimated from the training set. Now suppose we cluster the
+words into k dusters Wl,... ,~,V~. Since we are interested
+in reducing the number of features and the model size, we
+only look at "hard" clustering where each word belongs to
+exactly one word cluster, i.e,
+
+k
+W=Ui=lWi,
+and
+~,ViN~'Vj=¢, i#j.
+
+Let the random variable W c range over the word clusters.
+In order to judge the quality of the word clusters we now
+introduce an information-theoretic measure.
+The information about C captured by W can be mea-
+sured by the mutual information I(C; W). Ideally, in form-
+ing word clusters we would like to exactly preserve the mu-
+tual information; however clustering usually lowers mutual
+information. Thus we would like to find a clustering that
+minimizes the decrease in mutual information, I(C; W) -
+I(C; wC). The following theorem states that this change in
+mutual information can be expressed in terms of the gener-
+alized Jensen-Shannon divergence of each word cluster.
+
+THEORBM 1. The change in mutual information due to
+word clustering is given by
+
+k
+
+I(C;W) - I(C;W c) = ~
+~r(W~)JS,~,({p(CIw,) : w, e Wj})
+
+5=1
+
+
+where ~r(Wj) = Ewt·W~ ~rt, ~t =
+p(wt), .~ = ~t/ff(Wj)
+for w~ E Wj, and JS denotes the generalized Jensen-Shannon
+divergence as defined in (1).
+
+Proof.
+By the definition of mutual information (see (2)),
+and using p(cl, wt) = ~',p(c~lw,) we get
+
+/(c; w)
+= ~ ~.tp(c, lw,)logp(c~lw:)
+i
+t
+p(c~)
+
+and I(c; w ~) = ~ ~ ,(W,)p(c, lW¢)logP~).
+
+
+We are interested in hard clustering, so ~r(~,Vj) = ~,, ·VV~~rt
+
+and p(cdWi) = ~teW~ (~rt/~r(YY~))P(CilWt), thus imply-
+ing that for all clusters YVj,
+
+~(W~)p(c,lW~) =
+~
+~,p(c~lwt),
+(~)
+wt ·W~
+~rt
+p(CIW~)
+=
+~
+~r(~)p(CIw,).
+(8)
+
+
+Note that the distribution p(CIW~) is the (weighted) mean
+distribution of the constituent distributions p(Clwt ). Thus,
+
+I(C; W) - I(C; W c) = ~
+~ utp(c,lwt)logp(c, lw,)-
+i
+
+~ .(Wj)p(c, IW~)logp(c,IW~) (0)
+i
+j
+
+since the extra log(p(ci)) terms cancel due to (7). The first
+term in (9), after rearranging the sum, may be written as
+
+
+
+J wteWj
+
+= -E
+E
+J w~EWj
+
+~r(N~) H(p(CIw,)).
+(10)
+
+
+Similarly, the second term in (9) may be written as
+
+
+
+
+=
+-~r(Wj)H(p(CIWj))
+J
+
+
+=
+-
+-- =p(UIw,)
+(11)
+
+
+where (11) is obtained by substituting the value ofp(ClWj)
+from (8). Substituting (10) and (11) in (9) and using the
+definition of Jensen-Shannon divergence from (1) gives us
+the desired result,
+fl
+Theorem 1 gives a global measure of the goodness of word
+clusters, which may be informally interpreted as follows:
+
+1. The quality of word cluster ~'Vj is measured by the
+Jensen-Shannondivergence between the individualword
+distributions p(Clwt ) (weighted by the word priors,
+lrt = p(wt)). The smaller the Jensen-Shannon diver-
+gence the more "compact" is the word cluster, i.e.,
+smaller is the increase in entropy due to clustering (see (1)).
+
+
+2. The overall goodness of the word clustering is mea-
+sured by the sum of the qualities of individual word
+clusters (weighted by the cluster priors lr(Wj) = p(~'Vj)).
+
+
+Given the global criterion of Theorem 1, we would now
+like to find an algorithm that searches for the optimal word
+clustering that minimizesthis criterion. We now rewrite this
+criterion in a way that will suggest a "natural" algorithm.
+
+LEMMA 1. The generalized Jensen-Shannon divergence of
+a finite set of probability distributions can be expressed as
+the (weighted) sum of Kullback-Leibler divergences to the
+(weighted) mean, i.e.,
+
+n
+
+JS~(~pi : 1 < i < n}) = ElriKL(pi,m)
+(12)
+i~l
+
+where ~ri >_0, ~ lri = 1 and m ks the (weighted) mean prob-
+ability distribution, m = ~
+Ir,pi.
+
+
+
+
+194
+
+Algorithm Divisive_KL_Clustering( P ,II,l,k,W )
+
+Input: "P is the set of distributions, {p(Clwt) : 1 < t < m},
+II is the set of all word priors, {~rt= p(wt) : 1 < t < m}
+l is the number of document classes~
+k is the number of desired clusters.
+Output: W is the set of word clusters {W1, W2,... , ~4)k}.
+
+1. Initialization: for every word wt, assign w, to Wj
+such that p(cj Iw~)= maxi p(cl [w~). This gives l initial
+word clusters; if k _>l split each cluster into approxi-
+mately k/l clusters, otherwise merge the l clusters to
+get k word clusters.
+
+2. For each cluster Wj, compute
+
+,(Wj)
+=
+Z
+lr,
+w~EWi
+~t
+p(CIW~) =
+~
+~.(~)p(C[w,).
+w~~Wj
+
+3. Re-compute all clusters: For each word w,, find its
+new cluster index as
+
+j*(wt) = argmini KL(p(C]w,),p(CIWi)),
+
+resolving ties arbitrarily. Thus compute the new word
+clusters Wj, 1 _<j _<k, as
+
+wj
+= {w, : j'(w~) = j}.
+
+
+4. Stop if the change in objective function value given by
+(13) is "small" (say 10-a); Else go to step 2.
+
+
+Figure 1: Divisive Algorithm for word clustering
+based on KL-divergences
+
+Proof.
+Use the definition of entropy to expand the ex-
+pression for JS-divergence given in (1). The result follows
+by appropriately grouping terms and using the definition of
+KL-divergence.
+[]
+
+5.1
+The Algorithm
+By Theorem 1 and Lemma 1, the decrease in mutual in-
+formation due to word clustering may be written as
+
+k
+
+Z Ir(Wj) Z
+7r(~vj)KL(p(Cw~)'P(CIWJ))"
+j=l
+~t EWj
+
+
+As a result the quality of word clustering can be measured
+by the objective function
+
+Q({W~}~=i) = I(C; W) - X(C; W °)
+
+
+k
+
+= ~
+~
+~r,KL(p(C[w,),p(C[W~)).
+(13)
+
+
+Note that it is natural that the KL-divergenceemerges as the
+distance measure in the above objective function since mu-
+tual information is just the KL-divergence between the joint
+distribution and the product distribution (see Section 3).
+Writing the objective function in the above manner suggests
+an iterative algorithm that repeatedly (i) re-partitions the
+distributions p(C[wt) by their closeness in KL-divergence
+to the cluster distributions p(CIWj) , and (ii) subsequently,
+given the new word clusters, re-computes these cluster distri-
+butions using (8). Figure 1 describes the algorithm in detail.
+Note that this divisive algorithm bears some resemblance to
+the k-means or Lloyd-Max algorithm, which usually uses
+squared Euclidean distances [11, 10, 15, 4].
+Note that our initialization strategy is crucial to our algo-
+rithm, see step 1 in Figure 1 (also see [8, Section 5.1]) since it
+guarantees absolute continuity of each p(Clwt) with at least
+one cluster distribution p(CIWj), i.e., guarantees that at
+least one KL-divergence is finite. This is because our initial-
+ization strategy ensures that every word wt is part of some
+cluster Wj. Thus by the formula for p(ClWj) in step 2, it
+cannot happen that p(cilw~) ~ O, and p(cilWj) = 0. Note
+that we can still get some infinite KL-divergence values but
+these do not lead to any difficulty (indeed in an implemen-
+tation we can handle such "infinity problems" without an
+extra "if" condition thanks to the handling of "infinity" in
+the IEEE floating point standard [14, 1]).
+We now discuss the computational complexity of our al-
+gorithm. Step 3 of each iteration requires the KL-divergence
+to be computed for every pair, p(C[wt) and p(C]Wj). This
+is the most computationally demanding task and costs a to-
+tal of O(mkl) operations. Generally, we have found that the
+algorithm converges in 10-15 iterations independent of the
+size of the data set. Thus the total complexity is O(mkl),
+which grows linearly with m (note that k << m). In contrast,
+the agglomerative algorithm of [28] costs O(mal) operations.
+The algorithm in Figure 1 has certain pleasing proper-
+ties.
+As we will prove in Theorem 3, our algorithm de-
+creases the objective function value at every step and thus is
+guaranteed to converge to a local minimum in a finite num-
+ber of steps (note that finding the global minimum is NP-
+complete[13]). Also, by Theorem 1 and (13) we see that our
+algorithm minimizes the "within-cluster" Jensen-Shannon
+divergence. It turns out that (see Theorem 4) that our
+algorithm simultaneously maximizes the "between-cluster"
+Jensen-Shannon divergence. Thus the different word clus-
+ters produced by our algorithm are "maximally" far apart.
+We now give formal statements of our results with proofs.
+
+LEMMA 2. Given probability distributions px,... ,pn, the
+distribution that is closest (on average) in KL-diveryence is
+the mean probability distribution m, i.e., given any probabil-
+ity distribution q,
+
+Z 7riKL(pl, q) _>Z 7riKL(pi, m),
+(14)
+i
+i
+
+
+where 7ri _>O, ~i 7ri = 1 and m = ~i 7ripl.
+
+Proof.
+Use the definition of KL-divergence to expand the
+left-hand side(LHS) of (14) to get
+
+
+Z rri Zpi(x)(logpi(x) -log q(x)).
+i
+z
+
+
+Similarly the I:tHS of (14) equals
+
+
+Z
+7rlZ pl (x) (logpi (x) -log re(x)).
+
+
+
+
+195
+
+Subtracting the RHS from LHS leads to
+
+E
+~r,E
+p' (x) (log re(x) - log q(x)) =
+
+
+E
+re(x)log m(~) = KL(m, q).
+qtx)
+
+The result follows since the KL-divergence is always non-
+negative [6, Theorem 2.6.3].
+D
+
+THEOREM 2. The Algorithm in Figure 1 monotonically
+decreases the value of the objective function given in (13).
+
+Proof.
+Let W~0,... ,W~i) be the word clusters at itera-
+
+tion i, and let p(CIW~')),... ,p(CIW~0) be the correspond-
+ing duster distributions. Then
+
+k
+=EE
+~oe~vvj
+
+
+>-EE
+j=l
+~A;(i)
+~ot~vvj
+
+
+->EE
+(i)
+Q({W s }Sffi~)
+~r,K L(p(CIw,),P(ClWJ')) )
+
+
+
+~r,K L~( Clwt ),p(CIW~?(,~,)))
+
+
+
+~r,KL(p(CIw,),p(ClWJ i+1)))
+S=I .v, ~'Vi)~?+a)
+
+t"~lf'~hl(i+l)lk
+,.,iCk'krvs
+lj=l]
+
+where the first inequality is due to step 3 of the algorithm,
+and the second inequality follows from step 2 and Lemma 2.
+Note that if equality holds, i.e., if the objective function
+value is equal at consecutive iterations, then step 4 termi-
+nates the algorithm.
+I:l
+
+THEOREI~i 3. The Algorithm in Figure 1 always converges
+to a local minimum in a finite number of iterations.
+
+Proof.
+The result follows since the algorithm monotoni-
+cally decreases the objective function value, which is bounded
+from below (by zero).
+O
+We now show that the total Jensen-Shannon divergence
+(which is constant for a given set of probability distribu-
+tions) can be written as the sum of two terms, one of which
+is the objective function (13) that our algorithm minimizes.
+
+THEOREM 4. Let pl,...
+,p~ be a set of probability distri-
+butions and let lrl, . . . , It, be corresponding scalars such that
+~ri > O, ~i lri = 1. Suppose pl,... ,p, are clustered into k
+clusters Pl,...
+,Pk, and let m s be the (weighted) mean dis-
+tribution o/ PS, i.e.,
+
+ms
+E
+7rt
+=
+where-(gs)=
+Z
+"'"
+(15)
+
+
+Then the total JS-divergenee between pl,...
+,p,~ can be ex-
+pressed as the sum of "within-cluster JS-divergence" and
+"between-cluster JS-divergence', i.e.,
+
+k
+
+JS.(~pl
+:1 <i
+< n})
+~-
+ETr(TDS)JS~r,({pt :p, q*Pj})
+j-~l
+
++JS~,, ({m,: 1 < i < k}),
+
+where ~r[ = ~r,/~r(79~) and we use 7r" as the subscript in the
+last term to denote ~r~'= r(7~).
+Proof.
+By Lemma 1, the total JS-divergence may be writ-
+ten as
+n
+
+JS~({p,: 1 < i < n})
+=
+ETr, KL(pi,m)
+i=1
+
+=
+
+
+where m = ~i ~rlpi. With mj as in (15), and rewriting (16)
+in order of the clusters Pj we get
+
+
+
+j=lptE~ j
+x
+
+
+k
+k
+
+= E
+Ir('ps) E
+~j)KL(p,,r'
+mj) + Elr(Ps)KL(ms,m)
+j=l
+p~EqDj
+j=l
+
+
+k
+= E~r(Pj)JS~,({pt
+:p, e "Pj}) + JS~,,({m,: 1 < i < k}),
+j=l
+
+where lr~'= ~'('Pj), which proves the result.
+O
+This concludes our formal treatment. We now see how to
+use word clusters in our text classifiers.
+
+5.2
+Classification using Word Clusters
+The Naive Bayes method can be simply translated into us-
+ing word clusters instead of words. This is done by estimat-
+ing the new parameters p(W, [ci) for word clusters similar
+to the word parameters p(w, lci) in (4) as
+
+Eddic, n(W,,ds)
+p(~V, lci) =
+E.=i Ed o, .(W.,
+
+where n(142,,ds) = Ew, e~'V. n(w,, dj).
+Note that when estimates of p(wtlcl ) for individual words
+are relatively poor, the corresponding word cluster param-
+eters p(]/Vslci ) provide more robust estimates resulting in
+higher classification scores.
+The Naive Bayes rule (5) for classifying a test document
+d can be rewritten as
+
+
+c'(d) = argmax¢i
+logp(ci) + ~p(W,I d) logp(w,[cl)
+,
+
+
+wherep(W. Id) = n(W, Id)/Id I. SVMscan be similarlyused
+with word clusters as features.
+
+6.
+EXPERIMENTAL
+RESULTS
+This section provides empirical evidence that our divisive
+clustering algorithm of Figure 1 outperforms agglomerative
+clustering and various feature selection methods. We com-
+pare our results with feature selection by Information Gain
+and Mutual Information[30], and feature clustering using the
+agglomerative algorithm in [2]. We call the latter Agglomer-
+ative Clustering in this section for the purpose of comparison
+with our algorithm which we call Divisive Clustering. We
+show that Divisive Clustering achieves higher classification
+accuracy than the best performing feature selection method
+when the training data is sparse and show improvements
+over similar results reported in [28].
+
+
+
+
+196
+
+.·
+0.8
+
+
+
+,~
+0.6
+
+
+
+0.4
+
+o=
+
+
+0.2
+I
+20 Ng
+
+I
+I
+I
+I
+I
+Agglomeratve Clustering mmm=
+Divisive Clustering - -
+1
+
+
+o8q
+
+0.6
+
+
+"5
+0.4
+
+
+
+0.2
+Dmoz
+
+I
+I
+I
+I
+I
+I
+Agglomerative Clustering mum
+Divisive Clustering - -
+
+
+
+
+0
+~
+2
+5
+10
+20
+50 100 200
+500
+Number of Word Clusters
+
+Figure 2: Fraction of Mutual Information lost while
+clustering words with Divisive Clustering is signifi-
+cantly lower compared to Agglomerative Clustering
+at all number of features (on 20 Newsgroups data).
+
+6.1
+Data Sets and Implementation Details
+The 20 Newsgroups (20Ng) data set, collected by Ken
+Lang, contains about 20,000 articles evenly divided among
+20 UseNet Discussion groups. Each newsgroup represents
+one class in the classification task. This data set has been
+used for testing several text classification methods[2, 28, 21].
+During indexing we skipped headers, pruned words occur-
+ring in less than 3 documents and used a stop list but did not
+use stemming. The resulting vocabulary had 35,077 words.
+We collected the Draoz data from the Open Directory
+Project (www.dmoz.org). The dmoz hierarchy contains about
+3 million documents and 300,0000 classes. We chose the top
+Science category and crawled some of the heavily populated
+internal nodes beneath it resulting in a 3-deep hierarchy with
+49 leaf level nodes and about 5,000 total documents. For
+our experimental results we ignored documents at internal
+nodes. The list of categories and urls we used is available at
+www.cs.utexas.edu/users/manyam/dmoz.txt.
+While indexing
+we skipped text between html tags, pruned words occurring
+in less than five documents, used a stop. list but did not use
+stemming. The resulting vocabulary had 14,538 words.
+Bowl22] is a library of C code useful for writing text analy-
+sis, language modeling and information retrieval programs.
+We extended Bow to index BdB (www.sleepycat.com) fiat
+file databases where we stored the text documents for effi-
+cient retrieval and storage. We implemented Agglomerative
+and Divisive Clustering within Bow, and used Bow's SVM
+implementation in our experiments.
+
+6.2
+Results
+We first give evidence of the improved quality of word
+clusters obtained by our algorithm as compared to the ag-
+glomerative approach. We define the fraction of mutual in-
+formation lost due to clustering words as:
+
+~r(C; W) - I(C; W c)
+~(c;w)
+
+Intuitively, lower the loss in mutual information the bet-
+ter is the clustering. The term I(C; W) - I(C; W c) in the
+0
+2
+5
+10
+20
+50 100 200
+500
+
+Number of Word Clusters
+
+Figure 3: Fraction of Mutual Information lost while
+clustering words with Divisive Clustering is signifi-
+cantly lower compared to Agglomerative Clustering
+at all number of features (on Dmoz data).
+
+numerator of the above equation is precisely the global ob-
+jective function that Divisive Clustering attempts to mini-
+mize (see Theorem 1). Figures 2 and 3 plot the fraction of
+mutual information lost against the number of clusters for
+both the divisive and agglomerative algorithms on the 20Ng
+and Dmoz data sets. Notice that less mutual information
+is lost with Divisive Clustering compared to Agglomerative
+Clustering at all number of clusters, though the difference
+is more pronounced at lower number of clusters.
+Next we provide anecdotal evidence that our word clusters
+are better at preserving class information as compared to the
+agglomerative approach. Figure 4 shows three word clusters,
+Cluster 9 and Cluster 10 from Divisive Clustering and Clus-
+ter 12 from Agglomerative Clustering. These clusters were
+obtained while forming 20 word clusters with a 1/3-2/3 test-
+train split. While the clusters obtained by our algorithm
+could successfully distinguish between tee.sport.hockey and
+rec.sport.baseball, Agglomerative Clustering combined words
+from both classes in a single cluster. This resulted in lower
+classification accuracy for both classes with Agglomerative
+Clustering compared to Divisive Clustering. While Divisive
+Clustering achieved 93.33% and 9~.07% on tee.sport.hockey
+and nee.sport,baseballrespectively, Agglomerative Clustering
+could only achieve 76.97% and 52.42%.
+
+6.2.1
+Classification Results on 20 Newsgroups data
+Figure 5 shows classification accuracies on the 20 News-
+groups data set for the algorithms considered. The hori-
+zontal axis indicates the number of features/clusters used in
+the classification model while the vertical axis indicates the
+percentage of test documents that were classified correctly.
+The results are averages of 5-10 trials of randomized 1/3-2/3
+test-train splits of the total data. Note that we cluster only
+the words belonging to the documents in the training set. We
+used two classification techniques, SVMs and Naive Bayes
+(NB) for the purpose of comparison. Observe that Divisive
+Clustering (SVM as well as NB) achieves significantly bet-
+ter results at lower number of features than feature selection
+using Information Gain and Mutual Information. With only
+50 clusters, Divisive Clustering (NB) achieves 78.05% accu-
+
+
+
+
+197
+
+Cluster 10
+Divisive
+Clustering
+(Hockey)
+team
+game
+play
+hockey
+season
+boston
+chicago
+pit
+van
+nhl
+Clusterl2
+Agglomerative
+Clustering
+(Hockey and Baseball)
+Divisive
+Clustering
+(Baseball)
+hit
+runs
+baseball
+base
+ball
+greg
+morris
+ted
+pitcher
+hitting
+team
+detroit
+hockey
+pitching
+games
+hitter
+players
+rangers
+baseball
+nyi
+league
+morris
+player
+blues
+nhl
+shots
+pit
+vancouver
+buffalo
+eus
+Figure 4: Top few words sorted by Mutual Informa-
+tion in Clusters obtained by Divisive and Agglom-
+erative approaches on 20 Newsgroups data.
+
+
+I
+I
+[
+[
+I
+I
+[
+I
+I
+I
+
+
+Divisive Clustering (Naive Bayes)
+~.
+I;)ivi~iv~~ChJ!~;~~ (~"~.~i~ --.~---
+100
+Information-Gain (Naive Bayes) +
+Information Gain (SVM) ...----~........
+g0
+Mutual Information (Naive Bayes)
+o
+
+
+
+
+6O
+
+N 50
+
+
+3O
+
+2O
+
+10
+
+i
+I
+I
+i
+i
+I
+I
+I
+I
+I
+
+2
+5 10 20
+50 10(~00 50Q000
+5000
+35077
+Number of Features
+
+Figure 5: Classification Accuracy on 20 Newsgroups
+data with 1/3-2/3 test-train split.
+
+
+racy -- just 4.1% short of the accuracy achieved by a full
+feature NB classifier. We also observed that the largest gain
+occurs when the number of clusters equals the number of
+classes (for 20Ng data this occurs at 20 clusters). When we
+closely observed these word clusters we found that many of
+them contained words representing a single class in the data
+set, for example see Figure 4. We attribute this observation
+to our effective initialization strategy.
+In Figure 6, we plot the classification accuracy on 20Ng
+data using Naive Bayes when the training data is sparse.
+We took 2% of the available data, that is 20 documents per
+class, for training and tested on the remaining 98% of the
+documents. The results are averages of 5-10 trials. We again
+obsezve that Divisive Clustering obtains better results than
+Information Gain at all number of features. It also achieves
+a significant 12% increase over the maximum possible accu-
+racy achieved by Information Gain. This is' in contrast to
+Figure 5 where Information Gain eventually catches up as
+we increase the number of features. When the training data
+is small the word by class frequency matrix contains many
+zero entries. By clustering words we obtain more robust
+estimates of word class probabilities which lead to higher
+classification accuracies.
+8O
+
+
+70
+
+
+60
+
+
+5O
+
+
+
+
+30
+
+20
+
+10
+
+0
+i
+i
+i
+I
+Information Gain
+
+
+
+
+/j,./
+
+I
+I
+I
+I
+!
+I
+I
+I
+I
+I
+
+2
+5 10 20
+50 100200 50a000
+5000
+35077
+
+Number of Features
+
+Figure 6: Classification Accuracy on 20 Newsgroups
+data with 2~0 Training data (using Naive Bayes).
+
+lOO
+
+
+
+80
+
+
+
+
+6o
+
+
+
+40
+
+
+
+
+20
+
+
+
+0
+2
+5
+lO
+20
+50
+lOO 200
+500
+
+Number of Word Clusters
+
+Figure 7: Divisive Clustering leads to higher accu-
+racy than Agglomerative Clustering on 20 Ng data
+(1/~-02 '3 test-train split with Naive Bayes).
+J
+i
+i
+I
+!
+i
+i
+i
+I
+Divisive Clustering(Naive Bayes)
+,
+
+80
+Information Gain (Naive Bayes) ---v---
+Inforrnatior~ Gain(SVM) ~-~
+Mutual information(Naive Bayes)
+70
+......~,..-;
+
+
+60
+~'°~'~..............xJ'~ ......
+"~"
+
+/
+
+
+3°
+
+
+lo
+
+0
+I
+1]
+I
+I
+I
+I
+I
+
+2
+5
+10 20
+50 100200 5001000
+10000
+
+Number of Features
+
+Figure 8:
+Classification Accuracy on Dmoz data
+with 1/3-2/3 test-train split.
+
+
+
+
+198
+
+60 r"
+
+
+
+50
+i
+I
+!
+I
+I
+i
+I
+I
+Divisive Clustering
+J
+Information Gain
+
+
+
+
+4O
+
+
+
+30
+
+o~
+
+20
+
+
+
+10
+
+
+
+0
+I
+i
+i
+i
+I
+f
+i
+I
+i
+
+2
+5
+10 20
+50 100200 5001000
+10000
+
+Number of Features
+
+Figure 9:
+Classification Accuracy on Dmoz
+with 2~0 'I~aining data (using Naive Bayes).
+80
+~
+,
+,
+,'
+,
+~
+,
+,"
+
+Divisive Clustering mR
+70
+,
+
+
+60
+
+
+5o
+
+
+
+
+30
+data
+
+
+
+
+20
+
+
+10
+
+
+o
+2
+5
+lO
+20
+50
+lOO 200
+500
+
+Number of Word Clusters
+
+Figure 10: Divisive Clustering achieves higher accu-
+racy than Agglomerative Clustering on Dmoz data
+(1/3-2/3 test-train split with Naive Bayes).
+
+
+Figure 7 compares the classification a~curacies of Divisive
+Clustering and Agglomerative Clustering on the 20 News-
+groups data using Naive Bayes. Note that Divisive Cluster-
+ing achieves better classification results than Agglomerative
+Clustering at all number of features, though again the im-
+provements are more significant at lower number of features.
+
+6.2.2
+Classification Results on Dmoz data set
+Figure 8 shows classification results for the Draoz data set
+when we build a fiat classifier over the leaf set of classes.
+Unlike the previous plots, feature selection sometimes im-
+proves classification accuracy since HTML data appears to
+be inherently noisy. We observe results similar to those ob-
+tained on 20 Newsgroups data, but note that Information
+Gain(NB) here achieves a slightly higher maximum, about
+1.5% higher than the maximum accuracy observed with Di-
+visive Clustering(NB). To overcome this, Baker and McCal-
+lum[2] tried a combinationof feature-clustering and feature-
+selection methods. More rigorous approaches to this prob-
+lem are a topic of future work. Further note that SVMs fare
+g0
+[
+,
+,
+,
+
+
+I
+8O
+I
+I
+I
+i
+I
+I
+Information Gain (Fiat) ama~
+I
+Divisive (Flat) awl
+Divisive (Hierarchical)
+
+
+
+70
+
+
+60
+
+
+~" 50
+
+
+~e 4o
+
+
+30
+
+
+20
+
+
+10
+
+
+o
+5
+lO
+20
+50
+lOO 200
+500 lOOO
+500010000
+
+Number of Features
+
+Figure 11: Classification results on Dmoz hierarchy
+using Naive Bayes.
+Observe that the Hierarchical
+Classifier achieves significant improvements over the
+Flat classifiers with very few number of features.
+
+
+worse than NB at low dimensionality but better at higher
+dimeusionality,which is consistent with known SVM behav-
+ior [29]. In future work we will use non-linear SVMs at lower
+dimensions to alleviate this problem.
+Figure 9 plots the classification accuracy on Dmoz data
+using Naive Bayes when the training set is just 2%. Note
+again that we achieve a 13% increase in classification ac-
+curacy with Divisive Clustering over the maximum possi-
+ble with Information Gain. This reiterates the observation
+that feature clustering is an attractive option when training
+data is limited. Figure 10 compares Divisive Clustering with
+Agglomerative Clustering on Dmoz data where we observe
+similar improvements as with 20 Newsgroups data.
+
+6.2.3
+Hierarchical Classification on Dmoz Hierarchy
+Figure 11 shows classification accuracies obtained by 3
+different classifiers on Dmoz data (Naive Bayes was the un-
+derlying classifier). By Flat, we mean a classifier built over
+the leaf set of classes in the tree. In contrast, Hierarchical
+denotes a hierarchical scheme that builds a classifier at each
+internal node of the topic hierarchy (see Section 4.3). Fur-
+ther we apply Divisive Clustering at each internal node to
+reduce the number of features in the classification model at
+that node. The number of word clusters is the same at each
+internal node.
+Figure 11 compares the Hierarchical Classifier with two
+flat classifiers, one that employs Information Gain for fea-
+ture selection while the other uses Divisive Clustering. Note
+that Divisive Clustering performs remarkably well for Hi-
+erarchical Classification even at very low number of fea-
+tures. With just 10 features, Hierarchical Classifier achieves
+64.54% accuracy, which is slightly better than the maximum
+obtained by the two fiat classifiers at any number of features.
+At 50 features, Hierarchical Classifier achieves 68.42%, a sig-
+nificant 6% higher than the maximum obtained by the flat
+
+
+
+
+199
+
+classifiers. Thus Divisive Clustering appears to be a natural
+choice for feature reduction in case of hierarchical classifica-
+tion as it allows us to maintain high classification accuracies
+using very small number of features.
+
+7.
+CONCLUSIONS AND FUTURE WORK
+In this paper, we have presented an information-theoretic
+approach to "hard" word clustering for text classification.
+First, we derived a global objective function that captures
+the decrease in mutual information due to clustering. Then
+we presented a divisive algorithm that directly minimizes
+this objective function, converging to a local minimum. Our
+algorithm minimizes the within-cluster Jensen-Shannon di-
+vergence, and simultaneously maximizes the between-cluster
+Jensen-Shannon divergence.
+Finally, we provided an empirical validation of the effec-
+tiveness of our word clustering. We have shown that our
+divisive clustering algorithm obtains superior word clusters
+than the agglomerative strategies proposed previously[2, 28].
+We have presented detailed experiments using the Naive
+Bayes and SVM classifiers on the 20 Newsgroups and Dmoz
+data sets.
+Our enhanced word clustering results in sig-
+nificant improvements in classification accuracies especially
+at lower number of features.
+When the training data is
+sparse, feature clustering achieves higher classification accu-
+racy than the maximum accuracy achieved by feature selec-
+tion methods such as information gain and mutual informa-
+tion. Our divisive clustering method is an effective technique
+for reducing the model complexity of a hierarchical classifier.
+In future work we intend to conduct experiments at a
+larger scale on hierarchical web data to evaluate the effec-
+tiveness of the resulting hierarchical classifier. Reducing the
+number of features makes it feasible to run computation-
+ally expensive classifiers such as SVMs on large collections.
+While soft clustering increases the model size, it is not clear
+how it affects classification accuracy. In future work, we
+would like to experimentally evaluate the tradeoff between
+soft and hard clustering.
+Acknowledgements. We are grateful to Andrew
+McCallum and Byron Dora for helpful discussions. For this
+research, ISD was supported by a NSF CAREER Grant (No.
+ACI-0093404) while Mallela was supported by a UT Austin
+MCD Fellowship.
+
+8.
+REFERENCES
+[1] ANSI/IEEE, New York.
+IEEE Standard for Binary Floating Point Arithmetic,
+Std 754-1985 edition, 1985.
+[2] L. D. Baker and A. McCallum. Distributional
+clustering of words for text classification. In A CM
+SIGIR, pages 96--103, 1998.
+[3] R. Bekkerman, R. E1-Yaniv, Y. Winter, and
+N. Tishby. On feature distributional clustering for text
+categorization. In ACM SIGIR, pages 146-153, 2001.
+[4] P. Berkhin and J. D. Becher. Learning simple
+relations: Theory and applications. In Second SIAM
+Data Mining Conference, pages 420-436, 2002.
+[5] S. Chakrabarti, B. Dom, R. Agrawal, and
+P. Raghavan. Using taxonomy, discriminants, and
+signatures for navigating in text databases. In
+Proceedings o/ the 23rd VLDB Conference, 1997.
+[6] T. M. Cover and J. A. Thomas. Elements of
+Information Theory. John Wiley & Sons, 1991.
+[7] S. Deerwester, S. T. Dumais, G. W. Furnas, T. K.
+Landauer, and R. Harshman. Indexing by Latent
+Semantic Analysis. Journal of the American Society
+for Information Science, 41(6):391-407, 1990.
+[8] I. S. Dhillon and D. S. Modha. Concept
+decompositions for large sparse text data using
+clustering. Machine Learnin9, 42(1):143-175, 2001.
+[9] P. Domingos and M. J. Pazzani. On the the optimality
+of the simple Bayesian classifier under zero-one loss.
+Machine Learning, 29(2-3):103-130, 1997.
+[10] R. O. Duda, P. E. Hart, and D. G. Stork. Pattern
+Classification. John Wiley & Sons, 2nd edition, 2000.
+[11] E. Forgy. Cluster analysis of multivariate data:
+Efficiency vs. interpretability of classifications.
+Biometrics, 21(3):768, 1965.
+[12] J. H. Friedman. On bias, variance, 0/l-loss, and the
+curse-of-dimensionality. Data Mining and Knowledge
+Discovery, 1:55-77, 1997.
+[13] M. R. Garey, D. S. Johnson, and H. S. Witsenhausen.
+The complexity of the generalized Lloyd-Max problem.
+IEEE Trans.Inform. Theory,28(2):255-256,1982.
+[14] D. Goldberg.What everycomputerscientist should
+knowabout floatingpoint arithmetic. ACM
+Computing Surveys,23(1), 1991.
+[15] R. M. Grayand D. L. Neuhoff.Quantization. IEEE
+Trans. Inform. Theory,44(6):1-63,1998.
+[16] T. Hofmann.Probabilistic latent semanticindexing.
+In Proc.ACMSIGIR.ACM Press, August1999.
+[17] T. Joachims.Text categorizationwith support vector
+machines: learningwithmanyrelevantfeatures. In
+Proceedings ofECML-98,pages137-142,1998.
+[18] D. Kollerand M. Sahami.Hierarchicallyclassifying
+documentsusingveryfewwords.In ICML,1997..
+[19] S. Kullback and R. A. Leibler. On information and
+sufficiency. Ann. Math. Star., 22:79--86, 1951.
+[20] J. Lin. Divergence measures based on the Shannon
+entropy. IEEE Trans. Inform. Theory, 37(1), 1991.
+[21] A. McCallum and K. Nigam. A comparison of event
+models for naive bayes text classification. In AAAI-98
+Workshop on Learning for Text Categorization, 1998.
+[22] A. K. McCallum. Bow: A toolkit for statistical
+language modeling, text retrieval, classification and
+clustering, www.cs.cmu.edu/mccallum/bow, 1996.
+[23] T. Mitchell. Conditions for the equivalence of
+hierarchical and non-hierarchical bayesian classifiers.
+Technical report, CALD, CMU, 1998.
+[24] T. M. Mitchell. Machine Learning. McGraw-Hill, 1997.
+[25] F. Pereira, N. Tishby, and L. Lee. Distributional
+clustering of English words. In 31st Annual Meeting of
+the ACL, pages 183-190, 1993.
+[26] G. Salton and M. J. McGill. Introduction to Modern
+Retrieval. McGraw-Hill Book Company, 1983.
+[27] C. E. Shannon. A mathematical theory of
+communication. Bell System Technical J., 27, 1948.
+[28] N. Slonim and N. Tishby. The power of word clusters
+for text classification. In ZJrd European Colloquium on
+Information Retrieval Research (ECIR), 2001.
+[29] V. Vapnik. The Nature of Statistical Learning Theory.
+Springer-Verlag, New York, 1995.
+[30] Y. Yang and J. O. Pedersen. A comparative study on
+feature selection in text categorization. In ICML, 1997.
+
+
+
+
+200
+

@@ -1,0 +1,896 @@
+Collaborative Crawling: Mining User Experiences for
+Topical Resource Discovery
+
+Charu C. Aggarwal
+IBM T. J. Watson Research Center
+Yorktown Heights, NY 10598
+
+charu @ us.ibm.com
+
+
+ABSTRACT
+
+The rapid growth of the world wide web had made the prob-
+lem of topic specific resource discovery an important one in
+recent years. In this problem, it is desired to find web pages
+which satisfy a predicate specified by the user. Such a pred-
+icate could be a keyword query, a topical query, or some ar-
+bitrary contraint. Several techniques such as focussed crawl-
+ing and intelligent crawling have recently been proposed for
+topic specific resource discovery. All these crawlers are link-
+age based, since they use the hyperlink behavior in order to
+perform resource discovery. Recent studies have shown that
+the topical correlations in hyperlinks are quite noisy and
+may not always show the consistency necessary for a reliable
+resource discovery process. In this paper, we will approach
+the problem of resource discovery from an entirely different
+perspective; we will mine the significant browsing patterns
+of world wide web users in order to model the likelihood of
+web pages belonging to a specified predicate. This user be-
+havior can be mined from the freely available traces of large
+public domain proxies on the world wide web. We refer to
+this technique as collaborative crawling because it mines the
+collective user experiences in order to find topical resources.
+Such a strategy is extremely effective because the topical
+consistency in world wide web browsing patterns turns out
+to very reliable. In addition, the user-centered crawling sys-
+tem can be combined with linkage based systems to create
+an overall system which works more effectively than a sys-
+tem based purely on either user behavior or hyperlinks.
+
+
+1. INTRODUCTION
+With the rapid growth of the world wide web, the problem
+of resource collection on the world wide web has become
+very relevant in the past few years. Users may often wish to
+search or index collections of documents based on topical or
+keyword queries. Consequently, a number of search engine
+technologies such as Lycos and AltaVista have flourished in
+recent years.
+A significant method proposed recently for automated re-
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the firstpage. Tocopy otherwise, to
+republish, to post on serversor to redistributeto lists, requires prior specific
+permission and/or a fee.
+SIGKDD'02 Edmonton,Alberta, Canada
+Copyright 2002 ACM 1-58113-567-X/02/0007 ...$5.00.
+source discovery is the technique of focused crawling [4]. The
+essential idea in focused crawling is that there is a short
+range topical locality on the web. This locality may be used
+in order to design effective techniques for resource discov-
+ery by starting at a few well chosen points and maintain-
+ing the crawler within the ranges of these known topics. A
+recent paper discusses the application of learning method-
+ologies [3] in order to improve the effectiveness of the crawl.
+While the focussed crawling technique is designed for find-
+ing web pages belonging to one of the classes from a hierar-
+chically arranged topical collection, the intelligent crawling
+technique is capable of more flexible and arbitrary predicates
+such as a combination of different kinds of topical queries,
+keyword queries or other constraints on the content or meta-
+information about the web page such as its URL domain.
+Both the focussed crawling and intelligent crawling meth-
+ods [3, 4] use only linkage based information in order to find
+topical resources. In the former case, the linkage based in-
+formation is used directly under the assumption that web
+pages show topical locality, whereas in the latter case, a
+learning process is used to identify the most suitable web
+pages. It is this learning process of the intelligent crawling
+technique which provides it with the flexibility and robust-
+ness necessary to collect web pages belonging to arbitrary
+predicates.
+In many cases, links are quite noisy in terms of topical
+locality. Such links may correspond to banners, advertise-
+ments and other content which do not carry specific in-
+formation about resource discovery. Often advertisements,
+banners and such content dominate the resource structure
+of many web sites even though they are only occasionally
+browsed by users. In addition, since the web continues to
+grow rapidly in a unstructured fashion through the efforts
+of millions of non-collaborating users, it is difficult for a sin-
+gle linkage model to completely capture the complex and
+unstructured variation in hyperlink patterns.
+This paper will therefore diverge significantly from linkage-
+based methodologies, and instead concentrate on utilizing
+the browsing patterns of users on the web in order to mine
+significant patterns.
+We will achieve this goal by utilizing
+the logs of user access behavior on public domain proxies.
+An example of such a public-domain proxy is the Squid [5]
+proxy cache, which is a set of large hierarchical caches on
+the web which is capable of improving the latency perfor-
+mances of different geographical regions.
+The access pat-
+terns of these systems are representative of a large sample
+of world wide web clients.
+The utilization of user behavior turns out to be quite use-
+
+
+
+
+423
+
+ful in practice, since even for specific topics there are often
+hundreds of thousands of documents, and the size of these
+collections continues to grow and change every day.
+The
+browsing behavior of the users often reflects the changing
+trends on the world wide web quite effectively, since the
+user behavior mirrors the changes in the world wide web
+structure quite well. On the other hand, hyperlinks are fre-
+quently outdated and do not adapt quickly to changes in the
+documents on the web. Consequently, a linkage based sys-
+tem may often spend a fraction of its time trying to access
+web pages which no longer exist, whereas a recent trace will
+usually contain only those web pages which are accessible.
+(Inaccessible web pages would typically be contained in the
+error log.)
+This paper is organized as follows. In the next section,
+we discuss the general framework for the crawler, and the
+factors which may be used for the purpose of self-learning.
+In section 3, we will provide an overview of the statistical
+model which is used for the purpose of the crawling. Section
+4 discusses the empirical results, and the conclusions and
+summary axe discussed in section 5.
+
+
+2.
+COLLABORATIVE CRAWLING
+The collaborative crawler assumes that multiple users browse
+the web through proxy gateways, which generate web traces
+containing the access information of the users.
+We note
+that such gateways may often serve thousands of users; con-
+sequently, the web logs generated are often quite huge even
+on a daily basis. The collaborative crawling method is im-
+plemented as a learning system which identifies the impor-
+tance of different users during the crawling process in order
+to bias the crawl towards those web pages which are most
+likely to belong to the predicate. Specifically the character-
+istics of the web pages together with the browsing behavior
+of the users are learned by the collaborative crawler in order
+to estimate their likelihood of satisfying the predicate.
+An important aspect of most web logs is that they often
+do not contain individual user information but simply the
+domain names of the accesses.
+Since some of the domain
+names are actually proxy accesses from large groups of users
+rather than individuals, this reduces the level of granularity
+of the available data. Some simple processing can however
+improve the quality of the trace:
+� All source IP addresses which occurred in a larger num-
+ber of accesses than a given threshold 1 were removed. This
+filtered out a large fraction of group accesses. � The above
+criterion was also used for shorter periods of time such as a
+1 minute interval. If there were more than a certain num-
+ber 2 of accesses per unit of time from the same source IP
+address, then this was indicative of group behavior.
+The above preprocessing steps would still result in many
+IP addresses corresponding to groups of users rather than
+individuals.
+However, our primary aim is to discover re-
+sources rather than user behavior, and as long as there was
+considerable correlation between the source IP address and
+
+1We picked a threshold depending upon the number of days
+that it represented.
+Our threshold was 2000 accesses per
+day. The assumption was that only. large groups of people
+could make so many accesses in a given day.
+2We used 100 accesses per minute as the threshold.
+The
+reason for this high threshold is that multiple access entries
+in the trace may actually correspond to the different parts
+(images, frames and html) of the same user access.
+access content, we did not consider this to be a serious lim-
+itation. For the rest of the paper, we will stillrefer to a
+source IP address as a user for the purpose of conceptual
+abstraction.
+The crawler is implemented as an iterativesearch algo-
+rithm which always maintains a set of candidate web pages
+together with corresponding priorities.These prioritiesare
+determined by relatingthe statisticalbehavior of the crawled
+web pages to the users that have accessed them. Each time
+a web page is crawled, it is determined whether or not it
+satisfiesthe predicate. The statisticalbehavior of the users
+that have accessed this web page is utilizedto update the
+priorities of the candidate web pages. The crawler keeps
+track of the nodes which it has already visited,as well as a
+potential listof candidates. A web page is said to be a can-
+didate when ithas not yet been crawled, but some other web
+page which has been accessed by the same user has already
+been crawled. The access behavior of this user is incorpo-
+rated into the statisticalmodel used to decide whether that
+candidate islikelyto satisfythe predicate. This information
+may be used by the crawler to decide the order in which it
+visitsweb pages.
+Thus, at each point the crawler maintains candidate nodes
+which itislikelyto crawl and keeps calculatingthe priorities
+of the nodes using the information about the user access
+patterns of differentweb pages. This statisticalinformation
+which relatesthe user behavior to the predicate may be used
+to learn the nature of the relationship between web pages
+and users.
+
+
+2.1
+Modeling User Experiences
+In this section, we will discuss the statistical model which
+is used to keep track of the crawling behavior.
+Since the
+crawler system uses the gateway logs for resource discovery,
+itisan interestingquestion as to how the user behavior may
+be converted into prioritiesfor visitingweb pages. It is clear
+that we need to build a statisticalmodel which connects the
+user behavior to the predicate satisfactionprobability of the
+candidate web pages.
+We assume that the set of features used in the learning
+process are stored in the set /C. This set /C maintains the
+set of probabilitieswhich indicate the user behavior during
+the crawling process. We note that several kinds of informa-
+tion about the user behavior may be relevant in determining
+whether a web page is relevant to the crawl:
+� The access frequency behavior of the users for
+different web pages: Users that have accessed web pages
+belonging to a given predicate are more likelyto access other
+web pages belonging to the predicate.
+� The access frequency behavior of the users with
+the help of signature features:
+A signature feature is
+described as any characteristic of a web page such as content,
+vocabulary, or any other characteristic of a web page, In
+many cases, the access behavior of users in terms of signature
+topics yields information which cannot be revealed by their
+access behavior from individual web pages. This is because
+users may often access web pages belonging to combinations
+of topics rather than individual combinations of web pages.
+� The temporal
+patterns
+of behavior
+of the dif-
+ferent users across different web pages: This means
+that users that have just accessed web pages belonging to
+the predicate are more likely to access the same in the im-
+mediate future. Thus, by taking the order of accesses into
+
+
+
+
+424
+
+account, considerable amount of useful information can be
+mined.
+
+2.2
+The Frequency Bias Factor
+In this section, we discuss the probabilistic model for uti-
+lizing the access frequencies of users in computing priorities.
+In order to calculate the priorities, we compute the likeli-
+hood that the frequency distribution of user accesses makes
+it more likely for a candidate web page to satisfy the predi-
+cate. In order to understand this point a little better, let us
+consider the following case. Suppose that we are searching
+for web pages on online malls. Let us assume that only 0.1%
+of the pages on the web correspond to this particular pred-
+icate. However, it may happen that the percentage of web
+pages belonging to online malls accessed by a user is over
+10%. In such a case, it is clear that the user is favorably
+disposed to accessing web pages on this topic.
+If a given
+candidate web page has been accessed by many such users
+that are favorably disposed to the topic of online malls, then
+it may be useful to crawl the corresponding web page. We
+would like to quantify the level of favorable disposition of
+the candidate page by a value that we will refer to as the
+interest ratio.
+In order to develop the machinery necessary for the model,
+we will introduce some notations and terminology. Let N be
+total number of web pages crawled so far. Let U be the event
+that a crawled web page satisfies the user defined predicate.
+For a candidate page which is about to be crawled, the value
+of P(U) is the probability that the web page will indeed
+satisfy the user-defined predicate.
+The value of P(U) can
+be estimated by the fraction of web pages already crawled
+which satisfy the user defined predicate.
+We will estimate the probability that a web page belongs
+to a given predicate U, given the fact that the web page
+has been crawled by user i. We shall denote the event that
+the person i has accessed the web page by Ra. Therefore,
+the predicate satisfaction probability is given by P(UIRi) =
+P(U N Ri)/P(Ri). We note that when the person i is topi-
+cally inclined towards accessing web pages that belong to the
+predicate, then the value of P(UIRa) is greater than P(U).
+Correspondingly, we define the interest ratio of predicate
+satisfaction as follows:
+
+IB(UIR,) = P(U[Ri)/P(U)
+(1)
+
+We note that an interest ratio larger than one indicates that
+the person i is significantly more interested in the predicate
+than the average interest level of users in the predicate. The
+higher the interest ratio, the greater the topical affinity of
+the user i to the predicate. Similarly, an interest ratio less
+than one indicates a negative propensity of the user for the
+predicate. Now, let us consider a web page which has been
+accessed by the users il ... ik. Then, a simple definition of
+the cumulative interest ratio I(UIRi1,... Ri~) is the prod-
+uct of the individual interest ratios for each of the users.
+Therefore, we have:
+
+IB (UIRi, ....Rik) = Ir]=zI (UlRi# )
+(2)
+
+The above definitiontreats allusers in a uniform way in the
+computation of the interestratio. However, not all interest
+ratios are equally valuable in determining the value of a
+user to the crawling process. This is because we need a
+way to filterout those users whose access behavior varies
+from average behavior only because of random variations.
+In order to measure the significance of an interest ratio, we
+use the following computation:
+
+IP(UI/~J) - P(U)I
+(3)
+T(U, R.i~) = x/p(u) "(1 - P(U))/N
+
+We note that the denominator of the above expression is the
+standard deviation of the average of N independent identi-
+cally distributed bernoulli random variables, each with suc-
+cess probability P(U). The numerator is the difference be-
+tween the conditional probability of satisfaction and the un-
+conditional probability. The higher this value, the greater
+the likelihood that the event Rij is indeed relevant to the
+predicate. We note that this value of T(U, Ri~) is the sig-
+nificance factor which indicates the number of standard de-
+viations by which the predicate satisfaction of U is larger
+than the average if the user ij has browsed that web page.
+In the computation of the interest ratio of a candidate page,
+we use only those users ij for which T(U, R~) > t for some
+threshold s t.
+
+2.3 Use ofSignature Characteristics and Brows-
+ing Content
+We note that the nature of proxy traces is inherently
+sparse.
+As a result, in many cases, a single user may not
+access too many documents in a single trace. Therefore, a
+considerable amount of information in the trace can be bro-
+ken up into signatures which are particular characteristics of
+different web pages. Such signatures may be chosen across
+the entire vocabulary of words (content), topical categories
+based on scans across the world wide web, or other relevant
+characteristics of web pages. The use of such characteristics
+is of tremendous value if the signatures are highly correlated
+with the predicate. For example, if the document vocabu-
+lary is used as the relevant signature, then even though there
+many be billions of documents across the world wide web,
+the number 4 of relevant words is only of the order of a hun-
+dred thousand or so. Therefore, it is easier to find sufficient
+overlap of signatures across users in the crawling process.
+This overlap helps in reducing the feature space sufficiently,
+so that it is possible to determine interesting patterns of
+user behavior which cannot be discerned only by using the
+patterns in terms of the individual web pages.
+In order to formalize the above concept, we will assume
+that Lij is the event that the signature j has been accessed
+by a given user i.
+Thus, for example, when the event j
+corresponds to the word j being accessed, it means that the
+document corresponding to word j is accessed at least once
+by the user i. We define V~ as the event that a document
+belonging to the predicate has been accessed at least once by
+the user i. We note that the ratio P(I/~ILij)/P(P~) provides
+the interest ratio that the access of feature j is interesting
+for the user i. However, we are not just interested in the
+behavior of a single feature, but that of all the features.
+Therefore, we denote the signature specific interest ratio of
+the user i by SFi.
+
+SFi = EAiI Features j[P(VilL~J)/P(I'~)]
+(4)
+
+Here E[.] denotes the expected value over all the different
+
+ZFor the purpose of this paper, we will use a threshold of t =
+2 standard deviations in order to make this determination.
+4This assumes that the documents are in English and stop-
+words/rare words have been removed.
+
+
+
+
+425
+
+features. As in the previous case, let us assume that a given
+candidate page has been browsed by the users it ... ik. The
+corresponding events are denoted by /ht...R~.
+We de-
+note the event that the web page satisfies the predicate by
+U. Then, the cumulative interest ratio of predicate satis-
+faction, given that any of the signature characteristics in-
+side it have been browsed by users il...i~, is denoted by
+I$f(U[R4t... R4k) and is defined by the following expres-
+sion:
+
+ISF (uI~,
+. .. R~,) = 7r~=lSFij
+(5)
+
+Not all users may show a high propensity for or against a
+particular predicate. Consequently, we would like to filter
+out the noise from the above expression. Let ns be the total
+number of users for which signature specific interest ratios
+have been computed. We define the mean par and standard
+deviation asy of the feature-specific interest propensities:
+
+ns
+
+
+
+i=1
+
+
+
+
+o sF =
+(SF~
+-
+~s)2/n,
+(7)
+
+
+Therefore, we define the significanceof each user i as follows:
+
+SFF(i) =
+I(SF,
+-
+~sr)l/osr
+(8)
+
+Once the significance of each user i has been determined,
+we can now use only those users whose significance is above
+a pre-deflned threshold t for the purpose of crawling. This
+reduces the noise effects in the computation of the inter-
+est ratio and ensures that only users that show an access
+behavior which is significantly related to the predicate are
+used.
+
+2.3.1
+An example of signature characteristics
+As discussed above, a wide variety of signature character-
+istics can be used in order to facilitate the crawling process.
+One example of such a set of characteristics is the use of the
+topical categories available in the Yahoo! taxonomy. The
+characteristics in a web page are defined as the dominant
+classes in the taxonomy which are related to it. In order to
+achieve this goal, we implemented a classifier system similar
+to that described in [2]. This classifier system was capable
+of predicting the classes most related to a given web page.
+We found the km,,~ = 5 most closely related classes to the
+page using the nearest neighbor classifier of [2].
+
+2.4
+Use of Temporal Locality in Browsing
+The web pages accessed by a given user often show con-
+siderable temporal locality. This is because the browing
+behavior of a user in a given session is not just random but
+is highly correlated in terms of the topical subject matter.
+Often users that browse web pages belonging to a particular
+topic are likely to browse similar topics in the near future.
+This information can be leveraged in order to improve the
+quality of the crawl.
+In order to model this behavior, we will define the concept
+of temporal localityregion of a predicate U by Tll(U). To
+do so, we will first define the temporal locality of each web
+page access A. The temporal locality of a web page access
+A is denoted by TLR(A) and is the n pages accessed either
+strictly before or strictly after A by the same user, but not
+including A. Now let us say that A1...Am be the set of
+accesses which are known to belong to the predicate U. Then
+the temporal locality of the predicate U which is denoted by
+TI:(U) is defined as follows:
+
+T�(U) = Uik=iTLR(A,)
+(9)
+
+Let fl be the fraction of web pages belonging to T~(U)
+which also satisfy the predicate.
+Furthermore, let f2 be
+the fraction of web pages outside T�(U) which satisfy the
+predicate. Then, the overall interest ratio for a web page
+belonging to T�(U), is given by:
+
+ITL(u) = flIP(U)
+(10)
+
+Similarly, the Interest Ratio for a web page which does not
+belong to the temporal locality of U is given by:
+
+ITL(u) = jf2/P(V)
+(11)
+
+We note that in most cases, the value of .fl is larger than
+P(U), whereas the value of .f2 is smaller than P(U). Cor-
+respondingly, the interest ratios are larger and smaller than
+one respectively. For a given web page, we check whether or
+not it belongs to the temporal locality of a web page which
+satisfies the predicate. If it does, then the corresponding
+interest ratio is incorporated in the computation of the im-
+portance of that predicate.
+
+2.5
+Combining the different factors
+The different factors discussed above can be utilized in
+order to create a composite interest ratio which measures
+the value of the different factors in the learning process. We
+define the composite interest ratio as the product of the in-
+terest ratios contributed by the different factors. Therefore,
+the combined interest ratio IC(u) for a web page which has
+been accessed by users il ... ik is given by:
+
+f
+(u) = fL
+(u) . fF
+(ul]~l . . . P.~ ) " f(Vl~l
+... ~)
+(12)
+
+This composite interest ratio reflects the overall predicate
+satisfaction probability of a web page based on its charac-
+teristics.
+
+
+3.
+IMPLEMENTATION DETAILS
+The overall sketch of the collaborative crawling algorithm
+is discussed in Figure I. The method maintains a candidate
+listwhich is denoted by Cand which keeps track of the web
+addresses that are to be crawled. In each iteration, the high-
+est priority page FF of the candidate list Cand is crawled,
+while the learning information and priorities are updated
+based on the user access behavior of F. These updated pri-
+orities are used in order to expand the listof potential can-
+didates. The candidate page F is deleted from Cand after it
+has been crawled. The process of calculating the prioritiesis
+denoted by CalculatePriorities,whereas that of expanding
+the candidate listis denoted by ExpandList. This iterative
+process continues until the list Cand becomes empty.
+In
+addition~ it is assumed that at least rnin-candweb pages
+be crawled before the process terminates. If min.cand web
+pages have not yet been crawled and Cand is empty, then
+the algorithm randomly samples the trace for web pages
+which are further added to the candidate list.This ensures
+
+
+
+
+426
+
+Subroutine CalculatePriorities(WebPage: F, Trace: T,
+Learning Statistics: K);
+begin
+Find all the users 'P(F) than have accessed F;
+Compute the priorities of all web pages .Af accessed by
+P(F) using the computation discussed in section 2;
+return(A/');
+end
+
+Subroutine ExpandList(CandidateList:
+Cand,
+NewCandidates: JV)i
+{ Add those candidates in .iV to Cand which
+have priority above a user-defined threshold; }
+
+Algorithm CollabCrawler(Trace: T, StartingSeeds: S);
+begin
+Cand = S;
+Set priority of each element in Cand to 1;
+while Cand is not empty do
+begin
+Sort Cand in order of decreasing priorities;
+Pick the first page F from Cand;
+Issue a get request for UI:tL F;
+if F satisfies the predicate then save F;
+�
+date learning statistics K:;
+= CalculatePriorities(F, T, ~);
+EzpandList(Cand, Af);
+Delete F from Cand;
+if Cand is empty and at least min-cand
+candidates have not yet been crawled, then add
+a randomly sampled URL from 7" to Cand;
+end;
+end
+
+
+Figure 1: The Collaborative Crawler Algorithm
+
+
+
+that at least rain-canalpages have been crawled before the
+process terminates.
+In the actual implementation, two hash tables were main-
+talned, one of which contained information for the URLs
+(URL hashtable), whereas the other (User hashtable) con-
+tained information about the users accessing the URLs. For
+each user a list of their accesses together with time stamps
+were maintained in the user hashtable, whereas the list of
+the users accessing a UI:tL together with timestamps were
+maintained in the URL hashtable. In addition, a number
+of statistical values on the access behavior of the user were
+maintained in the hash table. These values were required
+in the determination of the predicate access behavior of the
+user. These values are denoted by the self-learning informa-
+tion K: which is collected by the crawler. The self learning
+information K: contains the following values:
+(1) Total number N of URLs crawled.
+(2) Total number Nu of crawled pages satisfying predicate.
+(3) Number qi of crawled pages accessed by user i.
+(4) Number q~ of web pages (satisfying the predicate) ac-
+cessed by user i.
+(5) Number of documents rlj accessed by user i containing
+the signature j.
+(6) Number of documents r .~. (satisfying the"predicate) ac-
+s3
+cessed by user i containing the signature j.
+(7) Number of documents sl belonging to the temporal lo-
+cality of U.
+(8) Number of documents s[ belonging to the temporal lo-
+caiity of U which satisfy the predicate.
+(9) Number of documents s2 which do not belong to the
+temporal locality of U.
+(10) Number of documents s~ not belonging to the temporal
+locality of U which satisfy the predicate.
+
+The quantities (1), (2), (7), (8), (9) and (10) are globally
+maintained in individual variables, whereas the quantities
+(3), (4), (5), and (6) are maintained for each user in the
+hash table. This information are used to estimate the key
+statistical parameters and probabilities as follows:
+(1) P(U) = N~/N
+(2) P(UIP~)= q~/q,
+(3) SFi = ~hll Features j (r~/rlj)/(Number of Features)
+(4) IR u = s[/sl
+(5) IR V= s~/s2
+We note that the above set of estimates suffice to com-
+pute all the interest ratios discussed in the previous section.
+However, it is time-consuming to calculate all the interest-
+ratios after each web page is crawled. In order to achieve
+better efficiency, the process of updating is executed in a
+lazy fashion by CalculatePriorities.
+The preference values
+are updated only for those users which have accessed the
+web page that was last crawled. Then, the interest ratios
+for the candidate web pages accessed by these users are up-
+dated. Even though this results in the interest ratios of a few
+web pages being stale, the web pages which are updated are
+the ones which have the maximum change in their priority
+values because of the last web page being crawled. In addi-
+tion, a periodic process of updating the priorities is applied
+every few iterations in order to update these values. The
+procedure CalculatePriorities returns a list Af of candidate
+URLs whose interest ratios were updated. All those interest
+ratios which are larger than 1 are added to the candidate
+list. This is achieved by the procedure ExpandList. After
+expansion of the list, the candidate page F is removed from
+Cand. This procedure is repeated until at least rnin-cand
+web pages have been crawled and Cand becomes empty. We
+note that one of the inputs to the algorithm is the starting
+seed set S. If topic specific resources in the trace are known,
+then these can be used as the starting seeds; alternatively
+the use of S = {} results in the random sampling of min-
+cand pages from the trace as the default starting point.
+
+3.1 Using linkage information
+We note that even though this paper is tailored towards
+the problem of using user relevance in the crawling process,
+it can be combined with a linkage based system in order to
+find predicate-specific pages which are less popular. In or-
+der to achieve this, the system can find all the web pages
+which are linked to by a predicate-satisfying web page and
+added to the candidate list. As a result, the list Cand be-
+comes a combination of candidates for which we may have
+either web log access information or linkage information. In
+addition, we need to make changes to the process of calcu-
+lation of priorities. In [3], we discussed the computation of
+interest ratios which are analogous to those discussed in this
+paper using purely linkage based information. Let IL(U) be
+the interest ratios computed for a candidate page using the
+c
+method in [3]. Let I (U) be the corresponding user-based
+interest ratio. As discussed earlier, not all web pages have
+both linkage based and user-based information associated
+with them. Therefore, when such information is not avail-
+able, the corresponding value for In(U) or Iv(U) is set to
+one. Since the URL for a candidate page is discovered either
+
+
+
+
+427
+
+o.4e
+
+
+o.~
+
+
+0.~
+
+oJ
+
+
+
+'ii
+~
+-
+0
+"
+-
+0
+
+
+
+
+I-.o-
+LiftCurve(Colla,bctalh,i Crmder)
+I
+-@.~ Cu~ (InlMIk~llf,dCrltwler)
+
+i
+/
+i
+i
+I
+I
+I000
+2OO0
+3OOO
+4OOO
+~�00
+eO00
+Numblr~ PlgellCatawled
+
+
+Figure 2: Performance of Collaborative and Intelli-
+gent Crawler (Predicate is category "SPORTS")
+
+O.4
+
+
+
+
+0.~
+
+
+
+
+~ a.2
+l
+0.1g
+
+
+
+0.1
+
+
+
+o.o~
+"%
+
+
+
+
+-O- tJRCu~ (calllxn~ ~
+
+
+
+
+Figure 3: Performance of Collaborative and Intelli-
+gent Crawler (Predicate is category t'Al:tTS ")
+
+
+from the content of a web page or from the web log, at least
+one of these interest ratios can be calculated effectively. The
+overall interest ratio is defined by IV(U) 텶L(U). We will
+see that the combination of the linkage and user-based sys-
+tems is very powerful in practice in improving the quality of
+the crawl. This is because the user behavior quickly iden-
+tities the most popularly visited resources which often link
+to a large number of closely related pages. These pages are
+added to the candidate list. The addition of such candidates
+facilitates the discovery of some of those rarely accessed web
+pages which may not be found in the traces. These in turn
+help in the discovery of more topically inclined users and
+vice-versa. In other words, some resources can be more eas-
+ily crawled from the user information, whereas others require
+linkage information. These interest ratios thus act in a com-
+plimentary way in finding promising candidates during the
+resource discovery process. As a result, the system works
+better than one which is developed using either purely user
+or purely linkage information.
+
+
+4.
+EMPIRICAL RESULTS
+The system was implementedon an AIX 4.1.4 system with
+100 MB of main memory and 2GB SCSI drive. The results
+were tested using the Squid proxy traces available from [6].
+The performance of the crawler is characterized by using
+the harvest rate P(U), which is the percentage of web pages
+crawled that satisfy the predicate. In order to illustrate our
+results, we will present the lift curve which illustrates the
+gradual improvement of the harvest rate with the number of
+URLs crawled. Initially, the crawling system is slow to find
+relevant web pages, but as the crawl progresses, it gradually
+learns the propensities of the users in terms of their predicate
+satisfaction probability. Correspondingly, the percentage of
+the candidates crawled belonging to the predicate increases
+as well.
+In Figures 2 and 3, we have illustrated an examples of lift
+curves which show the crawling performance of the system
+over time. In these curves, we have used two different pred-
+icates corresponding to the categories of "SPORTS" and
+"ARTS" respectively. The initial behavior of the crawler
+system is random, but as it encounters web pages belong-
+ing to the predicate, the performance quickly improves. In
+the same chart, we have also illustrated the performance
+of the intelligent crawler algorithm from [3]. The intelligent
+crawler algorithm was run using five different starting points
+and the bestof these lift curves (as indicated by the value of
+P(U) at the end of the crawl) was used. It is interesting to
+see that even a single execution of the collaborative crawler
+was significantly more effective than even the best of five
+executions of the intelligent crawler. This tends to indicate
+that the information available in web page links may not be
+very robust in always providing considerably effective infor-
+mation for the crawling process. In [1], the results axe also
+reported for the incorporation of linkage based information
+in the collaborative crawler.
+
+
+5.
+CONCLUSIONS AND SUMMARY
+In this paper, we discussed a method for leveraging user
+experiences for effective topical resource discovery. This is
+the first topical resource discovery system which deviates
+from the pra~:tice of using hyperlink citation behavior as
+the primary source of crawling behavior. The utilization of
+user experiences is critical in designing a system which is
+sensitive to the behavior of users in finding resources which
+are both topically accurate and popularly browsed.
+
+
+6.
+REFERENCES
+[1] C. C. Aggaxwal. Collaborative Crawling: Mining User
+Experiences for Topical Resource Discovery. IBM
+Research Report, 2002.
+[2] C. C. Aggarwal, S. C. Gates, P. S. Yu. On the merits
+of using supervised clustering for building
+categorization systems. KDD Conference, 1999.
+[3] C. C. Aggarwal, F. AI-Garawi, P. Yu. Intelligent
+Crawling on the World Wide Web with Arbitrary
+Predicates. WWW Conference, 2001.
+[4] S. Chakrabarti, M. van den Berg, B. Dora. Focussed
+Crawling: A New Approach to Topic Specific
+Resource Discovery. WWW Conference, 1999.
+[5] A. Rousskov, V. Solviev. On Performance of Caching
+Proxies. http://www.cs.ndsu.nodak.edu/rousskov/
+/research/cache/squid/profiling/papers/
+[6] ftp://ircache.ulaur.net/Traces/
+
+
+
+
+428
+

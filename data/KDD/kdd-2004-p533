@@ -1,0 +1,1319 @@
+Parallel Computation of High Dimensional Robust
+Correlation and Covariance Matrices
+
+
+James Chilson, Raymond Ng,
+Alan Wagner
+Department of Computer Science
+University of British Columbia
+Vancouver, BC, Canada, V6T 1Z4
+{chilson, rng, wagner}@cs.ubc.ca
+Ruben Zamar
+Department of Statistics
+University of British Columbia
+Vancouver, BC, Canada, V6T 1Z4
+ruben@stat.ubc.ca
+
+
+
+ABSTRACT
+The computation of covariance and correlation matrices are
+critical to many data mining applications and processes. Un-
+fortunately the classical covariance and correlation matrices
+are very sensitive to outliers. Robust methods, such as QC
+and the Maronna method, have been proposed. However,
+existing algorithms for QC only give acceptable performance
+when the dimensionality of the matrix is in the hundreds;
+and the Maronna method is rarely used in practice because
+of its high computational cost.
+In this paper, we develop parallel algorithms for both QC
+and the Maronna method. We evaluate these parallel algo-
+rithms using a real data set of the gene expression of over
+6,000 genes, giving rise to a matrix of over 18 million en-
+tries. In our experimental evaluation, we explore scalability
+in dimensionality and in the number of processors. We also
+compare the parallel behaviours of the two methods. Af-
+ter thorough experimentation, we conclude that for many
+data mining applications, both QC and Maronna are viable
+options. Less robust, but faster, QC is the recommended
+choice for small parallel platforms. On the other hand, the
+Maronna method is the recommended choice when a high
+degree of robustness is required, or when the parallel plat-
+form features a high number of processors.
+
+Categories and Subject Descriptors: H.2.8 [Database
+Management]: Database Applications - Data Mining
+
+General Terms: Algorithms, Performance, Experimenta-
+tion
+
+Keywords: parallel, robust, correlation, covariance, Maronna
+
+
+1. INTRODUCTION
+Given n samples of v variables, the correlation between
+two variables measures the strength of the linear relationship
+between the two variables. Given two columns of samples
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD'04, August 22­25, 2004, Seattle, Washington, USA.
+Copyright 2004 ACM 1-58113-888-1/04/0008 ...$5.00.
+of length n, the covariance between Xi and Xj is:
+
+cov(Xi, Xj) = Ave[(Xi - µi)(Xj - µj)]
+
+where µi = Ave(xi) and µj = Ave(xj) are the means. A
+covariance matrix measures the relation between all pairs of
+variables. The correlation of two variables is the normalized
+value of the covariance of the two variables and is related to
+the covariance as follows:
+
+corr(Xi, Xj) =
+cov(Xi, Xj)
+ij
+
+where i and j are the standard deviations of Xi and Xj.
+The computation of covariance and correlation matrices
+is critical to many data mining operations and processes.
+For example, in exploratory data analysis, it is typical to
+determine which variables are highly correlated. Moreover,
+covariance and correlation matrices are used as the basis
+for principal components analysis, for manual or automatic
+dimensionality reduction, and for variable selection. They
+are also the basis for detecting multidimensional outliers
+through computation of Mahalanobis distances.
+·
+
+
+
+
+·
+
+
+
+·
+·
+
+
+
+
+·
+·
+
+
+·
+
+
+
+·
+·
+
+
+
+
+·
+
+
+
+
+·
+·
+
+
+
+
+·
+·
+
+·
+·
+
+
+
+
+·
+·
+·
+
+·
+
+
+
+
+·
+·
+·
+
+
+
+
+·
+
+
+
+·
+·
+
+
+
+
+·
+·
+
+
+·
+Clean Data
+
+
+
+
+x
+y
+
+
+
+
+-2
+-1
+0
+1
+-2
+-1
+0
+1
+QC = 0.98
+
+Maronna = 0.96
+
+Pearson = 0.96
+
+
+
+
+·
+
+
+
+·
+
+
+·
+·
+
+
+
+
+·
+·
+
+·
+
+
+·
+·
+
+
+
+·
+
+
+
+
+·
+·
+
+
+
+
+·
+·
+
+·
+·
+
+
+
+
+·
+·
+·
+·
+
+
+
+
+·
+·
+·
+
+
+
+
+·
+
+
+·
+·
+
+
+
+
+·
+·
+
+·
+·
+
+
+
+·
+·
+
+·
+Contaminated Data
+
+
+
+
+x
+y
+
+
+
+
+-2
+-1
+0
+1
+-2
+-1
+0
+1
+2
+3
+
+
+
+QC = 0.60
+
+Maronna = 0.90
+
+Pearson = 0.08
+
+
+
+
+Figure 1: Advantage of Maronna over QC and the
+classical Pearson Correlation.
+
+Unfortunately, the classical covariance and correlation ma-
+trices are very sensitive to the presence of multidimensional
+outliers. The example shown in Figure 1 illustrates the prob-
+lem.
+If the data were perfectly clean, the classical Pear-
+son correlation coefficient would be 0.96. However, a small
+percentage of outliers (in this case, around 10%) was suf-
+ficient to create disaster for the classical coefficient, as it
+Research Track Poster
+
+
+
+
+533
+
+drops to 0.08. To improve on the robustness of covariance
+and correlation, many methods have been proposed to deal
+with "dirty" large databases.
+While Section 1.1 will give
+a more detailed discussion on related work, two state-of-
+the-art methods are Quadrant Correlation (QC)
+[1] and
+the Maronna method [5]. For the given example, the cor-
+relation based on QC drops from 0.98 when the data were
+perfectly clean, to 0.60 with a small percentage of outliers.
+The Maronna method is even more robust, as the value only
+changes slightly from 0.96 to 0.90. In Section 1.1, we will ex-
+plain in more precise mathematical terms why the Maronna
+method is more robust than QC.
+However, the problem for QC and the Maronna method is
+that they are computationally expensive, particularly when
+the size of the matrix (i.e., v×v) is large. Thus, the problem
+we tackle in this paper is: How to compute high dimensional
+robust covariance and correlation matrices?
+The approach we explore in this paper is based on paral-
+lelization. This is motivated by the fact that multi-processor
+compute clusters have become inexpensive in the past decade,
+to the extent that even a small organization (e.g., a medical
+research laboratory) can find such a cluster affordable. For
+the algorithms we develop here, the target architecture is a
+compute cluster consisting of commodity processors running
+MPI/LAM, a public domain version of MPI. MPI (Message
+Passing Interface) is a standardized communication library
+for distributed memory machines and makes the programs
+easy to port to a variety of parallel machines [2].
+This paper makes the following contributions:
+
+· First, we investigate the parallelization of QC on clus-
+ters. We find that the key computation is closely re-
+lated to matrix multiplication, thus QC can be exe-
+cuted on large parallel machines in a similar manner.
+
+· We also investigate the parallelization of the Maronna
+method. In the Maronna method the key step is for
+each pair to compute an iteration approximating the
+correlation. Each pair can be computed independently,
+thus Maronna is amenable to parallel computation.
+
+· We conducted extensive empirical evaluation of the
+parallel algorithms with several real data sets.
+We
+report here the results based on the gene expression
+levels of 6,068 genes.
+We examine scalability in di-
+mensionality and in the number of processors, and
+the trade-offs between accuracy and computational ef-
+ficiency. We conclude with a "recommended recipe"
+covering various situations.
+
+1.1 Related Work
+The robustness of an estimate can be measured by its
+breakdown point - the maximum fraction of contamination
+the estimate can tolerate. There has been considerable em-
+phasis on obtaining positive definite, affine equivariant esti-
+mators with the highest breakdown point of one-half. How-
+ever, all known affine equivariant high-breakdown point es-
+timates are solutions to a highly non-convex optimization
+problems and as such do not scale up to the large databases
+which are commonplace in data mining applications.
+The"Fast MCD" (FMCD) method that has recently been
+proposed is much more effective than naive subsampling for
+minimizing the objective function of the MCD [7].
+But
+FMCD still requires substantial running times for large v,
+and it no longer retains a high breakdown point with high
+probability when n is large.
+Much faster estimates with high breakdown points can be
+computed if one is willing to drop the requirement of affine
+equivariance of the resulting covariance matrix. Examples
+include classical rank based methods, such as the Spear-
+man's  and Kendall's ; methods based on 1-D "Huberized"
+data; and bivariate outlier resistant methods (see [3]). Re-
+cently, the latter two strategies have been combined to give
+new pairwise methods, such as QC, that preserve positive
+definiteness with a computational complexity of O(nv2) [4].
+However, these pairwise methods are not affine equivariant
+and may be upset by two-dimensional structural outliers. In
+contrast, the Maronna method is positive definite and affine
+equivariant, and is thus more robust than QC. The problem,
+of course, is that the extra robustness requires a lot more
+computational effort.
+
+
+
+2. GENE EXPRESSION ANALYSIS
+In this section, we show a real-life application which re-
+quires the computation of a high-dimensional robust covari-
+ance matrix. This application arises from our strong ties
+with the cardiovascular research laboratory at the St Paul's
+Hospital in Vancouver (www.icapture.ubc.ca). Rheumatic
+valves in the heart cause heart failures, and represent one of
+the most common reasons for heart transplants. To under-
+stand how rheumatic valves are formed, researchers at the
+hospital collect gene expression data (i.e., using microarray
+technologies) for a number of rheumatic valves and normal
+valves. Specifically, for each sample/valve, each gene is as-
+sociated with a non-negative count representing the number
+of times the gene has expressed itself in the valve. Based on
+these counts, we compute the covariance matrix.
+These matrices are useful for a variety of reasons. One
+usage is that for any given gene G, we can find a ranked list
+of genes which are the most positively or negatively corre-
+lated with G. Another use for the correlation matrix is to
+form a dissimilarity function for clustering a given collection
+of genes. Dendrograms of this kind help medical researchers
+to identify the biological pathways that are heavily involved
+in producing rheumatic valves.
+There are, however, a number of problems in computing
+the covariance matrix. First, even though microarray tech-
+nologies have improved dramatically in recent years, gene
+expression data are noisy (i.e., contain many outliers). Thus,
+robust methods for computing the covariance matrix are
+valuable. Second, as usually the case for many biomedical
+applications, n, the number of samples, may not be large.
+In our case each sample corresponds to a heart valve, and it
+takes a long time to collect even 10 rheumatic values from
+heart transplant patients. Minimizing the negative impact
+of noise is all the more important because of the small num-
+ber of samples. Last but not least, the dimensionality of
+the matrix is very high. In this paper, we experiment with
+a data set of 6068 expressed genes.
+This corresponds to
+a 6068 × 6068 matrix, with over 18 million entries. This
+magnitude far exceeds the capability of state-of-the-art al-
+gorithms for computing robust covariance matrices. In fact,
+we recently received a new version of the data set with over
+12,000 expressed genes. Thus, there is an urgent need to
+develop algorithms for computing high dimensional robust
+covariance and correlation matrices.
+Research Track Poster
+
+
+
+
+534
+
+3. PARALLEL CORRELATION AND
+COVARIANCE METHODS
+The Maronna and Quadrant Correlation (QC) methods
+take as input a n × v matrix X with v variables and n cases,
+and compute as output a v×v matrix, which is either the co-
+variance or correlation matrix. In general, both algorithms
+perform the following steps:
+
+1. Calculate the median/MAD for each variable in X,
+where MAD stands for the Median Absolute Deviation
+of the data from its median (cf: Section 3.3).
+
+2. Compute the pairwise covariance/correlation for X.
+
+3. Restore matrix positive definiteness, if required.
+
+Given space limitations, we mainly concentrate on step
+two, the covariance/correlations computation. The Maronna
+method is discussed in Section 3.1, while QC is discussed in
+Section 3.2. Step one is covered briefly in Section 3.3. Step
+three, restoring the positive definiteness of the covariance
+and correlation matrices, may or may not be necessary de-
+pending on the applications. Thus, for space limitations, we
+omit any details here on step three.
+
+3.1 The Maronna Method
+A description of the main portion of the parallel version of
+Maronna is shown in Figure 2. Each of the O(v2) pairwise
+calculations can be computed independently.
+Each inde-
+pendent computation for a given vi and vj is iterative and
+converges at different rates.
+The inner sequential part of
+each computation, depicted in Figure 2, does the following.
+
+
+1. In parallel For each pair of variables i, j
+2. Initially
+
+3.
+µ(0) =
+"median[
+i], median[j]#
+
+
+4.
+(0) =
+»
+(MAD[i])2
+0
+0
+(MAD[j])2
+­
+
+5. Let xq be the vector
+hXi [q
+], Xj[q]i.
+6. ITERATE
+7.
+Given µ(k
+)
+and (k
+)
+
+8.
+For q = 1 to n
+9.
+// Calculate the Mahalanobis distance.
+10.
+mah[q] = [xq - µ(k
+)
+] · [(k
+)
+]-1 · [xq - µ(k
+)
+]T
+11.
+// down-weigh outliers
+12.
+W [q] = weight(mah[q])
+13.
+Calculate
+14.
+µ(k
++1)
+=
+Pn
+q=1
+W [q] · xq/ Pn
+q=1
+W [q]
+
+15.
+(k
++1)
+=
+1
+n
+·
+n
+X
+q=1
+(W [q])2 ·
+hxq
+- µ(k
++1)
+iT
+·
+hxq
+- µ(k
++1)
+i
+16.// Check for convergence.
+17.UNTIL (determinant |(((k
+)
+)-1((k
++1)
+) - 1| <
+)
+
+
+
+Figure 2: Parallel Maronna Method
+
+First, the values involved in the iteration are initialized in
+step 3 and 4. µ is a vector of length two, and is initialized
+with the median of the data variables involved in this cor-
+relation calculation.  is a 2 x 2 matrix that will hold the
+estimate values for the correlation upon convergence. It is
+initialized as a diagonal matrix holding the MAD of the cor-
+relation variables in the diagonal. After initialization, the
+algorithm repeats the following process. The Mahalanobis
+distance is used to measure the distance between the samples
+of the pair of variables in step 10. The Mahalanobis distance
+measures the distance between a data point and the centroid
+of all the data points. A weight function is then applied to
+the distance values in step 12 to decrease the influence of
+outliers in the data. Our weight function uses Huber's score
+function as the robust M-estimate to score the influence of
+the sample points to the median and variance.
+
+
+weight(y)
+=
+
+1
+|y|  c
+c/|y| |y| > c
+(1)
+
+
+The weight function gives weights between zero and one that
+are applied to the data.
+The weight function will weigh
+normal data variables near one and down-weigh the outlier
+values with weights closer to zero.
+The weighted data is used to calculate new values for µ
+and  for the next iteration in steps 14 and 15. The loop
+continues until the change in covariance from one step to
+another is within the desired tolerance. The algorithm is
+known to converge, but the rate varies depending on the
+input.
+The sequential version of Maronna uses a single processor
+to perform all of the pairwise computations. The indepen-
+dence of these O(v2) pairwise computations makes Maronna
+an excellent candidate for parallelization. The parallel ver-
+sion divides the pairwise computations into p groups, one
+for each processor. The challenge in computing the covari-
+ances efficiently is to ensure that the work is distributed and
+equally shared among the processors. The number of itera-
+tions varies significantly and can potentially slow down the
+computation while some processors wait for others to finish.
+As well, care must be taken in the distribution and gather-
+ing of the results since, for large problem sizes, there are a
+large number of pairs to be distributed. The experiments in
+Section 4 show that Maronna can achieve significant speed-
+up on large problem sizes and can effectively use a large
+number of processors.
+
+3.2 Quadrant Correlation
+Figure 3 describes parallel QC. The major computation
+in QC is a large matrix multiplication. In the algorithm,
+we represent the matrices in column-major order, where the
+columns are variables. Thus X[i] refers to the ith column
+(variable). After calculating the median and MAD for all
+the variables, the algorithm creates a temporary matrix to
+hold the normalized values:
+
+X[i][j] =
+X[i][j] - median(X[i])
+MAD(X[i])
+
+The X matrix is then used to create a matrix Y of all 1's,
+-1's, and near zero values by applying a function, , that is
+similar to the sign function, to all the elements in X.
+
+
+(x, c) =
+
+sign(x)
+if |x| > c
+x
+c
+otherwise
+
+Our sign function cuts off the values within c of zero and
+assigns them to the value
+x
+c
+. Our choice for c in the code
+was 0.00001. In actuality, by our  function, we are using a
+Huberized estimator, which in the limiting case is Quadrant
+Correlation [1]. The limiting case here would be to use the
+sign function in the place of .
+In the next step, the algorithm calculates the following
+Research Track Poster
+
+
+
+
+535
+
+equation to fill in each entry of the correlation matrix:
+
+
+cor(i, j)
+=
+1
+n
+P(
+(X[j])) · ((X[i]))
+q( 1n
+P(
+(X[j]))2 ·
+1
+n
+P(
+(X[i]))2)
+(2)
+
+
+The computationally expensive part of the calculation is the
+part where the numerator is calculated using a matrix mul-
+tiplication between Y and its transpose in steps 4 and 6 of
+Figure 3. The operations involved are approximately O(v3).
+The denominator is the geometric mean of the average num-
+ber of nonzero elements for a pair of columns i and j. This
+part of the calculation takes O(v2) time and is set up in step
+9. The equation finishes in step 12 where the denominator
+divides the numerator. Again, this division occurs for every
+element in the matrix. Thus, step 12 requires O(v2) time.
+
+
+
+1.
+// Find "sign" () of normalized values.
+2.
+Construct Y where Y [i][j] = (X[i][j] - median[i])/MAD[i], C);
+3.
+// Parallel matrix multiply.
+4.
+In parallel compute matrix cor = Y · Y
+T
+;
+5.
+// Scale the matrix in parallel.
+6.
+In parallel Y =
+1
+n
+· Y ; (element-wise)
+7.
+For all i, j, set Y [i][j] = (Y [i][j])2;
+8.
+Construct vector D
+9.
+D[i] =
+1
+avg(Y
+[i])
+;
+
+10. // Parallel operations on the distributed matrix object.
+11. In parallel For all i, j set
+12.
+cor[i][j] = cor × D[i] × D[j]
+13.
+cor[i][j] = sin( 
+2
+· cor[i][j]);
+
+
+
+
+Figure 3: Parallel Algorithm for QC.
+
+The parallelization of QC is complicated by the number of
+different types of vector operations that it performs. These
+operations and a matrix multiply need to be performed on
+matrices and vectors that are distributed across the p proces-
+sors. Rather than create our own vector and matrix library
+we implemented QC using the PLAPACK library [8]. PLA-
+PACK is a well-known parallel numerical library from the
+University of Texas at Austin that provides a variety of vec-
+tor and matrix operations. The library is used to construct
+a processor mesh and partition the linear algebra objects,
+vectors and matrices, into blocks that are distributed to the
+processors. Once the objects are distributed the operations
+can be done in parallel with each processor working on their
+pieces of the distributed objects. There is some communica-
+tion between the processors during this computation when
+the values residing on other processors are needed, so the
+processors do not work independently.
+The difficulty in implementing QC using PLAPACK was
+to determine the block size and distribution patterns to
+avoid undue communication between the processors neces-
+sary to perform the various vector and matrix operations.
+It is possible to reduce the communication by replicating
+the matrix in each processor. However, this is impossible
+for larger problem sizes. Memory size was an issue on the
+problem sizes that we experimented with in this paper.
+
+3.3 Median and MAD Calculation
+Maronna and QC use the median and MAD values for
+each variable (i.e., column).
+MAD, which stands for the
+median absolute deviation, measures the deviation of the
+data from the median and is a more robust measure than
+the standard deviation. The MAD value of a variable can
+be directly calculated from the median using the formula
+below.
+
+MAD(X[i]) =
+median(|X[i][j] - median(X[i])|)
+0.6745
+
+The constant .6745 appearing in the formula is the inverse of
+the third quartile of the normal distribution. The numerator
+alone underestimates the standard deviation and dividing by
+.6745 leads to a better estimate [6]. It is possible, with slight
+modifications to the median finding algorithm, to directly
+calculate the MAD values for use by Maronna and QC.
+Parallel median finding algorithms are well-known. We
+choose not to implement a parallel median algorithm partly
+because our focus is high dimensional data where the for-
+mer case is more important, and partly because median-
+finding time is dominated by the correlation/covariance cal-
+culations.
+
+4. EXPERIMENTAL RESULTS
+
+4.1 Experimental Setup
+We evaluated the parallel Maronna and QC methods in
+two different cluster environments: (a) a small platform: a
+collection of eight 500MHz Pentium-3 processors running
+Linux using MPI-LAM on a 100Mbps LAN; and (b) a grid
+platform: WestGRID, a compute cluster consisting of 504
+dual processor 3 GHz Xeon processors running Linux with
+2 GB of RAM on Gigabit Ethernet (www.westgrid.ca).
+The majority of our experiments were performed on the
+Pentium-3 system which provided a dedicated and controlled
+environment to evaluate and test different versions of the
+program. The WestGRID facility was used to evaluate the
+scalability of the two methods for large numbers of proces-
+sors and increasing problem sizes.
+We experimented with several real data sets. The results
+reported below are based on the gene expression levels of
+6,068 genes on rheumatic and normal heart valves, as sum-
+marized in Section 2.
+We repeated each experiment ten
+times and report the best results because these more closely
+represent what performance would be in an ideal setting.
+
+
+
+
+0
+200
+400
+600
+800
+1000
+1200
+1400
+1600
+1800
+2000
+
+
+
+
+1
+2
+4
+8
+
+Processors
+Tim
+e
+(seconds)
+Correlation
+
+Broadcast/Gather
+
+I/O
+
+
+
+
+Figure 4: Maronna Performance for large problem
+size (6000 variables)
+
+
+4.2 Parallel Maronna Method
+Figure 4 shows the total time (wall clock time) taken for
+the Maronna method using the small platform. As expected,
+the total time decreased as we used more processors. On 8
+processors the wall clock time was about 400 seconds, rep-
+resenting a speed-up of 4.5 out of 8.
+Research Track Poster
+
+
+
+
+536
+
+In Figure 4 each bar is divided into the major time com-
+ponents that make up the total time. The most dominant
+components in Figure 4 are the correlation component, the
+I/O, and communication component. The other components
+are so small they do not appear on the chart. A closer exam-
+ination of the correlation component with varying number
+of processors and problem sizes is given in Figure 5.
+
+
+
+
+1
+2
+4
+8
+2000
+4000
+6000
+
+
+0
+200
+400
+600
+800
+1000
+1200
+1400
+1600
+1800
+
+
+
+
+Tim
+e
+(seconds)
+
+
+
+
+Processors
+Variables
+
+
+
+Figure 5: The Correlation Component
+
+Figure 5 shows that the main computational part of the
+method, calculating the correlation, achieved good speed-up
+over all problem sizes and machine sizes. Its overall speed-up
+was around 5.5 on 8 processors.
+The communication component included the time needed
+to distribute the pairwise correlations to the processors and
+the time to gather the results back to the manager proces-
+sor.
+It increased with both problem size and number of
+processors.
+Apart from the correlation and the communication com-
+ponents, the remaining component included the median/MAD
+calculation, matrix fill time, I/O time and miscellaneous
+other operations to initialize and manage memory.
+The matrix fill time was the time required to copy the
+results from the message buffers into the final result matrix.
+We could have eliminated much of this time by gathering
+the result directly into the matrix. In general, the time was
+small and constant. It did increase the time substantially
+when memory constraints resulted in page faults. This ex-
+plains the relatively large time on one and two processors,
+41 seconds and 22 seconds respectively. These page faults
+did slightly inflate the apparent speed-up in Figure 4.
+The I/O time remained relatively constant for a fixed pro-
+gram size. The program used a manager-worker organiza-
+tion where one processor, the manager, read in the matrix,
+distributed the matrix to the worker processors, gathered
+the result and wrote it to disk. The time to write the v × v
+matrix to disk was the major portion of the I/O time.
+
+4.3 Parallel QC Method
+Next we turn our attention to the parallel QC algorithm.
+QC calculated its correlation using several vector operations
+and matrix multiplication.
+The performance of QC for a
+large problem is shown in Figure 6.
+On 8 processors the wall clock time was 105 seconds,
+which was a speed-up of only 1.6 out of 8. Notice that QC
+executed faster than the Maronna method on the same prob-
+lem. Again, the bars in Figure 4 show the major time com-
+ponents that made up the total time. A clear observation is
+that QC was not able to use the processors as effectively as
+the Maronna method, and at 8 processors there was little to
+be gained by adding more processors. It is evident from the
+0
+20
+40
+60
+80
+100
+120
+140
+160
+180
+
+
+
+
+1
+2
+4
+8
+
+Processors
+Tim
+e
+(seconds)
+Overhead
+
+Correlation
+
+Scatter/Gather
+
+I/O
+
+
+
+
+Figure 6: QC Performance for large problem size
+(6000 variables)
+
+
+figure that the correlation calculation was dominated by the
+the communication time and I/O time. At 8 processors the
+correlation time was only taking 5 seconds, a fraction of the
+overall execution time of 105 seconds. QC's correlation per-
+formance looks very similar to that of Maronna in Figure 5,
+except that QC's time range extends to 45 seconds instead
+of Maronna's 1800 seconds.
+Except for the small problems sizes the speed-up was bet-
+ter than expected, in some cases superlinear. The reason
+for the superlinear speed-up related to how the PLAPACK
+library distributed matrix blocks to processors. It assumed
+a mesh formation and in these experiments attempted, as
+best possible, to arrange the processors in a square mesh.
+This distribution affected the performance, making it more
+difficult to determine exact speed-up numbers.
+
+
+
+
+1
+2
+4
+8
+2000
+4000
+6000
+
+0
+5
+10
+15
+20
+25
+30
+35
+
+
+
+
+Tim
+e
+(seconds)
+
+
+
+
+Processors
+Variables
+
+
+Figure 7: QC Communication Component
+
+The distribution of blocks to processors also affected com-
+munication. The communication component for QC is shown
+in Figure 7. The gather portion of QC used a PLAPACK
+primitive call to assemble the distributed matrix into a con-
+tinuous buffer on one processor. The time shown for sequen-
+tial communication was actually a memory-to-memory copy.
+The large copy times were due to page faults and were not
+present when executed on a cluster with more memory.
+
+4.4 Scalability on a Grid Platform
+From the previous figures, it is clear that the Maronna
+method was more amenable to parallelization than QC. The
+question to be answered is when the speed-up will stop for
+the Maronna method. To answer this question, we ran the
+parallel Maronna and QC on the WestGRID cluster using
+up to 128 processors on the gene data set. There was some
+variation in the experiments. Most of the variation came
+Research Track Poster
+
+
+
+
+537
+
+in the category of I/O time, and times varied by as much
+as 170 seconds for Maronna and 30 seconds for QC. Each
+experiment was run ten times with
+= 10-
+7
+and we used the
+smallest repeatable value. Although the processors were not
+shared, the network and file system were shared, resulted in
+varying times. The smallest value best reflected what would
+be possible on a dedicated machine.
+
+
+
+
+0
+5
+10
+15
+20
+25
+30
+
+
+
+
+1
+2
+4
+8
+16
+32
+64
+128
+
+Processors
+S
+peedup
+Maronna
+
+QC
+
+
+
+
+374.7
+236.2
+131.5
+71.3
+37.2
+28.7
+19.2
+15.5
+
+
+
+
+21.9
+14.2
+16.2
+31.2
+80.2
+
+
+
+
+Figure 8: Speed-up on WestGRID
+
+The speedup for QC and the Maronna method are listed
+in Figure 8.
+The data points are labelled with the total
+runtime values for Maronna and for QC with eight or more
+processors. As an example, the Maronna method using 128
+processors took 15.5 seconds and had a speedup of 24.1. For
+the Maronna method, the total runtimes continued to de-
+crease as we added processors. The times decreased from
+374.7 seconds on a single machine to 15.5 seconds with 128
+processors. We were surprised at how well Maronna per-
+formed on a large cluster. One may expect to have satu-
+rated the manager processor since it is the only one allocat-
+ing and distributing tasks. The fact that this did not occur,
+even when the total execution time was 15.5 seconds, sug-
+gests that the Maronna method will continue to scale well
+to larger problems and processor sizes. For a problem size
+of 6068, at 128 processors, there is little to be gained by
+adding more processors.
+As expected from previous discussions, the speed-up curve
+for QC in Figure 8 shows that QC quickly reached the point
+that it can not effectively use more processors. The times
+decreased for up to 16 processors, where the running time
+was 14.2 seconds compared to Maronna's 37.2, but commu-
+nication overhead began to dominate and the times began
+to increase.
+The good news is that QC executed quickly
+on large problems and was able to exploit a small degree of
+parallelism. We see that QC's running time was dramati-
+cally smaller than Maronna's until the overhead became a
+problem for QC. One may be able to use more processors to
+solve larger problems with QC. However, the communication
+overheads in QC were more significant than Maronna's.
+
+
+5. CONCLUSION
+This paper has shown that robust methods for calculat-
+ing high dimensional correlation and covariance matrices are
+feasible when implemented in parallel. These methods now
+make it possible to not only solve for large correlation and
+covariance matrices in a timely fashion, but also compute
+them with a more robust approach.
+Our experiments were performed on a real dataset with
+6068 variables representing the expression levels of genes in
+20 patients. The results show that QC scales well for up to 8
+processors. Maronna is able to scale up much further beyond
+since the computation portion requires no communication
+between processors. This helps Maronna to achieve speed-
+up on more than 8 processors, up to 128 as can be seen from
+the WestGRID results. QC is still faster, but Maronna is
+more robust and scalable to more processors.
+The QC and Maronna algorithms are good for solving dif-
+ferent types of problems. We have created a recipe in Figure
+9 to suggest which algorithm to use based on the given re-
+sources and needs. With low dimensional data, the Maronna
+method gives robust results and is not computationally ex-
+pensive. With high dimensional data however, the choice
+depends on the application's need for robustness. If only
+a moderate degree of robustness is necessary, and resources
+are limited to small clusters, then QC works best. If a large
+cluster is available, either QC or Maronna works well. On
+the other hand, for very robust applications, the purpose of
+the calculation may be considered. If the covariance matrix
+is needed for other calculations, it is best to use the Maronna
+method because of its higher quality results. If the output
+is intended only for preliminary exploration or visualization,
+then QC may be chosen for its performance.
+
+
+Dimension
+
+
+
+
+Robustness
+High
+
+
+
+
+Output
+Destination
+Cluster Size
+Very Robust
+Robust
+
+
+
+
+Visualization
+Input to Other
+Operations
+Large
+Small
+Low
+
+
+
+
+Maronna
+
+
+
+
+QC
+QC or
+Maronna
+Maronna
+QC or
+Maronna
+
+
+
+Figure 9:
+Recipe for Choosing a Parallel Robust
+Correlation/Covariance Algorithm
+
+6. REFERENCES
+[1] F. A. Alqallaf, K. P. Konis, and R. D. Martin. Scalable robust
+covariance and correlation estimates for data mining. In
+Proceedings of the Seventh ACM SIGKDD, pages 455­460,
+1990.
+[2] M. P. I. Forum. MPI: A message-passing interface standard.
+Technical Report UT-CS-94-230, Department of Computer
+Science, University of Tennessee, 1994.
+[3] R. Gnanadesikan and J. R. Kettenring. Robust estimates,
+residuals, and outlier detection with multiresponse data.
+Biometrics, 28:81­124, 1972.
+[4] R. Maronna and R. Zamar. Robust estimates of location and
+dispersion for high dimensional data sets. Technometrics, 2002.
+to appear.
+[5] R. A. Maronna. Robust m-estimators of multivariate location
+and scatter. The Annals of Statistics, 4(1):51­67, 1976.
+[6] R. D. Martin and R. H. Zamar. Asymptotically min-max
+bias-robust M-estimates of scale for positive random variables.
+Journal of the American Statistical Association, 84:494­501,
+1989.
+[7] P. Rousseeuw and V. Driessen. A fast algorithm for the
+minimum covariance determinant estimator. Technometrics,
+41:212­223, 1999.
+[8] R. A. van de Geijn. Using PLAPACK. Scientific and
+Engineering Computation Series. MIT Press, 1997.
+Research Track Poster
+
+
+
+
+538
+

@@ -1,0 +1,703 @@
+Towards Scalable Support Vector Machines using
+Squashing
+
+
+Dmitry Pavlov
+Info. and Comp. Science
+University of California, Irvine
+Irvine, CA, 92612
+pavlovd@ics.uci.edu
+Darya Chudova
+Info. and Comp. Science
+University of California, Irvine
+Irvine, CA, 92612
+dchudova@ics.uci.edu
+Padhraic Smyth
+Info. and Comp. Science
+University of California, Irvine
+Irvine, CA, 92612
+smyth@ics.uci.edu
+
+
+ABSTRACT
+Support vectormachines (SVMs)provide classi cation mod-
+els with strong theoretical foundations as well as excellent
+empirical performance on a variety of applications. One
+of the major drawbacks of SVMs is the necessity to solve
+a large-scale quadratic programming problem. This pa-
+per combines likelihood-based squashing with a probabilis-
+tic formulation of SVMs, enabling fast training on squashed
+data sets. We reduce the problem of training the SVMs on
+the weighted \squashed" data to a quadratic programming
+problem and showthatitcanbesolved using Platt'ssequen-
+tial minimal optimization (SMO) algorithm. We compare
+performance of the SMO algorithm on the squashed and the
+full data, as well as on simple random and boosted samples
+ofthe data. Experiments ona number ofdatasets show that
+squashing allows one to speed-up training, decrease memory
+requirements, and obtain parameter estimates close to that
+ofthe full data. Moreimportantly, squashing produces close
+to optimal classi cation accuracies.
+
+Categories and Subject Descriptors
+H.2.8 Information Systems]: Database Management|
+DatabaseApplications,DataMining I.2.6 ComputingMethod-
+ologies]: Arti cial Intelligence|Learning
+
+General Terms
+supportvectormachines(SVMs),scalability, squashing, boost-
+ing
+
+1. INTRODUCTION
+Following the pioneering work of Vladimir Vapnik 15], sup-
+portvectormachines (SVMs)aresteadily gaining popularity
+inthemachine learning community. SVMshavebeenproven
+to exhibit several attractive theoretical properties including
+maximum margin separation between the classes. In addi-
+tion, SVMs have been empirically shown to outperform con-
+ventional classi ers on a variety of benchmarks 13]. How-
+ever, the applicability of SVMs to large datasets is limited
+because of the high computational cost involved in solving
+quadratic programming problem arising in their training.
+Various training algorithms have been proposed to speed
+up the training, including chunking 13], Osuna's decom-
+position method 9], and Sequential Minimal Optimization
+(SMO) 11]. Although these algorithms accelerate thetrain-
+ing, they do not scale well with the size of the training data.
+Another approach to reducing the computational cost is to
+use approximation methods. The simplest method is sam-
+pling fromthe original dataset andusing the sample totrain
+the SVM. An extension of this idea was explored by Pavlov
+et. al. 10]who reported results on the application of boost-
+ing to training SVMs. Boost-SMO algorithm trains a se-
+quence of SVM classi ers on samples of data so that each
+subsequent classi er concentrates mostly on theerrors made
+by the previous ones 12,10]. While this method is not opti-
+mal in general, it allows for fast training of SVMs, has sub-
+stantially lower memory cost and yields performance close
+to that of SMO on the full data.
+In this paper we suggest another method for scaling SVMs
+up based on squashing. DuMouchel et. al. 5] and Madigan
+et. al. 7] recently introduced squashing as a technique that
+allows onetoscaleadatasetdownwhilepreserving itsstatis-
+tical properties. Inparticular, likelihood-based squashing 7]
+assumes a particular statistical model and tries to preserve
+the behavior of the likelihood function of the original data
+(referred to as the \mother-data") in the neighborhood of
+themaximum likelihood solution. Toapply likelihood-based
+squashing to SVMs it is necessary to have a probabilistic
+interpretation (see, e.g., 6, 16]). We use an interpretation
+of the SVM training procedure 14] as a problem of nding
+maximum aposteriori values for theparameters ofthe SVM.
+We show that the probabilistic interpretation of SVM train-
+ing in conjunction with likelihood-based squashing allows
+one to scale the training up. We reduce the problem of
+training the SVMs on the weighted \squashed" data to a
+quadratic programming problem and show that it can be
+solved using the SMO algorithm. We compare the perfor-
+mance of the SMO algorithm on the squashed and the full
+data, as well as on simple random and boosted samples of
+the data. Experiments on a number of datasets show that
+squashing allows one to speed-up training, decrease mem-
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+295
+
+ory requirements, and obtain parameter estimates close to
+that of the full data. More importantly, squashing produces
+classi cation accuracy that is close to optimal. Note that
+although our results can be directly generalized to large-
+scale datasets that do not t in the main memory, we are
+using moderately sized data that resides in memory in our
+experiments.
+The restofthe paper is organized as follows. We give a brief
+overview of SVMs in section 2. We then describe squash-
+ing and its application to SVMs in more detail in section 3.
+Section 4 describes results of empirical evaluation of the al-
+gorithms on 4 datasets. In section 5 we draw conclusions
+and discuss possible directions for the future work.
+
+2. SVMS: A BRIEF OVERVIEW
+We give a brief overview of linear SVMs here. Suppose that
+we have a total of N labeled patterns in the d-dimensional
+space D = f(xi yi)g belonging to two classes, so that labels
+yi are either ;1 or 1.In linear SVMs the line separating the
+classes is sought in the form
+y =<w x>+b
+(1)
+where w is the normal vector and b is the intercept of the
+hyperplane. The problem of nding the maximum margin
+separation betweentheclasses is equivalent totheminimiza-
+tion of kwk2L2 with the additional constraints yi(< w xi >
++b) 1 to ensure that all the patterns in the training set
+are classi ed correctly 4]. However, in most cases perfect
+separation is impossible and we need to trade errors on the
+individual training patterns for the maximum margin. The
+optimization problem becomes
+minwbE = minwbf12kwk2 +C
+N
+X
+i=1
+ig
+(2)
+
+subject to
+yi(<w xi >+b) 1; i
+(3)
+where C is a tradeo constant and i are the non-negative
+errors. Thus, learning theparameters oftheSVMisreduced
+to a linearly constrained quadratic programming problem.
+The standard SMO algorithm solves the dual of problem 2
+and 3 by decomposing it into the smaller problems that can
+be solved analytically. SMO is provably optimal 8].
+Several authors (e.g., 16, 14]) have shown that the right
+side of Equation 2 can be treated as a log-posterior on the
+parameters w and b, with the rst term corresponding to a
+prior on w and the second one to the likelihood. The prior
+on w will have a normal distribution with zero mean:
+p(w) exp(;kwk2)
+(4)
+while the log-likelihood of the data will (up to a constant
+additive factor independent of w and b) be proportional to:
+lf(w b)/
+N
+X
+i=1
+I(1;yi <w xi >+b])
+(5)
+
+where I(z) is z times the indicator function of z.
+By solving the dual optimization problem via SMO one es-
+sentially nds the maximum aposteriori values for w and b.
+We will use this probabilistic interpretation of the training
+procedure to develop a squashingprocedure for SVMs.
+
+3. SQUASHING FOR SVMS
+Toillustrate theidea ofsquashing letusassumethatwehave
+selected a probabilistic model p(zj ) for the data D and our
+objective is to nd the maximum likelihood estimate ML
+for the vector of parameters :
+
+ML = arg max
+N
+X
+i=1
+logp((xi yi)j ):
+(6)
+
+Further,supposethatthetermsinequation6canbegrouped
+(or clustered) so that thelikelihoods ofthe individual points
+within each group do not vary signi cantly in the neighbor-
+hood of ML. The squashing procedure eliminates points
+that contribute similar amounts to the likelihood by replac-
+ing each cluster with a single point placed at its center of
+mass and a weight equal to the number of points in the clus-
+ter. The maximum likelihood estimate can now be found
+from expression 7 which approximates equation 6:
+ML ' arg max
+Nc
+X
+c=1
+clogp((xc yc)sqj ):
+(7)
+
+HereNc isthe number ofclusters, c is theweight (orequiv-
+alently the number of points in the original cluster c) and
+(xc yc)sq is the squashed data point placed at the center
+of the cluster c. Note that we typically look for at least a
+50-100 times reduction in the amount of data so that con-
+ventional algorithms can be applied to the squashed data
+directly.
+Notice that clustering at this step should not be computa-
+tionally more intensive than solving the original maximum
+likelihood problem on the mother-data. In the formulation
+given in 7] squashing makes only two passes through the
+mother-data. It evaluates the likelihoods of the training
+points for certain choices of and forms the so-called likeli-
+hood pro les in the rst pass. After this Nc points are ran-
+domly selected to forminitial centers of clusters. Finally, on
+the second pass each training point is assigned tothe cluster
+whose center's likelihood pro le is closest to the likelihood
+pro le of the data point.
+Important design issues for the squashing algorithm include
+the choice of the number and location of the points in the
+parameterspace toevaluate thelikelihoods at,andthenum-
+ber of squashed data points to ensure a su ciently good ap-
+proximation. Various factorial designs 3] in the parameter
+space are suggested in 7]. While this method is universal,
+as we noted above, for SVMs we can sample the values of w
+from the prior distribution in equation 4. The choice of the
+intercept term b can be made from the condition that the
+hyperplane goes through the cloud of training points. We
+evaluate the likelihood of each training point for the xed
+pair of w and b and repeat the selection procedure L times,
+where L is the length of likelihood pro le. Our experiments
+show that for SVMs the performance of the squash-SMO
+method is almost insensitive to the choice of L as long as L
+is at least on the order of 102.
+Suppose that we have performed squashing of the original
+
+
+
+296
+
+data set using the likelihood de ned in equation 5. We now
+need to classify the squashed dataset Dsq = f(xc yc)sqg
+containing Nc weighted points. An expression for the like-
+lihood of the squashed dataset (up to a constant additive
+factor independent of w and b) is proportional to
+lsq(w b)/
+Nc
+X
+c=1
+cI(1;ycsq < w xcsq > +b])
+(8)
+
+since the squashed dataset contains c points coinciding
+with (xc yc)sq. Going back to the non-probabilistic formu-
+lation we will have the following optimization problem for
+the squashed data:
+minwbEsq = minwb12kwk2 +Csq
+Nc
+X
+i=1
+i i
+(9)
+
+with the constraints
+yisq(<w xisq >+b) 1; i
+(10)
+where the slack variables i are non-negative as before. It is
+easy to see that the substitution of slack variables i = i i
+transforms the objective function for the squashed problem
+into exactly the same form as we had for the mother-data,
+while theinequalities forconstraints will haveslack variables
+i divided by the corresponding weights. Thus, the only
+di erence between the dual problems for the mother- and
+the squashed data will be in the allowable regions for the
+Lagrange multipliers: the ith multiplier will be bounded by
+Csq i in the squashed data as opposed to C in the mother-
+data. Oncethe SMOcode is updated toaccount forthenew
+bounds on Lagrange multipliers, it can be used directly on
+the weighed data from squashing.
+
+4. EXPERIMENTS
+We have run experiments on four datasets, one of which is
+synthetic and the rest are publicly available at either the
+UCI machine learning 2] or UCI KDD repositories 1]. We
+evaluated theperformance ofthe full-SMO (SMOon thefull
+training data), srs-SMO(SMO on asimple random sample),
+squash-SMO (SMO on the squashed data) and boost-SMO
+(SMO on the boosted samples) with respect to the misclas-
+si cation rate,thetime tolearn theparameters ofthemodel
+and the memory used during the training.
+We performed all experiments on Sun Solaris 2.7 UNIX
+workstation with two 168MHz Sparc CPUs and 256Mb of
+main memory. We averaged results for squash-SMO, boost-
+SMO and srs-SMO over 100 runs to account for variability
+in the data resulting from sampling. Our implementation
+of the SMO algorithm used caching 11] to store frequently
+used dot products.
+
+4.1 Results on Synthetic Data
+Synthetic data was obtained by sampling from the specially
+designed piece-wise gaussian distributions in 2D. Each dis-
+tribution is composed of two parts as follows. Let g1(x y)
+and g2(x y) be two gaussian distributions, with the equal
+means = ( x y) = (;0:75 0) and diagonal covariance
+matrices
+1
+and
+2
+, such that (
+1
+)11 = 1, (
+2
+)11 = 3,
+(
+1
+)22=(
+2
+)22 = 9. Let the probability density for one of
+the classes be g1(x y) for x< x and g2(x y) for x> x so
+thatthere isadiscontinuity atx= x. Another distribution
+is a mirror symmetrical image of the rst one relative to the
+line x = 0. We generated 5000 examples of each class for
+both training and test sets. This example was speci cally
+tailored to have high density of data from both classes in
+the neighborhood of the optimal decision boundary x =0.
+Recall thatweseektheboundary intheformw1x+w2y+b =
+0, here w = (w1 w2) is a slope vector and b is an intercept.
+Table 1 illustrates how dramatically di erent was the per-
+formance of squash-SMO from srs-SMO on this dataset. In
+the rst column we report the average relative error in pa-
+rameter estimates over 100 runs, where the error is de ned
+as follows:
+E2 =
+kw
+f
+;w
+s
+k2+(bf ;bs)2
+kwfk2+bf2
+:
+(11)
+Here (wf bf) are the parameters estimated by the SMO al-
+gorithm on the full data and (ws bs) are obtained from ei-
+ther the squashed or sampled data. Squash-SMO obtains
+
+Table 1: Average Relative Error and St. Dev. in
+Parameter Estimates on Synthetic Dataset.
+E
+w1
+w2
+b
+Srs-SMO 0.467 0.52 0.47 0.38
+Squash-SMO 0.124 0.1 0.09 0.08
+
+parameter estimates that are almost 4 times more accurate
+than srs-SMO. Thenext 3columns contain the standard de-
+viation of the individual estimates for w1, w2 and b in 100
+runs of srs-SMO and squash-SMO. Notice that the parame-
+ters estimated by the squash-SMO are 5 times more stable
+than estimates obtained by srs-SMO.
+We analyzed the structure of the errors made by di erent
+models and concluded that srs-SMO made most errors in
+the neighborhood of the optimal decision boundary. Since
+Squash-SMO was able to obtain more stable and accurate
+parameter estimates, it exhibited much better performance
+in that region.
+Table 2 shows the error on the test set for various models
+on the synthetic data. Clearly, srs-SMO provides the worst
+improvement over the baseline model, full-SMO is the best
+with an error close to the Bayes error rate,and squash-SMO
+is a close runner-up.
+
+Table2: TestSetErrorRates OnSyntheticDataset.
+Baseline
+50%
+1% srs-SMO
+41%
+1% squash-SMO 34.04%
+1% boost-SMO 34.84%
+full-SMO
+33.54%
+
+
+
+4.2 Results on Benchmark Data
+The public datasets were \The Microsoft Anonymous Web"
+andthe"ForestCoverType"datasetsavailable atUCIKDD
+archive 1]andAdultdatasetavailable atUCImachinelearn-
+ing repository 2]. The classi cation task for the Web Data,
+
+
+
+297
+
+as we pose it, is to predict whether a user will visit the most
+popular site S based on his/her visiting pattern of all other
+sites. This dataset contains binary data and average record
+hasonly 3%ofits attributes setto1. ForAdultdatathetask
+is to predict if the income of a person is greater than $50K
+based on several census parameters, such as age, education,
+marital status and so forth. Finally, for the Forest data
+the task is to distinguish between several forest cover types
+based on the information about the location of the place,
+type of soil, distance to the water etc. For this dataset we
+experimented with 2 most populated classes for which the
+misclassi cation rate is the greatest: Spruce-Fir and Lodge-
+pole Pine. The parameters of all datasets are summarized
+in Table 3.
+
+Table 3: Characteristics of the Data Sets.
+Parameter
+Web
+Adult
+Forest
+NAttributes
+294
+14
+54
+Attributes
+Binary
+Categ.
+Categ.
+Training set 10057(+) 7508(+) 56404(+)
+21875(-) 22654(-) 42480(-)
+Test set
+1561(+) 3700(+) 226897(+)
+3325(-) 11360(-) 169360(-)
+
+Notethatoneofthedistinct advantages ofthemethods that
+use sampled or squashed data is that they allow to do cross-
+validation to optimize the parameters of the SVM classi er.
+Sincem-foldcross-validation will increasethecomputational
+cost of training by a factor of m, using it for the full-SMO
+is out of question. In our experiments we used 5-fold cross-
+validation to adjust the value of the regularization constant
+C for the squash-SMO, srs-SMO and boost-SMO. For the
+full-SMO C was set to 1 in all runs.
+
+
+
+
+1
+1.2
+1.4
+1.6
+1.8
+2
+2.2
+2.4
+2.6
+2.8
+3
+15
+15.5
+16
+16.5
+17
+17.5
+18
+18.5
+19
+19.5
+20
+20.5
+
+
+
+
+Log of Profile Length
+Misclassification
+Rate,
+%%
+P=0.5%
+P=1%
+P=2.5%
+P=5%
+P=7.5%
+1% Random Sample
+
+
+
+
+Full Data
+
+
+
+
+Figure 1: Misclassi cation Rate Vs LikelihoodPro-
+le Length on the Adult dataset.
+We analyzed the dependence of the SVM misclassi cation
+rate on the length of the likelihood pro le and the num-
+ber Nc of squashed points. In Figure 1 the parameter P
+refers to the squashing ratio, i.e., the number of points in
+the squashed data relative to the mother-data. As P in-
+creases from 0.5% to 7.5% we see a gradual decrease in the
+misclassi cation rate so that it approaches the misclassi ca-
+tion rate of SVMs on the full data. It is also apparent that
+for this data (Adult dataset) likelihood pro les of size 50-
+100 will yield the best rate. Similar results wereobtained on
+the Web data. In all experiments described below we were
+using a xed length of the likelihood pro le set to 100.
+
+Table 4: % Decrease from Baseline Error Rate.
+Web Adult Forest
+Baseline Error
+0.32 0.25 0.43
+1% srs-SMO,%
+10 18.7
+40
+1% squash-SMO,% 20 31.8 46.7
+1% boost-SMO,% 20.5 33.2 45.6
+full-SMO,%
+22.5 36.8 48.1
+
+Table 4 shows the misclassi cation rate on the test set for
+various datasets and algorithms. The rst row, baseline er-
+ror, shows the misclassi cation rate of the trivial prediction
+that classi es all examples into the most populated class.
+The restof the rowsshow what percentage ofdecrease in er-
+ror relative to baseline a particular model is able to provide.
+Notice that srs-SMO algorithm is the worst and full-SMO
+algorithm is the best. The di erence in misclassi cation
+rate between the two extremes ranges from 8% to 18%. It
+is remarkable that performance of both squash-SMO and
+boost-SMO is much closer to full-SMO than performance of
+srs-SMO.
+
+Table5: CPU Timeto Learn Parameters of Various
+Models for Various Datasets. For squash-SMO (srs-
+SMO) the rst number is the time to do squashing
+(sampling) and the second is the time to do SMO
+on the squashed (sampled) data.
+Web
+Adult
+Forest
+1% srs-SMO
+1.5 + 0.2
+1.5 + 0.2
+13 + 2
+1% squash-SMO 361.7 + 0.2 132.4 + 0.2 682.9 + 2
+1% boost-SMO
+10
+7.5
+85.3
+full-SMO
+4018
+1151
+1225
+
+
+Table 5 reports timing results for various algorithms. Srs-
+SMO turns out to be the fastest with times to carry out
+SMO below 2 seconds. The runner up is boost-SMO with
+times ranging from 7.5 for the Adult data to 85 seconds for
+the forest data. For both srs-SMO and squash-SMO the
+time to perform sampling or squashing dominates over the
+time to do SMO and it takes much longer to do squash-
+ing than sampling. The full-SMO algorithm is the slowest,
+being on average 10-100 times slower than the rest ofthe al-
+gorithms. While the optimality is a signi cant advantage of
+thefull-SMO, its timeand memoryrequirements leave much
+to be desired even for the modestly sized problems that we
+considered here. As an illustration, in our experiments we
+only allowed caching of up to 9 million dot products. When
+this upper limit was reached the cache was ushed. For all
+non-synthetic datasets this upper limit was reached and the
+program overall took from 80 to 120Mb of memory during
+training (the training and test data resided in main mem-
+ory as well). Note that in SMO we could trade memory for
+
+
+
+298
+
+speed if we did not allow caching dot products, but in this
+case the training will be even slower.
+For the really large datasets squash-SMO might outperform
+boost-SMO since the latter needs a) to store the current
+boosted sample and the distribution over all training ex-
+amples and b) multiple passes through the dataset to up-
+date the distribution on examples and sample from it. The
+Squash-SMO on the other hand will only need 2 full passes
+over the data as we discussed before during the squashing
+phase and the mother-data will not be used at all during
+SVM training.
+Yet another advantage of squash-SMO over boost-SMO is
+a better model interpretability that may be useful for ex-
+ploratory data analysis and visualization.
+
+5. CONCLUSIONS AND FUTURE WORK
+We describe how the use of squashing makes the training of
+SVMsapplicable tolargedatasets. Comparison withtheop-
+timal full-SMO algorithm shows that both squash-SMO and
+boost-SMO areable toreachnear-optimal performance with
+much lower time and memory requirements. On the other
+hand, the simplest and fastest standard random sampling
+SMO on average has a considerably higher misclassi cation
+rate. We conclude that statistical techniques based on the
+ideas of sampling (boost-SMO) and likelihood preservation
+(squash-SMO) promise high computational advantages for
+large datasets over the standard SMO algorithm.
+Bothsquash-andboost-SMOallowonetousecross-validation
+to tune parameters of the SVM, such as regularization con-
+stant C or thewidth ofthe kernel in non-linear SVMs. Such
+tuning is usually impossible on the full data due to the high
+computational cost.
+Although the performance of boost-SMO and squash-SMO
+is similar on the benchmark problems, we outlined when
+and why one algorithm should be preferred over another.
+In particular, squash-SMO o ers a better interpretability
+of the model and can be expected to run faster than SMO
+on the datasets that do not reside in the main memory. For
+the datasets that t in themain memory wesaw that boost-
+SMO is faster than squash-SMO.
+We see several possibilities to extend this work. The gains
+o ered by squash-SMO and boost-SMO might be even more
+signi cant for non-linear SVMs that take much longer to
+train. As we outlined above squashing itself takes consid-
+erable time. For the high-dimensional data one might need
+to increase the pro le length to get acceptable estimates for
+parameters of the model. This will result in a time increase
+and performance degradation. Thus, it would be useful to
+study the conditions under which squashing will work well
+on the high dimensional data. An interesting theoretical
+question is whether it is possible to give a bound on the
+distance between the parameter estimates obtained by the
+full-SMO and squash-SMO.
+
+6. ACKNOWLEDGEMENTS
+The research described in this paper was supported in part
+byNSFCAREERawardIRI-9703120,NSFawardIIS-9813584,
+the NIST Advanced Technology Program and KLA-Tencor,
+theUSDepartment ofEnergyandLawrenceLivermore Lab-
+oratory, HNCSoftwareInc.,MicrosoftResearch, andSmith-
+Kline Beecham Research. We would also like to thank Jian-
+chang Mao for making his SMO code available to us.
+
+7. REFERENCES
+1] S. Bay. UCI KDD archive, http://kdd.ics.uci.edu.
+2] C. Blake and C. Merz. UCI repository of machine
+learning databases, http://www.ics.uci.edu/ mlearn.
+3] G. Box, W. Hunter, and J. Hunter. Statisticsfor
+Experimenters: An Introduction to Design, Data
+Analysis, and Model Building. John Wiley & Sons,
+New York, 1978.
+4] C. Cortes and V. Vapnik. Support-vector networks.
+Machine Learning, pages 273{297, 1997.
+5] W. DuMouchel, C. Volinsky, T. Johnson, C. Cortes,
+and D. Pregibon. Squashing at les atter. 1999.
+6] T. S. Jaakola and D. Haussler. Probabilistic kernel
+regression methods
+http://www.ai.mit.edu/ tommi/publications/.
+7] D. Madigan, N. Raghavan, W. DuMouchel, M. Nason,
+C. Posse, and G. Ridgeway. Likelihood-based data
+squashing: A modeling approach to instance
+construction
+http://www.stat.washington.edu/greg/docs/lds.ps.
+8] E. Osuna, R. Freund, and F. Girosi. Training support
+vector machines: An application to face detection. In
+Proc. of CVPR 1997.
+9] E. Osuna, R. Freund, and F. Girosi. An improved
+training algorithm for support vector machines. In
+Proc. of IEEE Workshop on Neural Networks for
+Signal Processing,pages 276{285. 1997.
+10] D. Pavlov, J. Mao, and B. Dom. Scaling-up support
+vector machines using boosting algorithm. In Proc. of
+ICPR 2000 (to appear).
+11] J. Platt. Fast training of support vector machines
+using sequential minimal optimization. In Advances in
+Kernel Methods { Support Vector Learning,pages
+185{208. 1999.
+12] R. E. Schapire. An introduction to boosting
+algorithm. In Proc. of IJCAI 1999.
+13] B. Scholkopf, C. Burges, and A. Smola (eds).
+Advances in Kernel Methods { Support Vector
+Learning. MIT Press, Cambridge, MA, 1999.
+14] P. Sollich. Probabilistic interpretation and bayesian
+methods for support vector machines. In Proc. of
+ICANN 1999, pages 91{96, 1999.
+15] V. N. Vapnik. StatisticalLearning Theory. John Wiley
+& Sons, New York, 1998.
+16] G. Wahba. Support vector machines, reproducing
+kernel hilbert spaces and the randomized GACV,
+ftp://ftp.stat.wisc.edu/pub/wahba/nips97.ps.gz.
+University of Wisconsin Statistics Dept. TR 984, 1997.
+
+
+
+299
+

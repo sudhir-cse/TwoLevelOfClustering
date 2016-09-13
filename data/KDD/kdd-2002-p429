@@ -1,0 +1,1257 @@
+Sequential PAtternMining using A Bitmap Representation
+
+Jay Ayres, Jason Flannick, Johannes Gehrke, and Tomi Yiu
+Dept. ofComputerScience
+CornellUniversity
+
+
+
+
+ABSTRACT
+
+We introduce a new algorithm for mining sequential pat-
+terns. Our algorithm is especially efficient when the sequen-
+tial patterns in the database are very long. We introduce a
+novel depth-first search strategy that integrates a depth-first
+traversal of the search space with effective pruning mecha-
+nisms.
+Our implementation of the search strategy combines a ver-
+tical bitmap representation of the database with efficient
+support counting. A salient feature of our algorithm is that
+it incrementally outputs new frequent itemsets in an online
+fashion.
+In a thorough experimental evaluation of our algorithm on
+standard benchmark data from the literature, our algorithm
+outperforms previous work up to an order of magnitude.
+
+
+1.
+INTRODUCTION
+Finding sequential patterns in large transaction databases
+is an important data mining problem. The problem of min-
+ing sequential patterns and the support-confidence frame-
+work were originally proposed by Agrawal and Srikant [2,
+10]. Let I = {il,i2,...,in}
+be a set of items.
+We call a
+subset X C_ I an itemset and we call [X[ the size of X. A
+sequence s = (sl, s2,..., sin) is an ordered list of itemsets,
+where s~ C I,i E {1,..., m}. The size, m, of a sequence is
+the number of itemsets in the sequence, i.e. [s[. The length
+l of a sequence s = (shs2,...
+,sin) is defined as
+
+m
+t d~f E
+Isil"
+i=1
+
+A sequence with length I is called an l-sequence. A sequence
+Sa = (al,a2 .... ,a,~) is contained in another sequence Sb =
+(bhb2,...,b,~)
+if there exist integers 1 < il < iz < ... <
+in _< m such that ax C bil, a2 C bi2, ...,
+an C bl,.
+If
+sequence sa is contained in sequence Sb, then we call s~ a
+subsequence of Sb and Sb a supersequence of sa.
+A database D is a set of tuples (c/d, rid, X), where c/d is a
+cnstomer-id, tid is a transaction-id based on the transaction
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page, To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permissionand/or a fee.
+SIGKDD '02 Edmonton, Alberta, Canada
+Copyright 2002 ACM 1-58113-567-X/02/0007 ...$5.00.
+Customer ID (CID)
+TID
+1
+1
+1
+3
+1
+6
+2
+2
+2
+4
+3
+I
+5
+3
+I
+7
+Itemset
+{a,b,d}
+{b, c, d}
+{b, c, d}
+(b}
+{a, b, c}
+{,~,b}
+{b, e, d}
+
+Table 1: Dataset sorted by CID and TID
+
+
+CID
+Sequence
+1
+({a,b,d},{b,c,d},{b,c,d})
+2
+((b},(a,b,c})
+3
+({a,b},{b,c,d})
+
+Table 2: Sequence
+for each customer
+
+
+
+time, and X is an itemset such that X C /.
+Each tuple
+in D is referred to as a transaction.
+For a given cnstomer-
+id, there are no transactions with the same transaction ID.
+All the transactions with the same cid can be viewed as a
+sequence of itemsets ordered by increasing tid. An analogous
+representation for the database is thus a set of sequences of
+transactions, one sequence per customer, and we refer to
+this dual representation of D as its sequence representation.
+The absolute support of a sequence s~ in the sequence
+representation of a database D is defined as the number of
+sequences s E D that contain s~, and the relative support is
+defined as the percentage of sequences s E D that contain sa.
+We will use absolute and relative support interchangeably in
+the rest of the paper. The support of s~ in D is denoted by
+supD(s~).
+Given a support threshold rninSup, a sequence
+s~ is called a frequent sequential pattern on D if supD(s~) >
+rninSup.
+The problem of mining sequential patterns is to
+find all frequent sequential patterns for a database D, given
+a support threshold sup.
+Table i shows the dataset consisting of tuples of (customer
+id, transaction id, itemset) for the transaction. It is sorted
+by customer id and then transaction id. Table 2 shows the
+database in its sequence representation.
+Consider the se-
+quence of customer 2; the size of this sequence is 2, and the
+length of this sequence is 4.
+Suppose we want to find the support of the sequence
+sa =
+({a}, {b, c}).
+From Table 2, we know that s~ is a
+subsequence of the sequences for customer 1 and customer
+3 but is not a subsequence of the sequence for customer 2.
+
+
+
+
+429
+
+Hence, the support of s~ is 2 (out of a possible 3), or 0.67.
+If the user-defined minimum support value is less than 0.67,
+then st is deemed frequent.
+
+1.1
+Contributions of This Paper
+In this paper, we take a systems approach to the prob-
+lem of mining sequential patterns. We propose an efficient
+algorithm called SPAM (Sequential PAttern Mining) that
+integrates a variety of old and new algorithmic contributions
+into a practical algorithm. SPAM assumes that the entire
+database (and all data structures used for the algorithm)
+completely fit into main memory.
+With the size of cur-
+rent main memories reaching gigabytes and growing, many
+moderate-sized to large databases will soon become com-
+pletely memory-resident.
+Considering the computational
+complexity that is involved in finding long sequential pat-
+terns even in small databases with wide records, this as-
+sumption is not very limiting in practice. Since all algo-
+rithms for finding sequential patterns, including algorithms
+that work with disk-resident databases, are CPU-bound, we
+believe that our study sheds light on the most important
+performance bottleneck.
+SPAM is to the best of our knowledge the first depth-
+first search strategy for mining sequential patterns. An ad-
+ditional salient feature of SPAM is its property of online
+outputting sequential patterns of different length -- com-
+pare this to a breadth-first search strategy that first outputs
+all patterns of length one, then all patterns of length two,
+and so on. Our implementation of SPAM uses a vertical
+bitmap data layout allowing for simple, efficient counting.
+
+
+2.
+THE SPAM ALGORITHM
+In this section, we will describe the lexicographic tree of
+sequences upon which our algorithm is based. We will also
+discuss the way we traverse the tree and the priming meth-
+ods that we use to reduce the search space.
+
+2.1
+Lexicographic Tree for Sequences
+This part of the paper describes the conceptual framework
+of the sequence lattice upon which our approach is based.
+A similar approach has been used for the problem of mining
+frequent itemsets in MaxMiner [3] and MAFIA [5]. We use
+this framework to describe our algorithm and some pertinent
+related works. Assume that there is a lexicographical order-
+ing < of the items I in the database. If item i occurs before
+item j in the ordering, then we denote this by i _<xj. This
+ordering can be extended to sequences by defining sa _<sb
+if sa is a subsequence of sb. If sa is not a subsequence of Sb,
+then there is no relationship in this ordering.
+Consider all sequences arranged in a sequence tree (ab-
+breviated, tree) with the following structure. The root of
+the tree is labeled with 0. Recursively, if n is a node in the
+tree, then n's children are all nodes n' such that n < n' and
+Vm E T : n' < m ~
+n < m. Notice that given this defini-
+tion the tree is infinite. Due to a finite database instance as
+input to the problem, all trees that we deal with in practice
+are finite.
+Each sequence in the sequence tree can be considered as
+either a sequence-extendedsequence or an itemset-extended
+sequence. A sequence-extended sequence is a sequence gen-
+erated by adding a new transaction cor~sisting of a single
+item to the end of its parent's sequence in the tree. An
+itemset-extendedsequence is a sequence generated by adding
+a ,b
+(a .b)
+2a,a
+/i'\/\/\
+a a a
+a a b
+a a b)
+a,b,a
+a b b
+(a,b).a
+(a,b),b
+3
+
+
+
+
+a,la.b),(a,b)
+(a,b),a,(it ,b)
+(a,b),(a~).a
+(a,b),(a,b),b
+5
+
+
+
+
+- I-S~p
+(a,bl,la,bl,la,b)
+e
+
+
+
+Figure 1: The Lexicographic Sequence Tree
+
+
+
+an item to the last itemset in the parent's sequence, such
+that the item is greater than any item in that last itemset.
+For example, if we have a sequence s,, = ({a, b, c}, {a, b}),
+then ({a, b, c}, {a, b}, {a}) is a sequence-extended sequence
+of s~ and ({a~b, c}, {a, b, d}) is an itemset-extendedsequence
+of sa.
+If we generate sequences by traversing the tree, then each
+node in the tree can generate sequence-extendedchildren se-
+quences and itemset-extended children sequences. We refer
+to the process of generating sequence-extendedsequences as
+the sequence-extension step (abbreviated, the S-step), and
+we refer to the process of generating itemset-extended se-
+quences as the iternset-extension step (abbreviated, the 1-
+step). Thus we can associate with each node n in the tree
+two sets: S,, the set of candidate items that are consid-
+ered for a possible S-step extensions of node n (abbreviated
+s-extensions), and In, which identifies the set of candidate
+items that are considered for a possible I-step extensions
+(abbreviated, i-extensions.
+Figure 1 shows a sample of a complete sequence tree for
+two items, a and b, given that the maximum size of a se-
+quence is three. The top element in the tree is the null se-
+quence and each lower level k contains all of the k-sequences,
+which are ordered lexicographically with sequence-extended
+sequences ordered before itemset-extended sequences. Each
+element in the tree is generated only by either an S-step or an
+I-step, e.g. sequence ({a, b}, {b}) is generated from sequence
+({a, b)) and :not from sequence ({a}, {b}) or ({b}, {b}).
+
+2.2 Depth First Tree Traversal
+SPAM traverses the sequence tree described above in a
+standard depth-first manner. At each node n, the support
+of each sequence-extended child and each itemset-extended
+child is tested. If the support of a generated sequence s is
+greater than or equal to minSup, we store that sequence
+
+
+
+
+430
+
+and repeat DFS recursively on s. (Note that the maximum
+length of any sequence is limited since the input database is
+finite.) If the support of s is less than minSup, then we do
+not need to repeat DFS on s by the Apriori principle, since
+any child sequence generated from s will not be frequent [2].
+If none of the generated children are frequent, then the node
+is a leaf and we can backtrack up the tree.
+
+
+2.3
+Pruning
+The previous algorithm has a huge search space. To im-
+prove the performance of our algorithm, we can prune can-
+didate s-extensions and i-extensions of a node n in the tree.
+Our pruning techniques are Apriori-based and are aimed at
+minimizing the size of Sn and In at each node n.
+At the
+same time, the techniques guarantee that all nodes corre-
+sponding to frequent sequences are visited.
+
+
+2.3.1
+S-stepPruning
+One technique used prunes S-step children.
+Consider a
+sequence s at node n and suppose its sequence-extended
+sequences are sa = (s, {ij}) and Sb = (s, {ik}). Suppose sa
+is frequent but Sb is not frequent. By the Apriori principle,
+(s, {i# }, {ik }) and (s, (i#, ik }) can not be frequent, since both
+contain the subsequence Sb. Hence, we can remove ik from
+both Sm and Ira, where m is any node corresponding to a
+frequent sequence-extended child of s.
+
+Example
+
+Suppose we are at node ({a}) in the tree and suppose that
+
+
+S((a}) = {a, b, c, d}, I({a)) = {b, c, d).
+
+
+The possible sequence-extended sequences are ({a}, {a}),
+({a}, {b}), ({a}, {c}) and ({a}, {d}). Suppose that ({a}, {c})
+and ({a}, {d}) are not frequent.
+By the Apriori principle,
+we know that none of the following sequences can be fre-
+quent either:
+({a}, {a}, {c}), ({a}, {b}, {c}), ({a}, {a, c}),
+({a}, {b, c}), ({a}, {a}, {d}), ({a}, {b}, {d}), ({a}, {a, d}), or
+({a}, {b,d}).
+Hence, when we are at node ({a},{a})
+or
+({a}, {b}), we do not have to perform I-step or S-step us-
+ing items c and d, i.e.
+S({~),{~}) =
+S({~},{b})
+=
+{a,b},
+I({~),{~}) = {b}, and I({~),(b}) = 0.
+
+
+2.3.2
+1-stepPruning
+The second technique prunes 1-step children. Consider the
+itemset-extended sequences of s = (s',{Q,...,i,~}).
+Sup-
+pose the sequences are s~ = (s',{il ..... in, i#}) and Sb =
+(S', {il,... ,i,,ik}),
+and suppose that i# < ik. If sa is fre-
+quent and Sb is not frequent, then by the Apriori principle,
+(s',{Q ..... in,ij,ik})
+cannot be frequent.
+Hence, we can
+remove i~ from Ira, where rn is any node corresponding to a
+frequent itemset-extended child of s. We can remove from
+Sm the same items as we did using S-step pruning. For sup-
+pose that during S-step pruning (s, {it}) was discovered to
+be infrequent. Then so too will (sa, {it}) be infrequent for
+any frequent itemset-extended child s~, of s.
+Figure 2 shows the pseudocode of our algorithm after both
+I-step pruning and S-step pruning are added. After pruning
+the correct items from S,~ and Ira, we pass the new lists
+to the next recursive call. The lists are pruned exactly as
+described in the previous sections.
+DFS-Pruning(node
+n = (sl ..... sk), S"' I,~)
+
+(1)
+Stemp = ¢
+(2)
+I,emp =
+(3)
+For each (i E S~)
+(4)
+if ( (Sl ..... sk, {i}) is frequent )
+(5)
+st~mp= s~
+u {~}
+(6)
+For each (i e St¢mp)
+(7)
+DFS-Pruning((sl .... , sk, {i}), St~mp,
+all elements in St~mp greater than i)
+(8)
+For each (i 6 In)
+(9)
+if ((st ..... sk U (i}) is frequent)
+(10)
+Ite,~p= I,e,~pU{i}
+(11)
+For each (i E It~mp)
+(12)
+DFS-eruning((sl .... , sk t.J {i}), St~mp,
+all elements in Itemp greater than i)
+
+
+Figure
+2: Pseudocode
+for DFS
+with pruning
+
+
+Example
+Let us consider the same node ({a}) described in the pre-
+vions section. The possible itemset-extended sequences are
+({a,b}), ({a,c}), and ({a,d}).
+If ({a,c}) is not frequent,
+then ({a, b, c}) must also not be frequent by the Apriori
+principle.
+Hence, I<{a,b}) =
+{d}, S({a,b}) =
+{a,b}, and
+S({a,d)) = {a, b}.
+
+
+3.
+DATA REPRESENTATION
+
+3.1
+Data Structure
+
+To allow for efficientcounting, our algorithm uses a ver-
+tical bitmap representation of the data. A vertical bitmap
+is created for each item in the dataset, and each bitmap has
+a bit corresponding to each transaction in the dataset. If
+item i appears in transaction j, then the bit correspond-
+ing to transaction j of the bitmap for item i is set to one;
+otherwise, the bit is set to zero.
+To enable efficientcounting and candidate generation, we
+partition the bitmap such that allof the transactions of each
+sequence in the database will appear together in the bitmap
+(Figure 3). If transaction rn is before transaction n in a
+sequence, then the index of the bit corresponding to m
+is
+smaller than that of the bit corresponding to n. We also use
+different sized bitmaps depending on how many transactions
+are present in a sequence; we postpone a discussion of this
+until we discuss support counting.
+This bitmap idea extends naturally to itemsets. Suppose
+we have a bitmap for item i and a bitmap for item j. The
+bitmap for the itemset {i,j} is simply the bitwise AND
+of
+these two bitmaps. Sequences can also be represented using
+bitmaps.
+If the last itemset of the sequence is in transac-
+tion j and all the other itemsets of the sequence appear in
+transactions before j, then the bit corresponds to j will be
+set to one; otherwise, it will be set to zero. We define B(s)
+as the bitmap for sequence s.
+Efficientcounting of support isone of the main advantages
+of the vertical bitmap representation of the data. To achieve
+this, we partition the customer sequences into different sets
+based on their lengths when we read in the dataset. If the
+size of a sequence is between 2~ + 1 and 2k+1, we consider
+it as a 2k+1-bit sequence. The minimum
+value of k is 1 (i.e.
+
+
+
+
+431
+
+CID
+
+
+1
+1
+1
+
+2
+2
+
+
+
+3
+3
+
+
+-
+
+
+
+
+Figure 3:
+Figure 1
+TID
+
+
+1
+1
+3
+0
+6
+0
+0
+2
+4
+1
+0
+0
+5
+1
+7
+0
+0
+0
+1
+0
+1
+1
+1
+1
+1
+1
+1
+0
+0
+0
+1
+0
+0
+1
+1
+0
+0
+0
+0
+0
+0
+0
+1
+0
+0
+1
+1
+1
+0
+0
+0
+0
+0
+0
+
+Bitmap Representation of the dataset in
+0
+0
+1
+0
+i 0
+0
+!S-step
+~
+1
+
+process
+0
+0
+I 0
+
+
+0
+: :
+0
+I 0
+0
+I 0
+-
+I
+
+
+Figure 4:
+S-step processing on
+({a}) shown in Figure 3
+result
+|Ol~l
+
+
+
+
+sequence bitmap
+
+
+
+
+any sequence of size smaller than or equal to 4 is considered
+as a 4-bit sequence). We ignore any sequence of size larger
+than 64 because in most practical databases this situation
+will not arise. Each set of 2k-bit sequences will correspond
+to a different bitmap, and in that bitmap each section will
+be 2Z-bits long. Support counting for each customer then
+becomes a simple check as to whether the corresponding
+bitmap partition contains all zeros or not.
+Let us consider the dataset that is shown in Table 1. The
+bitmap representation of this dataset is shown in Figure 3.
+Each vertical bitmap is partitioned into three sections, and
+each section corresponds to a customer's sequence. Since all
+of the customers' sequences have less than four transactions,
+all of them are represented as ,l-bit sequences. Transaction
+6 contains items b,e, and d, so the bit that corresponds to
+that transaction in each of the bitmaps b,c, and d is set to
+one. Since transaction 6 does not contain the item a, the
+bit corresponding to that transaction in bitmap a is set to
+
+zero.
+
+
+
+3.2
+Candidate Generation
+In this section, we will describe how we perform candi-
+date generations using the bitmap representation described
+above. We first consider S-step processing, followed by 1-step
+processing.
+
+3.2.1
+S-step Process
+Suppose we are given bitmaps B(sa) and B(i) for sequence
+s~ and item i respectively, and that we want to perform a S-
+step on st using i. This S-step will append the itemset {i} to
+st. The bitmap for the new sequence, B(sg), should have the
+property that if a bit has value one, then the corresponding
+transaction j must contain i, and all of the other itemsets
+in sg must be contained in transactions before j.
+Let us consider a section (a customer's sequence) of the
+bitmaps; we will refer it as a bitmap in this discussion. Sup-
+pose the index of the first bit with value one in B(sa) is k.
+Note that for bit k, the corresponding transaction j contains
+the last itemset of s~, and all the other itemsets of s,~ must
+be contained in the transactions before j. One observation is
+that since {i} is appended after the last itemset in s~, it must
+be present in a transaction strictly after j in sa. Therefore,
+bit k in B(sg) must have value zero. Another observation is
+that if item i is contained in any transaction after j, then
+the corresponding bit in B(sg) should be one. Therefore,
+all of the bits indexed after bit k in B(sg) should have the
+same value as the corresponding bit in B(i). Our method
+to perform S-step is based on these two observations.
+We first generate a bitmap from B(st) such that all bits
+less than or equal to k are set to zero, and all bits after k are
+set to one. ~Ve call this bitmap a transformed bitmap. We
+then AND the transformed bitmap with the item bitmap.
+The resultant; bitmap has the properties described above and
+it is exactly the bitmap for the generated sequence. In our
+implementation, the transformation is done using a lookup
+table.
+Figure 4 shows an example of the S-step process. Let us
+consider the bitmap B(({a})), and suppose we want to gen-
+erate S(({a}, {b})). Since ({a}, {b}) is a sequence-extended
+sequence of ({a}), we have to perform a S-step process on
+B(({a})). Consider the section of the bitmap for the first
+customer. The first bit with value one is the first bit in the
+section. Hence, in the transformed bitmap B(({a}),), the
+first bit is set to zero and all the other bits for in that section
+are set to one. The resultant bitmap obtained by ANDing
+the transformed bitmap mad B({b}) is exactly B(({a}, {b})).
+In the final hitmap, the second bit and the third bit for the
+first customer have value one. This means that the last item-
+set (i.e. {b}) of the sequence appears in both transaction 2
+and transaction 3, and itemset {a} appears in transaction
+1.
+
+3.2.2
+1-step Process
+Suppose we are given B(s~) and B(i), and that we want
+to perform an 1-step on s~ using i. This 1-step will generate
+a new sequence sg by adding item / to the last itemset of
+s~,. The bitmap for sg should have the property that if a bit
+has value one, then the corresponding transaction j must
+contain the last itemset in s9, and all of the other itemsets
+in sg must be in transactions before j.
+Now, consider the resultant bitmap B(sr) obtained by
+ANDing B(.s~) and B(i). A bit k in B(s~) has value one
+if and only if bit k in B(s~) is one and bit k in B(i) is
+also one. For bit k of B(sr) to be one, the transaction j
+that corresponds to bit k must, therefore, contain both the
+last itemset in s~ and the item i. In addition, all of the
+other itemsets of s~ must appear in transactions before j.
+It follows that B(s~) satisfies each of the requirements that
+B(su) must satisfy; B(s~) is therefore exactly the bitmap
+
+
+
+
+432
+
+((a}, {b})
+--vY-
+
+1
+1
+1
+0
+0
+&
+0
+0
+0
+0
+1
+Io
+0
+result
+
+
+
+
+Figure
+5:
+I-step processing
+({a}, {b}) shown in Figure 4
+({a},{b,d})
+0
+1
+1
+0
+0
+0
+0
+0
+
+
+
+
+on sequence
+bitmap
+
+
+
+
+Symbol
+D
+C
+T
+S
+I
+Meaning
+Number of customers in the dataset
+Average number of transactions per customer
+Average number of items per transaction
+Average length of maximal sequences
+Average length of transactions within
+the maximal sequences
+
+Table 3: Parameters used in dataset generation
+
+
+
+
+for the generated sequence.
+Figure 5 shows an example of an I-step process. Let us
+consider B(({a}, {b})) from the previous section, and sup-
+pose we want to generate B(({a}, {b, d})). Since ({a}, {b, d})
+is an itemset-extended sequence of ({a}, {b}), we have to
+perform an I-step process on B(({a}, {b})).
+The bitmap
+that results from the ANDing of B(({a}, {b})) and B({d}) is
+exactly B(({a}, {b, d})). In the final bitmap, the second bit
+and the third bit for the first customer have value one, which
+means that the last itemset (i.e. {b, d}) of the sequence ap-
+pears in both transaction 2 and transaction 3, and the other
+itemsets in the sequence (i.e. {a}) appear in transaction 1.
+
+
+4.
+EXPERIMENTAL EVALUATION
+In this section, we report our experimental results on the
+performance of SPAM in comparison with SPADE [12] and
+PrefizSpan [9]. We obtained the source code of SPADE from
+Mohammed Zaki, and an executable of PrefixSpan from Ji-
+awei Han.
+All the experiments were performed on a 1.7GHz Intel
+Pentium 4 PC machine with 1 gigabyte main memory, run-
+ning Microsoft Windows 2000. All three algorithms are writ-
+ten in C++, and SPAM and SPADE were compiled using
+g++ in cygwin with compiler option -03. During all of the
+tests, output of the frequent sequences was turned off so that
+the true running times of the algorithms were recorded. Our
+tests show that SPAM outperforms SPADE and PrefixSpan
+by up to an order of magnitude.
+
+4.1
+Synthetic data generation
+To test our algorithm we generated numerous synthetic
+datasets using the IBM AssocGen program [2]. There are
+several factors that we considered while comparing SPAM
+against SPADE. These factors are listed in Table 3.
+All
+of these factors can be specified as parameters when run-
+ning AssocGen. We also compared the performance of the
+algorithms as the minimum support was varied for several
+datasets of different sizes.
+
+4.2
+Comparison With SPADE and PrefixSpan
+We compared SPAM with SPADE and PrefizSpan via
+two different methods.
+First, we compared the three al-
+gorithms on several small, medium, and large datasets for
+various minimum support values.
+This set of tests shows
+that SPAMoutperforms SPADE by about a factor of 2.5 on
+small datasets and better than an order of magnitude for
+reasonably large datasets.
+PrefixSpan outperforms SPAM
+slightly on very small datasets, but on large datasets SPAM
+outperforms PrefixSpan by over an order of magnitude. The
+results of these tests are shown in Figures 6 to 11.
+The primary reason that SPAMperforms so well for large
+datasets is due to the bitmap representation of the data
+for efficient counting. The counting process is critical be-
+cause it is performed many times at each recursive step,
+and SPAM handles it in an extremely efficient manner. For
+short datasets, the initial overhead needed to set up and use
+the bitmap representation in some cases outweighs the ben-
+efits of faster counting, and because of this PrefizSpan runs
+slightly faster for small datasets.
+As candidate sequences
+become longer, we recurse more levels down the tree and
+counting becomes more and more important. Overall, our
+runtime tests show that SPAMexcels at finding the frequent
+sequences for many different types of large datasets.
+Our second method of testing compared the performance
+of the algorithms as several parameters in the dataset gen-
+eration were varied. We investigated the impact of different
+parameters of the data generation on the running time of
+each algorithm.
+The parameters that we varied were the
+number of customers in the dataset, the average number of
+transactions per customer, the average number of items per
+transaction, the average size of itemsets in the maximal se-
+quences, and the average length of the maximal sequences.
+For each test, one parameter was varied and the others, in-
+cluding minimum support, were kept fixed. The results of
+these tests are shown in Figures 12 to 15.
+Our experiments show that as the average number of items
+per transaction and the average number of transactions per
+customer increases, and as the average length of maximal se-
+quences decreases, the performance of SPAM increases even
+further relative to the performance of SPADE and PrefixS-
+pan. This performance increase is due to similar factors as
+in the case of increasing dataset size. While SPAM contin-
+ues to outperform SPADE and PrefixSpan as the average
+size of the itemsets in the maximal sequences and the num-
+ber of customers in the dataset increaseds the discrepancy
+between the running times did not increase as significantly
+as with the other parameters. The reasonfor the low inrease
+in performance is that an increase in these parameters does
+not make efficient counting more important as much as does
+the increase of the other parameters; however, SPAM is still
+much faster than SPADE and PrefixSpan in all cases with
+relatively large datasets.
+
+4.3
+Consideration of space requirements
+Because SPAM uses a depth-first traversal of the search
+space, it is quite space-inefficient in comparison to SPADE.
+We can make an estimation of the blow-up in space require-
+
+
+
+
+433
+
+Datlaat
+(DlCl
+0T5S815) at
+varying
+minimum
+lupporl~
+<.0-
+
+
+
+
+o,os O.Oe 0.07 O.OS 0.09
+o.1
+Minimum luppor~
+Dataset
+(D7CTTTSTI7)
+at
+varying
+minimum
+supports
+s0.
+
+
+|.0
+Ji
+0
+O.03
+o.o4
+o.o5
+0.~
+0.07
+Minimum Ilupport
+Dataset
+(DSC15T10S10110)
+at varying
+minimum
+supports
+10oo
+
+
+|:o:\
+
+
+Minimum support
+
+
+
+Figure 6: Varying support
+for
+small datnset #1
+Figure 7: Varying support for
+small dataset #2
+Figure 8: Varying support
+for
+medium-sized dataset #1
+
+
+
+Dataset
+(D15C15TtSStSI15)
+at
+varying
+minimum
+aupports
+200
+
+
+
+
+0.6S
+0.e8
+0.'rl
+O.74
+Mlnlmm support
+Dataset
+(D5C20T20S20120)
+at varying
+minimum
+supporlta
+
+
+
+
+0.86
+0.88
+0.9
+O.92
+Minimum support
+DiItallat
+(D18C18T18518118)
+lit
+varying
+minimum
+isupporta
+
+
+
+
+0.89
+0.74
+0.79
+0.04
+Minimum lupport
+
+
+
+
+Figure 9: Varying support
+for
+medium-sized dataset #2
+Figure 10: Varying support for
+large dataset #1
+Figure 11: Varying support for
+large dataset #2
+
+
+merits based on the parameters of an input dataset. Let D
+be the number of customers in the database, C the average
+number of transactions per customer, and N the total num-
+ber of items across all of the transactions. Using the vertical
+bitmap representation to store transactional data, for each
+item we need one bit for transaction in the database. Since
+there are D x C transactions, SPAM requires (D x C x N) /8
+bytes to store all of the data. Our representation is ineffi-
+cient since even when an item is not present in a transaction,
+we are storing a zero to represent that fact.
+The representation of the data that SPADE uses is more
+efficient. For each transaction, each item in that transaction
+must be recorded.
+Let us denote the average number of
+items per transaction as T. In that case, we need to record
+approximately D x C x T items. Assuming it costs about 2
+bytes to store a given item, SPADE uses about D x C x T x 2
+bytes.
+Thus, SPAM is less space-efficient then SPADE as long
+as 16T < N. In our sample datasets there are thousands
+of items and roughly 10 to 20 items per transaction. As a
+result, SPADE is expected to roughly outperform SPAM in
+terms of space requirements by factors ranging from 5 to
+20, mirroring the performance increase of SPAM. Thus the
+choice between SPADE and SPAM is clearly a space-time
+tradeoff.
+If space becomes a major issue, it is possible to compress
+the bitmaps that SPAM uses. Essentially, we can remove
+transactions from the bitmap for a sequence when those
+transactions will never contribute to the support count of
+the sequence. We are unable to include a full discussion of
+bitmap compression due to space constraints.
+
+
+5.
+RELATED WORK
+Agrawal and Srikant introduced the sequential pattern
+mining problem in [2]. Many methods, which are based the
+Apriori property [1], have been proposed for mining sequen-
+tial patterns [2, 11, 9, 6, 4, 7, 8]. Apriori principle states
+that the fact that any superseqeuence of a non-frequent se-
+quence must not be frequent. SPADE [12] and PrefixSpan
+[9] are two of the fastest algorithms that mine sequential
+patterns.
+
+
+6.
+CONCLUSION
+In this paper we presented an algorithm to quickly find all
+frequent sequences in a listof transactions. The algorithm
+utilizesa depth-firsttraversal of the search space combined
+with a verticalbitmap representation to store each sequence.
+Experimental results demonstrated that our algorithm out-
+performs SPADE and PrefixSpan on large datasets by over
+an order of magnitude. Our new algorithmic components in-
+cluding bitmap representation, S-step/l-step traversal, and
+S-step/l-step pruning all contribute to this excellent run-
+time.
+Acknowledgements.
+We thank Mohammeed Zaki for
+providing us 'with the source code of Spade, and to Jiawei
+
+
+
+
+434
+
+Dataset (D?C20T20S20115)
+at varying D and minimum
+support
+of 0.91
+25o
+
+
+
+
+J'i
+10
+12
+14
+10
+Number of cuat~mers In the dataset
+Dataset (D15C?T20S20115)
+at Varying C and minimum
+aupporl
+of 0.75
+2.~o0
+
+
+
+
+12
+14
+18
+AvermBenumber of ~sns~J~s per
+=umtomer
+Dataset (O12C20T?S20115)
+at varying T and minimum
+support
+of 0.75
+120o
+
+100o -
+|055
+
+J'551
+/
+
+10
+11
+12
+13
+14
+13
+Avtmge Burner ~ I~mm per
+trsnslctJon
+
+
+
+
+Figure 12: Varying number of
+customers
+Figure 13: Varying number of
+transactions per customer
+Figure 14: Varying number of
+items per transaction
+
+
+
+Dataset (D15C20T15S?I15)
+at varying S and minimum
+support of 0.83
+too0
+
+|:
+
+
+T
+9
+1~
+Avemoe length of ~lmllll
+n©m
+seque
+·
+Datasat (D15C2OT15S2017)
+at wal~flng I and minimum
+support of 0.80
+
+
+~255
+~
+
+
+
+
+10
+11
+12
+13
+14
+AvemOelength c,ftrlns~ctlons
+within the maximal 8equencel
+Dataset (D50C1OT85818) at
+varying minimum
+supports
+155
+
+
+
+
+o
+0.19
+0.29
+0.39
+0.49
+Minimum euppo~
+
+
+
+
+Figure
+15:
+Varying average
+length of maximal sequences
+Figure
+16:
+Varying average
+length of transactions within
+maximal sequences
+Figure 17:
+Varying support
+with large number of customers
+in dataset
+
+
+Han for providing us with the executable of PrefixSpan.
+This work was supported in part by NSF grants IIS-0084762
+and IIS-0121175, by a gift from Intel Corporation, and by
+the Cornell Intelligent Information Systems Institute.
+
+
+7.
+REFERENCES
+
+[1] R. Agrawal and R. Srikant. Fast Algorithms for
+Mining Association Rules in Large Databases. In
+Proceedings off the Twentieth International Conference
+on Very Large Databases, pages 487-499, Santiago,
+Chile, 1994.
+[2] R. Agrawal and R. Srikant. Mining Sequential
+Patterns. In ICDE 1995, Taipei, Taiwan, March 1995.
+[3] R. J. Bayardo. Efficiently mining long patterns from
+databases. In SIGMOD 1998, pages 85-93, 1998.
+[4] C. Bettini, X. S. Wang, and S. Jajodia. Mining
+temporal relationships with multiple granularities in
+time sequences. Data Engineering Bulletin,
+21(i):32-38, 1998.
+[5] D. Burdick, M. Calimlim, and J. Gehrke. Mafia: A
+maximal frequent itemset algorithm for transactional
+databases. In ICDE 2001, Heidelberg, Germany, 2001.
+[6] M. Garofalakis, R. Rastogi, and K. Shim. SPIRIT:
+Sequential pattern mining with regular expression
+constraints. In VLDB 1999, pages 223-234, San
+Francisco, Sept. 1999. Morgan Kaufmann.
+[7] J. Hart, G. Dong, and Y. Yin. Efficient mining of
+partial periodic patterns in time series database. In
+ICDE 1999, pages 106-115, Sydney, Australia, Mar.
+1999.
+[8] H. Mannila, H. Toivonen, and A. I. Verkamo.
+Discovering frequent episodes in sequences. In KDD
+1995, pages 210-215, Montreal, Quebec, Canada,
+1995.
+[9] J. Pei, J. Hart, B. Mortazavi-Asl, H. Pinto, Q. Chen,
+U. Dayal, and M.-C. Hsu. PrefixSpan mining
+sequential patterns efficiently by prefix projected
+pattern growth. In ICDE 2001, pages 215-226,
+Heidelberg, Germany, Apr. 2001.
+[10] R. Srikant and R. Agrawal. Mining Sequential
+Patterns: Generalizations and Performance
+Improvements. In EDBT 1996, Avignon, France,
+March 1996.
+[11] R. Srikant and R. Agrawal. Mining sequential
+patterns: Generalizations and performance
+improvements. In P. M. G. Apers, M. Bouzeghoub,
+and G. Gardarin, editors, EDBT 1996, pages 3-17,
+25-29 Mar. 1996.
+[12] M. J. Zaki. Spade: An efficient algorithm for mining
+frequent sequences. Machine Learning, 42(1/2):31-60,
+2001.
+
+
+
+
+435
+

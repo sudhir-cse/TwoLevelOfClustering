@@ -1,0 +1,975 @@
+Instability of Decision Tree Classification Algorithms
+
+
+Ruey-Hsia Li
+Lightspeed Semiconductor
+209 N. FairOaks Avenue
+Sunnyvale, CA 94085
+rli@ lightspeed.com
+Geneva G. Belford
+Department of Computer Science
+Universityof Illinoisat Urbana-Champaign
+Urbana, IL 61801
+belford@cs.uiuc.edu
+
+
+
+ABSTRACT
+The instability problem of decision tree classification al-
+gorithms is that small changes in input training samples
+may cause dramatically large changes in output classifica-
+tion rules. Different rules generated from almost the same
+training samples are against human intuition and complicate
+the process of decision making. In this paper, we present
+fundamental theorems for the instability problem of deci-
+sion tree classifiers. The first theorem gives the relation-
+ship between a data change and the resulting tree structure
+change (i.e. split change). The second theorem, Instabil-
+ity Theorem, provides the cause of the instability problem.
+Based on the two theorems, algorithmic improvements can
+be made to lessen the instability problem. Empirical results
+illustrate the theorem statements. The trees constructed by
+the proposed algorithm are more stable, noise-tolerant, in-
+formative, expressive, and concise. Our proposed sensitivity
+measure can be used as a metric to evaluate the stability
+of splitting predicates. The tree sensitivity is an indicator
+of the confidence level in rules and the effective lifetime of
+rules.
+
+
+1.
+INTRODUCTION
+The instability problem of decision tree classifiers is that
+the constructed rules may be significantly different from the
+original ones if the input training sample is slightly changed.
+That is, the rules generated from two very similar samples
+may be very different. Figure 1 shows an example where
+the customers of an auto insurance company axe described
+by the number of years of driving experience and whether
+the insured vehicles are sports cars or not. If the second
+record of the sample is changed from < 2, no, high > to
+< 4,yes, high >, then the output changes from the tree in
+Figure l(a) to that in Figure l(b). Although in this exam-
+ple one record change is not a small change, this example
+demonstrates the potential of the problem.
+Different rules constructed from similar samples are not
+only against intuition, but also complicate the process of
+
+
+
+
+Permissionto make digital or hard copies of all or part of this workfor
+personalor classroomuse is grantedwithoutfee providedthat copiesare
+not madeor distributedfor profitor commercialadvantageand that copies
+bearthisnoticeandthe fullcitationon the firstpage. Tocopyotherwise,to
+republish,toposton serversor toredistributeto lists,requirespriorspecific
+permissionand/ora fee.
+SIGKDD'02 Edmonton,Alberta,Canada
+Copyright2002ACM 1-58113-567-X/02/0007...$5.00.
+nyears
+sports car
+risk
+1
+yes
+high
+2
+no
+high
+2
+yes
+high
+4
+no
+low
+8
+no
+low!
+(a) original sample and the corresponding tree
+
+
+nyears isp°rts4421
+yesYesYeSnocar highhighhighlowriSk
+I ~
+
+
+
+8
+no
+low
+(b) changed sample and the corresponding tree
+
+Figure 1: Different rules constructed from samples
+differing in one record
+
+
+
+
+decision making.
+In the above example, only one factor is
+discovered by either classifier.It isdangerous that both clas-
+siftersconsider only one factor, and not both, to determine
+the risk of a driver which we know from our common
+sense
+that both driving experience and car type are factors that
+should be taken into account. Decision based on partially
+discovered factors will result in dramatically profit loss to
+the company.
+Aggregating methods, such as bagging and boosting [1, 5],
+have been incorporated into tree classification algorithms to
+mitigate the instability problem. Aggregating methods gen-
+erate several versions of classifiers and then combine these
+classifiers to make predictions. Although aggregating meth-
+ods obtain higher accuracy, the drawback is that multiple
+classifiers are difficult to comprehend, and it is difficult to
+trace how a prediction is made. The problem that aggregat-
+ing methods deal with is the instability of class predictions,
+but not the instability of rules.
+It is more important to
+provide consistent, stable, insightful, and accurate rules to
+facilitate the process of decision making.
+In this paper, we present fundamental theorems for the
+instability problem. We investigate the relationship between
+a data change and the resulting rule change, and propose
+improvements to lessen the instability problem. Section 2
+presents the basic theorems and definitions for the instability
+problem. Section 3 presents algorithmic improvements to
+lessen the instability problem. A stability evaluation of the
+proposed algorithm is given in Section 4. Conclusions and
+suggestions for future work are in Section 5.
+
+
+
+
+570
+
+2.
+THEORETICAL PROOF OF THE INSTA-
+BILITY PROBLEM
+
+2.1
+The Cause of the Instability Problem
+Intuitively, the unstable behavior of tree classification al-
+gorithms is caused by the instability of split selection meth-
+ods. Split selection methods evaluate split candidates ac-
+cording to some split evaluation function and select the
+best candidate by which to partition the data. If at some
+node there is no dominant split (i.e., a tie or almost equally
+good split candidates), a split candidate is selected as the
+split. The resultant tree structure may be sensitive to small
+changes, because a minor change in the training sample may
+cause a split that was slightly inferior to the selected split to
+become slightly superior. Once a different split is selected,
+the subtree evolving from that node may be very different
+from the original one.
+Knowing what might be the cause of the instability prob-
+lem, how do we justify that one split is slightly inferior to, or
+almost as good as another? In next section, we analyze the
+relationship between a data change and the resulting split
+change.
+
+2.2
+Instability Theorem
+To study the relationship between a data change and the
+resulting split change, we analyze the goodness measures of
+the two splits before and after the change.
+Assume that
+the objects in a training sample belong to either the class
+'+' or the class '-', each node has only two child nodes,
+and changes are made to class labels. Assume that S and
+S' are two slightly different training samples and the trees
+grown on the two samples differ in the subtrees T and T' as
+shown in Figure 2. Denote the data associated with the root
+nodes of T and T' by D and D', respectively, and denote the
+differences between the two data by the change parameter
+e, i.e., D + c = D'. Define the size of c, [e[, as the fraction
+of the objects in D that are changed.
+
+
+
+
+,,.
+.
+.
+.
+.
+\:
+,I\.
+.
+.
+
+
+
+
+/'
+\\
+z ~
+'\
+
+
+Figure 2: The trees grown on S and S' differ in the
+subtree T and T'
+
+We use the split selection method from [2], and the gini
+index to measure the node impurity. The goodness of a split
+s is defined as the decrease in impurity between s and its two
+child nodes, i.e., goodn,D(S) = I(n) --pL "I(nz ) --pn .I(nn ),
+where s divides the data D associated with a node n into
+two subsets such that a proportion pL of the objects in D
+go to the left child node nz and the proportion pn go to the
+right child node ha. The impurity of a node n measured by
+the gini index is defined as I(n) = 2 · f+ · f_, where f± is
+the proportion of the objects belonging to class =1:.
+To measure the goodness of the split to of the root node
+of T, assume that to partitions the data D into two subsets
+Dto,L and Dto,R and a proportion p of the objects in D go
+to Dto,L. Let f, g, and h be the fractions of the objects in
+D, Dto,L, and Dto,n, respectively, that belong to the class
+'+'.
+To measure the goodness of the split candidate t at
+the root node of T, assume that t partitions the data D
+into two subsets Dt,L and Dt,n and a proportion q of the
+objects in D go to Dt,z. Let u and v be the fractions of the
+objects in Dt,L and Dr,R, respectively, that belong to the
+class '+'. The other two sets of the parameters measuring
+the goodness of to and t at the root node of T' can be defined
+similarly. Table 1 summarizes all the parameters.
+The following two lemmas establish the properties for
+Theorem 1.
+
+LEMMA 1. With the assumption that changes are made to
+class labels only, D and D' contain equal number of objects.
+If D and D' are divided by the same split, then p' = p and
+q' =q.
+
+
+PROOF. Since D and D' are the subsets of S and S' that
+satisfy the same split conditions, and S and S' differ only in
+the class labels of some objects, D and D' contain the same
+number of the objects. Therefore, p' = p, and q' = q.
+[]
+
+To compute the new class frequencies in D~o,z and D~o,n ,
+change e is refined as follows. Note that the parameters are
+proportional to the number of objects in D.
+x0 : the fraction of the objects in Dto,L that change class
+from '+' to '-'.
+Xl : the fraction of the objects in Dto,L that change class
+from '--' to '+'.
+x2 : the fraction of the objects in Dto,n that change class
+from '+' to '-'.
+x3 : the fraction of the objects in Dto,n that change class
+from '--' to '+'.
+
+LEMMA 2. The proportions of the objects in D~o,n and
+and
+D~o,R that belong to the class '+' are (a) g' = g -
+p,
+(b} h' = h-
+~
+where co = xo - xl, and cI = x2 - x3,
+I--p'
+respectively.
+
+
+PROOF. (a) The number of the objects in Dt0,L that be-
+long to the class '+' is g .p. IDI. Since the change has made
+x0 · IDI objects in Dt0,L change class from '+' to '-', and
+xl · IDI objects change classes from '-' to '+', the num-
+ber of the objects that belong to the class '+' in D~o,L is
+g .p. [D[ - (xo' [D[ - xl" [D[). From lemma 1, [D'[ = [D[
+and p' = p.
+The frequency of the class '+' in D~o,L is
+gt = # of the objects in D~o,L that belong to class s+l
+# of objects in Dto,L
+~_ ff -- e~
+t
+p ·
+
+(b) Proof of (b) is similar to the proof of (a).
+[]
+
+The new class frequencies u' and v' can be obtained sim-
+ilarly.
+
+THEOREM 1. Assume that D' is obtained by changing the
+classes of a fraction lel of the objects in D. The effect of the
+change c to the class frequencies in Dto,z and Dto,R are
+described by co and ct , and the effect of the change e to the
+class frequencies in Dt,L and Dt,R are described by c2 and
+co. Then the split to, which is the split selected to partition
+the data D, will be inferior to a split t in D' if and only if
+
+0 < goodn,D(to) -- good~,D(t) < e(e),
+(1)
+
+
+
+
+571
+
+Parameter
+Description
+S
+D
+to,t
+D=,L, Dz,R
+P(q)
+f
+g(u)
+h(v)
+S'
+D'
+c
+DR,L, D~,R
+p'(q')
+
+i;
+h'(v')
+a sample
+a subset of S
+split candidates
+the two subsets of D divided by split x
+the proportion of the objects in D that go to Dto,L(Dt,L )
+the proportion of the objects in D that belong to the class '+'
+the proportion of the objects in Dto,L(Dt,L ) that belong to the class '+'
+the proportion of the objects in Dto,R(Dt,R ) that belong to the class '+'
+a sample that is almost the same as S
+subset of S' (D + e = D')
+the difference between D and D'
+the two subsets of D' divided by the split :c
+D'
+~D'
+the proportion of the objects in D' that go to
+t0,n~ ~,L)
+the proportion of the objects in D' that belong to the class '+'
+the proportion of t.he objects in D~n,R(D~,n) that belong to the class '+'
+
+Table I: Parameters
+to evaluate
+to and t in D and D'
+
+
+where e(c) = e(co, el, e2) = 2 [2gco + 2hCl - 2uc2 - 2v(co +
+e~ - e~) - -4 - _EL + 1 + ~oo+o,-~)~ ].
+p
+l--p
+q
+l--q
+
+
+PROOF. (=~) From the definition, the goodness measures
+of the split candidates to and t in D and D' using the gini
+index are
+good.,D(to) = 2f(1 -- f) -- 2pg(1 -- g) -- 2(1 -- p)h(1 - h),
+good.,D(t) = 2f(1 -- f) -- 2qu(1 -- u) -- 2(1 -- q)v(1 -- v),
+good.,,o,(to) = 2f'(1- f')-2p' g'(1-g')-2(1-p')h'(1-h'),
+good.,,o,(t) = 2f'(1-f')-2q'u'(1-u')-2(1-q')v'(1-v').
+The difference of the goodness measures of to and t in D'
+can be expressed as good., ,D, (to)-good.,,o, (t ) = good.,D (to)-
+good.,D(t) -- 2(Ko - Kx), where Ko = pgg + (1 - p)hh -
+[p'g'g' + (1-p')h'h'], and K1 = quu+ (1-q)vv- [q'u'u' + (1-
+q')v'v']. Since t is a better split than to in D', good.,,o, (to) <
+good., ,D,(t ). Therefore, good.,o (to ) - good.,D (t ) < 2(K0-
+K1).
+Since co and cl represent the change as cz and cs, cs =
+cco+cx-e2. From Lemma 2, e(c) = ~(co, cl, c2) = 2(Ko-K1)
+
+= 212gco +
+2hcl
+-
+2ue2 - 2v(co q- el - e2) -
+c°2p_ --~ + ~tq _+
+
+
+(¢=) Conversely, suppose that goodn,D(tO) -- good.,D(t) <_
+e(c).
+goodn,D(to) -- goodmD(t) -- e(e) = good.,,D,(to) --
+goodn,,D, (t) _<O. Thus, goodn,,D, (to) < goodn,,D, (t). This
+proves that to is inferior to t in the changed data D'.
+[]
+
+Based on Theorem 1, the fuzzy term almost equally good
+splits can be defined. Assume that to, t:, ... , t~ are the
+split candidates in D, to is the best split, and ci* is the
+smallest change that satisfies the inequality good.,D(to) --
+good.,D(tl) _<e(ci*) for the splits to and ti, i = 1, ... ,k.
+Define a change x to be smaller than another change y if the
+number of the objects changed by x is less than the number
+of the objects changed by y, i.e., Ixl < lY[. The definitions of
+sensitivity and almost equally good splits are given below.
+
+Definition 1. Define the sensitivity of to "to tl as the size
+of the smallest change that satisfies the inequality (1); that
+is, the smallest fractional change in D that may cause ti to
+become superior to to.
+
+Definition $. A split tl is defined to be almost as good as
+to with respect to a predefined fraction c if [ci*[ < c.
+The splits that axe almost as good as to with respect to a
+fraction c are those that may be superior to to if the fraction
+c of D is changed. As an example, consider four split can-
+didates to, tl, t2, and t3. Assume that to is the best split,
+and the relative sensitivities between to and the other splits
+are 1%, 2%, and 5%, respectively. If 3% of data is changed,
+then to may be replaced by tl and t2. If a change is less
+than 1%, no split change will occur.
+
+THEOREM 2. (Instability Theorem) Assume that to is
+the split of a node and t is a split that is almost as good
+as to with respect to a fraction c. Then t may be the split
+selected to partition the changed data, if a change is made
+to a fraction ~:lff_l
+ISl
+of the objects in the training sample S,
+where D is the data associated with the node.
+
+
+PROOF. Since t is a split that is almost as good as to with
+respect to a fraction c, t may become superior to to if the
+fraction c of D is changed. The fraction c change in D is
+equivalent to the fraction ~1
+change in S. Therefore, t
+
+be selected to partition the data, if the fraction ~
+of
+may
+S is changed.
+[]
+
+For the purpose of simplicity and illustration, we have
+assumed that changes are made to class labels only. This
+restriction can be relaxed. The theorems for general case
+are the same except that a different function e is derived
+[8]. Since the function e is used to identify almost equally
+good splits, e in Theorem 1 can be used in general case to
+measure the relative sensitivity between splits.
+
+
+3.
+PROPOSED SPLIT SELECTION METHOD
+Instability Theorem proves that split selection among al-
+most equally good splits may result in rules sensitive to small
+changes, and Theorem 1 provides a measurement for iden-
+tifying almost equally good splits. To lessen the instability
+problem, the standard split selection algorithm is enhanced
+by considering splits of the same degree of importance when
+forming the splitting predicate at a node. The concept of
+the improvement is described as follows:
+StableSplit(Data D, Fraction c)
+I. Generate split candidates, and find the best split to.
+
+
+
+
+572
+
+2. Identify splits that are almost as good as to with respect
+to a predefined fractional data change c.
+3. Generate and evaluate the possible combinations of
+splitting predicates formed by almost equally good splits.
+4. Return the splitting predicate with the largest goodness
+measure from to and the predicates from step 3.
+Step 1 is the same as the standard split selection algo-
+rithm. To identify splits that are almost as good as t0, we
+compute the relative sensitivities between to and the other
+split candidates. If the computed sensitivity between to and
+a split t is less than c, then t is almost as good as to. To
+find the smallest change, the most straightforward approach
+is to check all the possible combinations of the parameters
+co, ci, and c~. The smallest one that satisfiesthe inequality
+is the sensitivityof to to t. The detailsof the algorithm can
+be found in [8].
+Once almost equally good splitsare identified,the possi-
+ble predicates formed by the almost equally good splitsin
+conjunctive normal form (CNF) are generated and evalu-
+ated. The best predicate is then used to partition the data.
+The advantages of thisapproach iscompleteness and expres-
+siveness. Completeness guarantees to find the best splitting
+predicate, and a predicate in CNF is more expressive. How-
+ever, the drawback is that it is computationally expensive
+for a large number of almost equally good splits. However,
+we expect only a small number of the almost equally good
+splitsat a node. Hence, itisfeasibleto do exhaustive search.
+There are various ways [8] to deal with a moderate number
+of almost equally good splits to reduce the extra computa-
+tion overhead. For instance, instead of using all the almost
+equally good splits, splitting predicates can be formed by
+two or three good splits. 'This approach is at the risk of
+loosing information about unselected almost equally good
+splits.
+
+Split
+Candidate
+nyears < 1.5
+nyears < 3
+nyears _<6
+sports car
+Goodness
+Computed
+Measure
+Smallest Change
+0.08
+(0.2, -0.2, 0.2)
+0.48
+0.18
+(0, -0.2, -0.2)
+0.21
+(0.2, 0, 0)
+Relative
+Sensitivity
+4O%
+
+
+2O%
+2O%
+
+
+
+
+Figure 3: Example of the proposed algorithm
+
+To demonstrate the algorithm, consider the training sam-
+ple in Figure l(a). The steps to build a tree to tolerate a
+20% sample change axe the following:
+
+1. Assume that "nyears < 1.5", "nyears _<3","nyears <
+6", and "sports car" are the four split candidates at
+the root. The goodness measures of these splits axe
+shown in Figure 3.
+
+2. Compute the sensitivities of "nyears < 3" to the other
+split candidates. Let's use "nyears < 3" and "nyears <
+1.5" as an example. If "nyears < 3" is used to parti-
+tion the data, then p = 3
+~, g= 1, and h =0. If the
+data is divided by "nyears < 1.5", q = -~, u = 1, and
+v = ¼. Therefore, 6(e) = C(co,cl,cz) = 2[co - s~Co -
+5 2
+5
+C2) 2 -- C2 + 5C~].
+If a change,
+cl-~cl+~(c0+cl-
+which satisfies the inequality E(e) - (0.48 - 0.08) < 0,
+is made to the sample, then "nyears < 1.5" is superior
+to "nyears < 3" in the changed sample.
+
+By checking the possible combinationsof co, cl, and c2,
+a smallest change satisfying the inequality is described
+by (co,cl, c2) = (0.2,-0.2, 0.2) which corresponds to a
+change in 40% of the sample. The computed change
+states that if a change is made to the classes of a high
+risk and inexperienced (i.e. nyears < 1.5) driver and
+a low risk and experienced (i.e. nyears > 3) driver,
+then "nyears < 1.5" will be superior to "nyears < 3".
+
+The computed smallest changes and sensitivities of
+"nyears < 3" to the other splits are shown in Fig-
+ure 3. "nyears < 6" and "sports car" are the splits
+that are almost as good as "nyears < 3" with respect
+to 20% sample change.
+
+3. The evaluation of the possible combinations of the
+almost equally good splits selects "nyears < 3"V
+"sports car" as the split of the node. The classifi-
+cation tree is shown in Figure 3.
+
+In this example, the rule built by the proposed algorithm
+contains information about car type and driving experience
+compared to only one factor discovered by the standard al-
+gorithm. If the sample is changed from Figure l(a) to Figure
+l(b), the proposed algorithm constructs the same tree com-
+pared to the different tree built by the standard algorithm.
+The splitting predicate formed by almost equally good splits
+is more expressive.
+Although the proposed algorithm tends to produce more
+stable trees and can discover more factors, it requires extra
+computation to identify almost equally good splits and to
+form splitting predicates. The overhead may not be as se-
+vere as it looks, because we don't expect instability occurs
+at every node, and when it happens, the number of almost
+equally good splits are usually small. To cut down the over-
+head, the stable split selection algorithm can be applied to
+the top few levels only, since the splits at the top levels are
+the most important factors. In addition, more expressive
+splitting predicates may result in smaller trees which can
+compensate for the cost. Even though it is more expensive
+to build stable trees, the benefit of stable trees outweighs the
+overhead. A modest amount of additional time to build the
+tree can yield a tree with significantlylonger useful lifetime.
+We have proposed a split selection algorithm to construct
+more stable splitting predicates. It is still helpful to have a
+domain expert to resolve ambiguities in split selection. As
+in the example, given the three almost equally good splits,
+a domain expert can easily see that both driving experience
+and car type are important factors. The two almost equally
+good splits based on driving experience shows the ambiguity
+in defining "experienced drivers".
+
+
+4.
+STABILITY EVALUATION
+We applied the proposed split selection algorithm to the
+well known classification algorithm CART [2], and exam-
+ined the tree classifiers built by standard CART and by our
+algorithm on slightly different samples. Since decision tree
+is recursive, we only study the split forming process at the
+
+
+
+
+573
+
+Split
+Goodness
+Sensitivity of
+Sensitivity of
+Candidate
+Measure
+A1 to Ai
+A1 A A2 to Ai
+A1 = 1
+0.006063
+A2=l
+0.003443
+A3 = 1
+0.001516
+A4 = 1
+0.002250
+As = 1
+0.000001
+0.000263
+Ae=l
+A7=1
+As=I
+Ag=l
+AlO --- 1
+0.001920
+0.000162
+0.000264
+0.000202
+All= 1
+0.000880
+A12 = 1
+0.000515
+Alz = 1
+0.000314
+A14 = 1
+0.000000
+0.000242
+A15
+--
+1
+
+A16 = 1
+0.000219
+
+
+
+
+A2o
+A17 -- 1
+0.000000
+Als = 1
+0.000013
+Alo = 1
+0.000073
+= 1
+0.000145
+0.7%
+1.4%
+1.1%
+2.7%
+2.2%
+1.2%
+2.3%
+2.2%
+2.3%
+1.7%
+2.0%
+2.2%
+2.7%
+2.3%
+2.3%
+2.8%
+2.6%
+2.5%
+2.4%
+2.3%
+2%
+3.3%
+2.9%
+2.2%
+2.9%
+2.9%
+2.9%
+2.5%
+2.7%
+2.8%
+3.2%
+2.9%
+2.9%
+3.3%
+3.1%
+3.0%
+3.0%
+
+
+Figure 4: Goodness measures and relative sensitiv-
+ities for the original sample
+either an insignificantpattern change or a noise, and selects
+"A1 = 1 A A2 --=1" as the split of the root node.
+We continuedto test the stability of the two algorithms by
+adding another 2.3% change to the changed training sample.
+The new trees built by CART and the proposed algorithm
+are shown in Figures 5(c) and (c'). Though the rule still
+holds for almost 78% of the objects in the sample, the tree
+built by CART fails to discover it and only two of the factors
+in the rule are discovered. The proposed algorithm, on the
+other hand, is insensitive to noise because the combination
+of almost equally good splits filtered out noise.
+Figures 5(d) and (d') show the trees built by the two al-
+gorithms after adding another 2.5% change to the sample.
+CART fails to discover any of the factors in the rule even
+though there are still about 76% of the objects classified
+by the rule. On the other hand, the proposed algorithm
+identified "A2 = 1", "AT = 1", and "A10 = 1" as almost
+equally good splits, and chose "A2 = 1 A A7 = 1" as the
+splitting predicate of the root. Because "A2 = 1" is part
+of the splitting predicate of the root node, the splits based
+on A1, A3, and A4 are discovered at lower levels. "At = 1"
+is included in the splitting predicate of the root node be-
+cause the accumulated changes which had been in favor of
+A7 become significant enough to indicate a possible pattern
+change. The accuracy comparison of the two algorithms is
+shown in Figure 6.
+
+
+
+
+root node. We use synthetic data which contains 1000 ob-
+jects and has 20 attributes. (Note that sample size and the
+number of attributes are not the reasons for instability.) The
+training sample is formed by randomly generating the ob-
+jects and then assigning the class labels based on the rule,
+"i/(A1 = 1)A(A2 = 1)A(Aa = 1)A(A4 = 1), then class =
+'+', otherwise class = '-' ". A 20% noise level is added
+to the training sample; that is, 20% of the sample objects
+are misclassifled. We conducted the experiment by adding
+small changes to the training sample and studied the result-
+ing tree structure changes.
+Figures 5(a) and (a') show the trees grown on the origi-
+nal sample by CART and the proposed algorithm, respec-
+tively. Note that the tree built by the proposed algorithm
+is more concise and expressive. Figure 4 shows the com-
+puted relative sensitivities of the splits at the root nodes.
+The proposed algorithm selects "A1 = 1" and "A2 = 1" to
+form the splitting predicate because "A2 = 1" is almost as
+good as "A1 = 1" with respect to 1% change. The com-
+puted sensitivity shows that "A1 = 1" is less stable than
+"A1 = i A A2 = I", because "A1 = 1" is insensitive to
+changes up to 0.7% compared to 2% for "A1 = 1 AAa = 1".
+We added a 1.5% change to the sample. From the sen-
+sitivity measures in Figure 4 we already know that "A1 =
+1 A A2 = 1" is insensitive to the change, and "A1 = 1"
+may be replaced. The constructed trees shown in Figures
+5(b) and (b') confirm that. Even though the attribute Ar
+has nothing to do with the classification, it is considered by
+CART as the most important factor. The proposed algo-
+rithm, on the other hand, is able to discover the true rule
+because of the consideration of almost equally good splits.
+At the root node, "A1 = 1" and "A2 = 1" are identified
+almost as good as "AT = 1". The evaluation of the com-
+binations of the three splits filters out "At = 1", which is
+81% ·
+
+8O%
+
+79%
+
+78%
+·
+%.
+
+76%
+
+75%"
+
+74%
+
+73%
+O%
+""..\..
+
+='".......
+
+
+
+
+2%
+4%
+6%
+
+Cha~c fr~tlm
+.-m--CART
+
+
+
+
+Figure 6: The accuracy comparison of the two algo-
+rithms
+
+The results show that the proposed algorithm is more sta:
+ble, more tolerant to noise, and can reflect possible pattern
+changes. Unlike the series of abrupt changes in the tree
+structures built by CART, the proposed algorithm holds the
+tree structure until the changes are significant enough to be-
+come a new pattern. At the beginning, both algorithms are
+able to discover the rules. As data changes, CART starts
+to pick the noise or insignificant pattern change to parti-
+tion data. On the contrary, the proposed algorithm is able
+to discover the rule. Thus the proposed algorithm is more
+accurate.
+
+
+5.
+CONCLUSIONS
+We have presented fundamental theorems for the instabil-
+ity problem, ~md evaluated tree classifiers by their stability.
+Theorem I gives the relationship between a data change and
+the resulting split change. Based on Theorem 1, split sensi-
+tivity and splits that are almost equally good can be defined.
+
+
+
+
+574
+
+,o/
+o
+-
+._
+
+
+.....
+7/
+::(
+\:
+(a)
+(b)
+(c)
+no
+
+
+
+
+·_,
+,÷.
+
+
+(d)
+
+
+
+
+,÷,
+._,
+.÷.
+,-.
+.÷.
+.-.
+iffi
+^
+Aa
+'-'
+
+
+
+
+.÷,
+..
+
+
+
+(a')
+(b')
+(c')
+(d')
+
+
+Figure 5: Stability comparison of the two algorithms
+
+
+Split relative sensitivity not only shows the relationship be-
+tween the split candidates of a node, but can also be used as
+a metric to evaluate the stability of tree classifiers. Theorem
+2, Instability Theorem, provides the cause of the instability
+of decision tree classification algorithms. Based on the theo-
+rems, an algorithm to form splitting predicates is derived to
+lessen the instability problem. The experimental results in-
+dicate that the trees constructed by the proposed algorithm
+tend to be more expressive, informative, stable, concise, and
+accurate. Since the focus of this paper is the fundamental
+theorems for the instability problem, the complexities of the
+algorithms to identify almost equally good splits and form
+splitting predicates at a node axe not addressed. The per-
+formance analysis of the algorithms axe in [8].
+Splitting predicates formed by almost equally good splits
+tend to be more expressive. It would be interesting to see
+if they can alleviate some of the inefficient representation
+problems of disjunctive rules [9] and strongly correlated nu-
+meric attributes [6].
+The sensitivity measure can be used as an indicator of
+the effective time of validity of rules. When data changes
+axe greater than the change that the most sensitive split can
+tolerate, the rules may need to be reconstructed to reflect
+the changes. In a dynamic environment where data changes,
+effective classification rules axe crucial to make correct de-
+cisions. To ensure the effectiveness of the rules, changes
+to the database need to be monitored.
+Since not every
+change greater than the computed sensitivity will cause a
+split change, the algorithm should be able to detect a struc-
+ture change only when it actually happens. When a split
+change occurs at a subtree, instead of growing a new tree
+the information about changes is utilized to reconstruct the
+subtree.
+
+
+6.
+REFERENCES
+[1] L. Breiman. Bagging predictors. Machine Learning,
+24(2):123-140, 1996.
+[2] L. Breiman, J. H. Friedman, R. A. Olshen, and C. J.
+Stone. Classification and Regression Trees.
+Wadsworth, Inc., 1984.
+[3] P. K. Chan and S. J. Stolfo. On the accuracy of
+meta-leaxning for scalable data mining. Journal of
+Intelligent Integration of Information, 1997.
+[4] P. Domingos. Knowledge discovery via multiple
+models. Intelligent Data Analysis, 2(3), August 1998.
+[5] J. Friedman, T. Hastie, and R. Tibshirani. Additive
+logistic regression: a statistical view of boosting.
+Technical Report. Department of Statistics Stanford
+University., 1999.
+[6] T. Fukuda, Y. Morimoto, and S. Morishita.
+Constructing efficient decision trees by using
+optimized numeric association rules. In Proceedings off
+the 2Pad VLDB Conference, Mumbai, India, 1996.
+[7] J. Gehrke, V. Ganti, R. Ramakrishnan, and W.-Y.
+Loh. Boat - optimistic decision tree construction. In
+Proceedings of the 1999 SIGMOD Conference.
+Philadelphia, Pennsylvania, 1999.
+[8] R.-H. Li. Instability of decision tree classification
+algorithms. Technical Report UIUCDCS-R-PO01-2230,
+University of Illinois at Urbana-Champalgn, July 2001.
+[9] J. 3. Oliver. Decision graphs - an extension of decision
+trees. In Proceedings of the Artificial Intelligence and
+Statistics Conference, 1993.
+[10] J. Quinlan. Induction of decision trees. Machine
+Learning, pages 81-106, 1986.
+
+
+
+
+575
+

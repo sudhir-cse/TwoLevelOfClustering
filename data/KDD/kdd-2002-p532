@@ -1,0 +1,1111 @@
+A Model for Discovering Customer Value for E-Content
+
+Srinivasan Jagannatha~ Jayanth Nayak2 Kevin Almeroth'
+Markus Hofmann3
+
+Department of Computer Science, Department of Electrical and Computer Engineering~
+University of California, Santa Barbara, CA 93106-5110
+[jsrini@cs,jayanth@ece, almeroth@cs}.ucsb.edu
+
+High-Speed Networks Research Department~
+Bell Laboratories, Holmdel, NJ 07733-3030
+hofmann @bell-labs.corn
+
+
+ABSTRACT
+
+There exists a huge demand for multimedia goods and services in
+the Internet. Currently available bandwidth speeds can support sale
+of downloadable content like CDs, e-books, etc. as well as services
+like video-on-demand. In the future, such services will be prevalent
+in the Internet. Since costs are typically fixed, maximizing revenue
+can maximize profits. A primary determinant of revenue in such e-
+content markets is how much value the customers associate with the
+content. Though marketing surveys are useful, they cannot adapt to
+the dynamic nature of the Internet market. In this work, we examine
+how to learn customer valuations in close to real-time. Our contri-
+butions in this paper are threefold: (1) we develop a probabilistic
+model to describe customer behavior, (2) we develop a framework
+for pricing e-content based on basic economic principles, and (3)
+we propose a price discovering algorithm that learns customer be-
+havior parameters and suggests prices to an e-content provider. We
+validate our algorithm using simulations. Our simulations indicate
+that our algorithm generates revenue close to the maximum expec-
+tation. Further, they also indicate that the algorithm is robust to
+transient customer behavior.
+
+
+1.
+INTRODUCTION
+
+The Internet is seeing an explosive growth in commercial activ-
+ities, especially in content delivery services. The challenge is to
+envision realistic scenarios where customers can download music
+or movies for a price. For instance, Blockbuster could enter into an
+arrangement with the local cable modem or DSL services provider
+for on-demand movie rentals or music-video sales. Another ex-
+ample is how e-Books are being proposed as a viable alternative
+to paper books. In such markets, the content provider can maxi-
+mize revenue by charging the customers as high an amount as they
+are willing to pay. The key to increasing revenues therefore lies in
+learning how much the customers are willing to pay for the content.
+From the customer perspective, price affects whether to purchase
+the product or service. The customer can accept or reject a price
+based on his/her capacity to pay and willingness to do so. Choos-
+
+
+
+
+Permission to make digital or hard copies of all or p~irtof this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. Tocopy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD'02 Edmonton, Alberta, Canada
+Copyright 2002 ACM 1-58113-567-X/02/0007 ...$5.00.
+ing the right price is therefore of great importance to maximize
+revenue. There are not many ways to choose the right price. Usu-
+ally, content providers use years of experience with customers to
+guide their choice of prices. However, such approaches have some
+inadequacies in an Internet setting. First, these approaches are typi-
+cally regional. Surveys can find customer valuations for a service in
+some geographical region. Such region based characterization may
+not be helpful in the Internet. For instance, it is not inconceivable
+that in the future, during prime-time, when servers in Europe are
+overloaded, customers in Europe can watch movies streamed by a
+content provider in North America. Prices based on North Ameri-
+can market surveys (or based on experience with North American
+customers) would then severely affect revenues. Second, customer
+behavior can be time varying. A sudden news event can cause im-
+mediate changes in the Internet market. Experience-based prices
+and surveys cannot keep up with such dynamic behavior.
+This paper develops an analytical framework for discovering the
+right price in an Internet setting. We answer two questions- (1)
+can the content provider learn customer valuations online? and (2)
+can the content provider adapt to changes in customer behavior?
+A simple approach to learn customer valuations is to charge differ-
+ent prices and observe how customers react. And by continuously
+observing how customers react, one can track changes in behavior.
+However, experimenting with different prices can result in loss of
+revenue. The challenge is to learn customer behavior with mini-
+mal loss in revenue due to experimentation. One can minimize loss
+in revenue if data acquired by making a small number of obser-
+vations can be extrapolated based on a formal model of customer
+behavior. To this end, we develop a parameterized customer behav-
+ior model that takes into account how much a customer can spend
+as well as how willing she is to do so. We then develop an al-
+gorithm that ascertains these parameters online and then uses our
+analytical framework to suggest prices to the content provider. We
+perform simulations to validate our algorithm. We compare the
+revenue generated by our algorithm with the maximum expectation
+predicted by our analytical framework. We also compare the rev-
+enue generated by our algorithm with that generated using a simple
+pricing scheme. We simulate a variety of scenarios where customer
+behavior changes dynamically. The simulation results indicate that
+our algorithm is robust to such scenarios. Our work is based on a
+video-on-demand server, but it is sufficiently general to be applied
+to other forms of content and services in the Internet.
+The rest of the paper is organized as follows. We describe our
+basic system model used in this paper in Section 2. We formulate
+the maximum expectation of revenue as a constrained optimization
+
+
+
+
+532
+
+problem in Section 3. In Section 4, we develop a price discovering
+algorithm that tracks customer behavior and suggests the price for
+the content. We perform simulations to validate and stress-test our
+algorithm in Section 5. We discuss related and motivational work
+in Section 6. We conclude the paper in Section 7.
+
+
+
+2,
+SYSTEM
+AND
+CUSTOMER
+BEHAVIOR
+
+MODELS
+
+We consider a system where requests are satisfied if resources
+are available and the customer agrees to pay the quoted price. Re-
+sources are modeled as logical channels. Every request which is
+satisfied occupies a channel for some finite amount of time. Re-
+quests are processed on a First-Come-First-Served basis. If there
+are no channels available when a request arrives, then the request is
+rejected. For a video-on-demand server we can think of the number
+of channels as the number of movies that can be served simultane-
+ously. In this paper we do not focus on how the channel is allocated
+or how an allocated channel is managed. We mainly focus on the
+interaction between the system and the customer before a channel
+is allocated.
+In our model, we assume that once the content provider makes
+the initial infrastructural investment, there are either negligible or
+fixed costs in maintaining the resources (caches, servers, bandwidth
+etc.), i.e., there are no additional costs based on number of requests
+served. This is a reasonable assumption because servers incur fixed
+costs and bandwidth is typically bought at a flat rate. If mainte-
+nance costs are negligible or fixed, profit maximization is equiv-
+alent to revenue maximization. We also assume that there is no
+distinction or classification in the type of service, i.e., all customers
+are provided the same quality of the product. We also assume that
+all the products/services being sold are similar. This implies that
+the content provider is selling only e-books or only CDs or a VoD
+service and not a combination of these. A content-provider who de-
+cides to combine these activities can pre-allocate some channels to
+each category. Our analysis would then hold true for each of these
+categories independently. Though our ultimate objective is develop
+learning algorithms for a competitve market, in this paper, we re-
+strict ourselves to a monopolistic market where there is a single
+content provider providing the service.
+Economic theory has established that there are a large number
+of customers with a small income and a very small number of cus-
+tomers with a very large income[2]. It is reasonable to assume that
+customers' capacities to spend will follow a similar behavior. Cur-
+rently, two probability distribution models, Pareto and log-normal,
+are used to represent the distribution of incomes. In this paper, we
+use the Pareto distribution to represent the capacity to spend. Every
+customer has the capacity to pay based on a Pareto distribution with
+two parameters-shape a and scale b. All customers have capacities
+at least as large as b. The shape a determines how the capacities
+are distributed. The larger the value of a, the fewer the people with
+a very large capacity to pay. The Pareto density function is defined
+as .f~(x) = ~v,
+for x > b.
+Figure 1 illustrates the Pareto density function for different val-
+ues of shape a, and scale b = 50. Let us consider an illustrative
+example to understand the Pareto distribution of capacities. Con-
+sider a video-on-demand server. We can expect all customers to
+have a capacity to pay at least some amount for the movie. We call
+the largest such amount that can be paid by all the customers as the
+scale of the distribution of their capacities and denote it as b. We
+would expect most of the customers to be able to pay only about
+this amount. There will be very few customers who can pay a sig-
+nificantly more than the scale. This information is captured by the
+shape of the distribution, which we denote as a. The greater the
+value of a, the fewer the customers who can pay a lot more than
+b. For systems like video-on-demand servers, we would expect the
+shape to be very large. Another interpretation of the capacity to
+spend is to assume that it is the maximum valuation for that prod-
+uct. For common products, like movies or CDs, it is very likely
+that most people will have a similar maximum valuation and very
+few may have a higher maximum valuation. The Pareto distribution
+captures this behavior. Henceforth, we shall use the terms capacity
+to pay and maximum valuation interchangeably.
+Even though customers can spend (i.e., have a maximum valua-
+tion of the product), they may not be willing to do sot. For instance,
+even though a customer might value watching a movie at $10, how
+much he/she actually pays depends on the movie and other intan-
+gibles like "mood". To adequately describe the willingness of cus-
+tomers to pay, we define a family of probability functions. Consider
+an arbitrary customer with capacity X. We denote his/her decision
+to purchase the service by the random variable T which can take
+two values, 1 for accept and 0 for reject. The probability that the
+customer accepts the price ¢, denoted by P{T = 1 I ¢} depends
+on his/her capacity (or maximum valuation) X, and the price ¢. In
+general, for rational customers, we would expect this probability to
+decrease with price and increase with capacity. In this paper, we
+work with a simple model, where P{T = 1 I ¢} is defined as
+shown in Equation 1.
+
+
+{
+P{T=I
+1¢}=
+1-
+,
+0_<¢_<X
+0
+,
+¢>X
+(1)
+
+
+
+The parameter 6 in Equation 1 is a product-specific variable that
+represents how willing a customer is to spend money. By varying
+the parameter 6, we can make the willingness as elastic as desired.
+The higher the value of 6, the more willing the customer is to spend
+money on that product. We show willingness models for a customer
+having capacity 100, with 6 values 0.5, 1, 2, 5 and 10 respectively in
+Figure 1. As can be seen, the model with 6 = 10 makes the customer
+much more willing to spend money than in the case of the other
+models. In fact, as 6 increases, the willingness begins to resemble
+a "step-function", i.e., the customer is willing to pay as much as
+his/her capacity to pay. In particular, when 6 is infinity, the model
+reduces to a quasi-linear utility function model, where customers
+will purchase at any price below their maximum valuation. Since
+different customers will have different degrees of willingness, we
+shall assume that for each product, the willingness parameter ,~of
+the customers is a random variable. While in reality, the customers'
+willingness can be totally arbitrary, to make our analysis tractable,
+we shall assume that it is exponentially distributed. Let the mean
+elasticity of willingness be 6o. Then, the probability density of 6 at
+
+x, denoted by fzx(x), is given by fzx(x) = ~oe-~° forx > 0
+
+
+
+3.
+EXPECTATIONS
+OF REVENUE
+AND AC-
+
+CEPTANCE
+
+
+
+1Typically, the willingness of customers is modeled in terms of
+utility functions. This presupposes that the customer has associated
+a value with the good or service and that this value is known. In
+reality, the actual value a customer associates with the product is
+difficult to determine. We therefore propose a model where the
+customer probabilistically reacts to the quoted price.
+
+
+
+
+533
+
+0.1
+
+0.01
+
+0.001
+
+_~ 0.0001
+
+
+ie.os
+
+
+le-08
+Pare~oDeity Func~on
+
+
+
+
+lo-07
+
+le.Oe
+shap0=l.0--
+Sh~oo~2.o
+- -
+Saap~2.S.....
+Slaap*=3.0--
+1.0
+
+1.6
+
+1.4
+
+12
+
+1
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0
+ProbabilislicAcceptanceModels
+
+Bas~city=lO --
+Basticily--5 --
+BasUcity=2 .........
+Elasticity=l --
+Elast~ty=O,5 --
+
+
+
+
+0
+200 400 600 800 1000 1200 1400 1600
+'20
+40
+60
+80
+100
+X
+Pdce
+
+
+Figure 1: Pareto Distribution and Probabilistic User Willing-
+
+uess
+
+
+
+In this section, we discuss the dynamics of the customer behavior
+model and system resource constraints and how together they affect
+revenue. We state the following theorem without proot~.
+
+THEOREM 1. Consider product pi. Let customer willingness to
+pay for pi be represented by Equation 1. For a Pareto distribution
+of customer capacities, with shape c~and scale b, c~ _> 1, b > O,
+and exponentially distributed elasticity of willingness with mean
+81o,the expectation of the variable Ti givenprice ¢i, E [Ti I ¢i] is
+as follows. In Equation 2, F(p,q) refers to the incomplete gamma
+
+function f~ :;.~ dx.
+
+
+
+{
+E[Vi 1¢11 =
+0 < ¢i _<b
+(0,
+>
+(2)
+
+
+We now formulate an expression for the revenue. Let m be the
+total number of products and A~the arrivalrate of requests for prod-
+uct pi. The fraction of customers who accept the quoted price ¢i
+for pl per unit time is hl E[Ti I ¢i]. Therefore the expected rev-
+enue earned on pi per unit time is given by hi ¢i E[Ti I ¢i]. The
+expectation of revenue per unit time for all the products together is:
+n = E?=I hi¢iE[Ti I ¢'1
+One can show that there exists a maximum for the equation de-
+fined above. To do so we observe that each term in the expression
+for revenue is dependent only on one variable. Therefore, if each of
+the individual terms can be maximized, the sum can also be maxi-
+mized. Moreover, the ith term is a concave function3of the variable
+¢~. Therefore each term can be maximized and any local maxima is
+also a global maxima. Since the revenue function is well behaved,
+a good numerical package can be used to determine the optimal
+prices.
+Though the optimal prices can be ascertained through numerical
+methods, resource constraints may prevent achieving the maximum
+expectation of revenue. To illustrate this phenomenon, let us con-
+sider a hypothetical system with one single product, 10 channels,
+and an arrival rate of 20 requests per minute. Further, assume that
+at the optimal price, the acceptance rate is 0.6. In effect, if the con-
+tent provider quotes the optimal price, there will be 12 customers
+accepting the price. This clearly leads to an unstable system since
+only 10 requests can be accommodated. On the other hand, by
+
+2The proof outline is presented in a detailed version of this work
+[131.
+3We have omitted the proof for reasons of space.
+Figure 2: Maximizing Revenue Under Resource Constraints
+
+slightly increasing the price, the content provider can ensure that
+only as many customers accept the price as can be accommodated
+by the system. This is illustrated in Figure 2. In this figure, the
+revenue and the number of customers accepting the price are plot-
+ted as a function of price. At the price when revenue is maximized,
+the number of customers accepting the price is more than capacity
+of the system. By increasing the price to such an extent that only
+as many customers accept as can be accommodated by the system,
+maximum revenue is realized.
+We formalize this idea by introducing the constraint of system
+utilization. System utilization is the relative fraction of time for
+which the channels are busy servicing requests. Let h = ~ hl
+be the arrival rate of requests, n the number of channels, and the
+d the average time to serve a requesd. Then, the system utiliza-
+tion, p, is defined as the ratio of the number of requests entering
+the system per unit time to the number of serviced requests exiting
+the system per unit time. The mathematical expression for system
+utilization, when we charge a price ¢~ for product p~, is given by:
+d
+rn
+p(¢z, ..., era) = ; ~i=z hiE[Ti I ¢,]
+For a stable system, the system utilization is bounded above by
+1. This imposes a constraint on the revenue maximization prob-
+lem. Combining the expressions for revenue and system utilization
+and the fact that prices should be positive, we formulate revenue
+maximization as a constrained optimization problem:
+
+
+
+Maximize : 7~ = ~
+hi¢iE[Ti I ¢i]
+(3)
+
+i=l
+
+d m
+Eh~E[Ti[¢i]
+_< 1
+(4)
+i=l
+
+Vi, 1 < i <m,¢~
+> 0
+(5)
+
+
+4.
+PRICE
+DISCOVERING
+ALGORITHM
+
+In the previous section, we formulated revenue maximization
+as a constrained optimization problem. To solve the optimization
+problem, the content provider would need to know the shape, scale,
+and mean customer willingness elasticity for all the products. In
+this section, we develop an algorithm that learns these parameters
+in real-time and suggests prices to the content provider.
+Our algorithm is based on gauging the customers' reaction to
+different prices. Consider product p/. By observing customers'
+decisions over a period of time for a trial price ~, one can ascer-
+lain the mean rate of acceptance for that price. This observed rate
+is assumed to be the expectation of the decision to purchase, i.e.,
+E[Ti [ ¢i]- Theorem 1, which quantifies E[Ti [ ¢i], depends on
+four variables: price (¢D, shape (a), scale (b), and mean customer
+
+4We make the assumption that all products have similar service
+time. For other systems, only the formulation for system utilization
+will change. The constraint remains the same.
+
+
+
+
+534
+
+willingness elasticity (~/o). Of these we only know price. We as-
+sume a set of feasible pairs of values for shape and mean customer
+willingness. For each of these feasible pairs ((c~,of)), we solve for
+scale using Equation 2. Thus, we now have a feasible set of val-
+ues for the scale of the customer capacity distribution. We now
+set another trial price ~p~. For each feasible tuple of shape, scale
+and mean willingness elasticity, we compute the expectation of the
+decision to purchase for price ~b[. We then make a second round
+of observations of customer decisions, this time for the price ~.
+By comparing actual customer reactions with the predicted reac-
+tion, we can estimate the closest feasible tuple for shape, scale and
+mean customer willingness elasticity. We can use these values in
+the constrained optimization problem to compute the optimal price.
+This new price is again used as a trial price and this process is re-
+peated forever. Since there are continuous price experiments, any
+changes in customer behavior will be detected by the algorithm.
+There are a few problems in the algorithm outlined above. First,
+customer preferences for products can be expected to follow a Zipf
+distribution[16]. This means that request arrival rates will be highly
+disproportionate. Therefore, the interval for observation to esti-
+mate the rate of acceptance could be very large. Because the trial
+price can be suboptimal, the greater the time spent charging the
+trial price, the greater the loss of revenue, Second, if the number
+of products is very large, the optimization problem can be fairly
+difficult to solve.
+We therefore classify the set of products into categories. Each
+category consists of a set of products for which the content provider
+estimates that the mean customer willingness to pay is "similar".
+The customer will be charged the same price for all products be-
+longing to the same category. For instance, in a VoD system, the
+content provider can classify movies as Hot, Cold and Special. Hot
+movies are those that the content provider thinks are very popu-
+lar. Cold movies are those for which customer may not pay a lot.
+Special movies are those that have a limited appeal, but those who
+prefer it have a high willingness to pay. Alternately, the content
+provider can classify the movies as Action, Western,Romance, etc.
+We believe that content providers can make classifications based on
+customer willingness to pay with a reasonable degree of accuracy.
+Since every product in a class is charged the same price, each class
+of products can be thought of as a single meta-product. There are
+two advantages of working with a set of recta*products: (1) the rev-
+enue optimization problem is more tractable since there are fewer
+variables, and (2) the intervals of observation for estimating the rate
+of acceptance are much smaller.
+Another assumption we make is that the content provider sets
+a minlum price and a maximum price. Any prices suggested by
+the algorithm that are not in this range are ignored, and the near-
+est bound is set as the new price. Such bounds represent policy
+decisions that may be made by content-providers in real-life.
+The modified algorithm makes a round of observations of cu-
+tomer reactions for each product. A round of observations is com-
+plete as soon as there are ~,q requests for any of the meta-products.
+It is quite possible that one of the meta-products has received very
+few requests when the round is over. In this case, since the ar-
+rival rate for that meta-product is small, an erroneous estimate of
+the acceptance rate will not affect the revenue maximization. The
+specifics of the algorithm are outlined in a detailed version of this
+work [13].
+Inspite of the very large number of unknowns, our algorithm is
+able to produce consistently high revenues (when compared with
+the maximum expectation) in our simulations. We discuss our sim-
+ulation scenarios in greaterdetail in the next section.
+5.
+SIMULATION
+We have implemented a simulator to model a content delivery
+system. Using simulations, we analyze the performance of the
+price discovering algorithm described in Section 4 and compare
+its performance with two other pricing schemess. We describe the
+simulation scenario below,
+System Description: We performed simulations with I000 logical
+channels. We chose a fixed number of channels because the system
+capacity typically does not change very often. We chose request
+service times from a uniform distribution between 90 and 110 min-
+utes. This closely models the typical length of movies. Channels
+were allocated based on a FCFS policy. Requests arriving when
+there are no free channels are rejected. There is no waiting queue.
+Customer Choice of Products: In all our simulations we assume
+that there are 50 products for the customer to choose from. Cus-
+tomer choice of the products was assumed to follow a Zipf-like
+distribution with zipf-exponent6, 0 = 0.73. In a Zipf-like distribu-
+tion, the ith popular product in a group of m products is requested
+1
+with probability
+E-
+
+Customer Capacity and Willingness: Since our system delivers
+only similar kinds of products7, we assume that for any given cus-
+tomer, his/her maximum valuation (or capacity to pay) for all the
+products is the same. Only the willingness to pay differs over prod-
+ucts. A high request arrival rate for a specific product can be di-
+rectly correlated to a high willingness to pay for that product. Alter-
+nately, there may exist no correlation between popularity and will-
+ingness to pay. We simulate both scenarios. In the first scenario,
+the mean customer willingness for the ,~h most popular product
+
+was chosen to be 100 x ~-~--,
+where w = 0.73. In the second
+
+scenario, the products were ranked according to customer willing-
+ness to pay. The mean customer willingness of the ,th ranked prod-
+uct was chosen in a similar way as in the first scenario. The set of
+mean customer willingness values so generated is highly skewed,
+with very few products having a high mean customer willingness
+and most other products having a low mean customer willingness.
+Request Arrival Process: We simulated a variety of arrival-rate
+models, adapted from the work on arrival-rate based scheduling by
+Almeroth et al.[1]. The workloads, presented in Figure 5, are mod-
+eled based on a 24 hour period beginning from 8.00am of one day
+and running to 8.00am of the next. "Prime time" periods see a
+surge in demand. We have used a steady baseline workload, with
+no surges in demand, and three non-steady workloads. The arrival
+rates during prime time for the non-steady workloads was around
+five times greater than the normal rate- based on statistics reported
+by Little and Venkatesh [14]. We simulated both gradual as well
+as sudden increases in arrival rate. We also used a workload with
+hourly spikes in arrival rate during primetime. This type of work-
+load is based on the belief that the workload for some systems may
+be synchronized with an external event like wall-clock time.
+Pricing Policies: We assume that the content-provider will charge
+at least $1 and not more than $10 for servingthe content. In all
+our simulations, we assume that our unit of currency is a dime (10
+
+
+5While it would be interesting to use real data to validate our
+model, such data does not exist. The reason is that customers will
+seldom disclose their true valuations for products.
+6Web-page accesses have been observed to obey a Zipf-like distri-
+bution with zip-exponent in the range 0.64 to 0.83 [5].
+rFor instance, on a VoD server, only movies are streamed and we
+can assume that a customer has a single maximum valuation for
+movies, even though his willingness to pay for specific movies is
+different.
+
+
+
+
+535
+
+Steady State System
+
+
+
+
+o
+"Prime
+Time"
+with a Gradual
+Increase
+in
+Load
+
+
+
+
+"Prime
+Time"
+with
+a Sudden
+Increase
+in LoaO
+
+
+
+
+"Prime
+Time"
+with
+a Sudden
+Increase
+In Load and Hourly Spikes
+
+
+
+
+8am
+12pro
+4
+m
+8
+m
+12am
+4am
+8am
+Simulation
+P~-Ime (Hours)
+
+Figure 3: Workloads
+
+
+dimes = $1). To better understand the performance of our price
+discovering algorithm we compared its revenues with those of two
+other pricing policies: 1) optimal pricing and 2) fixed pricing. The
+optimal pricing policy is based on a prescient algorithm that knows
+all the parameters of the system. Using all these parameters, it com-
+putes the optimal price for each product using the constrained opti-
+mization package. The optimal pricing policy is clearly unrealistic
+because it is impossible to know all the customer behavior parame-
+ters. It is therefore an upper bound on the achievable revenue for a
+price discovering algorithm. The fixed pricing policy on the other
+hand is simplistic and practical: The contentprovider chooses some
+fixed price and charges all customers the same price irrespective of
+the product requested. The problem with this policy though is that
+the content provider does not know what price to charge. For the
+purposes of comparison, we repeated the simulationswith different
+prices, starting with a price of 10 and going up to 100 in increments
+of 1.5. Assuming that all these prices are equally likely, we com-
+puted the mean revenue earned in the simulations for each of these
+prices. To get a better idea of how a particular fixed price impacts
+overall revenue, we also present results for simulations with prices
+20, 40, 60 and 80. The fixed pricing scheme we outlined above
+is a representative of the class of fixed pricing algorithms. We do
+not claim that our fixed pricing scheme is the best representative
+of that class. It is not the aim of this paper to benchmark our al-
+gorithrn with respect to the best fixed pricing algorithm. Instead,
+our objective is to understand the flexibility that a price discover-
+ing pricing scheme provides in adjusting to customer behavior and
+resource constraints.
+
+5.1
+Simulation Results
+We ran simulations for a period of 1440 minutes (one day of
+simulated time). All the simulation results are averaged over 10
+runs with different seed values for the random number generator.
+In case of the price discovering algorithm, in all our simulations,
+the products are classified into three categories. The same price is
+charged for all products in the same category. The metric we use
+in our simulations is called the revenue-ratio. The revenue-ratio of
+a pricing scheme for a particular simulation is the ratio of the rev-
+enue generated by that pricing scheme to the theoretically predicted
+maximum expectation for that simulation. The higher the revenue-
+ratio, the better the performance of the pricing scheme. Since the
+revenue-ratio is with respect to an expectation, it is possible for the
+revenue-ratio to be greater than 1. Moreover, since the maximum
+expectation is computed using numerical methods, our results are
+accurate only within error bounds.
+
+
+
+
+1.4
+|
+~s0era
+1,3 [
+Adaptive
+
+7f
+~.
+
+
+0.9
+"
+~
+-
+
+~
+0.8
+
+0.7
+
+0.6
+'
+'
+2O
+30
+40
+5O
+
+Scale
+Workload2
+
+Prescient.Ngorithm --
+Adaptive Algorithm - -
+FixedPridng Schemes: Woddoad2
+
+L
+'
+"
+~ixedPree=~ . "
+2 t
+FixedFrice=40
+·
+J
+FixedPri0~=60
+·
+0
+|
+FixedPric~-80
+·
+~
+1.5 1
+FixedPriclngMean ----
+
+
+
+
+0.5
+
+
+0 I
+i
+,
+i
+i
+60
+70
+80
+20
+30
+40
+50
+60
+70
+80
+
+Scale
+
+
+Figure 4: Revenue relative to maximum expectation for differ-
+ent pricing policies
+
+
+
+Figure 4 shows the performance of the three pricing schemes
+for different customer capacities. The revenue-ratio is presented
+as a function of tile scale of the Pareto distribution. The scale of
+the Pareto distribution is varied from 20 to 85. The results for the
+fixed pricing schemes are presented in a separate graph to improve
+readability. The revenue-ratio for the different fixed prices varies
+with the scale of the distribution. This indicates that, if the con-
+tent provider does not know the customer behavior parameters, the
+revenue earned can be suboptimal. Notice that the mean revenue
+of the fixed pricing schemes increases with the scale. This is be-
+cause as the scale increases, more customers could pay the prices
+charged in our simulations. The price discovering algorithm gen-
+erates revenue within 80% of the optimal. The revenue generated
+by the price discovering algorithm is low for the lower values of
+scale because in all our simulations, we started with intial test price
+vectors of (30, 35, 35) and (50, 55, 55) respectively. Since these
+prices are much higher compared to the scale of the Pareto dis-
+tribution, there is an initial loss in revenue. The prescient algo-
+rithm generates nearly the same revenue as the predicted maximum
+expectation. This validates our theoretical results. In this set of
+simulations, there is no correlation between popularity of a prod-
+uct and the mean customer willingness to pay for it. The results
+for the other scenario, where the popularity and willingness to pay
+are correlated, are very similar. We have presented results only for
+one of the workloads due to reasons of space. The revenue-ratios
+were similar for the other workloads. However, the actual revenue
+earned was higher in case of workloads with high request arrival
+rates.
+In the simulations presented above, the customer behavior was
+invariantover time. But this may not be true in a real-world setting.
+For instance, one may expect a greater willingness to pay during
+"prime-time" than say, during "office-hours". We performed many
+simulations to see how these behavioral changes may impact rev-
+enue. We present results for two scenarios-one where the scale
+of customer distributionincreases during prime time and the other
+where the elasticity of willingness changes randomly during prime
+time. The results are presented in Figure 5. We also investigated
+how performance of the price discovering algorithm deteriorates
+when the frequency of customer behavior changes increases. For
+a good algorithm,, this deterioration should be smooth and if possi-
+ble negligible. In our simulations, we observed that the algorithm
+was able to adapt to changes in customer behavior. In fact, the
+performance (with respect to the optimal) does not deteriorate sig-
+
+
+
+
+536
+
+Performance when scale is doubled
+
+Worldoad I
+Workload 1
+1.4
+Prescient ~Jgorithm --
+1.3
+Adaptive Algorithm --
+'"=,.,~r
+Fixed Pr~e-~
+·
+/
+FixedPdce~O
+·
+=o '1.2
+o
+I [
+Fixed Price=80
+,
+~
+1.1
+~
+O.Ot
+Fixed Pdcing Mean ----
+
+
+0.9
+...............
+=>
+_
+_
+f
+.
+.
+.
+-
+-
+.
+.-
+~: .. ~
+,
+,
+~
+.
+~
+
+¢
+0.8
+¢
+0.4
+
+0.7
+0.2
+
+0.~
+'
+--
+--
+--
+0
+20
+25
+30
+35
+40
+45
+20
+25
+30
+35
+40
+45
+
+Scale
+Scale
+
+
+
+
+1.4
+
+1.3
+
+o
+1.2
+u
+
+
+
+~
+0.9
+f
+m
+0.8
+
+0.7
+
+O.E
+2O
+Performance when mean willingnessis changed randomly
+
+Workload 1
+Wo~oad
+1
+
+
+'
+' Presl:ient~gorithn~~
+/
+'
+'
+J:i~ed,frice--~
+. '
+Adaptive.J,lgorlthm --
+~ ~.
+FixedPrice=40
+·
+= I
+Fk~P~=60
+·
+o
+]
+Fixed Price=80
+*
+~l.sI
+F=odp~ M~.----
+
+~ o
+~"~os'
+..........................~:~:
+i
+i
+i
+i
+,
+i
+
+30
+40
+50
+60
+70
+80
+20
+30
+40
+50
+60
+70
+80
+
+Scale
+Scale
+Figure 5: Performance with dynamic customer behavior
+
+
+nificantlyeven when customer behavior changes after every hour of
+simulated time. We do not present the results for reasons of spaces.
+
+
+6.
+RELATED WORK
+Our work has been motivated by the significant amount of re-
+search on bandwidth and congestion pricing. Dynamic pricing schemes
+[15, 7, 10] have been shown to be socially and economically effi-
+cient. The main thrust of such schemes has been to increase prices
+when resources are scarce. Such research has been "resource-centric",
+where the primary focus has been on managing resources and not
+on revenue. Our work has also been motivated by research which
+has been "content-centric"[8, 4], and not concerned with resource
+constraints. Ignoring resource constraints can however lead to a
+situation where customers are rejected due to lack of server or
+bandwidth resources. We believe that our work strikes a balance
+between resource considerations and customers' value for the con-
+tent.
+To the best of our knowledge there has been very little research
+on online price discovering algorithms [11, 12]. Most research has
+been focussed on agent based market economies [3, 6, 9].
+
+
+7.
+CONCLUSIONS AND FUTURE WORK
+We have developed an analytical framework for pricing of on-
+demand content. The framework models customer behavior as well
+as resource constraints. Based on this framework, we have devel-
+oped an algorithm that suggests prices to the content-provider. We
+have analyzed the peformance of our algorithm using simulations.
+We have used a simple fixed pricing scheme and an unrealistic op-
+timal pricing scheme as a baseline for comparison. We have ob-
+served that the fixed pricing scheme can generate,sub-optimal rev-
+enues if parameters governing customer behavior are not known.
+We have also observed that the relative performance of the pricing
+schemes is independent of the request arrival rate. We also ob-
+served that the fixed pricing scheme breaks down in the presence
+of dynamic customer behavior. Finally, we have observed that our
+
+SResults are presented in a detailed version of this work [13].
+price discovering scheme performs consistently even with highly
+varying workloads and dynamic customer behavior.
+Our work models a monopolistic market. Competition will af-
+fect customer behavior and hence the maximum expectation of rev-
+enue. Learning customer behavior in competitive markets needs to
+be studied in greater detail. Another avenue for research is to study
+the tradeoffs between a dynamic pricing scheme and a subscription-
+based pricing scheme and how the two can be integrated.
+
+
+8.
+REFERENCES
+[1] K. Almeroth, A. Dan, D. Sitaram, and W. Tetzlaff. Long term
+channel allocation strategies for video applications. In IEEE
+lnfocom, April 1997.
+[2] B. C. Arnold. Pareto Distributions. International
+Co-operative Publishing House, Burtonsville, Maryland,
+1983.
+[3] J. Y. Bakos. Reducing buyer search costs: Implicationsfor
+electronic marketplaces. Management Science, 43(12),
+December 1997.
+[4] E Basu and T. Little. Pricing considerations in
+video-on-demand systems. In ACM Multimedia Conference,
+November 2000.
+[5] L. Breslau, E Cao, L. Fan, G. Phillips, and S. Shenker. Web
+caching and zipf-like distributions: Evidence and
+implications. In Infocom, pages 126-134, 1999.
+[6] A. Chavez and E Maes. Kasbah: an agent marketplace for
+buying and selling goods. In Proceedings of the First
+International Conference on the PracticalApplication of
+IntelligentAgents and Multi-Agent Technology, April 1996.
+[7] R. J. Gibbens and E P. Kelly. Resource pricing and the
+evolution of congestion control. Automatica, 35:1969-1985,
+1999.
+[8] A. Goldberg, J. Hartline, and A. Wright. Competitive
+auctions and digital goods. Technical Report
+STAR-TR-99-01, InterTrust Technologies Corporation,
+November 2000.
+[9] A. Greenwaid and J. Kephart. Shopbots and pricebots. In
+Sixteenth International Joint Conference on Artificial
+Intelligence, August 1999.
+[10] A. Gupta, D. O. Stahl, and A. B. Whinston. The economics
+of network management. Communications of the ACM,
+42(9):57.-63, 1999.
+[11] S. Jagannathan and K. C. Almeroth. The dynamics of price,
+revenue and system utilization. In Management of
+Multimedia Networks and Services, Chicago, Illinois, USA,
+October 2001.
+[12] S. Jagannathan and K. C. Almeroth. Price issues in
+delivering e-content on-demand. ACM Sigecom Exchanges,
+3(2), May 2002.
+[13] S. Jagannathan, J. Nayak, K. Almeroth, and M. Hofmann.
+E-content pricing: Analysis and simulation.Technical report,
+University of California Santa Barbara, November 2001.
+available at
+http://www.nmsl.cs.ucsb.edu/papers/ECONTENTPRC.ps.gz.
+[14] T. Little and D. Venkatesh. Prospects for interactive
+video-on-demand. IEEE Multimedia, pages 14.-23, Fall
+1994.
+[15] J. Mackie-Mason and H. Varian. Pricing the Internet. Public
+Access to the lnternet, February 1994.
+[16] G. Zipf. Human Behavior and the Principle of Least Effort,
+an Introduction to Human Ecology. Addison-Wesley, 1949.
+
+
+
+
+537
+

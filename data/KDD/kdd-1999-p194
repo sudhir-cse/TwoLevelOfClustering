@@ -1,0 +1,803 @@
+Generalized Additive Neural Networks
+William J. E. Potts
+SAS Institute Inc.
+SAS Campus Drive
+Caty, NC 27513
+(919) 677-8000
+will.potts@sas.com
+
+
+
+ABSTRACT
+There are several practical difficulties with the widespread
+application of artificial neural networksto predictive datamining.
+The inscrutability of the fitted model limits their suitability for
+many databasemarketing applications and can even have legal
+ramifications in credit scoring applications. Other difficulties
+concerndetermining the architectureof the network (the number
+of layers, the number of neurons) and trouble with numerical
+optimization such as local minima. Generalized additive neural
+networks (GANNs) have constraints on their architecture that
+lessen these difftculties. Graphical methods can be used for
+interpreting the effect of eachinput variable on the fitted model.
+Partial residual plots can be used to visually determinenetwork
+complexity. With the addition of direct connections,GANNs can
+be initialized using generalizedlinear models.Thesemethodsare
+illustrated using abanking marketingexample.
+Keywords
+Predictive modeling, additive models,partial residuals.
+
+1. NEURAL NETWORKS FOR
+PREDICTIVE DATA MINING
+Predictive modeling methodsarewidely usedfor analyzing large
+operational databases.Database marketing is concerned with
+predicting customer response to promotions. Credit scoring
+models use applicant information to predict adverse outcomes
+such as default or bankruptcy. Fraud detection models use
+transaction characteristics to predict abuse and deliberate
+deception.
+The generic supervisedprediction problem consistsof a data set
+of i=l ,...,n cases(observations,examples,instances).Associated
+with eachcaseis vector of input variables (predictors, features),
+q,...,x,,
+and a target variable (response, outcome), y. A
+predictive modelmapstheinputs to expectedvalueof thetarget.
+
+
+pcmission tO nlake digital or hard copies of all Or part of this work f"'
+personal or c,assroom use is granted without fee provided that copies
+arc not ,,,ade or distributed for profit or commercial advantageandthat
+cop;es bear this notice and the full citation on the tirst Page. To COPY
+ot~,e,~~isc,to republish, to post on scrvcrs or to redistribute to lists.
+requires prior specific permission and/or a fee.
+KDD-QQ San Diego CA USA
+copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+The predictive model is built on a training data set where the
+target is known. The purposeis to apply the model to new data
+where the target is unknown. The target may represent class
+labels, for example,whether a prospectrespondedto a marketing
+offer. The target may representa continuous outcome such as
+revenue.
+Generalizedlinear models[131
+
+
+
+arewidely usedfor predictive modeling. The link function, go',
+is used to constrain the range of the predicted values. For
+example, the logit
+link
+g;`@(y))=
+ln(E(y)/(l -E(y))
+is
+appropriate when the expected target is bounded between zero
+andone,suchasprobability. The parametersareusually estimated
+by maximumlikelihood.
+Multilayer perceptrons[2, 161are the most widely used type of
+neural network for supervisedprediction. A multilayer perceptron
+(MLP) with a single hidden layer with h hidden units (neurons)
+hasthe form
+
+
+
+
+The (link-transformed) expected target is expressedas a linear
+combinationsof nonlinear functions of linear combinations of the
+inputs. The link function is the inverse of the output activation
+function. In this case,the activation function usedfor the hidden
+layer is thehyperbolic tangent,although other sigmoidal functions
+could
+be used. This
+nonlinear
+regression model has
+h(k + 2)+ 1unknown parameters (weights and biases). The
+parametersareestimatedby numerically optimizing somesuitable
+measureof fit to the training data(the error function) such asthe
+negativelog likelihood.
+The chief benefit of MLPs for predictive modeling is their
+flexibility in representingnonlinear phenomenon.Theoretically,
+they are universal approximators, capable of modeling any
+arbitrary continuous function [16]. However, their ascribed
+similarities to organic neural networks have lead to unhealthy
+anthropomorphism and, with it, unrealistic expectations. Many
+dataanalystsaredisappointed when they experiment with neural
+models on real data. This is particularly true in domains with
+noisy data such as databasemarketing where future customer
+behavioris predictedbasedon pastbehavior anddemographics.A
+
+
+
+
+194
+
+typical rendition of this sentiment is the article titled "Applying
+Neural Computing to Target Marketing"
+by Zahavi and Levin
+[ 193.The abstract summarizes the results:
+"It is shown that, at least for the data used in this study the fit
+achieved for both methods [logistic
+regression and neural
+networks] is approximately
+the same, but the process of
+configuring and setting up a neural network for a database
+marketing application is not straightforward and may require
+extensive
+experimentation
+and computer
+resources. The
+results are therefore not encouraging for the neural net
+approach."
+Poorly specified neural networks, inefficiently fitted to noisy data,
+are a waste of effort. However, in the domains where the signal is
+difficult to extract from the noise, such as database marketing,
+small improvements of predictive power often have great value.
+
+Three practical difficulties
+with applying
+neural networks in
+predictive data mining are inscrutability,
+model selection, and
+troublesome training.
+Multilayer
+perceptrons are usually considered black boxes with
+respect to interpretation. The effects of a particular input on the
+target can depend in complicated ways on the values of the other
+inputs.
+In some pattern
+recognition
+applications,
+such as
+handwriting
+recognition,
+pure
+prediction
+is
+the
+goal;
+understanding how the inputs affect the prediction is immaterial.
+In
+many
+scientific
+applications,
+the
+opposite
+is
+true.
+Understanding is the goal, and predictive power is a consideration
+only to the extent that it validates the interpretive power of the
+model. This is the domain for formal statistical inference such as
+hypothesis testing and confidence intervals.
+
+Domains such as database marketing often have both goals.
+Scoring new cases is the ultimate purpose of predictive modeling.
+However, some understanding, even informal,
+of the factors
+affecting the prediction can be helpful in determining how to
+market to segments of likely
+responders. Understanding
+the
+effects of the inputs can also be useful for decisions about costly
+data acquisitions. In credit scoring, the opaqueness of the model
+can have legal ramifications. The US Equal Credit Opportunity
+Act requires creditors to provide a statement of specific reasons
+why an adverse action was taken. The regulation considers the
+statements that the applicant failed to achieve the qualifying score
+on the creditor's scoring system to be insufficient.
+
+The second practical difficulty
+with neural networks is the
+enormous number of configurations from which to choose. Trial
+and error is the most reliable method for determining the best
+number of layers, number of units, number of inputs, type of
+activation functions, type of connections, etc.
+
+The third practical difficulty is the computational effort required
+to optimize the large number of parameters in a typical neural
+network model. This is partially self-inflicted. Data analysts often
+use inefficient
+optimization
+methods such as backpropagation
+with neural networks. Newton-type methods [5] are usually more
+robust and efficient.
+Even with an efficient
+algorithm,
+local
+minima are troublesome. Different starting values can converge to
+different (faulty) solutions. Often the best remedy is multiple runs
+from different random starting values.
+2. GANN ARCHITECTURE
+AND
+ESTIMATION
+Generalized additive models are a compromise
+between the
+inflexible,
+but docile,
+linear
+models and the flexible,
+but
+troublesome, universal approximators.
+A generalized
+additive
+model (GAM) is defined as
+
+
+
+
+where the expected target (on the link scale) is expressed as the
+sum of individual
+unspecified univariate functions. The GAM
+methodology was developed by Hastie and Tibshirani [8, 9, lo].
+Each univariate function can be interpreted as the effect of the
+corresponding input holding the other inputs constant. GAMs are
+easy to interpret (graphically)
+and allow more flexibility
+than
+linear models.
+
+GAMs are usually presented as extensions of linear models.
+GAMs can also be presented as constrained forms of flexible
+universal approximators such as projection pursuit regression 161
+and artificial neural networks [17]. The basic architecture for a
+generalized additive neural network (GANN) has a separate MLP
+with a single hidden layer of h units for each input variable [ 171
+
+
+
+The individual output bias terms are absorbed into the overall bias
+8s. Each individual univariate function has 3h parameters, where
+h could vary across inputs. An enhanced architecture includes an
+additional parameter for a direct connection (skip layer)
+
+
+.fjbji)=
+
+wojxji +wlj tanh w,,~ +wlljxji
+(
+1+...
++ whj tanh(w,,,j + wlhjxji )
+
+so that the generalized linear model is a special case.
+
+Hastie and Tibshirani 18, 9, IO] use a backfitting
+algorithm to
+estimate the individual
+univariate functions, fi. The algorithm
+involves multiple univariate fits by smoothing the partial residuals
+from the current estimates. Backtitting is unnecessary for GANNs.
+Any method suitable for fitting more general MLPs can be used to
+simultaneously estimate the parameters of GANN models. Of
+course, the usual optimization and model complexity issues also
+apply to GANN models.
+The following recipe for constructing a GANN takes advantage of
+their constrained form to simplify
+optimization
+and model
+selection:
+
+1.
+Construct a GANN with one neuron and a skip layer for each
+input (inputs are assumed to be standardized)
+
+fj(Xji)=
+WojXj;
++
+Wlj
+tanh(w,,j
++WIlXji)
+
+
+This gives 4 parameters (degrees of freedom (df)) for each
+input. Binary inputs (dummy variables) only have a direct
+connection (I df).
+
+2.
+Fit a generalized linear model to give initial estimates of
+POand the woj .
+
+
+
+
+195
+
+3.
+Initialize the remaining 3 parametersin eachhidden layer as
+random values from a normal distribution with mean zero
+andvarianceequalto 0.1.
+4.
+Fit the full GANN model.
+5.
+Examine each of the fitted univariate functions overlaid on
+their partial residuals.
+6.
+Prune the hidden layers with apparently linear effects and
+add neurons to hidden layers where the nonlinear trend
+appearsto be underfitted. If this step is repeated,the final
+estimatesfrom previousfits canbeusedasstartingvalues.
+
+The visual diagnostics used in model selection are plots of the
+fitted univariate functions,
+-?j
+(xji)9
+overlaid on the partial
+residuals
+
+
+Prji
+=g,`CYi)-B"-C~,(x,i)=G~`Cvi)-gol~i))+~j(xji)
+
+itj
+
+
+versus the correspondingjth input. Partial residuals are used to
+investigate the effect of the individual inputs, adjusted for the
+effect of the other inputs. Thejth partial residual is the deviation
+betweenthe actualvaluesandthat portion of the fitted modelthat
+doesnot involve xj . Partial residuals were originally developed
+to diagnosenonlinearity in linear regressionmodels(identity link
+function) [4, 121. When gOi is nonlinear, a first order
+approximation [3, 10, 1I] is usually used
+
+prji=ag0'
+CFi
+>
+ay
+Cyi-ji)+.fj&ji)
+
+
+
+The growing and pruning processstartswith a single neuron plus
+a skip layer insteadof the linear model (the linear tit is only used
+for initialization). Berk and Booth [l] discussthe effectivenessof
+partial residual plots for visualizing the underlying curve. They
+show that the partial residuals basedon a GAM fit (which they
+call AMALL) are more reliable than thosebasedon a linear fit.
+Moreover, starting with 4 df smoothersis commonpractice with
+GAM estimation.
+Partial residual plots are used in step 6 to add or subtract
+complexity from the model. They can also be used to suggest
+transformations of the input variables. Neural networks do not
+rely on assumptionsconcerning the distribution of the inputs.
+Nevertheless,monotonic transformationscan reducethe effect of
+extremevaluesthat exert excessiveleverageon the fitted model.
+Model selection based on partial residual plots is subjective.
+Formal measuresof tit can be incorporated into the process.
+Measures of performance on external validation data are
+commonly used for tuning neural networks. Less expensive
+alternatives such asthe Bayesianinformation criterion, BIC [151
+can be used when the parametersare estimated by maximum
+likelihood.
+The randominitialization of the hidden layer (step3) is designed
+to give well-placed and stablestarting values.The combination of
+standardizedinputs, the hyperbolic tangent activation function,
+and random values close to zero discourages the iterative
+algorithms from taking large stepsinto treacherousregions of the
+parameterspace.However, local minima can still occur. Inferior
+local minima can usually be seenin the partial residual plots, in
+which caseanewrandominitialization should betried.
+
+3. RETAIL BANKING EXAMPLE
+The training dataconsistsof 2000 banking customerswho had an
+opportunity to acquire a new investment product. An equal
+number (1000) of respondersand nonrespondersare represented
+in the sample.The target is a binary indicator for whether they
+acquired the investment product. The prevalence of the target
+eventis approximately4% in the population. Eight interval-scaled
+input variablesareconsidered
+.
+ATMCT = the numberof ATM transactionsper month
+.
+ADBDDA = averagedaily balancein their checking account
+.
+DDATOT = total amountof checkingtransactions
+.
+DDADEP = total amountof checkingdeposits
+.
+SAVBAL = savingaccountbalance
+.
+INCOME = monthly income
+.
+INVEST = amountof investments
+.
+ATRES = length of time attheir current residence
+For responders, the inputs represent product usage and
+demographicsprior to their acquiring the new investmentproduct.
+The aim of the analysis is to develop a predictive model that can
+be used to score other banking customersso that a marketing
+campaigncanbetargetedto likely responders.
+A holdout sampleof 1000cases,also with an equal allocation of
+thetargetevent,wasavailable for external validation.
+The expected value of the binary target (coded O/l) is the
+posterior probability of the target event. Consequently, GANNs
+were fitted with a logit link (logistic `output activation) by
+Bernoulli maximumlikelihood [131.
+In logistic regression, the partial residuals need to be
+approximatedbecausethe logit of zero and one is undefined. The
+usualfirst-order approximation (for the ith caseandjth input)
+
+
+prji =
+&+~j(xji)
+
+
+
+[3, 111 often produces wild outliers when the predicted
+probabilities, jl, are close to 0 or 1 - as was the casein this
+example.Empirical partial residualscanbe usedasan alternative.
+The empirical partial residuals for the jth input is calculated by
+binning the input into r = 1, .... R equally sized groups
+(quantiles).The empirical partial residualsarecalculatedas
+
+
+
+
+wheremijr is the number of events, m jr is the number of cases,
+
+Z, is the meanvalue of the input, and F, is the meanpredicted
+probability in the rth bin. The numberof bins, R, was setat 100,
+giving 20 casesin eachbin. There may be fewer than 100bins if
+therearemanytied values.
+
+
+
+
+196
+
+ATMCT
+DDATOT
+
+
+
+
+ADBDDA
+DDADEP
+0
+0
+
+
+
+
+INCOME
+SAVBAL
+
+
+
+
+0
+
+
+
+
+0
+
+
+
+INVEST
+ATRES
+O
+0
+
+
+
+
+Figure 1 The first GANN model for the banking data set. The fitted univariate functions are overlaid on the empirical partial residuals.
+
+
+
+
+147
+
+\
+
+
+0
+
+
+
+
+V"
+0
+0
+0
+0
+0
+
+
+00
+DDATOT'"
+
+
+
+
+ADBDDA"3
+DDADEP1'3
+
+
+
+
+INCOME
+
+
+
+
+INVEST
+SAVBAL'13
+
+
+
+
+0
+
+ATRES
+
+
+Figure 2 The secondGANN model for the banking dataset.Three inputs have beentransformedand the hidden layer for ATMCT was
+pruned
+
+The first GANN model had 33 parameters (4 for each of the eight
+inputs, plus an output bias). It was fitted using the Levenburg-
+Marquardt optimization method [5]. Convergence was attained in
+71 iterations. The analysis was conducted using the SAS@
+procedure NEURAL from the Enterprise MinerTM. Computational
+details are given in [ 141.
+The empirical partial residual plots (figure 1) show poor tits for
+several of the inputs. The distributions of the inputs DDATOT,
+ADBDDA,
+DDADEP,
+and SAVBAL
+are highly skewed. The
+fitted values appear to be overly sensitive to the few large values
+in the tails of the distributions.
+Power transformations were applied to DDATOT,
+ADBDDA,
+DDADEP, and SAVBAL
+to encourage the GANN to learn the
+variation
+in the center of the distributions.
+The cube-root
+transformation was chosen because of the positive skewness and
+the presence of many zero values. The choice of transformation is
+not as crucial here as it is with linear models. The neural network
+can accommodate nonlinearity. The purpose of the transformation
+is merely to reduce data sparsity.
+
+In addition to the transformations, the neuron for ATMCT was
+pruned because the partial residuals showed a linear trend. The
+second GANN model had 30 parameters (4 for seven of the
+inputs, 1 for ATMCT, and an output bias). It was fitted using the
+Levenburg-Marquardt
+optimization method [5]. Convergence was
+attained in 39 iterations.
+
+The partial residual plots (figure 2) show adequate fits for all the
+inputs. To aid interpretation, the inputs can be de-transformed to
+the original scale and the partial residuals can be converted from
+the logit scale to the probability
+scale. However, even on the
+transformed scale, the partial residual plots give an informal
+profile
+of likely
+responders. DDATOT
+and DDADEP
+have
+opposite effects. For small and moderate checking accounts,
+greater response is associated with a greater amount deposited and
+less withdrawn.
+This is supported by the negative trend in
+ATMCT. Increasing savings (SAVBAL)
+is associated with greater
+response except for the largest accounts. The wealthier customers
+appear to behave differently. This is supported by the effects of
+INCOME and INVEST, which increase at a decreasing rate.
+
+To assess the predictive power of the model the validation data
+was scored. The area under the receiver operating characteristic
+(ROC) curve [7] was used as a performance measure. In database
+marketing the ultimate goal is usually classification, not function
+estimation. A cutoff on the predicted probability
+is used to
+determine which cases receive an offer. The ROC area measures
+the discriminatory power of the classifier over a range of cutoffs.
+It can be interpreted as the probability that an actual responder has
+a greater posterior probability
+than a nonresponder.' The ROC
+curve is not distorted by the separate sampling design (i.e. 50%
+responders in the sample versus 4% in the population).
+
+The first GANN (33 parameters) had a ROC area on.the validation
+data of .919. The transformations and pruning increased the ROC
+area to .928. For comparison, several other neural network models
+were fitted to this data. The 9-parameter linear logistic regression
+model had a ROC area of .912. To determine the best MLP
+architecture, 33% of the training data was held out for model
+selection. Five runs, from different starting values, were used for
+each network configuration. The best performing single-hidden-
+layer MLP had 2 neurons and 21 parameters. This network had a
+ROC area ,920. In addition, a larger 91-parameter (9 neuron)
+network was fitted to 90% of the training data. The complex
+model was regularized
+by stopping
+the training
+when the
+performance on the remaining 10% of the data started to degrade
+[2, 191.This network had a ROC area .921.
+
+A third and more complex GANN was fitted. A second neuron
+was added to the ADBDDA
+layer, because the partial residuals
+showed a slight oscillatory pattern. This 33-parameter model (4
+for six inputs, 1 for ATMCT,
+7 for ADBDDA,
+and the output
+bias) was fitted using the final estimates from the second stage as
+starting values. Convergence was attained in 32 iterations.
+
+The empirical partial residual plots were nearly identical for the
+seven inputs other than ADBDDA.
+The univariate function for
+ADBDDA
+(figure 3) appeared to better follow the data. However,
+the ROC area on the validation data was the same as that of the
+simpler model (.928). It is unclear whether the three-step trend
+represents true systematic variation.
+
+
+
+
+0
+
+
+
+
+0
+0
+0
+
+
+
+
+ADBDDA'13
+
+
+Figure 3. The fitted univariate function and partial residuals for
+ADBDDA after adding a second neuron (7 df).
+
+4. DISCUSSION
+In the banking example, the construction of GANN models was
+straightforward. The fitted model allowed visual assessment of the
+effects of the individual
+inputs.
+Furthermore,
+the GANN
+performed well in comparison with more flexible MLPs.
+
+The chief disadvantage GANNs is that they are, not universal
+approximators. They would not be expected to perform well in the
+presence of
+strong
+interactions,
+particularly
+in
+low-noise
+situations.
+However,
+in
+some
+domains
+the
+benefits
+of
+interpretability
+may
+outweigh
+the
+loss
+in
+performance.
+Furthermore, with noisy data, GANNs may outperform models
+that are more flexible
+because the training is simplified.
+The
+network may find it easier to learn the individual nonlinear effects
+of the inputs in the constrained architecture.
+
+There are several ways that interactions could be incorporated into
+the additive model framework [ Ill.
+For example, new layers
+could
+be added for products
+of selected input
+variables.
+Interactions with categorical inputs could be modeled by adding
+layers for the nested effects. However, the careless addition of
+many interaction terms can degrade the interpretability
+of the
+model.
+
+
+
+
+199
+
+5.
+VI
+
+PI
+
+131
+
+
+[4]
+
+
+[51
+
+[61
+
+
+t71
+
+PI
+
+
+r91
+REFERENCES
+Berk, K. N. and Booth, D. E., "Seeing a Curve in Multiple
+Regression,"Technometrics, 37,385-398, (1995).
+Bishop, C. M., Neural Networks for Pattern Recognition,
+New York: Oxford University Press.1995
+Cai, Z. and Tsai, C., "Diagnostics for Nolinearity in
+Generalized Linear Models," Computational Statistics and
+Data Analysis, 29,445-467, (1999).
+Ezekiel, M., "A methodfor handling Curvilinear Correlation
+for any Number of Variables," Journal of the American
+Statistical Association, 19,43 I-453, (1924)
+Fletcher,R., Practical Methods of Optimization, John Wiley
+& Sons,1987.
+Friedman, J. H. and Stuetzle, W., "Projection Pursuit
+Regression,"Journal of the American Statistical Association,
+76, 817-823,(1981).
+Hand, D. J., Construction and Assessment of Classi@ation
+Rules, New York: JohnWiley & Sons,1997.
+Hastie, T. J. and Tibshirani, R. J., "Generalized Additive
+Models (with discussion)," Statistical Science, 1, 297-318,
+(1986).
+Hastie, T. J. and Tibshirani, R. J., "Generalized Additive
+Models: Some Applications (with discussion)," Journal of
+the American Statistical Association, 82,371-386, (1987).
+[1l] Landwehr, J. D., "Graphical Methods for AssessingLogistic
+Regression Models (with discussion)," Journal
+of the
+American Statistical Association, 79,61-83, (1984).
+[12] Larsen, W. A. and McCleary, S. J., `The Use of Partial
+Residual Plots in RegressionAnalysis," Technomettics, 14,
+781-790,(1972).
+[13] McCullagh, P. andNelder, J.A., Generalized Linear Models,
+Second Edition, New York: ChapmanandHall, 1989.
+[14] Potts, W. J. E., Neural Network Modeling
+Course
+Notes,
+Cary NC: SASInstitute Inc., 1999.
+[151Raftery,A. E., "BayesianModel Selectionin Social Research
+(with discussion)," in: Sociological
+Methodology
+1995
+(Marsdened.),Blackwells, (1995).
+[161Ripley, B. D., Pattern Recognition and Neural Networks,
+CambridgeUniversity Press,1996.
+[17] Sarle, W. S., "Neural Networks and Statistical Models,"
+Proceedings of the Ninteenth Annual SAS Users Group
+International Conference, (1994).
+1181Sarle, W. S., "Stopped Training and Other Remediesfor
+Overiitting," Proceedings of the 2rh Symposium on the
+Interface, (1995).
+[19] Zahavi, J. and Levin, N., "Applying Neural Computing to
+Target Marketing," Journal of Direct Marketing, 11, 5-22,
+(1997).
+
+[lo] Hastie, T. J. and Tibshirani, R. J., Generalized Additive
+Models, New York: ChapmanandHall, (1990).
+
+
+
+
+200
+

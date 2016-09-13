@@ -1,0 +1,918 @@
+A Human-ComputerCooperativeSystem for Effective High
+Dimensional Clustering
+
+Charu C. Aggarwal
+IBM T. J. Watson Research Center
+Yorktown Heights, NY 10598
+charu@us.ibm.com
+
+
+ABSTRACT
+
+High dimensional data has always been a challenge for clus-
+tering algorithms because of the inherent sparsity of the
+points. Therefore, techniques have recently been proposed
+to find clusters in hidden subspaces of the data. However,
+since the behavior of the data may vary considerably in dif-
+ferent subspaces, it is often difficult to define the notion of a
+cluster with the use of simple mathematical formalizations.
+In fact, the meaningfulness and definition of a cluster is best
+characterized with the use of human intuition. In this pa-
+per, we propose a system which performs high dimensional
+clustering by effective cooperation between the human and
+the computer. The complex task of cluster creation is ac-
+complished by a combination of human intuition and the
+computational support provided by the computer. The re-
+sult is a system which leverages the best abilities of both the
+human and the computer in order to create very meaningful
+sets of clusters in high dimensionality.
+
+
+1.
+INTRODUCTION
+The clustering problem is formally defined as follows: Given
+a set of points in multidimensional space, find a partition of
+the points into clusters so that the points within each clus-
+ter are similar to one another. Most clustering algorithms
+do not work efficiently in higher dimensional spaces because
+of the inherent sparsity of the data [1, 3, 4, 6].
+Conse-
+quently, techniques for finding projected clusters in lower
+dimensional spaces have been discussed in [3, 4, 6]. Such
+clusters may exist either in projections of the original set of
+attributes or in arbitrary lower dimensional subspaces. We
+note that the formalization for finding clusters in projec-
+tions of the original set of attributes provides greater inter-
+pretability [3, 6], whereas that of picking arbitrary projec-
+tions is more flexible in discovering clusters created by local
+correlations [4].
+It may often be the case that the density, distribution,
+and shapes of the clusters may be quite different in different
+data localities and subspaces. We have illustrated examples
+
+
+
+Pennission to make digitalor hard copiesof all orpart of this work tbr
+personal o1'classroomuse is granted withoutteeprovided that copies
+arc not made or distributed for profit or commercialadvantageand that
+copiesbear this notice and the fullcitation on the first page. To copy
+otherwise,to republish, to post on serversor to redistribute1olists,
+requires prior specificpermissionand/or a fee.
+KDD 01 San FranciscoCA USA
+CopyrightACM 2001 1-58113-391-x/01/08...$5.00
+AVailteI
+z
+z
+Attfibut
+z
+z
+z ~
+
+z
+z
+z
+
+SmallHigh-Den~tyClustersin
+| LowtoModerateDe~iwNoise
+~
+e
+tt~ers~
+t
+"ty
+
+A'ilfibute2
+Attribute4
+
+
+Figure 1: Variation in cluster shape, size and density
+across data localities and subspaces
+
+
+of such cases in Figure 1. In many cases, a region of low
+density can be dearly distinguished as a separate cluster in
+one subspace, but regions with similar density correspond to
+noise in another subspace. Often, even within a subspace,
+the clusters can be distinguished from one another only on a
+case-by-case basis. Such clusters are difficult to isolate using
+fully automated methods in which simple mathematical for-
+realizations are used as the only criterion in order to define
+all clusters. Since there is so much variation across differ-
+ent data localities and projections, it is difficult to recon-
+cile these differences without the use of human intervention.
+At the same time, since there are a very largeI number of
+subspaces in the high dimensional case, human involvement
+necessitates the exploration of only a small fraction of the
+subspaces. Thus, computational support is required in order
+to minimize the effort in finding clusters in optimally chosen
+subspaces. Therefore, a natural solution is to divide the clus-
+tering task in such a way that each entity performs the task
+that it is most well suited to. In the system thus devised, the
+computer performs the high dimensional data analysis which
+is used in order to provide the user with summary feedback;
+this feedback is given in a way so that the human is facili-
+tated in his intuitive task of characterizing the clusters. The
+reactions of the user are utilized in order to determine and
+quantify the meaningfulness of the final set of clusters which
+are highly interpretable in terms of the user-reactions. The
+result of this cooperative technique is a system which can
+perform the task of high dimensional clustering better than
+either a human or a computer. We note an interesting tech-
+nique discussed in [7], which describes a visual tool for users
+to interact with clusters in lower dimensional views of the
+data. However, our system actively finds views of the data
+in which projected clusters exist, whereas the technique in
+
+1There are infinitely many if arbitrary subspaces of the data
+are picked.
+
+
+
+
+221
+
+Algorithm IPCLUS(Data
+Set: 2~, Min. Support: s,
+Number
+of Polarization Points: k);
+begin
+{ The Id Vector 2: = {/1,... IN} has one entry string
+for each record and is initialized to null }
+while not(termination_criterion) do
+begin
+Kandomly sample k points y~ ... y~ from T~;
+= ComputePolarizedProjection(2~,
+y~ ... y~, s);
+]C = InteractiveClusterSeparation(~) , E, yl . . . y~ );
+Z = UpdateldStrings(Z,
+IC);
+end;
+(OF... CF, Q1... QK) =FinalClusterCreation(Z,
+s);
+(I R~ , . . . I Rg ) = EvalMeaningful(Z, C~ . . . g ~ , Q~ . . . Q K );
+return(IR~... IRK, C~ . . . el, Q~ . . . QK);
+end;
+
+
+Figure 2: The IPCLUS
+Algorithm
+
+
+
+[7] is somewhat more passive in this respect by preselecting
+projections and then combining them over time along with
+user interaction. Since it becomes a more difficult problem
+to find good projections with increasing dimensionality, it
+is valuable to combine active subspace determination tech-
+niques with user interaction in order to reduce the number
+of possibilities during subspace exploration. We also provide
+techniques for quantification of meaningfulness and value of
+the clusters.
+In order to describe our algorithm further, we shall in-
+troduce a few notations and definitions. Let N denote the
+total number of data points. Assume that the dimension-
+ality of the overall space is d. We assume that the data
+set is denoted by ~ and the full dimensional space by H.
+Let C = {~?, ~-~,..., ~7} be the set of points in a cluster.
+Let E =
+{~... ~7} be a set of I < d orthonormal vec-
+tors in this d-dimensional space.
+These orthonormal vec-
+tors define an l-dimensional subspace.
+The projected dis-
+tance between the points ~'? and ~'~ in subspace g is de.-
+noted by Pdist(~,~-~,E)
+and is equal to the euclidean dis-
+tance between the projections of the points ~'~ and ~'~ in
+the 1-dimensional space represented by g.
+The subspace
+momentum
+of the cluster C = {xl,x2,...
+,~7} in subspace
+about the point ~ is denoted by R(C,g,y)
+and is given
+by the mean square distance of the points to y, when all
+points in C are tprojected to the subspace £. Thus, we have
+R(C, g,~) = ~i=~{Pdist(~i~,~,
+E)}2/t.
+Note that the momentum of the cluster C about a given
+point ~ is less in a subspace E than.that in the full dimen-
+sional space. When the data is polarized tightly around ~,
+this momentum is likely to be significantly lower. In this
+paper, we will see that such subspaces are very helpful to
+the user in separating out the prominent clusters.
+
+
+2.
+INTERACTIVE PROJECTED CLUSTER-
+ING
+We will first provide a high level overview of the cluster-
+ing algorithm; in a later section, we will provide a detailed
+description of the various steps.
+The idea behind the In-
+teractive Projected CLUStering algorithm (IPCLUS) is to
+provide the user with a set of meaningful visualizations in
+lower dimensional projections together with the ability to
+decide how to separate the clusters. We assume that as in-
+Algorithm ComputePolarizedProjec~ion(Data
+Set: 9 ,
+Polarization Anchors:
+yl...yk,
+Min.
+Support: s);
+begin
+lc ----d/2; gc = Lt;
+while ic > 2 do
+begin
+for each data point x E :D and polarization anchor yi
+compute Pdist (yi, x, £c);
+Let Adi denote the set of N. s points
+closest to polarization anchor y~;
+?d = A,tl U... U Mk;
+Let zi be the centroid of A4i;
+for i = I to k compute Oi(zi) by subtracting
+z~ from each point in Adi;
+Let cij be covariance of (i,j) for data ukffilOq(Zq);
+{ Let A be the d * d matrix [cij] for [i, j] E [dXa~; }
+Determine eigenvectors V ----{~'Y... ~'~} of matrix A;
+& = Set of i~ vectors from V with least eigenvalues;
+lc = max{e, [lc/2]};
+end
+return(&);
+end
+
+
+Figure 3: Computing Polarized Projections
+
+
+
+put to the system we provide a user-defined support, which
+is the minimum fraction of database points in a cluster for
+it to be considered statistically significant.
+The overall algorithm is illustrated in Figure 2. The in-
+teractive projected clustering algorithm works in a series
+of iterations in each of which a projection is determined in
+which there are distinct sets of points which can be clearly
+distinguished from one another.
+We refer to such projec-
+tions as well polarized.
+In a well polarized projection, it is
+easier for the user to clearly distinguish a set of clusters from
+the rest of the data. In order to create the polarizations, we
+pick a set of k records from the database which are referred
+to as the polarization anchors.
+A subspace of the data is
+determined such that the data is clustered around each of
+these polarization anchors. The data is repeatedly sampled
+for polarization anchors in an iterative process, so that the
+most dominant subspace clusters containing these anchors
+are discovered.
+In each iteration, when the projection subspace has been
+found, kernel density estimation techniques can be used in
+order to determine the data density at each point in this
+projection. A visual profile of the data density is provided
+to the user, who uses this aid in order to find the most
+intuitive separation of the data into clusters. The cluster
+separation by the user is then recorded in the form of a set of
+N Identity Strings (IdStrings),
+where N is the total number
+of records in the database. These set of identity strings are
+denoted by 27= (11... IN). We assume that the rth string I~
+corresponds to the rth data record. In the nth iteration, the
+value of the nth position in the identity string is recorded.
+If the rth data point does not belong to any of the clusters
+corresponding to the polarization points, then this position
+value is set at * (don't care). Otherwise, we set the value
+to the index of the corresponding cluster in that particular
+projection. We will provide a more detailed discussion on
+this slightly later. As the termination criterion, we ensure
+that most points in the data are included in a cluster in some
+view. Specifically, we define the coverage of the data set as
+the average number of views in which a data point occurs in
+
+
+
+
+222
+
+°
+
+
+
+
+2q
+·
+·
+·
+
+
+
+· 4
+"
+"
+a
+·
+· *
+"
+·
+:". ::..:".,"",:
+
+·
+","
+.
+,'"
+·.
+°
+·
+·
+
+·
+..
+·
+¢·
+":
+.
+·
+
+·
+.·
+· . , · . . , ~ -
+,
+
+·
+%
+* ~ l a a ~
+Point
+·.......: ::.: .-
+°..
+°o
+
+
+
+·
+°
+
+·
+°
+
+
+
+
+Figure 4: Determination
+of a well Polarized
+Projec-
+tion (two polarization
+points)
+
+
+some cluster· The algorithm is terminated when the average
+coverage of each data point is above a user-defined threshold.
+At this stage all the user responses have been encoded
+in the identity strings which are postprocessed in order to
+create the final set of clusters. The final quality of the clus-
+tering is quantified in terms of the consistency of the user
+behavior across different projections.
+Thus, the algorithm can be divided into two parts; the first
+part is iterative which involves the repeated user-interaction;
+the later step involves the determination of the final clusters
+and the quantification of the meaningfulness of these clus-
+ters. In the next few sections, we will describe the various
+components of the algorithm in detail, including the follow-
+ing iterative steps:
+(1) Determination of subspaces in which the data is well
+polarized. (Procedure ComputePolarizedProjection)
+(2) User Interaction in order to visually separate the clusters
+in different views. (Procedure 1nteraetiveClusterSeparation)
+(3) Storing the user interactions in the form of IdStrings
+(Procedure UpdateldStrings).
+The procedures for final creation of the clusters and the
+quantification of meaningfulness from user responses, are re-
+spectively denoted by procedures FinalClusterCreation and
+EvalMeaningf~l in Figure 2. In this paper, we provide pseu-
+docodes of only the IPCLUS algorithm and the process for
+creation of polarized subspaces. Word descriptions of the
+procedures InteractiveClusterSeparation,
+UpdateldStrings, Fi-
+nalClusterCreation, and EvalMeaningful are provided in sub-
+sections 2.2, 2.3, 2.4 and 2.5 respectively. Pseudocodes may
+be found in [2].
+
+2.1 Determination of Polarization Subspaces
+The procedure for determination of the polarization step
+is described in the ComputePolarizedProjeetion procedure of
+Figure 3. The motivation of the procedure is to find sets of
+projections in which the data is well clustered and can be
+perceived in a clear visual way by the user. To this effect, in
+each iteration we sample a small number k of points from the
+database. The points are denoted by yl ... Yk, and are the
+polarization points around which we would like to find clus-
+ters. Since yl .-. y~ are sampled randomly, many of them
+may lie in a well defined cluster in a carefully chosen pro-
+jection of the data. If a small number of polarization points
+are chosen, then it is reasonable that a projection can be
+found in which the data shows distinct clusters containing a
+majority of the polarization points. Of course, clusters may
+also exist in that projection which do not contain any of the
+polarization points. However, once a good projection is de-
+termined, all relevant clusters are used by the algorithm. It
+is an interesting problem to find the projection subspace E
+in which the data shows this polarized behavior· An exam-
+ple of such a projection is illustrated in Figure 4, in which
+the data is nicely separated out into different clusters using
+two polarization points. We emphasize that the main pur-
+pose of randomly sampling the data for polarization points
+is to discover projected clusters (if any) which contain these
+points· F~zrthermore, even if some clearly separated clusters
+have low density in all possible projections, the correspond-
+ing subspaces would still be discovered when a polarization
+point from the cluster is sampled. In this sense, polarization
+points serve a similar function to medoids in many cluster-
+ing algorithms [3]· As in medoid based algorithms, it is
+expected that the user would sample at least one point from
+the prominent (projected) clusters in the data, if enough
+number of points are sampled for polarization.
+In order to actually find the projection subspace we use
+an iterative process in which we start off with the universal
+d-dimensional subspace L/. In each iteration, we maintain a
+current subspace gc of dimeusionality Ic which is gradually
+reduced to a 2-dimeusional projection. In each iteration, we
+find the set of data points J~i which is closest to the po-
+larization anchor yt based on the distance measurements in
+the subspace £~. We assume that the centroid of .Adi is zi.
+The number of data points in each subset A41 is determined
+by the user-defined threshold s. In turn, the data points in
+Uk__.~lJ~iare used to determine the subspace in which these
+points form well distinguished clusters around the polariza-
+tion points· This can be done only by finding the subspace
+in which the momentum
+of these sets about their centroids
+is minimal. Some principal component analysis techniques
+exist [8]which can find the optimum subspace in which the
+momentum
+of a singleset of points about their centroid is
+minimal.
+However, here we have k sets ~i
+...Mk,
+and
+k
+we need to minimize ~iffil7"£(A4i,g, zi) over all subspaces
+E. Therefore, we will use a simple transformation trick in
+order to use the method in [8].
+Let O(zi) be the set of points obtained by subtracting
+zi from each point in .A4i. Thus, each of the sets O(zi) is
+now centered at the origin O. Since this transformation is
+a simple translation, the covariance and momentum about
+the centroid is preserved by the transformation. Therefore,
+we can show that TC(Mi, E, zi) = 7~(Oi(zi),g,'O).
+But we
+also know that E ~=1T~(Oi(zi), £, g) = 7~(t-J/k=lOi (zi), 8, 0--).
+Now all we need to do is to use the method of [8] in order
+to find the subspace in which the momentum of the single
+set of points U~=lOi(zi) about their centroid is minimal·
+In order to do, we first determine the covariance matrix A
+of the data points in U/k=10i (zi). Specifically, the covariance
+matrix is a d* d matrix, in which the entry (i,j) is equal to
+the covariance between the dimensions i and j of the points
+in U~=lOi(zi). This matrix is positive semi-definite and can
+be diagonalized in order to determine a set of eigenvectors
+which will be orthogonal to one another· It has been shown
+in [8] that the eigenvectors corresponding to the smallest
+eigenvalues define the subspace with the least momentum
+about the centroid. Therefore, the subspace ~c corresponds
+to the eigenvectors for the ic smallest eigenvaiues. Corre-
+spondingly, this means that the data points in J~4i are likely
+
+
+
+
+223
+
+Figure 5: Density Based Cluster Separation (Iono-
+sphere Data Set, r/= 27)
+
+
+to be dusters in the projection go.
+The process of determining the data points A/"and the sub-
+space Ec of dimensionality Ic is continued iteratively while
+reducing the value of 1¢ by a factor of 2 in each iteration, un-
+til the final 2-dimensional projection Ee is determined. We
+note that the data set X and the subspace Ec are alternately
+determined from one another in this iterative process. The
+motivation behind this iterative approach is the gradual re-
+finement of the projection subspace and corresponding clus-
+ter, so that the sparse subspaces are gradually eliminated.
+As our empirical section will show, this results in well dis-
+tinguished clusters, many of which are centered at the po-
+larization points. We have so far discussed the case when
+the data is visualized in arbitrary projections of the data.
+In some cases, it may also be desirable to find the clusters
+in combinations of the original set of attributes in the in-
+terests of interpretability. In such cases, we simply replace
+the eigenvectors with the original axis-directions in all the
+above iterative calculations.
+
+2.2
+User Interaction for Cluster Creation
+The procedure for interactive separation of clusters is de-
+noted by InteraetiveClusterSeparation in Figure 2. In order
+to facilitate user-interaction, effective ways must be provided
+to understand and visualize the clusters in each projection.
+A convenient way of doing so is to provide the user with
+an idea of which regions of the data are dense or sparsely
+populated in a given projection. Density based methods [7]
+are quite useful in order to determine the variations in data
+behavior. In this technique, in order to calculate the density
+estimate at x, we sum up the kernel function values for each
+data point xi. Given the data points xl...x~v, the kernel
+density estimate at x is given by:
+
+N
+
+f(x) = 1/N" E
+Ku(x - x,)
+(1)
+i=1
+
+Here Kh is a smooth, unimodal density function which is
+dependent on the smoothing parameter h. A widely used
+value of the kernel is the gaussian function:
+
+Kh(x - ~) = (1/v~. h). e-<x-x')~/~)
+(2)
+
+For N data points with variance a s, the smoothing param-
+eter h is chosen to be 1.06. a. N -1/5 in accordance with the
+Silverman approximation rule.
+Since the density at every point in the continuous space
+cannot be calculated, we pick a set of p * p grid-points at
+which the density of the data is estimated. The density val-
+ues at these grid points are used in order to create a surface
+plot. An example of such a plot is illustrated in Figure 5.
+Since clusters correspond to dense regions in the data, they
+are represented by peaks in the density profile. Similarly,
+the regions which separate out the different clusters have
+low density values and are represented by valleys in the den-
+sity profile. In order to actually separate out the clusters,
+the user can visually specify density value thresholds which
+correspond to noise level at which clusters can be separated
+from one another. Specifically, a cluster may be defined to
+be a connected region in the space with density above a cer-
+tain noise threshold ~/, which is specified by the user.
+In
+order to provide the visual perspective of this separation, a
+hyperplane at a density value of rI can be superposed on the
+density profile. We shall refer to this as the density separa-
+tor plane. The intersection between the separator plane and
+the density profile creates a number of connected regions at
+which the density is above the specified noise threshold. The
+contours of the intersections between the separator planes
+and the density profiles are also the contours of the clusters
+in the data. All the data points which lie within a contour
+correspond to the same duster in a given projection. For
+example, in Figure 5, we have illustrated a case in which by
+specifying the noise threshold r/= 27, we find two clusters
+above the noise threshold. Note that the resulting clusters
+may be of arbitrary shape. Furthermore, by specifying dif-
+ferent values of the noise threshold y one may have different
+number, sizes and shapes of clusters. For example, in Figure
+5, there are two clusters at the specified noise threshold of
+27, whereas if we reduced the noise threshold to 15, there
+are three clusters. This is because in this case the cluster
+corresponding to the low density peak is also found. If we
+reduced the noise threshold further, then two of the clus-
+ters may get merged, and a larger portion of the low density
+cluster is found. Thus, different noise thresholds provide a
+division of the data into clusters of different levels of gran-
+ularity.
+It is often difficult to settle on the use of single
+density, since clusters in different localities will have differ-
+ent densities. In order to handle this, we allow the user the
+flexibility to specify multiple values of 0 in a single projec-
+tion. The smaller values of the density will reveal even the
+low density dusters in the data but will not reveal the finer
+separations among different clusters. The larger values of
+the density will reveal the fine grained separations into dif-
+ferent clusters, but will not reveal the low density clusters.
+We assume that the final set of densities picked by the user
+is denoted by/C = nl ... n,. In some projections, the data
+may not be amenable to clustering. In such cases, the user
+may choose not to specify any value of the noise threshold r/,
+and the set/C is null. This will not happen too often if the
+subspace determination procedure of the previous section is
+effective in finding well polarized projections. We note that
+the number of different separations r may depend upon the
+nature of a given projection and a user's understanding of
+the data behavior.
+Such intuition cannot be matched by
+any fully automated system effectively; this is an example
+of the criticality of the user in the cooperative process of
+high dimensional clustering. We note that in Figure 5, the
+polarization point occurs at the peak of a local optimum in
+the density profiles. It is typical that polarization points
+
+
+
+
+224
+
+occur at high elevations in the density profile, because the
+subspace determination algorithm actively tries to finds a
+view in which the sampled polarization points occur in the
+interior of some cluster. We note that the specification of the
+noise threshold y need not be done directly by value; rather
+the density separator hyperplane can be visually superposed
+on the density profile with the help of a mouse.
+
+2.3
+Updating Identity Strings
+The procedure for updating the IdStrings is denoted by
+UpdateldStrings in Figure 2. The set of user reactions ]C in a
+given projection is used in order to update the IdStrings Z.
+The first step is the determination of the contours in the dif-
+ferent clusters. Since the data densities have been calculated
+using a set of p * p grid points, we can use them in order to
+obtain an approximation of the cluster contours. The first
+step is to find all of the elementary grid squares which lie
+approximately within a cluster contour.
+A grid square is
+assumed to approximately lie within a cluster contour, if at
+least three of its corners have a density value above the user-
+specified noise threshold ~i. We refer to such grid squares as
+dense. Once we have determined all the dense grid squares,
+we need to consolidate them into connected components. A
+variety of graph search algorithms are available for this pur-
+pose. In order to use these techniques we assume that each
+grid square is a node, and they are connected by an edge
+if they share a common side. Now, a simple breadth first
+search technique may be used in order to find all the con-
+nected components. For each of the clusters, we determine
+the data points which lie in the corresponding grid squares.
+These are the clusters which the user has separated out in
+that particular projection.
+After all the clusters have been found, we assign each of
+them an Id number. (The Ids of the dusters are numbered
+from 1 through the total number of clusters which have been
+determined in that particular projection.) If a data point lies
+inside a cluster, then its identity is equal to that of the cor-
+responding cluster, otherwise it is "*'. We concatenate the
+identity of each data point to the corresponding IdStrin9.
+We note that for each different noise threshold ~ E K: spec-
+ified by the user in any projection, we concatenate exactly
+one element to the end of each IdString. Therefore, at the
+end of the process, the length of each string is equal to the
+total number of acceptable cluster separations specified by
+the user.
+Once the interactive phase has been terminated by mul-
+tiple iterations of subspace determination and user inter-
+action, these IdStrings are used to create the final set of
+clusters.
+
+2.4 Final Creation of Clusters
+The final step of creation of the dusters is denoted by Fi-
+nalClusterCreation in Figure 2. We note that even though
+a set of points may be perceived as a cluster by the user in
+a given projection, they may be separated out into differ-
+ent clusters in a different projection. Therefore, in order to
+find the final set of clusters we would like to isolate sets of
+points which have been classified by the user into the same
+cluster in as many views as possible. At the same time, we
+would like to guarantee that a cluster contains at least the
+minimum fractional support s. Since the user characteriza-
+tion of clusters is captured with the set of identity strings in
+Z, we need to find subpatterns in these strings which occur
+throughout the data.
+Consider an IdString I~ and pattern S of the same length
+l. A pattern S is a subpattern of I~ if and only if for each
+position i E {1,... l} in S which is not *, the ith position
+in I~ also has the same value. Thus, the string *2*5*** is a
+subpattern of the string *2*5*4*, but it is not a subpattern
+of the string *2*3*4*. The support of the pattern S is equal
+to the percentage of the IdStrings in 2:, for which the string
+S is a subpattern. The larger the number of fixed positions
+in S, the smaller the support of the string. We note that
+the minimum support s provided by the user is a measure
+of the minimum number of data points which a cluster must
+contain for it to be considered useful. Therefore we find all
+the mammal subpatterns which have support greater than
+the user defined threshold s. We also refer to such subpat-
+terns as itemsets. Methods for finding such itemsets have
+been proposed in [5]. Let us denote the final patterns found
+by QI... QK. Note that each of these patterns Qi can be
+mapped onto all the data points CiF whose IdStrin9s are
+supersets of these subpatterns. We shall refer to the sub-
+pattern Qi for cluster C~ as the cluster template. A position
+value m r on this template Qi which is not * (a fixed position)
+corresponds to a projection in which the points of Cf belong
+to duster id m ~separated out by the user in that view. We
+note that when the projections are chosen from the original
+set of dimensions, it is possible to interpret the clusters using
+the duster template. This is because the cluster template
+Q~ of the cluster Cf provides the different combinations of
+dimensions in which the user always classified all of these
+points to belong to the same cluster. This provides an intu-
+itive interpretation of how the final clusters relate both to
+the attributes in the data and the history of user interac-
+tion. The subspace in which the set of points Cf is a cluster
+corresponds to the union of all the 2-dimensional subspaces
+for fixed positions in Q~. It now remains to discuss how the
+meaningfulness of each of these clusters is quantified.
+
+2.5
+Quanth$eation of Meaningfulness
+The procedure for evaluation of meaningfulness of clus-
+ters is denoted by EvalMeaningful in Figure 2. Since the
+final dusters are created by determination of the sets of
+points which occur together as clusters in multiple projec-
+tions, it is useful to evaluate the consistency of the user
+behavior across these different views in order to evaluate
+meaningfulness. In order to do so, we calculate the interest
+ratios of the patterns which define the clusters. The interest
+ratio of a pattern is the ratio of its actual support to the
+expected support based on the assumption of statistical in-
+dependence. Let S = rnl ... m~ be a given cluster template,
+created by the I iterations. Let 0 be the fraction of database
+points supported by S. Let/3i be the fractional support of
+the number of points corresponding to mi. (Specifically,/3i
+is the fraction of points that belong to cluster Id mi for the
+visual projection i. When mi is "*", then the value of/3i
+is 1.) Then the interest ratio IR(S) of the cluster template
+S is the ratio of the support of template S to its support
+assuming statistical independence.
+
+IR(S) = 0/(ill·~. fls...~,)
+(3)
+
+When the user behavior does not show any meaningful cor-
+relation across the different projections, the interest ratio
+for the clusters discovered will be close to one. An interest
+ratio larger than 1 is indicative of a cluster which reveals
+
+
+
+
+225
+
+100-
+
+05-
+
+85-
+
+76-
+
+
+
+
+a5-
+
+
+
+10-
+
+6
+~tS'
+/ ........f........i........i........;........;........"........~........:........:.......:
+:" .;........ ~........ ~........ ~........ !........ "........ i..
+i
+i
+~
+i
+
+
+
+
+3
+~/
+' 2/"
+1'6/
+0.5/
+0l"
+-O.J"
+-1/
+-I.8/
+
+
+
+Figure 6: Example Projection (Ionosphere Data Set,
+two polarization points)
+
+
+significantly greater affinity among the different data points
+based on the user behavior.
+This effectively means that
+the set of points occur together in one cluster based on the
+user observations in a larger number of projections than can
+be justified by random or statistically independent behav-
+ior across the different views. Thus, the IPCLUS algorithm
+finally returns all the clusters, their templates (which pro-
+vide interpretability) and the interest ratios (which quantify
+meaningfulness).
+
+
+3.
+EMPIRICAL RESULTS
+The data sets for testing the IPCLUS algorithm were ob-
+tained from the UCI machine learning2 repository. Our aim
+in this section is to provide a flavor of how the cooperative
+process for high dimensional clustering works both in terms
+of the kind of projections discovered and the final quality of
+clustering.
+Unless otherwise mentioned, for each data set that we
+tested, support of a cluster was set at 5%. We ran the al-
+gorithm to termination, until the average coverage of each
+point in the data set was 10. The first data set on which
+we tested the algorithm was the ionosphere data set. This
+data set contained feature vectors for radar returns from the
+atmosphere. The radar returns were classified as "good" or
+"bad" depending upon whether or not they showed some
+kind of structure in the ionosphere. We will discuss the case
+when one polarization point was used. In order to achieve
+the termination criterion of an average coverage of 10, the
+user was presented about 22 different views of the data, since
+each view covered between 10 - 75% of the data points. We
+found that the subspace determination procedure of our al-
+gorithm always determined projections in which the data
+was well polarized. An example of the density profile in such
+a projection is illustrated in Figure 5. A number of natu-
+ral dusters are revealed in the data, one of which contains
+the polarization point. As discussed in an earlier section, it
+was possoble to isolate clusters of different granularity with
+different noise thresholds. The total length of the id strings
+was 29, which is different from the number of views (22)
+since multiple density separators were used for some of the
+views. When the cluster templates were determined at the
+user defined support of 5%, the average interest ratio was
+found to 71.4, which is significantly greater than 1. In order
+
+2http://www.cs.uci.edu/'mlearn
+to provide an intuitive understanding of the actual quality
+of the clusters found, we use a measure which we refer to as
+the cluster purity. Each record in the data sets had a class
+label associated with it. The cluster purity was defined as
+the average percentage of the dominant class label in each
+cluster. Since the class label was not used in the interactive
+clustering process, this provides an intuitive idea of the final
+quality of the clusters. For the case of the ionosphere data
+set, the average cluster purity was found to be 86.3%. We
+also tested the algorithm when more than one polarization
+point was used. Example of a sample projection on the iono-
+sphere data set with two polarization points is illustrated in
+Figure 6.
+The interactive experience and final result for
+the case of two polarization points was similar to the case
+when one point was used.
+The algorithm was also tested
+on the segmentation data set from the UCI machine learn-
+ing repository. The overall clustering experience was quite
+similar to the ionosphere data set. A detailed description
+of these empirical results and the effect of using different
+number of polarization points is provided in a long version
+of this paper [2].
+
+4.
+CONCLUSIONS AND SUMMARY
+High dimensional clustering is a very challenging prob-
+lem because of the sparsity of the data. In this paper we
+discussed the problem of discovering meaningful clusters in
+high dimensional space with the utilization of a cooperative
+process between the human and the computer. The clusters
+are discovered in different subspaces with the use of polar-
+ization points and a visual profile of the data is provided
+to the user. This visual profile may be used in order sepa-
+rate out the different clusters with the use of human inter-
+vention. The attraction behind such an interactive process
+is that the problem of high dimensional clustering requires
+both the computational power of a computer and the in-
+tuition of a human; consequently a system which allocates
+the tasks according to the abilities of each entity is more
+effective than a fully automated process.
+
+5.
+REFERENCES
+[1] C. C. Aggarwal. Re-designing distance functions and
+distance based applications for high dimensional data.
+ACM SIGMOD Record, March 2001.
+[2] C. C. Aggarwal. A Human-Computer Cooperative
+System for Effective High Dimensional Clustering, IBM
+Research Report, 2001.
+[3] C. C. Aggarwal et al. Fast algorithms for projected
+clustering. ACM SIGMOD Conference, 1999.
+[4] C. C. Aggarwal, P. S. Yu. Finding Generalized
+Projected Clusters in High Dimensional Spaces. ACM
+SIGMOD Conference, 2000.
+[5] R. Srikant, R. Agrawal. Mining Quantitative
+Association Rules in Large Relational Tables. ACM
+SIGMOD Conference, 1996.
+[6] It. Agrawal et al. Automatic Subspace Clustering of
+High Dimensional Data for Data Mining Applications.
+ACM SIGMOD Conference, 1998.
+[7] A. Hinneburg, D. A. Keim, M. Wawryniuk. HD-Eye:
+Visual Mining of High Dimensional Data. IEEE Comp.
+Graphics and Applications, 19(5), pp. 22-31, 1999.
+[8] I. T. Jolliffe. Principal Component Analysis,
+Springer-Verlag, New York, 1986.
+
+
+
+
+226
+

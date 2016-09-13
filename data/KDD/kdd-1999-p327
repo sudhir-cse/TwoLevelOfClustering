@@ -1,0 +1,1113 @@
+Informat
+ion Mining
+Platforms:
+An infrastructure
+for KDD rapid deployment
+
+
+Corinna
+Cortes & Daryl Pregibon
+AT&T
+Labs-Research
+Florham
+Park, NJ 07932 USA
+{ corinna,daryl}@research.att
+.com
+
+
+
+Abstract
+
+Experience
+has shown
+that
+the
+data
+extraction,
+parsing,
+cleaning
+and analysis
+steps of a KDD
+problem
+account
+for a
+much larger
+expenditure
+of resources
+(time
+and money)
+than
+the statistical
+modeling
+or machine
+learning
+part.
+Couple
+this
+statement
+with
+the need for fast
+turn-around
+time
+in
+commercial
+applications,
+and the obvious
+conclusion
+is that
+it is impractical
+to start
+from
+scratch
+for
+each new
+KDD
+application.
+To deal with
+this situation,
+we propose
+the use
+of an information
+mining
+platform
+that
+amortizes
+several
+of the
+critical
+pre-
+and
+post-processing
+steps
+needed
+to
+apply
+KDD.
+Thus,
+new KDD
+applications
+can leverage
+the
+platform
+for efficiency
+and robustness.
+
+
+1
+Introduction
+
+Knowledge discovery in very large data sets is so much
+more than a learning or clustering
+task.
+Anecdotal
+reports cite that approximately
+80% of a KDD task is
+spent on collecting,
+parsing, extracting,
+checking, and
+cleaning the available data. For KDD to be successful
+in the marketplace
+and for the field to realize the
+huge potential
+that is expected of it, the time from
+problem statement to system implementation
+must be
+significantly
+reduced.
+The field of KDD is too immature to pose a general
+solution
+to this challenge but in the case of large
+transactional
+data streams, enough progress has been
+made to commence a dialog on what seems to work in
+solving real business problems.
+By "data stream" we
+mean a dynamic continuous flow of data. In contrast,
+a "data set" is a static collection
+of data.
+The more
+important
+distinction
+however lies in the time constants
+associated with data streams and data sets: the value of
+the information
+in a static data set persists for months
+
+
+
+Permission to make digital or hard copies of all or part of this work Ibr
+personal or classroom USCis granted without fee provided that topics
+are not made or distributed for profit or commercial advantage and that
+copies hear this notice and the full citation on the first page. To copy
+otherwise, to republish, to post on servers or to rcdistrihute to lists.
+rcquircs prior specific permission and/or a fee.
+KDD-99
+San Diego CA USA
+Copyright ACM 1999 I-581 13-143-7/99/08...$5.00
+or years while the value of the information
+in a dynamic
+data stream persists for days or weeks.
+This short
+"shelf life" of streamed data exacerbates the need to
+compress the KDD
+development
+cycle.
+To meet this
+need we propose an information
+mining
+platform
+that
+provides the necessary infrastructure
+for maintaining
+and ensuring the quality
+of the data stream and the
+delivery of production
+quality KDD to end-users.
+The information
+mining platform
+(IMP) is responsi-
+ble for constantly
+processing fresh data and summariz-
+ing it so that applications can be rapidly developed and
+deployed.
+These statistical
+summaries are called pro-
+jiles and they lie at the core of data mining applications
+for data streams. Profiles are collections of descriptive
+variables of the data stream aggregated to the level of
+the individual
+end-user (e.g., credit card or telephone
+number).
+For example, a profile for card usage might
+include frequency of card use, typical purchase amounts,
+categories of stores where the cards are used, and ge-
+ographical
+iegions of use. Such variables characterize
+the pattern of credit card usage by the card holder and
+could be used for a variety of applications.
+Profiles differ from conventional
+data marts in that
+they are neither
+time-stamped
+nor indexed
+through
+time.
+Rather they evolve through
+time thereby cap-
+turing
+current end-user behavior.
+Much flexibility
+in
+defining "current"
+is supported by the methodology but
+the basic concept is that the profile captures a "moving
+window"
+of user behavior.
+Our use of profiles
+in data mining
+applications
+is not new [Burge & Shawe-Taylorl996,
+Denning1987,
+Lunt1993, Fawcett & Provost1997, Davison & Hirsh1998,
+Cortes & Pregibonl9981.
+But information
+mining plat-
+forms to support profiling are less common and we argue
+that they are necessary if KDD is to prosper and realize
+its enormous potential.
+We first describe the major elements of information
+mining platforms and highlight
+some important
+design
+choices.
+We then present a general methodology
+for
+creating profiles. Finally, we demonstrate how machine
+learning (ML) and statistical
+techniques can easily be
+combined with our platform to rapidly and successfully
+
+
+
+
+327
+
+INFORMATION
+MINING PLATFORM
+
+
+
+
+Data Warehouse
+
+
+DWl
+
+DW2
+
+DW3
+
+
+
+
+End User
+
+
+Figure 1: Example of an information
+platform
+for a
+large telecommunications
+data stream.
+
+
+build powerful tools for discriminating
+behaviors.
+
+2
+Information
+Mining
+Platforms
+An IMP has the responsibility
+for providing
+
+l
+that the data is complete (no records lost),
+
+l
+that the data is correct (including
+parsing),
+
+l
+that the data is sufficiently
+protected (from anyone
+without
+the need to know),
+
+l
+adequate storage of the data (for sequential
+and
+random access),
+
+l
+a powerful and flexible processing environment
+that
+can keep up with the data collection
+and profiling
+processing,
+
+l
+template interfaces that enable easy distribution
+of
+the derived information.
+
+These requirements are best discussed in reference to
+a specific implementation
+(see Figure 1). On a typical
+business day, the AT&T
+network carries about 250M
+calls. At the conclusion of a telephone call, a record is
+generated at the originating
+network switch. It contains
+fields such as the originating
+phone number, the dialed
+phone number, the time of the call, its duration
+and
+some additional
+switch data related to the way the
+call was routed.
+The switches concatenate files with
+call records and these are sent to a central collector
+every few minutes.
+Production
+support
+is 24 x 7
+so that any anomalies can be addressed immediately.
+Since this stream is the source of billing
+records for
+the corporation,
+it provides very high quality
+data as
+regards completeness and accuracy.
+At the single point of entry where all call records
+are collected from the network, our information
+mining
+platform
+is provided
+a direct feed that parallels the
+billing
+stream.
+The call records are in an industry
+format
+(AMA)
+that is not conducive
+to subsequent
+processing.
+The first job of the IMP is to parse the
+AMA records into a call detail record (CDR) format -
+the equivalent of going from a variable-length
+to a fixed-
+length record, except that additional
+tables are brought
+to bear in the translation.
+The IMP delivers CDRs to a data warehouse and
+to a software module (called the streamer) that filters
+records for specific applications.
+The data warehouse
+was developed internally
+[Greer1999] and has been in
+operation for over two years.
+The streamer module filters CDRs to different appli-
+cations. The target applications
+range from production
+fraud detection modules to marketing initiatives
+to ad
+hoc applications
+to resolve an apparent anomaly or to
+respond to some vice president's question.
+A key fea-
+ture of the streamer is that it is indeed modular so that
+new filters can be added or removed easily without
+a
+break in the record processing.
+
+3
+Profiling
+
+Some applications,
+such as fraud detection or network
+security, require a near real-time characterization
+of a
+user in order to minimize
+the loss or damage caused
+by illegitimate
+usage.
+The use of profiles for these
+applications
+is crucial, since it is not possible in real-
+time to extract and analyze all the associated records
+in order to detect a potentially
+fraudulent
+deviation
+in
+behavior, or a malicious network intrusion.
+For fraud and intrusion detection, profiles are used in
+two ways: in signature-based detection methods, and in
+anomaly detection methods.
+In signature-based
+methods,
+a library
+of aberrant
+attack
+profiles
+(called
+signatures)
+are stored
+in a
+signature data base. Profiles of user's recent traffic are
+then compared to these signatures to detect intrusions
+or fraudulent
+behavior.
+An example of this use is
+provided in Section 5.3.
+In anomaly detection,
+the profile for each entity is
+itself the baseline for comparison.
+A well-formulated
+profile captures the typical behavior of the credit card
+or computer user, allowing one to compare recent events
+to the appropriate
+profile to ensure that the behavior
+is within
+the norm. New traffic for a user is compared
+against their individual
+profile to determine if the user's
+behavior
+has changed.
+A significant
+departure
+from
+baseline is a signal that the account may have been
+compromised. Anomaly detection via profiles is used in
+AT&T
+for detecting international
+toll fraud.
+Selecting
+variables.
+Selecting variables that appropri-
+ately capture user behavior is the most difficult
+yet the
+
+
+
+328
+
+most creative part of profiling.
+In deciding what vari-
+ables to choose, one has to consider the computational
+complexity
+of calculating
+the variables and the amount
+of space the `collection of profiles will require.
+Some
+variables like counts and means only require a linear
+scan over the data.
+Others like the number of simul-
+taneous calls or the top five callers may require more
+complex processing and staging of data. The amount
+of space required is a function of the number of entities
+generating the transactions, the number of variables in-
+cluded in the profile, the degree of quantization
+of these
+variables, and finally the desired system performance.
+For example, one of our applications maintains approxi-
+mately 15 million 512-byte profiles for a total of 7.5GB.
+This is larger than the available memory on the current
+hardware so careful tuning was required so that per-
+formance would not be dominated by I/O limitations.
+In another application
+we maintain
+approximately
+450
+million 8-byte profiles for a total of 3.5GB. This fits into
+physical memory but required that each variable in the
+profile be quantized
+to 16 levels, thereby disallowing
+subtle changes through time.
+Maintenance,
+storage,
+and accessibility
+of profiles.
+Profiles can be stored in a variety of formats depending
+on the needs of the common IMP applications.
+The
+simplest form is to store profiles in flat ASCII files. This
+format is convenient for browsing and accommodates
+variable
+length
+profiles.
+However,
+ASCII
+files are
+inefficient
+as regards space and processing time (e.g.,
+there is considerable overhead reading an ASCII file
+into a C program).
+A simple alternative
+is using
+fixed-length
+profiles and storing them in binary files.
+Individual
+profiles can be retrieved by binary search
+(assuming
+that
+the files are sorted by entity
+id-
+number).
+In cases where performance demands entity
+indexing,
+an alternative
+is to store profiles
+in B-
+trees [Bayer & McCreight19721.
+This is the storage
+format used in our 15 million 512 byte profile example.
+Finally,
+if the application
+has a tight coupling with a
+formal database management system the profiles can
+be conveniently
+stored in a relational
+DBMS.
+Updating
+profiles.
+Profiles need to be updated to
+reflect the most recent behavior.
+An update of a
+profile requires three steps, reading the profile from
+disk (or from a memory location),
+changing the values
+in the profile according to some statistical
+blending
+algorithm,
+and writing
+the profile to disk (or memory
+location).
+Two processing models are common: event-
+driven
+and time-driven
+processing.
+In event-driven
+updating,
+every new record results in the associated
+profile
+being updated
+as the record arrives in the
+stream.
+In time-driven
+updating,
+records are staged
+for some time period. At the end of the time period the
+records are summarized and the profiles updated.
+Event-driven
+updating
+ensures that the profiles are
+up-to-date,
+but the I/O demands can be considerable
+when the profile
+data base is too large to fit into
+memory. Time-driven
+processing is less I/O bound but
+temporary
+disk space can be a problem since records
+have to be staged over the desired time period.
+Event- and time-driven
+processing follow the same
+processing
+model.
+A record or a set of records
+constitutes a A for a profile P. The new profile at time
+t + 1 is formed from the profile at time t by
+
+if ]Pt -A]
+> E
+otherwise
+(1)
+
+where 0 < E < 00 and 0 2 0 < 1. The E parameter is
+employed in applications
+where it is important
+to avoid
+contaminating
+a profile with outliers.
+The 0 parameter is a heuristic blending factor that
+determines how much weight is given to fresh data,
+or alternatively,
+how little
+weight
+is given to old
+data. For time-driven
+updating,
+0 is normally constant,
+independent of what entity is being updated. Its value
+depends on the time scale over which old data becomes
+irrelevant.
+For example, for daily processing, 0 = .85
+effectively discounts all data 30 days prior, while 0 = .5
+effectively discounts all data 7 days prior.
+For event-driven
+updating,
+B is often chosen to be a
+function of the record inter-arrival
+time. This assumes
+that even though profiles are updated record by record,
+the "moving
+window"
+that the profile is attempting
+to capture is a fixed length of time (e.g., a week or
+month).
+Setting 0 = B(rate) allows a new record to
+have relatively more influence on a profile for infrequent
+users (i.e., low calling rate), while a new record for users
+generating loads of activity
+(i.e., high rate) can have
+little relative weight. This way one can ensure that the
+(fixed time) moving window is not constantly
+flushed
+away for profiles that are frequently
+updated.
+
+
+4
+Interfaces
+and delivery
+of KDD
+applications
+
+A KDD
+application
+has many opportunities
+to fail,
+but the place where it should not fail is at the final
+stage where the "concentrated
+information"
+must be
+delivered to the target audience.
+Unfortunately
+the
+hand-off from research to business unit is not always a
+clean one so this important
+function of an IMP cannot
+be taken for granted.
+Our approach to KDD delivery utilizes the corporate
+intranet
+and browser
+functionality.
+To take full
+advantage of the ubiquity
+of web browsers on the
+desktop, the IMP should provide tools and templates
+that allow KDD researchers to quickly
+populate web
+pages.
+The only drawback with this move to web-
+based delivery
+of KDD
+applications
+comes from the
+requirement that the content is delivered in "web time,"
+
+
+
+
+329
+
+i.e., at most 10 seconds from mouse click to full page
+display.
+Our experience with including tools and templates in
+an IMP for KDD delivery has evolved and continues to
+evolve as performance shortcomings
+are uncovered, or
+as applications
+become more ambitious.
+
+5
+Application
+This section presents an application
+of the general
+framework
+and methodology
+to a large data stream
+consisting of the toll-free
+(800 number) traffic on the
+AT&T
+network.
+We first briefly describe some of the
+characteristics
+of this data stream and our information
+platform.
+Then we describe the steps we took to create
+profiles for toll-free numbers. Finally, we illustrate
+the
+use of these profiles for a fraud-detection
+application.
+
+5.1
+The
+toll-free
+data
+stream
+On a typical
+day AT&T
+carries about
+1OOM toll-
+free calls.
+These calls terminate
+in approximately
+1.5M distinct
+800 numbers.
+Over a year, we observe
+approximately
+4M distinct
+800 numbers. The amount
+of traffic into these numbers varies considerably.
+Most
+receive relatively
+few calls per day, while others (e.g.,
+800-CALL-ATT)
+receives several million calls per day.
+The source of the toll-free data stream is the subset of
+CDRs obtained from the streamer module (Figure 1).
+
+5.2
+Profiling
+We used a combination
+of domain
+knowledge
+and
+visualization
+techniques both to gain experience with
+the data, and to define meaningful variables. Extensive
+browsing of traffic to a variety of toll-free numbers led
+us to the following very simple profile:
+
+l
+distribution
+of call times:
+as captured by 24 bins
+containing
+the number of completed calls received
+each hour of the day,
+
+l
+distribution
+of call durations:
+as captured
+by 12
+logarithmically
+spaced bins containing
+the number
+of calls of each duration,
+
+l
+fraction
+of incomplete
+calls: single count,
+
+l
+total daily volume:
+in minutes,
+
+l
+birthday:
+the first day that we observed a call to the
+number, and
+
+l
+recency:
+the most recent day that we observed a call
+to the number.
+
+This simple approach assigns a profile of the same
+size and with
+the same fields to all 800 numbers
+independently
+of how many calls they receive.
+Such
+a standardized
+profile makes it easy to compare the
+behavior of two 800 numbers or to compare 800-profiles
+to a pre-specified signature (in the same format).
+The
+profiles are small enough (41 bytes each) to store them
+Figure 2: The profile of two suspicious 800 numbers.
+Characteristics
+for this kind of 800 fraud is the heavy
+night activity
+and the long call durations.
+
+
+in one flat ASCII file sorted on the 800 number.
+The
+total size of this profile data base is less than 1GB.
+We update the 800-profiles daily, thereby adopting a
+time-driven
+updating
+scheme. The degree of blending
+we use (0 = 0.85) corresponds to a moving window of
+one month. Finally we decided to include all records in
+the update (c = oo) since abuse of an existing legitimate
+toll-free number is unlikely.
+
+5.3
+Night
+Owls
+A few months ago research was contacted by network
+security with a new problem.
+Security associates had
+noticed an increased number of 800 accounts being set
+up with phony names and addresses. In this case, there
+was no apparent connection between the bogus accounts
+with the possible exception that some of the individuals
+identified themselves as purveyers of psychic advice.
+By the time we were contacted,
+only a handful
+of
+fraudulent
+accounts were identified.
+Our approach was
+to bootstrap
+from this small set to a decent sized
+training
+set, and then apply statistical
+and machine
+learning techniques to identify likely fraudsters.
+The first thing we did was to launch queries against
+the data warehouse in the IMP to determine
+which
+originating
+numbers
+had called the fraudulent
+800
+numbers.
+We used these numbers in two ways: we
+looked back in time to see which other 800 numbers
+that they called, and we started
+a process whereby
+we would look for all new 800 numbers they called.
+Security associates then manually investigated each and
+tagged them as fraud
+"yes/no".
+For all fraud
+"yes"
+800-numbers, we repeated this process, and after a few
+weeks we had a decent sized training set to apply off-line
+learning techniques.
+Creating
+and delivering
+an automated
+system for
+detecting new fraudulent
+800 numbers was then con-
+structed within
+days. The task reduced to extracting
+the existing
+800-profiles for the training
+set from the
+IMP and feeding the labeled training set to various ma-
+chine learning tools. Several competing classifiers (atree
+[Freund & Mason],
+slipper
+[Cohen & Singer],
+model-
+averaged logistic regression [Rafteryl996])
+were used to
+
+
+
+
+330
+
+create powerful predictors.
+Profiles of a few suspicious
+800 numbers are displayed in Figure 2. Perusing a num-
+ber of such profiles and by analyzing the structure of the
+classifiers, we were able to simply characterize this kind
+of fraud.
+Specifically, fraudulent
+800-numbers tend to
+have extensive late night activity
+(hence the name night
+owls) and long call durations.
+The predictors
+are now in place and in production
+within
+the security organization.
+The classifiers pro-
+duce prioritized
+lists that are displayed on a web in-
+terface with direct (active) links into various corporate
+databases.
+We are currently
+evaluating
+the alterna-
+tives but initial results suggests that all perform about
+equally well with fraud hit rates for the top 10% of the
+scores in the 70-80% range.
+
+6
+Conclusion
+We have discussed how an IMP can provide a robust
+and automated KDD computing infrastructure
+that can
+serve as a vehicle for fast response to new business
+needs. The IMP that we described is the result of a
+collaborative effort involving researchers from statistics,
+databases, machine learning,
+and visualization.
+It
+continues to evolve as the applications
+mature and we
+are able to further abstract some of the core functional
+steps required by rapid deployment of KDD. Our work
+has spawned several promising
+research projects that
+should further enhance our next generation IMP:
+
+l
+Hancock:
+a high level programming
+language for
+designing and implementing
+profiles
+[Bonachea, Fisher, & Rogers], and
+
+l
+Dynamic
+Strudel:
+enhancements
+to the Strudel
+web-site management tool to support dynamically
+generated web pages [Suciu et al.19981.
+
+Finally
+we continue to explore flexible visualization
+tools and techniques to easily allow KDD researchers
+and end-users to browse and navigate through
+large
+multidimensional
+data.
+
+7
+Acknowledgments
+The concepts presented in this paper are the result
+of three years experience with large transactional
+data
+streams. We also drew on the collective experience of
+a number of colleagues that contributed
+extensively to
+the current IMP that we now enjoy.
+We specifically
+acknowledge the pioneering work of Rick Becker and
+Diane
+Lambert
+(Lucent)
+on event-driven
+updating
+of profiles,
+Allan
+Wilks on the streamer module to
+filter
+the stream for target applications,
+Rick Greer
+for anticipating
+the need for an industrial-strength
+database management system for such leading edge
+applications,
+Rich Drechsler and Kirsten
+Schultz for
+the visualization
+tools that have been invaluable,
+and
+our modeling colleagues William
+Cohen, Yoav Freund,
+Yoram Singer, and Chris Volinsky.
+
+References
+[Bayer & McCreightl9721
+Bayer, R., and McCreight,
+E. M. 1972. Organization
+and maintenance of large
+ordered indices. Actalnformatica
+1:173-189.
+
+[Bonachea, Fisher, & Rogers] Bonachea,
+D.;
+Fisher,
+K.; and Rogers, A.
+Hancock:
+A language for de-
+scribing signatures. In submitted
+for publication.
+
+[Burge & Shawe-Taylor19961 Burge,
+P., and Shawe-
+Taylor, J. 1996. Frameworks for fraud detection in
+mobile telecommunications
+networks. In Proceedings
+of the Fourth
+Annual
+Mobile
+and Personal
+Commu-
+nications
+Seminar. University
+of Limerick.
+
+[Cohen & Singer] Cohen, W. W., and Singer, Y.
+A
+simple, fast, and effective rule learner. In submitted
+for publication.
+
+[Cortes & Pregibonl9981
+Cortes, C., and Pregibon, D.
+1998. Giga mining.
+In Proceedings
+of the Fourth
+International
+Conference
+on Z<nowledge
+Discovery
+and Data Mining.
+
+[Davison & Hirsh19981 Davison, B. D., and Hirsh, H.
+1998.
+Probabilistic
+online action prediction.
+In
+Working
+Notes
+of the AAAZ
+Spring
+Symposium
+on
+Intelligent
+Environments,
+AAAZ
+Proess, 148-154.
+
+[Denningl987]
+Denning,
+D. E.
+1987.
+An intrusion-
+detection model.
+In IEEE
+Trans
+Soft Eng
+Vol 13,
+No 2.
+
+[Fawcett & Provost19971 Fawcett, T., and Provost, F.
+1997. Adaptive
+fraud detection.
+Data
+Mining
+and
+Knowledge
+Discovery
+1:291-316.
+
+[Freund & Mason] Freund, Y., and Mason, L.
+The
+alternating
+decision
+tree learning
+algorithm.
+In
+submitted
+for publication.
+
+[GreerlSSS] Greer, R. 1999. Daytona and the fourth-
+generation
+language cymbal.
+In roceedings
+of the
+SZGMOD
+Database
+Conference.
+
+[Lunt1993]
+Lunt, T. F. 1993. Detecting intruders
+in
+computer systems.
+In Proceedings
+of Auditing
+and
+Computer
+Technology.
+
+[Rafteryl996]
+Raftery,
+A. E.
+1996.
+Approximate
+bayes factors and accounting for model uncertainty
+in generalised linear models. Biometrika
+83:251-266.
+
+[Suciu et al.19981 Suciu, D.; Fernandez, M.; Florescu,
+D.;
+Kang,
+3.; and Levy,
+A.
+1998.
+Catching
+the boat with Strudel:
+experiences with a web-site
+management system. In SZGMOD.
+
+
+
+
+331
+

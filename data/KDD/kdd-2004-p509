@@ -1,0 +1,1348 @@
+A Generalized Maximum Entropy Approach to
+Bregman Co-clustering and Matrix Approximation
+
+
+Arindam Banerjee
+Inderjit Dhillon
+Joydeep Ghosh Srujana Merugu
+University of Texas
+Austin, TX, USA
+Dharmendra S. Modha
+IBM Almaden Research Center
+San Jose, CA, USA
+
+
+
+ABSTRACT
+Co-clustering is a powerful data mining technique with var-
+ied applications such as text clustering, microarray anal-
+ysis and recommender systems. Recently, an information-
+theoretic co-clustering approach applicable to empirical joint
+probability distributions was proposed. In many situations,
+co-clustering of more general matrices is desired.
+In this
+paper, we present a substantially generalized co-clustering
+framework wherein any Bregman divergence can be used
+in the objective function, and various conditional expec-
+tation based constraints can be considered based on the
+statistics that need to be preserved.
+Analysis of the co-
+clustering problem leads to the minimum Bregman infor-
+mation principle, which generalizes the maximum entropy
+principle, and yields an elegant meta algorithm that is guar-
+anteed to achieve local optimality. Our methodology yields
+new algorithms and also encompasses several previously known
+clustering and co-clustering algorithms based on alternate
+minimization.
+
+Categories and Subject Descriptors: I.2.6 [Artificial
+Intelligence]: Learning
+
+General Terms: Algorithms
+
+Keywords: Co-clustering, Matrix Approximation, Breg-
+man divergences
+
+
+1. INTRODUCTION
+Co-clustering, or bi-clustering [9, 4], is the problem of si-
+multaneously clustering rows and columns of a data matrix.
+The problem of co-clustering arises in diverse data mining
+applications, such as simultaneous clustering of genes and
+experimental conditions in bioinformatics [4, 5], documents
+and words in text mining [8], users and movies in recom-
+mender systems, etc.
+In order to design a co-clustering
+framework, we need to first characterize the "goodness" of
+a co-clustering. Existing co-clustering techniques [5, 4, 8]
+achieve this by quantifying the "goodness" of a co-clustering
+in terms of the approximation error between the original
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD'04, August 22­25, 2004, Seattle, Washington, USA.
+Copyright 2004 ACM 1-58113-888-1/04/0008 ...$5.00.
+data matrix and a reconstructed matrix based on co-clustering.
+Of these techniques, the most efficient and scalable algo-
+rithms are those based on alternate minimization schemes [5,
+8], but these are restricted to only two distortion measures
+namely, KL-divergence and the squared Euclidean distance,
+and a few specific matrix reconstruction schemes. These two
+limitations restrict the applicability of these techniques to a
+small range of data matrices.
+In this paper, we address the following two questions:
+(a) what class of distortion functions admit efficient co-
+clustering algorithms based on alternate minimization?, and
+(b) what are the different possible matrix reconstruction schemes
+for these co-clustering algorithms? We show that alternate
+minimization based co-clustering algorithms work for a large
+class of distortion measures called Bregman divergences [3],
+which include squared Euclidean distance, KL-divergence,
+Itakura-Saito distance, etc., as special cases. Further, we
+demonstrate that for a given co-clustering, a large variety
+of approximation models are possible based on the type of
+summary statistics that need to be preserved. Analysis of
+this general co-clustering problem leads to the minimum
+Bregman information principle that simultaneously general-
+izes the maximum entropy and the least squares principles.
+Based on this principle, and other related results, we develop
+an elegant meta-algorithm for the Bregman co-clustering
+problem with a number of desirable properties. Most pre-
+viously known parametric clustering and co-clustering al-
+gorithms based on alternate minimization follow as special
+cases of our methodology.
+
+1.1 Motivation
+We start by reviewing information-theoretic co-clustering [8]
+and motivating the need for a more general co-clustering
+framework. Let [u]m
+1
+denote an index u running over {1, ··· , m}
+and let X and Y be discrete random variables that take
+values in the sets {xu}, [u]m
+1
+, and {yv}, [v]n
+1
+, respectively.
+Suppose we are in the idealized situation where the joint
+probability distribution p(X, Y ) is known.
+In practice, p
+may be estimated from a contingency table or co-occurrence
+matrix. Suppose we want to co-cluster, or, simultaneously
+cluster X into k disjoint (row) clusters {^
+xg}, [g]k1, and Y
+into l disjoint (column) clusters, {^
+yh}, [h]l1. Let
+^
+X and
+^
+Y
+denote the corresponding clustered random variables that
+range over these sets. An information theoretic formulation
+of finding the optimal co-clustering is to solve the problem
+
+min
+^
+X, ^
+Y
+I(X; Y ) - I(
+^
+X;
+^
+Y ) ,
+(1.1)
+
+
+
+
+509
+Research Track Poster
+
+where I(X; Y ) is the mutual information between X and Y [6].
+In [8], it was shown that
+
+I(X; Y ) - I(
+^
+X,
+^
+Y ) = D(p(X, Y )||q(X, Y )),
+(1.2)
+
+where q(X, Y ) is a distribution of the form
+
+q(X, Y ) = p(
+^
+X,
+^
+Y )p(X|
+^
+X)p(Y | ^
+Y ),
+(1.3)
+
+and D(·||·) denotes the Kullback-Leibler(KL) divergence.
+Thus, the search for the optimal co-clustering may be con-
+ducted by searching for the nearest approximation q(X, Y )
+that has the form in (1.3). We note that q(X, Y ) depends
+only on (m - k + n - l + kl - 1) independent parameters,
+which is much smaller than the (mn - 1) parameters that
+determine a general p(X, Y ). Hence, we call q(X, Y ) a "low
+complexity" or low parameter matrix approximation.
+The above is the viewpoint presented in [8].
+We now
+present an alternate viewpoint that highlights the key maxi-
+mum entropy property that makes q(X, Y ) a "low complex-
+ity" or low parameter approximation.1
+
+Lemma 1 Given a fixed co-clustering
+^
+X,
+^
+Y , consider the
+set of joint distributions p that preserve the following statis-
+tics of the input distribution p:
+
+X
+x^
+x
+X
+y^
+y
+p (x, y) = p(^
+x, ^
+y) =
+X
+x^
+x
+X
+y^
+y
+p(x, y),
+^
+x, ^
+y,
+
+
+p (x) = p(x),
+p (y) = p(y),
+x,y.
+
+Among all such distributions p , the distribution q in (1.3)
+has the maximum Shannon entropy, i.e., H(q)  H(p ).
+
+Thus, among all distributions that preserve marginals and
+co-cluster statistics, the maximum entropy distribution has
+the form in (1.3).
+Thus, by (1.2) and Lemma 1, the co-
+clustering problem (1.1) is equivalent to the problem of find-
+ing the nearest (in KL-divergence) maximum entropy dis-
+tribution that preserves the marginals, and the co-cluster
+statistics of the original data matrix.
+The above formulation is applicable when the data ma-
+trix directly corresponds to an empirical joint distribution.
+However, there are important situations when the data ma-
+trix is more general, for example, the matrix may contain
+negative entries and/or a distortion measure other than KL-
+divergence, such as the squared Euclidean distance, or the
+Itakura-Saito distance might be more appropriate.
+This paper addresses the general situation by extending
+information-theoretic co-clustering along three directions.
+First, "nearness" is now measured by any Bregman diver-
+gence. Second, we allow specification of a larger class of con-
+straints that preserve various statistics of the data. Lastly,
+to accomplish the above, we generalize the maximum en-
+tropy approach: we guide our co-clustering generalization by
+appealing to the minimum Bregman information principle
+that we shall introduce shortly. The optimal co-clustering
+is guided by the search for the nearest (in Bregman diver-
+gence) matrix approximation that has minimum Bregman
+information while satisfying the desired constraints.
+
+
+2. FORMULATION AND ANALYSIS
+In this section, we formulate the Bregman co-clustering
+problem in terms of the Bregman divergence between a given
+matrix and an approximation based on the co-clustering.
+
+1
+Proofs omitted due to lack of space, see [1] for details.
+We start by defining Bregman divergences [3, 2]. Let 
+be a real-valued strictly convex function defined on the con-
+vex set S = dom()  R, the domain of , such that 
+is differentiable on int(S), the interior of S.
+The Breg-
+man divergence d : S × int(S)  [0, ) is defined as
+d(z1, z2) = (z1) - (z2) - z1 - z2,
+(z2) , where
+ is
+the gradient of .
+
+
+Example 1.A (I-Divergence) Given z  R+, let (z) =
+z log z. For z1, z2  R+, d(z1, z2) = z1 log(z1/z2)-(z1-z2).
+
+Example 2.A (Squared Euclidean Distance) Given z 
+R, let (z) = z2. For z1, z2  R, d(z1, z2) = (z1 - z2)2.
+
+Based on Bregman divergences, it is possible to define a use-
+ful concept called Bregman information, which captures
+the "spread" or the "information" in a random variable.
+More precisely, for any random variable Z taking values
+in S = dom(), its Bregman information is defined as
+the expected Bregman divergence to the expectation, i.e.,
+I(Z) = E[d(Z, E[Z])].
+
+
+Example 1.B (I-Divergence) Given a real non-negative
+random variable Z, the Bregman information corresponding
+to I-divergence is given by I(Z) = E[Z log
+"
+Z
+E[Z]
+"]
+. When
+Z is uniformly distributed over the set {p(xu, yv)}[u]m
+1
+[v]n
+1
+,
+i.e., Pr(Z = p(xu, yv)) =
+1
+mn
+, u, v, then E[Z] =
+1
+mn
+and
+the Bregman information of Z is proportional to D(p||p0) =
+-H(p) + constant, where D(·||·) is KL-divergence, p0 is the
+uniform distribution and H(·) is the Shannon entropy.
+
+
+Example 2.B (Squared Euclidean Distance) Given any
+real random variable Z, the Bregman information corre-
+sponding to squared Euclidean distance is given by I(Z) =
+E[(Z - E[Z])2], and when Z is uniformly distributed over
+the elements of a matrix, it is proportional to the squared
+Frobenius norm of the matrix + constant.
+
+We focus on the problem of co-clustering a given m × n
+data matrix Z whose entries take values in a convex set
+S = dom(), i.e., Z  Sm
+×n
+. With a slight abuse of nota-
+tion, we can consider the matrix Z as a random variable in S
+that is a known deterministic function of two underlying ran-
+dom variables U and V , which take values over the set of row
+indices {1, ··· , m} and the set of column indices {1, ··· , n}
+respectively. Further, let  = {uv : [u]m
+1
+, [v]n
+1
+} denote the
+joint probability measure of the pair (U, V ), which is either
+pre-specified or set to be the uniform distribution. Through-
+out the paper, all expectations are with respect to .
+
+
+Example 1.C (I-Divergence) Let (X, Y )  p(X, Y ) be
+jointly distributed random variables with X, Y taking values
+in {xu}, [u]m
+1
+and {yv}, [v]n
+1
+respectively. Then, p(X, Y ) can
+be written in the form of the matrix Z = [zuv], [u]m
+1
+, [v]n
+1
+,
+where zuv = p(xu, yv) is a deterministic function of u and v.
+This example with a uniform measure  corresponds to the
+setting described in Section 1.1 (originally in [8])2.
+
+
+Example 2.C (Squared Euclidean Distance) Let Z 
+Rm
+×n
+denote a data matrix whose elements may assume
+
+2
+Note that in [8] KL-divergence was used, which is a special
+case of I-divergence applicable to probability distributions.
+
+
+
+510
+Research Track Poster
+
+any real values. This example with a uniform measure 
+corresponds to the setting described in [5, 4].
+
+A k × l co-clustering of a given data matrix Z is a pair
+of maps:  : {1, ··· , m}  {1, ··· , k},
+ : {1, ··· , n} 
+{1,··· ,l}. A natural way to quantify the "goodness" of a
+co-clustering is in terms of the accuracy of an approximation
+^
+Z = [^
+zuv] obtained from the co-clustering, i.e., the quality
+of the co-clustering can be defined as
+
+
+E[d(Z,
+^
+Z)] =
+m
+X
+u=1
+n
+X
+v=1
+uvd(zuv, ^
+zuv).
+(2.4)
+
+
+where
+^
+Z is uniquely determined by the co-clustering (, ).
+Given a co-clustering (, ), there can be a number of
+different matrix approximations
+^
+Z based on the informa-
+tion we choose to retain.
+Let
+^
+U and
+^
+V be random vari-
+ables for row and column clusterings respectively, taking
+values in {1, ··· , k} and {1, ··· , l} such that
+^
+U = (U) and
+^
+V = (V ). Then, the co-clustering (, ) involves four un-
+derlying random variables U, V ,
+^
+U, and
+^
+V corresponding
+to the various partitionings of the matrix Z. We can now
+obtain different matrix approximations based solely on the
+statistics of Z corresponding to the non-trivial combinations
+of {U, V,
+^
+U ,
+^
+V } given by
+
+ = {{U,
+^
+V }, { ^
+U , V }, { ^
+U,
+^
+V }, {U}, {V }, { ^
+U }, { ^
+V }} .
+
+If () denotes the power set of , then every element of
+() is a set of constraints that leads to a (possibly) different
+matrix approximation. Hence, () can be considered as the
+class of matrix approximation schemes based on a given co-
+clustering (, ). For the sake of illustration, we consider
+four examples corresponding to the non-trivial constraint
+sets in () that are symmetric in U,
+^
+U and V,
+^
+V :
+
+C1 = {{^
+U }, { ^
+V }},
+C2 = {{^
+U ,
+^
+V }},
+C3 = {{^
+U ,
+^
+V }, {U}, {V }},
+C4 = {{U,
+^
+V }, { ^
+U , V }} .
+
+Now, for a specified constraint set C  () and a co-
+clustering (, ), the set of possible approximations MA(, , C)
+consists of all Z
+ Sm
+×n
+that depend only on the rel-
+evant statistics of Z, i.e., E[Z|C], C  C, or more pre-
+cisely, satisfy the following conditional independence condi-
+tion: Z  {E[Z|C] : C  C}  Z . Hence, the approxima-
+tions Z can be a function of only {E[Z|C] : C  C}.
+We can now define the "best" approximation
+^
+Z corre-
+sponding to a given co-clustering (, ) and the constraint
+set C as the one in the class MA(, , C) that minimizes the
+approximation error, i.e.,
+
+^
+Z =
+argmin
+Z MA(,,C)
+E[d(Z, Z )].
+(2.5)
+
+
+2.1 Minimum Bregman Information
+Interestingly, it can be shown [1] that the "best" matrix
+approximation
+^
+Z turns out to be the minimum Bregman
+information matrix among the class of random variables
+MB(,,C) consisting of all Z
+ Sm
+×n
+that preserve the
+relevant statistics of Z or more precisely, satisfy the linear
+constraints: C  C, E[Z|C] = E[Z |C]. Hence, the best
+approximation
+^
+Z of the original matrix Z for a specified
+co-clustering (, ) and constraint set C is given by
+
+^
+Z =
+argmin
+Z MA(,,C)
+E[d(Z, Z )] =
+argmin
+Z MB (,,C)
+I(Z ). (2.6)
+This leads to a new minimum Bregman information
+principle: the best estimate given certain statistics is one
+that has the minimum Bregman information subject to the
+linear constraints for preserving those statistics. It is easy to
+see that the widely used maximum entropy principle [6] is a
+special case of the proposed principle for I-divergence since
+the entropy of a joint distribution is negatively related to the
+Bregman information (Example 1.B). In fact, even the least
+squares principle [7] can be obtained as a special case when
+the Bregman divergence is squared Euclidean distance.
+The following theorem characterizes the solution to the
+minimum Bregman information problem (2.6). For a proof,
+see [1].
+
+
+Theorem 1 For a Bregman divergence d, any random vari-
+able Z  Sm
+×n
+, a specified co-clustering (, ) and a speci-
+fied constraint set C, the solution
+^
+Z to (2.6) is given by
+
+(
+^
+Z) = - X
+r
+r,
+(2.7)
+
+
+where   {r} are the optimal Lagrange multipliers corre-
+sponding to the set of linear constraints: E[Z |Cr] = E[Z|Cr],
+Cr  C. Furthermore,
+^
+Z always exists, and is unique.
+
+2.2 Bregman Co-clustering Problem
+We can now quantify the goodness of a co-clustering in
+terms of the expected Bregman divergence between the orig-
+inal matrix Z and the minimum Bregman information so-
+lution
+^
+Z. Thus, the Bregman co-clustering problem can be
+concretely defined as follows:
+
+
+Definition 1 Given k, l, a Bregman divergence d, a data
+matrix Z  Sm
+×n
+, a set of constraints C  (), and an
+underlying probability measure , we wish to find a co-
+clustering ( ,  ) that minimizes:
+
+( ,  ) = argmin
+(,)
+E[d(Z,
+^
+Z)]
+(2.8)
+
+
+where
+^
+Z =
+argmin
+Z MB (,,C)
+I(Z ).
+
+
+The problem is NP-complete by a reduction from the kmeans
+problem. Hence, it is difficult to obtain a globally optimal
+solution. However, in Section 3, we analyze the problem in
+detail, and prove that it is possible to come up with an itera-
+tive update scheme that provides a locally optimal solution.
+
+
+Example 1.D (I-Divergence) The Bregman co-clustering
+objective function is given by E[Z log( Z^
+Z
+)-Z+
+^
+Z]= E[Z log( Z^
+Z
+)]
+where
+^
+Z is the minimum Bregman information solution (Ta-
+ble 1). Note that for the constraint set C3 and Z based on
+a joint distribution p(X, Y ), the objective function reduces
+to D(p||q) where q is of the form (1.3) that was used in [8]
+
+
+Example 2.D (Squared Euclidean Distance) The Breg-
+man co-clustering objective function is E[(Z -
+^
+Z)2] where
+^
+Z is the minimum Bregman information solution (Table
+2).
+Note that for the constraint set C4, this reduces to
+E[(Z - E[Z|U,
+^
+V ] - E[Z| ^
+U , V ]+ E[Z| ^
+U ,
+^
+V ])2], which is iden-
+tical to the objective function in [5, 4].
+
+
+
+511
+Research Track Poster
+
+3. A META ALGORITHM
+In this section, we shall develop an alternating minimiza-
+tion scheme for the general Bregman co-clustering problem
+(2.8).
+Our scheme shall serve as a meta algorithm from
+which a number of special cases (both new and previously
+known) can be derived. Throughout this section, let us sup-
+pose that the underlying measure , the Bregman divergence
+d, the data matrix Z  Sm
+×n
+, number of row clusters k,
+number of column clusters l, and the constraint set C are
+specified. We first outline the essence of our scheme.
+
+Step 1: Start with an arbitrary row and column clustering,
+say, (0, 0). Set t = 0. With respect to this clustering,
+compute the matrix approximation
+^
+Zt by solving the
+minimum Bregman information problem (2.6).
+
+Step 2: Repeat one of the two steps below till convergence:
+
+Step 2A: Hold the column clustering t fixed, and
+find a new row co-clustering, say, t
++1
+. Set t
++1
+=
+t. With respect to the co-clustering (t
++1
+, t
++1
+),
+compute the matrix approximation
+^
+Zt
++1
+by solv-
+ing the minimum Bregman information problem
+(2.6). Set t = t + 1.
+Step 2B: Hold the row clustering t fixed, and find a
+new column co-clustering, say, t
++1
+. Set t
++1
+=
+t. With respect to the co-clustering (t
++1
+, t
++1
+),
+compute the matrix approximation
+^
+Zt
++1
+by solv-
+ing the minimum Bregman information problem
+(2.6). Set t = t + 1.
+
+Note that at any time in Step 2, the algorithm may choose
+to perform either Step 2A or 2B.
+
+3.1 Updating Row and Column Clusters
+From the above outline, it is clear that the key steps in our
+algorithm involve finding a solution of the minimum Breg-
+man information problem (2.6) and appropriately updating
+the row and column clusters. First, we focus on the latter
+task. Consider matrix approximations based on the func-
+tional form for the minimum Bregman solution
+^
+Z given in
+(2.7). For a given (, , C), there exist a unique set of optimal
+Lagrange multipliers  so that (2.7) uniquely specifies the
+minimum Bregman information solution
+^
+Z. In general, (2.7)
+provides a unique approximation, say
+~
+Z, for any set of La-
+grange multipliers  (not necessarily optimal) and (, , C)
+since
+(·) is a monotonic function [3, 2]. To underscore the
+dependence of
+~
+Z on the Lagrange multipliers, we shall use
+the notation
+~
+Z = (, , ) = (
+)-
+1
+(- Psr
+=1
+r). The ba-
+sic idea in considering approximations of the form (, , )
+is that alternately optimizing the co-clustering and the La-
+grange multipliers leads to an efficient update scheme that
+does not require solving the minimum Bregman information
+problem anew for each possible co-clustering.
+Further, the matrix approximations of the form (, , )
+have a nice separability property [1] that enables us to de-
+compose the matrix approximation error in terms of either
+the rows and columns:
+
+E[d(Z,
+~
+Z)]
+=
+EU [EV
+|U
+[(U, (U), V, (V ))]]
+=
+EV [EU
+|V
+[(U, (U), V, (V ))]],
+
+where
+~
+Z = (, , ) and (U, (U), V, (V )) = d(Z,
+~
+Z).
+Using the above separability property, we can efficiently ob-
+Table 1: Minimum Bregman information solution
+for I-Divergence leads to multiplicative models.
+
+Constraints C
+Approximation
+^
+Z
+
+C1
+E[Z| ^
+U]×E[Z| ^
+V ]
+E[Z]
+C2
+E[Z| ^
+U,
+^
+V ]
+
+C3
+E[Z|U]×E[Z|V ]×E[Z| ^
+U, ^
+V ]
+E[Z| ^
+U]×E[Z| ^
+V ]
+
+C4
+E[Z|U, ^
+V ]×E[Z| ^
+U,V ]
+E[Z| ^
+U,
+^
+V ]
+
+Table 2: Minimum Bregman information solution
+for squared Euclidean distance leads to additive
+models.
+
+Constraints C
+Approximation
+^
+Z
+C1
+E[Z| ^
+U] + E[Z| ^
+V ] - E[Z]
+C2
+E[Z| ^
+U,
+^
+V ]
+C3
+E[Z|U] + E[Z|V ] + E[Z| ^
+U,
+^
+V ]
+-E[Z|^
+U] - E[Z| ^
+V ]
+C4
+E[Z|U,
+^
+V ] + E[Z| ^
+U, V ] - E[Z| ^
+U,
+^
+V ]
+
+
+tain the best row clustering by optimizing over the indi-
+vidual row assignments while keeping the column clustering
+fixed and vice versa. In particular, optimizing the contribu-
+tion of each row to the overall approximation error leads to
+the row cluster update step,
+
+t
++1
+(u) = argmin
+g:[g]k
+1
+EV
+|u
+[(u, g, V, t(V ))],
+[u]m
+1
+.
+
+
+Similarly, we obtain the column cluster update step,
+
+t
++1
+(v) = argmin
+h:[h]l1
+EU
+|v
+[(U, t(U), v, h)],
+[v]n
+1
+.
+
+
+So far, we have only considered updating the row (or
+column clustering) keeping the Lagrange multipliers fixed.
+After row (or column) updates, the approximation
+~
+Zt =
+(t
++1
+, t
++1
+, t) is closer to the original matrix Z than
+the earlier minimum Bregman information solution
+^
+Zt, but
+it is not necessarily the best approximation to Z of the
+form (t
++1
+, t
++1
+, ). Hence, we need to now optimize over
+the Lagrange multipliers keeping the co-clustering fixed. It
+turns out [1] that the Lagrange multipliers that result in the
+best approximation to Z are same as the optimal Lagrange
+multipliers of the minimum Bregman information problem
+based on the new co-clustering (t
++1
+, t
++1
+). Based on this
+observation, we set
+^
+Zt
++1
+to be the minimum Bregman in-
+formation solution in steps 2A and 2B.
+
+3.2 The Algorithm
+Finally, we state the meta algorithm for generalized Breg-
+man co-clustering (see Algorithm 1) that is a concrete "im-
+plementation" of our outline at the beginning of Section 3.
+Further, since the row/column cluster update steps and the
+minimum Bregman solution steps all progressively decrease
+the matrix approximation error, i.e., the Bregman co-clustering
+objective function, the alternate minimization scheme shown
+in Algorithm 1 is guaranteed to achieve local optimality.
+
+
+Theorem 2 The general Bregman co-clustering algorithm
+(Algorithm 1) converges to a solution that is locally optimal
+for the Bregman co-clustering problem (2.8), i.e., the objec-
+tive function cannot be improved by changing either the row
+clustering, or the column clustering.
+
+
+
+512
+Research Track Poster
+
+Table 3:
+Row and column cluster updates for I-
+divergence.
+
+C
+(u, g, V, (V ))
+(U, (U), v, h)
+
+C1
+EV
+|u
+[Z log "
+Z
+E[Z|g]
+"]
+EU
+|v
+[Z log "
+Z
+E[Z|h]
+"]
+C2
+EV
+|u
+[Z log "
+Z
+E[Z|g, ^
+V ]
+"]
+EU
+|v
+[Z log "
+Z
+E[Z| ^
+U,h]
+"]
+
+C3
+EV
+|u
+[Z log " Z
+×E[Z|g]
+E[Z|g, ^
+V ]
+"]
+EU
+|v
+[Z log " Z
+×E[Z|h]
+E[Z| ^
+U,h]
+"]
+
+C4
+EV
+|u
+[Z log " Z
+×E[Z|g,^
+V ]
+E[Z|g,V ]
+"]
+EU
+|v
+[Z log " Z
+×E[Z|^
+U,h]
+E[Z|U,h]
+"]
+
+Table 4:
+Row and column cluster updates for
+squared Euclidean distance.
+
+C
+(u, g, V, (V ))
+(U, (U), v, h)
+C1
+EV
+|u
+[(Z - E[Z|g])2]
+EU
+|v
+[(Z - E[Z|h])2]
+C2
+EV
+|u
+[(Z - E[Z|g,
+^
+V ])2]
+EU
+|v
+[(Z - E[Z| ^
+U, h])2]
+C3
+EV
+|u
+[(Z - E[Z|g,
+^
+V ]
+EU
+|v
+[(Z - E[Z| ^
+U, h]
++ E[Z|g])2]
++ E[Z|h])2]
+C4
+EV
+|u
+[(Z - E[Z|g, V ]
+EU
+|v
+[(Z - E[Z|U, h]
++ E[Z|g,
+^
+V ])2]
++ E[Z| ^
+U, h])2]
+
+
+When the Bregman divergence is I-divergence or squared
+Euclidean distance, the minimum Bregman information prob-
+lem has a closed form analytic solution as shown in Tables
+1 and 2. Hence, it is straightforward to obtain the row and
+column cluster update steps (Tables 3 and 4) and implement
+the Bregman co-clustering algorithm (Algorithm
+1). The
+resulting algorithms involve a computational effort that is
+linear in the size of the data and are hence, scalable. In
+general, the minimum Bregman information problem need
+not have a closed form solution and the update steps need to
+be determined using numerical computation. However, since
+the Lagrange dual L() in the minimum Bregman informa-
+tion problem (2.6) is convex in the Lagrange multipliers , it
+is possible to obtain the optimal Lagrange multipliers using
+convex optimization techniques [3]. The minimum Bregman
+information solution and the row and column cluster update
+steps can then be obtained from the optimal Lagrange mul-
+tipliers.
+
+
+4. EXPERIMENTS
+There are a number of experimental results in existing
+literature [4, 5, 8, 10] that illustrate the usefulness of par-
+ticular instances of our Bregman co-clustering framework.
+In fact, a large class of parametric partitional clustering al-
+gorithms [2] including kmeans can be shown to be special
+cases of the proposed framework wherein only rows or only
+columns are being clustered.
+In recent years, co-clustering has been successfully applied
+to various application domains such as text mining [8] and
+analysis of microarray gene-expression data. Hence, here we
+do not experimentally re-evaluate the Bregman co-clustering
+algorithms against other methods. Instead, we present brief
+case studies to demonstrate two salient features of the pro-
+posed co-clustering algorithms: (a) dimensionality reduc-
+tion, and (b) missing value prediction.
+
+4.1 Dimensionality Reduction
+Dimensionality reduction techniques are widely used for
+text clustering to handle sparsity and high-dimensionality
+of text data. Typically, the dimensionality reduction step
+comes before the clustering step, and the two steps are al-
+most independent. In practice, it is not clear which dimen-
+Algorithm 1 Bregman Co-clustering Algorithm
+Input: Matrix Z  Sm
+×n
+, probability measure , Bregman
+divergence d : R × R  R, number of row clusters l, number
+of column clusters k, constraint set C.
+Output: Co-clustering (, ) that (locally) optimizes the ob-
+jective function in (2.8).
+Method:
+{Initialize ,  }
+^
+U  (U),
+^
+V  (V )
+repeat
+{Step A: Update Row Clusters ()}
+for u = 1 to m do
+(u)  argmin
+g:[g]k
+1
+EV
+|u
+[(u, g, V, (V ))]
+
+
+where (U, (U), V, (V )) = d(Z,
+~
+Z),
+~
+Z = (, , )
+and  are optimal Lagrange multipliers before updates.
+end for
+^
+U  (U)
+{Step B:Update Column Clusters ()}
+for v = 1 to n do
+(v)  argmin
+h:[h]l1
+EU
+|v
+[(U, (U), v, h)]
+
+
+where (U, (U), V, (V )) = d(Z,
+~
+Z),
+~
+Z = (, , )
+and  are optimal Lagrange multipliers before updates.
+end for
+^
+V  (V )
+until convergence
+
+
+Table 5: Effect of Implicit Dimensionality Reduction
+by Co-clustering on Classic3. Each subtable is for a
+fixed number of (document,word) co-clusters.
+
+(3,20)
+(3,500)
+(3,2500)
+1389
+1
+2
+1364
+3
+18
+920
+49
+292
+9
+1455
+33
+5
+1446
+21
+31
+1239
+404
+0
+4
+998
+29
+11
+994
+447
+172
+337
+
+
+sionality reduction technique to use in order to get a good
+clustering.
+Co-clustering has the interesting capability of
+interleaving dimensionality reduction and clustering. This
+implicit dimensionality reduction often results in superior
+results than regular clustering techniques [8].
+Using the bag-of-words model for text, let each column
+of the input matrix represent a document, and let each row
+represent a word. Keeping the number of document clus-
+ters fixed, we present results by varying the number of word
+clusters. We ran the experiments on the Classic3 dataset,
+a document collection from the SMART project at Cornell
+University with 3 classes. Co-clustering was performed with-
+out looking at the class labels. We present confusion matri-
+ces between the cluster labels assigned by co-clustering and
+the true class labels, over various numbers of word clusters.
+The number of document clusters were fixed at 3 for all ex-
+periments reported. As we can clearly see from Table 5 (for
+Classic3), implicit dimensionality reduction by co-clustering
+actually gives better document clusters, in the sense that
+the cluster labels agree more with the true class labels with
+fewer word clusters.
+
+4.2 Missing Value Prediction
+To illustrate missing value prediction, we consider a col-
+laborative filtering based recommender system. The main
+problem in this setting is to predict the preference of a given
+user for a given item using the known preferences of all other
+users. A popular approach to handle this is by computing
+the Pearson correlation of each user with all other users
+
+
+
+513
+Research Track Poster
+
+Table 6: Mean Absolute Error for Movie Ratings
+
+Algo.
+C2,SqE
+C3,SqE
+C2,IDiv
+C3,IDiv
+Pearson
+Error
+0.8398
+0.7639
+0.8397
+0.7723
+1.4211
+
+based on the known preferences and predict the unknown
+rating by proportionately combining the other users' rat-
+ings. We adopt a co-clustering approach to address the same
+problem. The main idea is to simultaneously compute the
+user and item co-clusters by assigning zero measure to the
+missing values. As a result, the co-clustering algorithm tries
+to recover the original structure of the data while disregard-
+ing the missing values and the reconstructed approximate
+matrix can be used for prediction.
+For our experimental results, we use a subset of the Each-
+Movie dataset3 consisting of 500 users, 200 movies and con-
+taining 25809 ratings, each rating being an integer between
+0 (bad) to 5 (excellent). Of these, we use 90% ratings for
+co-clustering, i.e., as the training data and 10% ratings as
+the test data for prediction. We applied four different co-
+clustering algorithms (k = 10, l = 10) corresponding to con-
+straint sets C2 and C3 with squared Euclidean (SqE) distance
+and I-divergence (IDiv) to the training data and used the re-
+constructed matrix for predicting the test ratings. We also
+implemented a simple collaborative filtering scheme based
+on Pearson's correlation. Table 6 shows the mean absolute
+error between the predicted ratings and the actual ratings
+for the different methods. From the table, we observe that
+the co-clustering techniques achieve superior results.
+For
+constraint set C3, the individual biases of the users (row av-
+erage) and the movies (column average) are accounted for,
+hence resulting in a better prediction. The co-clustering al-
+gorithms are computationally efficient since the processing
+time is linear in the number of the known ratings.
+
+
+5. RELATED WORK
+Our work is primarily related to three main areas: co-
+clustering, matrix approximation and learning based on Breg-
+man divergences.
+Co-clustering has been a topic of much interest in the
+recent years because of its applications to problems in mi-
+croarray analysis [4, 5] and text mining [8]. In fact, there
+exist many formulations of the co-clustering problem such
+as the hierarchical co-clustering model [9], the bi-clustering
+model [4] that involves finding the best co-clusters one at a
+time, etc. In this paper, we have focussed on the partitional
+co-clustering formulation first introduced in [9].
+Matrix approximation approaches based on singular value
+decomposition (SVD) have been widely studied and used.
+However, they are quite often inappropriate for data ma-
+trices such as co-occurrence and contingency tables, since
+SVD-based decompositions are difficult to interpret, which
+is necessary for data mining applications. Alternative tech-
+niques involving non-negativity constraints [11] using KL-
+divergence as the approximation loss function [10, 11] have
+been proposed.
+However, these approaches apply to spe-
+cial types of matrices. A general formulation that is both
+interpretable and applicable to various classes of matrices
+would be invaluable. The proposed Bregman co-clustering
+formulation attempts to address this requirement.
+Recent research [2] has shown that several results involv-
+ing the KL-divergence and the squared Euclidean distance
+
+3
+http://www.research.compaq.com/src/eachmovie/
+are in fact based on certain convexity properties and hence,
+generalize to all Bregman divergences. This intuition mo-
+tivated us to consider co-clustering based on Bregman di-
+vergences. Further, the similarities between the maximum
+entropy and the least squares principles [7] prompted us to
+explore a more general minimum Bregman information prin-
+ciple for all Bregman divergences.
+
+
+6. DISCUSSION
+This paper makes three main contributions.
+First, we
+generalized parametric co-clustering to loss functions cor-
+responding to all Bregman divergences. The generality of
+the formulation makes the technique applicable to practi-
+cally all types of data matrices.
+Second, we showed that
+approximation models of various complexities are possible
+depending on the statistics that are to be preserved. Third,
+we proposed and extensively used the minimum Bregman
+information principle as a generalization of the maximum
+entropy principle. For the two Bregman divergences that
+we focussed on, viz., I-divergence and squared Euclidean
+distance, the proposed algorithm has linear time complexity
+and is hence scalable.
+Acknowledgements: This research was supported by
+NSF grants IIS-0307792, IIS0325116, NSF CAREER Award
+ACI-0093404, and by an IBM PhD fellowship to Arindam
+Banerjee.
+
+
+7. REFERENCES
+[1] A. Banerjee, I. Dhillon, J. Ghosh, S. Merugu, and
+D. Modha. A generalized maximum entropy approach
+to bregman co-clustering and matrix approximation.
+Technical Report UTCS TR04-24, UT, Austin, 2004.
+[2] A. Banerjee, S. Merugu, I. Dhillon, and J. Ghosh.
+Clustering with Bregman divergences. In SDM, 2004.
+[3] Y. Censor and S. Zenios. Parallel Optimization:
+Theory, Algorithms, and Applications. Oxford
+University Press, 1998.
+[4] Y. Cheng and G. M. Church. Biclustering of
+expression data. In ICMB, pages 93­103, 2000.
+[5] H. Cho, I. S. Dhillon, Y. Guan, and S. Sra. Minimum
+sum squared residue co-clustering of gene expression
+data. In SDM, 2004.
+[6] T. M. Cover and J. A. Thomas. Elements of
+Information Theory. Wiley-Interscience, 1991.
+[7] I. Csiszar. Why least squares and maximum entropy?
+an axiomatic approach to inference for linear inverse
+problems. Annals of Statistics, 19:2032­2066, 1991.
+[8] I. Dhillon, S. Mallela, and D. Modha.
+Information-theoretic co-clustering. In KDD, pages
+89­98, 2003.
+[9] J. A. Hartigan. Direct clustering of a data matrix.
+Journal of the American Statistical Association,
+67(337):123­129, 1972.
+[10] T. Hofmann and J. Puzicha. Unsupervised learning
+from dyadic data. Technical Report TR-98-042, ICSI,
+Berkeley, 1998.
+[11] D. L. Lee and S. Seung. Algorithms for non-negative
+matrix factorization. In NIPS, 2001. 556-562.
+
+
+
+
+514
+Research Track Poster
+

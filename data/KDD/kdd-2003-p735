@@ -1,0 +1,642 @@
+Visualizing Concept Drift
+Kevin B. Pratt and Gleb Tschapek
+Computer Science Innovations, Inc.
+1235 Evans Rd., Melbourne, Florida 32904
+(321) 676-2923; fax (321) 676-2355
+kpratt@csi-inc.com; gtschapek@csi-inc.com
+
+
+ABSTRACT
+We describe a visualization technique that uses brushed, parallel
+histograms to aid in understanding concept drift in multi-
+dimensional problem spaces.
+This technique illustrates the
+relationship between changes in distributions of multiple
+antecedent feature values and the outcome distribution. We can
+also observe effects on the relative utilization of predictive rules.
+Our parallel histogram technique solves the over-plotting
+difficulty of parallel coordinate graphs and the difficulty of
+comparing distributions of brushed and original data.
+We
+demonstrate our technique's usefulness in understanding concept
+drifts in power demand and stock investment returns.
+
+Categories and Subject Descriptors
+H.2.8[Database Management]: Database Applications - Data
+Mining
+
+Keywords
+Visualization; Concept Drift; Parallel Histogram; Parallel
+Coordinate Graph; Brushing.
+
+1. INTRODUCTION
+Concept drift is the gradual change in the frequency distribution
+of values of the features on which prediction rules rely. Most
+machine learning assumes no change will occur.
+Stated
+differently, machine learning models (sets of rules) typically
+assume stationarity: that any two samples will have within each
+feature substantially the same distributions of values.
+This
+assumption is applied to training sample sets, testing sample sets,
+and sample sets selected using a temporal window.
+The
+assumption is that each sample is drawn from the same
+population.
+
+Variations of the frequency distributions of values of the features
+can change the frequency distribution of predicted outcomes, and
+in particular, the frequency of occurrence of those outcomes of
+greatest interest. If general outcome is measured by a simple
+central tendency statistic like mean or median, the change in
+distribution of results may go undetected due to offsetting effects.
+
+The change in outcome distribution may occur in two ways. First,
+an individual predictive rule may retain its accuracy, but the rule
+is invoked more (or less) often because of the changed frequency
+of occurrence of triggering feature values. Second, an individual
+rule may lose accuracy because the features on which it was
+based have become irrelevant. Those rules may need to be
+discarded and replaced with new rules that depend on newly
+relevant features. Calculation of relevance depends on the rule
+construction algorithms used in the machine learner, and their
+inputs, such as Pearson linear correlation, information theoretic
+gain, entropy loss, or fractal dimension values.
+
+Typically, we want to focus on the outcomes of greatest interest.
+Thus, we want to visually evaluate whether there are changes in
+the frequency distributions of values of features that are
+specifically relevant to those outcomes. If those distributions
+change, then a machine learner and its models will need to be
+modified to accommodate that non-stationarity.
+
+To visualize concept drift, we apply a novel extension of parallel
+coordinate graphs called "brushed parallel histograms."
+A
+parallel histogram graph consists of a parallel coordinate graph
+with a histogram superimposed on each axis. (See Figure 1.) The
+histogram describes the frequency distribution of the points of the
+data set projected on that axis. Because more than three (up to a
+few hundred) axes can be displayed side-by-side, parallel
+histogram
+graphs
+usefully
+display
+distributions
+in
+high
+dimensional feature space where 3-dimensional orthogonal
+coordinates fail.
+
+
+
+
+Figure 1. Brushed, parallel histogram example, where axis 4
+(power demand) was brushed to highlight high power
+demand. The histograms of resulting brushed values of the
+other features are to the left of the population histograms.
+
+Using a computer input device such as a mouse, a user can
+"brush" a value or range of values on an axis. The values selected
+by the brushing and links to all other features are highlighted with
+color. Histograms of the brushed values are created. A set of
+brushings can constrain multiple features, after which we can
+observe change in all remaining features. Brushings of values of a
+temporal feature provide windows where we view temporal
+concept drift.
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the first page. To copy
+otherwise, or republish, to post on servers or to redistribute to lists,
+requires prior specific permission and/or a fee.
+SIGKDD '03, August 24-27, 2003, Washington, DC, USA.
+Copyright 2003 ACM 1-58113-737-0/03/0008...$5.00.
+
+
+735
+
+Visualization of change, rather than state, in high dimensional
+space has been a long-standing challenge. To allow direct viewing
+of change, we position histograms of brushed points adjacent to the
+histograms for the original population data. We do this for every
+feature so that a user may scan the change in each feature dimension.
+
+2. PRIOR WORK
+Current approaches to concept drift in machine learning generally
+involve constant relearning, either by decaying the importance of
+older instances [26], by block retraining [12, 17], or by sub-tree
+insertion [16]. Decay and retraining do not involve evaluation of
+the nature and extent of change of the feature contexts affected by
+any change. The importance of hidden changes in context was
+developed by [28]. Changes in stationarity were identified as an
+important aspect of context drift [16]. Statistical measures such
+as higher statistical moments have been proposed for detection of
+non-stationarity in time series [20]. Raz [24] proposed using
+invariants to identify drift in context. Nakaya [22] used semantic
+concepts to define context.
+Adaptation in changing context
+continues to be an active research area [2, 8]. We are unaware of
+approaches to visualize concept drift.
+
+There are many ways to try to visualize state in high dimensional
+feature spaces [1, 9, 10, 13]. More common approaches are the
+grand tour [3] of lower dimensional scatter graphs, star (also
+called hub and spoke) graphs, and parallel coordinate graphs.
+Parallel coordinate graphs originated in the 19th century.
+d'Ocagne [23] proved the duality of a Cartesian point to a line in
+parallel coordinates. Parallel coordinates were used in 1928 to
+display the relation of 14 features of chemical concentration in
+blood [9]. In the past twenty years, parallel coordinate graphs
+have re-appeared [4, 18, 19, 25].
+
+Interactive brushing helps identify points of interest and visualize
+connections of the values of different features [4, 21].
+Hierarchical organization has been used to help interpret large
+parallel coordinate data sets [11].
+When data points bundle
+together in visual "ropes" in a parallel coordinate graph, they can
+be analyzed as stating rules or clusters [29].
+
+When a parallel coordinate graph is used to display many data
+points, the overplotting of lines obscures the frequency and
+linkages represented by those lines, making analysis difficult [29].
+Wegman [27] proposed creating density surfaces of parallel
+coordinate graph lines to handle overplotting. The disadvantage
+of density surfaces is that they obscure the individual linkages and
+bundles of linkages between values or sets of values on adjoining
+axes. Our use of parallel histograms preserves the ability to see
+the links, while at the same time seeing the density at the axis.
+The combination of histograms with brushing enables more
+complete viewing of change.
+
+3. VISUALIZATION BY BRUSHED,
+PARALLEL HISTOGRAMS
+A parallel histogram graph consists of a parallel coordinate graph
+with a histogram superimposed on each axis.
+The histogram
+describes the frequency distribution of the points of the data set
+projected on that axis. Parallel coordinate graphs usefully display
+up to a few hundred axes. A point on a parallel coordinate graph
+is a set of connected line segments crossing all axes. The set of
+line segments is the dual of a point in Cartesian-Euclidean space
+of equal dimensionality.
+By manipulating the mouse, a user can select a value or range of
+values on an axis. This action is called "brushing." The values
+included in the brushing are highlighted with color, and the user
+can view all linked values of all other features on the remaining
+axes. A sequence of brushing can constrain multiple features.
+
+Because constraining the range of values on one (or more)
+features is the selection of a sub-sample of the data population,
+the frequency distribution of the brushed points on the
+unconstrained axes may change. We display the histogram of the
+brushed points adjacent to the histogram of the original
+population so that the user can visually evaluate the changes that
+may occur.
+
+We normalized the display of all data to the range 0 to 1(top of
+graph). An input mask distinguishes date, continuous, categorical,
+and binary data. Histograms for continuous feature values use an
+optimal bin width according to the normal bin width reference
+rule, without skew adjustment [25]. Thus, bin width = 3.5  n
+-1/3
+,
+where  is the standard deviation and n is the number of points in
+the sample. While the brushed sub-sample often needs fewer
+bins, users were visually confused by the variation in the bin
+width of the brushed histogram from the bin width of the
+histogram of the population. Thus, we chose to use the same bin
+width for both histograms of an axis.
+
+The parallel histogram graph was implemented in Java 1.4 using a
+data-view architecture that separates the view from the data
+tables. The architecture allows rapid switching from the brushed
+parallel histogram graph to any brushed 2 or 3-dimensional scatter
+plot of selected axes, and access to the brushed set statistics from
+any view. We use the scatter plots to drill down to bi- or tri-
+variate relationships implicated from the parallel histograms.
+
+In other work, we have applied parallel histograms to data sets as
+large as 50 axes. On a Windows XP operating system using a 1.7
+GHz Pentium processor with 768 MB of RAM, window rendering
+after brushing takes less than 2 seconds on the stock data set of
+26,000 points described below.
+
+4. EXPERIMENTS
+We apply brushed parallel histograms to gain insight into known
+seasonal drift in electrical power demand and to understand
+unexpected drift in stock market returns.
+
+For visualization of concept drift, we brush temporal windows,
+often in conjunction with an outcome classification of high
+interest. If there is no drift, a sliding temporal window should not
+induce patterns in the frequency distribution of features' values
+that significantly differ from the population, nor should patterns
+be auto-correlated. Thus, we are alert to the appearance and
+continuation of patterns across temporal windows.
+
+4.1 Electric Power Demand
+We are interested in drift affecting peak power demands and
+minimal demands. For power producers, the former drives capital
+construction plans and outside power purchases; the latter drives
+maintenance scheduling on facilities.
+
+We use data for the hourly demand for electricity in a temperate
+region (state of Georgia, USA) in 1992 (8800 data points) and
+hourly meteorological data. Figures 1 to 4 display day-of-year,
+hour-of-day, dry bulb temperature, wet bulb temperature, which
+
+
+
+736
+
+reflects humidity, and megawatt hour power demand, on axes 0 to
+4 (low values at the bottom of the axes).
+
+First, we note that a modeler without any a priori knowledge of
+the meaning of the features might propose to predict demand
+based on hour of day using a (non-linear) regression model
+because the Pearson linear correlation coefficient of demand to
+hour-of-day is highest, 0.46 (whereas correlation to dry bulb
+temperature is 0.35, to wet bulb is 0.23, and to day-of-year is
+0.10).
+However, in this domain we have a reliable a priori
+expectation of cyclic seasonality and easily recognize the flaw in
+such a simple model. In more complex domains, such as stock
+investment, next shown, initial intuition is much less. We suggest
+that the human intuitive ability to recognize model flaws in
+higher-dimensional domains is weak. Visualizing concept drift
+helps detect model flaws.
+
+In Figure 1, we confirm the seasonality in high power demand by
+brushing the highest segment of axis 4 (power load). We observe
+in axis 0 (day) that high demand occurs both in periods of June-
+September and December-January. Note in axis 2 and 3 (dry and
+wet bulb temperatures) that high demand occurs both when
+temperatures are high, and when temperatures are low.
+The
+hourly distribution (axis 1) suggests that demand occurs from
+0800 to 2200, and rises and falls gradually.
+
+Because the monthly distribution on axis 0 of Figure 1is bimodal,
+we hypothesize that drift might occur in other features as seasons
+change. In Figure 2, we brushed the June-September period. The
+hourly distribution on axis 1 rises and falls gradually from 1100 to
+2200, peaking at 1700, a somewhat different distribution than in
+Figure 1.
+However, winter was very different.
+Unlike the
+summer months brushed in Figure 2, the winter months brushed in
+Figure 3 display a bimodal distribution on the hour-of-day axis,
+with modes around 0800 and 2000, and an onset of demand more
+rapid than during the summer. The range of winter high demand
+(Figure 3, axis 4) is smaller than the summer range (Figure 2, axis
+4), and contains no extremely high values. Figure 2 also indicates
+that wet bulb temperature (axis 3) more precisely associated with
+high summer demand than dry bulb (axis 2), as shown by the
+narrow histogram. On the other hand, Figure 3 shows dry bulb
+temperature is a more precise indicator for winter months. Not
+shown are intervening periods of months, where the histograms
+transitioned between the summer and winter distributions.
+
+We tested whether the distributions of the values of the features
+would become different during low demand. We brushed the
+lowest power demand (Figure 4, axis 4). The parallel histograms
+illustrate that the lowest power load occur in April and October
+(axis 0), from midnight to 0600 (axis 1), when dry bulb
+temperature (axis 2) is 60 degrees Fahrenheit and wet bulb
+temperature (axis 3) is 55 degrees Fahrenheit. The three modes of
+the brushed histogram of axis 0 that are associated with the three
+bundles of values at that axis imply at least three rules may be
+needed to predict lowest demand.
+
+Comparing Figure 2, 3, and 4, we gain a visual understanding that
+the drift of feature value distributions associated with lowest
+demand behaves significantly differently from drift associated
+with high demand.
+Figure 2. Summer high demand shown by brushing a high
+power demand range on axis 4 and May-Sept on axis 0. Note
+gradual mono-modal hourly distribution on axis 1.
+
+
+
+
+Figure 3. Winter high demand shown by brushing a high
+power demand range on axis 4 and Jan.-Mar. and Nov.-Dec.
+on axis 0. Note steep bi-modal hourly distribution on axis1.
+
+
+
+
+Figure 4. Lowest power demand shown by brushing axis 4 in
+lowest range. The three bundles of points on axis 0 imply the
+need for multiple predictive rules for lowest power demand.
+
+4.2 Stock Market Returns
+Our goals are to visualize whether high returns associate with
+certain sectors and relative price ranges that are stable throughout
+the year, and whether concept drift occurs. We use weekly results
+for the 500 Standard and Poor's listed stocks during 2002 (26,000
+data points). Figures 5-7 show values for each data point for
+week-of-year (grouped by month, axis 0), market sector as listed
+in Table 1 (axis 1), relative price (the week ending price as a
+percent of the prior 100 days' price range for the stock, axis 2),
+and return (20 days average daily percentage change, axis 3). We
+used 0.66 % per day (13.2 % return for the 20 day period) to
+threshold high return.
+
+
+
+
+737
+
+Table 1. Market Sectors.
+
+Sector Name
+Sector Name
+
+1
+Basic Materials
+7
+Financial
+
+2
+Capital Goods
+8
+Health Care
+
+3
+Conglomerates
+9
+Services
+
+4
+Consumer Cyclical
+10
+Technology
+
+5
+Consumer Non-Cyc.
+11
+Transport
+
+6
+Energy
+12
+Utilities
+
+
+
+Parallel histograms can be used to watch whether a particular
+predictive rule operates on stationary distributions of values of
+features through a sequence of temporal windows, and if not, how
+drifting distributions relate to the outcome distribution of the rule.
+Instead, we show here the drifts in two features, sector and
+relative price, while outcome class (high return) is fixed. This
+illustrates more vividly the dynamic drift interaction of sector and
+relative price.
+
+Figure 5 shows drift in the January-February-March windows. In
+January, many high return stocks came from sectors 1 and 9.
+Figure 6 and 7 show sector 9 remained a strong source of high
+return stocks throughout the year (second quarter is not shown),
+while after January, sector 1 never again was a strong source of
+high return stocks. Axis 2 shows most high return stocks in
+January came from the upper half of the relative price range;
+however, in February and March, the distribution of relative price
+was flattened and scattered.
+
+Figure 6 shows rapid increase in sector 10 (on axis 1) across July-
+August-September, but a very stationary period for the
+distribution of relative price (axis 2). During that period, high
+return stocks were concentrated toward the low end of the relative
+price feature. We presume that a classifier trained on the July to
+September period alone would consider low relative price
+extremely relevant to predictions of high return.
+However,
+application of a classification rule developed on that basis would
+not have performed well in the next period, as seen in Figure 7.
+
+Figure 7 shows drift during October-November-December of high
+return stocks away from concentration at low relative price to a
+distribution similar to that in the prior January. Sector 10 (axis 1)
+remains stationary as a large source of high return stocks, but
+sector 9 falls.
+
+The visualization of the stock feature drifts here offer a better
+understanding of the interrelation of the features to outcomes.
+The patterns shown in the figures, both in the sector feature and in
+the relative price feature, display varying degrees of temporal
+auto-correlation. Some implications from this example are that a
+machine
+learning
+assumption
+of
+stationarity
+would
+be
+unsupported by the data and that static market prediction models
+may be fragile in the face of drift. Dynamic market prediction
+models would need to include meta-features descriptive of
+concept drift.
+Where features purport to describe the inner
+workings of a "black-box" system, such as the stock market,
+understanding and adjusting for drift may be critical to good
+model performance.
+Figure 5 January, February, March. We brushed high return
+(axis 3) and the month (axis 0). Observe that sectors 1 and 9
+(axis 1) and higher priced stocks (axis 2) are the source of
+most high returns for January, but in February sector 1 no
+longer participates and the distribution of axis 2 is more even.
+In March axis 2 shows more stocks at each extreme, but
+sectors have little change from February.
+
+
+
+
+738
+
+Figure 6. July, August, September. High returns consistently
+come from low relative price stocks (axis 2). Sector 10
+(technology sector) is growing (axis 1).
+
+4.3 Other Experiments
+In addition to the experiments here, we have used brushed,
+parallel histograms to study the drift of 17 features affecting stock
+market return, on a data set of 6000 points. In that instance, a
+year of weekly sets of approximately 140 stocks each
+wereselected using filters on fundamental and technical
+information.
+We obtained values for categorical, binary, and
+continuous feature variables from publicly available information,
+and derived features reflecting gradients and time delays. As with
+the stock market returns described here for the Standard and
+Poor's
+500
+stocks,
+we
+observed
+unexpected
+non-linear
+correlations among features, appearance and disappearance of
+modes in features during the year, and slow swings of behavior.
+We were able to state descriptive rules for the market returns for
+parts of the year, based on segments of feature values.
+Figure 7. October, November, December. The distribution of
+relative price (axis 2) drifts from concentration at the low
+range to a distribution similar to January. Sector 10 is
+constant, but sector 9 falls.
+
+While the rules were less precise than those from an n-ary
+decision tree that we had applied, they were intuitive, more
+persuasive, and easier to explain. We also noted that it seemed
+easier to evaluate the fragility of rules obtained visually than
+those from the decision tree. We had observed on other occasions
+that a decision tree rule can sometimes be stated by the machine
+learner with high confidence, at the same time rules on closely
+similar values predict seriously dissimilar classifications. We
+have
+also
+applied
+brushed,
+parallel
+histograms
+toward
+understanding how 44 morphological features of geologic
+material could predict mineral composition.
+
+4.4 Significant Limitations
+Brushed parallel histograms suffer from two common high-
+dimensional visualization maladies: difficulty in organizing axes
+and information loss by projection to lower dimensional space.
+
+
+739
+
+We addressed organizing axes with options for manual axis
+ordering, ordering by Pearson correlation, ordering by robust
+correlation, chaining correlations, and ordering by axis modality
+counts. Each ordering approach provided different insights about
+the relation of features. Information loss is more serious. When
+we drilled down to two or three specific axes and displayed
+brushed scatter plots, we observed new relationships.
+
+5. CONCLUSION AND FUTURE WORK
+Concept drift can affect the success of machine learning systems.
+Visual understanding of the interaction of features may help in the
+design of dynamic models that recognize and accommodate
+change. Models based on assumptions of stationarity, of static
+information content of features, and on too simplistic descriptive
+statistics, are prone to failure where concepts drift.
+
+There is abundant future work.
+How to order axes in high
+dimensional space continues to be a common issue in all high
+dimensional visualization methods. We need effective ways to
+describe numerically the drift that humans can visualize so that
+meta-features can be generated for use with machine learning.
+Also important is automated identification of "interesting"
+interactions of segments of histograms across multiple features.
+
+6. ACKNOWLEDGEMENTS
+We thank Monte Hancock at Computer Science Innovations, Inc.
+who provided the Georgia power data. We obtained the 2002
+stock source data from the Yahoo! Finance web site.
+
+7. REFERENCES
+[1] K. Andrews, Information visualization, Tutorial Notes
+Version 5th July 2002, IICM, Graz U. Technology,
+http://www.iicm.edu/ivis/, 2002.
+[2] D. Anguita, Smart Adaptive Systems: State of the Art and
+Future Directions of Research, DIBE ­ U. of Genova, In
+Eunite, 2001.
+[3] D. Asimov, The grand tour: a tool for viewing
+multidimensional data, DIAM J. on Scientific and Statistical
+Computing, v.61, pp. 128-143, 1985.
+[4] T. Chomut, Exploratory Data Analysis in Parallel
+Coordinates, Los Angeles Scientific Center, 1987.
+[5] R. Delmater and M. Hancock, Data Mining Explained,
+Digital Press, Woburn MA, 2001.
+[6] R. Duda, P. Hart, and D. Stork, Pattern Classification, Wiley,
+New York, 2001.
+[7] S. G. Eick and A. F. Karr, Visual scalability, J.
+Computational and Graphical Statistics, v. 11(1) p. 22, 2002.
+[8] T. Lane and C. Brodley, Approaches to on-line learning and
+concept drift for user identification in computer security, In
+Proceedings of Fourth International Conf. on Knowledge
+Discovery and Data Mining (KDD-98), pp. 259-263, 1998.
+[9] M. Friendly and D. J. Denis, Milestones in the history of
+thematic cartography, statistical graphics, and data
+visualization, U. York, Dept. of Mathematics, Gallery of
+Data Visualization,
+http://www.math.yorku.ca/SCS/Gallery/milestone/, 2003.
+[10]M. Friendly, Corrgrams: exploratory displays for correlation
+matrices, Am. Statistician, v. 56(4), pp. 316-325, 2002.
+[11]Y. Fua, M. Ward and E. Rundensteiner, Hierarchical parallel
+coordinates for exploration of large datasets, In Proceedings
+on Visualization '99, pp. 43-50, 1999.
+[12]V. Ganti, J. Gehrke and R. Ramakrishnan, Mining Data
+Streams under Block Evolution, SIGKDD Explorations, v. 3
+(2), pp.1-11, 2002.
+[13]G. Grinstein, M. Trutschl, and U. Cvek, High-dimensional
+visualizations, In Proceedings of Workshop on Visual Data
+Mining, ACM Conference on Knowledge Discovery and
+Data Mining, pp.1-14, 2001.
+[14]M. A. Hall, Correlation-based Feature Selection for Machine
+Learning, PhD dissertation. Waikato University, Dept. of
+Computer Science, Hamilton, New Zealand, 1998.
+[15]J. Han and M. Kamber, Data Mining Concepts and
+Techniques, Academic Press, San Diego, 2001.
+[16]G. Hulten, L. Spencer and P. Domingos, Mining Time-
+Changing Data Streams, In Proceedings of the Seventh ACM
+SIGKDD International Conference on Knowledge Discovery
+and Data Mining, pp. 97-106, 2001.
+[17]W. H. Hsu, M. Welge, T. Redman, and D. Clutter, High-
+Performance Commercial Data Mining: A Multistrategy
+Machine Learning Application. Knowledge Discovery and
+Data Mining, v.6(4) pp. 361-391, Kluwer, 2002.
+[18]A. Inselberg, The plane with parallel coordinates, Special
+Issue on Computational Geometry, Visual Computer 1, pp.
+69-97, 1985.
+[19]A. Inselberg, Data Mining and Visualization of High
+Dimensional Data, In Proceedings of Workshop on Visual
+Data Mining, ACM Conference on Knowledge Discovery
+and Data Mining, pp. 65-81, 2001.
+[20]H. Kantz and T. Schreiber, Nonlinear Time Series Analysis,
+Cambridge U. Press, 1997.
+[21]A. R. Martin and M. O. Ward, High dimensional brushing
+for interactive exploration of multivariate data, In
+Proceedings of IEEE Conf. on Visualization, pp. 271-278,
+1995.
+[22][N. Nakaya, M. Kurematsu and T. Yamaguchi, A Domain
+Ontology Development Environment Using a MRD and Text
+Corpus, In Proceedings of Joint Conf. on Knowledge Based
+Software Engineering, 2002.
+[23]M. d'Ocagne, Traite de nomographie: Theorie des Abaques,
+Applications Pratiques, Gauthier-Villars, Paris, 1899.
+[24]O. Raz, P. Koopman, and M. Shaw, Semantic Anomaly
+Detection in Online Data Sources, In Proceedings of
+International Conf. Software. Engineering, pp. 302-312,
+2002.
+[25]D. W. Scott, Multivariate Density Estimation, Wiley, NY,
+1992.
+[26]J. C. Schlimmer and R. H. Granger, Jr., Beyond incremental
+processing: Tracking concept drift, In Proceedings of the
+Fifth National Conf. on Artificial Intelligence, pp. 502-507,
+1986.
+[27]E. J. Wegman, Hyperdimensional Analysis Using Parallel
+Coordinates, J. Am. Statistical Assn, v. 85, pp. 664-675,
+1990.
+[28]G. Widmer and M. Kubat, Learning in the Presence of
+Concept Drift and Hidden Contexts, Machine Learning,
+v.23(1), pp 69-101, 1996.
+[29]K. Zhao and B. Liu, Visual Analysis of the Behavior of
+Discovered Rules, In Proceedings of Workshop on Visual
+Data Mining, ACM Conference on Knowledge Discovery
+and Data Mining, pp.59-64, 2001.
+
+
+
+740
+

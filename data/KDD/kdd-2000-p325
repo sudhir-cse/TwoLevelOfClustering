@@ -1,0 +1,646 @@
+Unsupervised Bayesian Visualization of
+High-Dimensional Data
+
+
+Petri Kontkanen, Jussi Lahtinen, Petri Myllymäki, Henry Tirri
+Complex Systems Computation Group (CoSCo)
+P.O.Box 26, Department of Computer Science
+FIN-00014 University of Helsinki, Finland
+cosco@cs.Helsinki.FI, http://www.cs.Helsinki.FI/research/cosco/
+
+
+ABSTRACT
+We propose a data reduction methodbased on a probabilis-
+tic similarity framework where twovectors are considered
+similar if they lead to similar predictions. We showhow
+this type of a probabilistic similarity metric can be de ned
+both in a supervised and unsupervised manner. As a con-
+crete application of the suggested multidimensional scaling
+scheme,wedescribehowthemethodcanbeusedforproduc-
+ing visual images of high-dimensional data, and give several
+examples of visualizations obtained by using the suggested
+scheme with probabilistic Bayesian net work models.
+
+1. INTRODUCTION
+Multidimensional scaling see, e.g., 3, 2 is a data com-
+pression or data reduction task where the goal is to re-
+place the original high-dimensional data vectors with much
+shorter vectors, while losing as little information as pos-
+sible. Intuitivelyspeaking, it can be argued that a prag-
+matically sensible data reduction scheme is suchthat two
+vectors close to eac h other in the original multidimensional
+space are also close to each other in the lower-dimensional
+space. This raises the question of a distance measure |
+what is a meaningful de nition of similarity when dealing
+with high-dimensional vectors in complex domains?
+Traditionally, similarityisde nedintermsofsomestandard
+geometric distance measure, suchas the Euclidean distance.
+Ho wever,such distances do not generally re ect properly
+the properties of complex problem domains, where the data
+typically is not coded in a geometric or spatial form. In this
+type of domains, changing one bit in a vector may totally
+change the relevance of the vector, and make it in some
+sense a quite di erent vector, although geometrically the
+di erence is only one bit. This issue is discussed in more
+detail in Section 2.
+In 9 we proposed and analyzed a supervised, probabilistic
+model-based data reduction scheme where the similarity of
+two vectors w as determined by using a formal model of the
+problem domain. In the suggested Bayesian framework, two
+vectors are considered similar if they lead to similar predic-
+tive distributions, when the corresponding attribute-v alue
+pairs are given as input to the same probabilistic model.
+TheideaisrelatedtotheBayesiandistancemetricsuggested
+in 11 as a method for de ning similarity in the case-based
+reasoning framework. The basic principles of the suggested
+supervised Bayesian data reduction scheme are reviewed in
+Section 3.
+An obvious drawback with the approach suggested in 9 is
+that the sc hemeis inherently supervised in nature, and can-
+not be applied in unsupervised domains. To overcome this
+limitation, in Section 4 we introduce a novel, unsupervised
+Ba yesian distancemeasurebasedonanextensionof theear-
+lier supervised approach. As a concrete application of the
+suggested unsupervisedBayesian datareductionscheme, we
+consider the problem of visualizing high-dimensional data
+on a 2D or 3D display. This t ype of visualizationscan be
+exploited in nding regularities in complex domains, and
+applied in various data mining tasks, such as instance selec-
+tionandclustering. Aformaldescriptionofthevisualization
+problem is given in Section 2.
+In this paper weuse probabilistic Bayesian networks 16,
+14 as the formal model family required in our Ba yesian
+data reduction framework. Intuitively speaking, a Bayesian
+belief net work is a representation of a probability distri-
+bution over a set of usually discrete variables, consisting
+of an acyclic directed graph, where the nodes correspond to
+domain variables, and the arcs de ne a set of independence
+assumptions which allow the join tprobability distribution
+for adatavectortobefactorized as aproductofsimplecon-
+ditional probabilities. Techniques for learning such models
+from sample data are discussed in 5. One of the main ad-
+vantagesoftheBayesiannet workmodelisthefactthatwith
+certain technical assumptions it is possible to marginalize
+integrate over all parameter instantiations in order to pro-
+duce the corresponding predictive distribution. As demon-
+strated in, e.g., 13, such marginalization improves the pre-
+dictive accuracy of the Bayesian net work model, especially
+in cases where the amount of sample data is small. Practi-
+cal algorithms for performing predictive inference in general
+Ba yesian net works are discussed for example in 16, 15, 7.
+Permission to make digital or hard copies of part or all of this work or
+personal or classroom use is granted without fee provided that copies are not
+made or distributed for profit or commercial advantage and that copies bear
+this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers, or to redistribute to lists, requires prior specific
+permission and/or a fee.
+KDD 2000, Boston, MA USA
+© ACM 2000 1-58113-233-6/00/08 ...$5.00
+
+
+
+
+325
+
+After producing a compressed, two- or three-dimensional
+representation of our data, an obvious question concerns
+the quality of the result: how do we know whether the
+compressed data set represents the problem domain in a
+reasonable manner? This question can of course be partly
+answered through the results of a data mining process: if
+the user is capable of discovering new, interesting regulari-
+ties in the data based on the visualization obtained through
+the data reduction scheme, we can say that thecompression
+is in some sense reasonable, at least from a pragmatic point
+of view. However, we would like to come up with a more
+theoretically rigorous, statistical methodology for estimat-
+ing the quality of di erent compressions. This important
+questionisdiscussedinSection5,wherewealsogiveillustra-
+tive examples of visualizations obtained with public-domain
+classi cation data sets.
+
+2. THE VISUALIZATION PROBLEM
+Let X =fx1;::: ;xNg denote a collection of N vectors, and
+let us assume that each vector xi consists of values of m
+attributes X1;::: ;Xm. For simplicity, in the sequel we will
+assume the attributes Xi to be discrete.
+Let
+~
+X denote a new data matrix where each m-component
+datavectorxi isreplacedbyatwo-orthree-componentdata
+vector ~xi. As this new compressed data matrix can easily
+be plotted on a two- or three-dimensional display, the result
+can be used for producing a visual representation of a high-
+dimensional domain, and hence in the sequel we will call
+~
+X
+the visualization of data X.
+For producing a visualization of a high-dimensional data
+set X, we need to nd a transformation function which
+maps each data vector xi in the domain space to a vector
+~xi in the visual space. In order to guarantee the usefulness
+of the transformation used, an obvious requirement is that
+two vectors close to each other in the domain space should
+also be close to each other in the visual space. One way to
+express this condition formally is to aim at minimizing the
+following objective function FX;
+~
+X,
+FX;
+~
+X=
+N
+X
+i=1
+N
+X
+j=i+1
+dxi;xj,
+~
+d~xi;~xj2; 1
+
+where dxi;xj denotes the pairwise distance between vec-
+tors xi and xj in the domain space, and
+~
+d~xi;~xj the dis-
+tancebetweenthecorrespondingvectorsinthevisualspace.
+ThisapproachtothevisualizationproblemisknownasSam-
+mon's mapping see 8.
+Our practical goal is to apply the reduced data set
+~
+X for
+data visualization purposes, so the geometric Euclidean dis-
+tance is a natural choice for the distance metric
+~
+d in the
+visual space. Nevertheless, it is important to realize that
+there is no a priori reason why this distance measure would
+make a good similarity metric in the high-dimensional do-
+mainspace. Asamatteroffact,inmanycomplexdomainsit
+is quite easy to see that geometric distance measures re ect
+poorly the signi cant similarities and di erences between
+the data vectors. Handling discrete data is especially di -
+cult: many data sets contain nominal or ordinal attributes,
+inwhichcase ndingareasonablecodingwithrespecttothe
+Euclidean distance metric is a di cult task. Furthermore,
+theresults are highlydependableon attributescaling: as all
+attributesaretreatedasequal,itisobviousthatanattribute
+withascaleof, say,between-1000and1000, ismorein uen-
+tial than an attribute with a range between -1 and 1. What
+is more, although it seems at rst sight that Euclidean dis-
+tance is model-free in the sense that the similarities are not
+based on a any speci c domain model, this view is awed:
+when summing over the pairwise distances between di er-
+entattributevaluesindependently,wehavealreadymadean
+implicit global independence assumption, although we have
+notstatedthisandotherassumptionsexplicitly. Forthese
+reasons, wearguethatalthoughtheEuclideandistanceisan
+obvious choice for the distance metric
+~
+d, in general d
+should be di erent from
+~
+d.
+There have been several attempts to circumvent the above
+weaknesses by using various coding schemes or variants of
+the Euclidean distance measure, such as the Mahalanobis
+distance see, e.g., 2. However, the proposed approaches
+either use ad hoc methodologies with no theoretical frame-
+work to support the solutions presented, or are based on
+relatively simple implicit assumptions that do not usually
+hold in practice. As an example of the latter case, it is easy
+to see that the Euclidean distance is based on an under-
+lying model with normally distributed, independent vari-
+ables, while the Mahalanobis distance assumes the multi-
+variate normal model. These models are clearly too simple
+for modeling practically interesting, complex domains, es-
+pecially without the explicit, formal theoretical framework
+that can be used for determining the model parameters.
+
+3. A SUPERVISED BAYESIAN DISTANCE
+METRIC
+Weargue thatthatin orderto overcometheproblemslisted
+in Section 2, our assumptions concerning the domain space
+should be explicitly listed and exploited by using a formal
+model of the problem domain. By a model M we mean
+here a parametric model form so that each parameterized
+instance M; of the model produces a probability distri-
+bution PX1;::: ;XmjM; on the space of possible data
+vectors x. To make our presentation more concrete, for the
+remainderofthepaperwe assumethatthemodelsM repre-
+sent di erent Bayesian network structures for an introduc-
+tion to Bayesian network models, see e.g., 16, 15.
+The general idea can be summarized as follows: two vectors
+are considered similar if they lead to similar predictive dis-
+tributions, when the corresponding attribute-value pairs are
+given as input to the same Bayesian network model M. To
+makethis idea more precise, we must rst de ne the predic-
+tivedistributionusedintheaboveinformalde nition. In 9
+this predictive distribution was determined with respect to
+a special target variable Xk, resulting in the conditional dis-
+tribution
+PXk jX1;::: ;Xk,1;Xk+1;::: ;Xm;M:
+2
+Datavectorsxi andxj arenowconsideredsimilarifthecor-
+responding predictive distributions are similar, i.e., PXk j
+x,i ;M  PXk j x,j ;M, where x,i denotes the attribute
+values in vector xi without the value of the target variable
+Xk.
+
+
+
+326
+
+This type of similarity measures lead to supervised distance
+measures, and we can easily change the focus of the met-
+ric by changing the target variable Xk. The scheme is also
+scale invariant as we have movedfrom the original attribute
+space to the probability space where all the numbers lie be-
+tween 0 and 1. This also allows us to handle di erent type
+of attributes discrete or continuous in the same consistent
+framework. Furthermore, the framework ful lls the require-
+ment stated earlier: the approach is theoretically on a solid
+basis as all our domain assumptions must be formalized in
+the model M.
+The above scheme still leaves us with the question of de n-
+ing a similarity measure between two predictive distribu-
+tions. The standard solution for computingthe distance be-
+tween two distributions is to use the Kullback-Leibler diver-
+gence. However, thisasymmetricmeasureisnotinitsbasic
+form a distance metric in the geometric sense. In the em-
+pirical experiments reported in 9 it was observed that the
+simpler distance metric dkxi;xj = 1:0,PMAPkxi =
+MAPkxj yields good results in practice. Here MAPkxi
+denotes the maximum posterior probability value of target
+variable Xk with respect to the predictive distribution 2.
+In this paper we however use a slightly di erent distance
+function dxi;xj based on a straightforward logarithmic
+transformation of the predictive probabilities:
+dkxi;xj=,logPMAPkxi=MAPkxj: 3
+As noted in 9, extending this general approach to cases
+with two or more target variables is straightforward.
+
+4. AN UNSUPERVISED BAYESIAN
+DISTANCE METRIC
+The distance metric described in Section 3 is inherently su-
+pervised in nature, as it requires us to choose one or more
+of the domain variables to be used as the target variable.
+Consequently, this approach cannot be directly used cases
+where no natural candidate for such a target variable exist,
+and we would like to visualize our data in a purely unsuper-
+vised manner. For such unsupervised domains, we propose
+thefollowing unsupervisedextensionofthesuggestedsuper-
+vised similarity metric:
+dxi;xj=
+m
+X
+k=1
+dkxi;xj:
+4
+Consequently, the distance between two vectors xi and xj
+is computed by taking each of the variables Xk in its turn
+as the target variable, and summing the resulting m super-
+vised distance measures computed by formula 3. Intu-
+itively speaking, this means that two vectors xi and xj are
+consideredsimilar, ifthemostprobableoutcomeisthesame
+in both cases in all the m individual supervised prediction
+tasks based on the m conditional distributions 2 for all
+k 2f1;::: ;mg. As we are using a sum of logarithms in the
+de nition of our overall unsupervised distance function 4,
+this means that we are basically treating all these separate
+supervised prediction tasks independently.
+In the Bayesian framework, the model structure M used in
+the conditional distributions required can be determined by
+maximizing the posterior probability PM j X. Assuming
+the uniform prior for the model structures, this equals to
+using the model with the highest marginal likelihood or evi-
+dence. Therequiredconditionaldistribution2canthenbe
+computedbymarginalizingthejointprobabilitydistribution
+Pxi jX;M appropriately.
+However, as noted in e.g. 6, nding the maximal evidence
+model structure is not a feasible task in practice as the
+number of possible Bayesian network structures is super-
+exponential. This means that in practical situations we are
+dealing with a model structure M that is possibly only a
+poor model of the true" joint domain probability distri-
+bution, and hence some of the probabilities obtained are
+not correct. As demonstrated in 12, instead of trying to
+nd a good model of the joint probability distribution, in
+supervised classi cation domains it makes sense to try to
+nd a model or a set of models so that the errors a ect
+the accuracy of the conditional distribution 2 as little as
+possible, while we can allow the joint probability distribu-
+tion to be such that the predictions concerning some other
+variable would be quite inaccurate. For this reason, we sug-
+gest that instead of using a single model structure M for
+determining the distance measure 4, we should use m su-
+pervised models M1;::: ;Mm, each chosen with respect to
+the corresponding predictive task. We return to this issue
+in Section 5.
+
+5. EMPIRICAL RESULTS
+5.1 The setup
+To illustrate the validity of the suggested data reduction
+scheme, we performed a series of experiments with 20 pub-
+licly available classi cation data sets from the UCI data
+repository 1. In the preprocessing phase of the experi-
+mentalsetup, all continuous attributes in thedata sets were
+discretized by using a straightforward application of the k-
+means algorithm. Consequently, with respect to the empir-
+ical study reported here, all the data sets were discrete.
+When producing a visualization of a data set X, the pair-
+wise distances between vectors xi and xj were determined
+byusingtheunsuperviseddistancemetric4. Thisrequires
+determining m predictive distributions PXk j x,i ;Mk.
+Unfortunately, as discussed in 6, 4, 12, nding accurate
+Bayesian network models for supervised prediction tasks is
+a di cult problem. On the other hand, as demonstrated in,
+for example, 17, 10, the structurally simple Naive Bayes
+classi er performs surprisingly well in many real-world clas-
+si cation domains, despite of the fact that the model is ex-
+tremely fast to construct and use. For this reason, in this
+series of experiments the predictive models Mk used in the
+visualization scheme were Naive Bayes models, constructed
+with respect to the target variable Xk.
+For constructing a visualization
+~
+X for data X, in the ap-
+proach presented here we need an algorithm for nding a
+visualization
+~
+X so that the objective function 1 is min-
+imized. This objective function is typically quite complex
+and ndingtheoptimalvisualizationinthissenseisnotpos-
+sibleinpractice, soweareleftwithapproximativesolutions.
+However, it should be pointed out that in this context it is
+not necessary to aim at the absolutely optimal visualization
+~
+X|forvisualization purposesa reasonable approximation
+is usually quite su cient. How to nd e ectively good ap-
+proximations of the optimal visualization is however a wide
+
+
+
+327
+
+Figure1: TheThyroidDiseasedataset: anexample
+of theunsupervisedvisualizations obtained with the
+suggested method.
+
+research problem on its own, and is not discussed in detail
+here. In the experiments reported here we used a simple
+iterative stochastic greedy algorithm where at each step the
+visual locations of two randomly chosen data vectors are
+optimized along the connecting line so that the objective
+function 1 is optimized locally.
+Thepracticalrelevanceofavisualization
+~
+Xcanbeindirectly
+measured through a data mining process, where domain ex-
+perts try to capture interesting regularities from the visual
+image. In our case, however, no such domain experts were
+available, so we had to evaluate our visualization technique
+in a di erent manner. In this set of experiments, this was
+done by assuming that the clustering provided by the class
+labels in the UCI data sets is a reasonable clustering, in the
+sense thatthis clustering can be regarded as somethingthat
+we should come up with, had we not seen the class labels
+originally. Following this line of reasoning, each classi ca-
+tion data set was rst pruned by removing the class labels,
+i.e., the column containing the values of the class variable
+Xm. The remaining data X was then visualized in two-
+dimensional space by using the unsupervised approached
+presented here. Finally, the produced visual images were
+colored according to the class labels that were not used at
+all in the visualization process. If the resulting image was
+visually pleasing in the sense that the di erent classes dif-
+ferent colors were nicely separated in the picture, it can be
+said that we were able to recover the original clustering in a
+totally unsupervised manner, without using the class label
+information.
+
+5.2 The results
+The empirical results show that the suggested unsupervised
+visualization method work very well: most of the produced
+visual images pass the class coloring clarity test explained
+above. A library of colored 2D examplesof theproducedvi-
+sualizations can be found at URL: http: www.cs.Helsinki.
+FI research cosco Projects Visual KDD2000.
+There is however a possible caveat in the above experimen-
+tal procedure: basically there is no a priori reason why the
+unsupervised visual image produced should re ect the clus-
+tering provided by the class labels, especially if the original
+clustering is poor from the probabilistic modeling point of
+view. One way to measure the goodness" of the cluster-
+ing provided by the class labels is to evaluate the predictive
+accuracy of the Naive Bayes model, as this model is essen-
+tially based on clustering the data according to the class
+variable Xm. Leave-one-out crossvalidated classi cation re-
+sultsof theNaiveBayesclassi er canbefoundinthesecond
+column of Table 1.
+We can now conjecture that the above class-color clarity
+test" for the resulted visual images may fail with data sets
+where the performance of the Naive Bayes classi er is poor.
+The experimental results con rm this hypothesis: in cases
+where the leave-one-out crossvalidated classi cation accu-
+racy of the NB classi er is poor in the absolute sense as
+with the Liver Disorders data set, or in the relative sense
+with respect to the default classi cation accuracy as with
+the Postoperative Patient data set, the class labeled col-
+ored images are somewhat blurred. Nevertheless, we would
+like to emphasize that this does not mean that the unsu-
+pervised visualization technique has failed" in these cases,
+but that in these relatively few cases the somewhat arti -
+cial empirical setup used here is not practically sensible in
+the rst place. This means that if the data would in these
+cases be clustered according to the visual image produced,
+this could result in a probabilistic model producing more
+accuracy predictions than the Naive Bayes classi er. This
+interesting idea is however not studied further here.
+We believe that most people agree that the produced im-
+ages with the exception of the few cases discussed above
+are visually pleasing in the sense that the original classes
+are clearly separable in the image. This however raises the
+question of whether the quality of the visualization could
+be measured more objectively. Intuitively, we would like to
+measure how well the data in the visual image is clustered
+according to the hidden class label. We suggest that this
+can be done by using, for example, a simple k-NN nearest
+neighbor method, where each data point is classi ed as a
+member of the class containing the most representatives in
+theknearestdatapoints. Theresultswiththistypeofk-NN
+withk=9classi cation methodaresummarizedinTable1.
+The method 9-NN refers to 9-nearest neighbor classi ca-
+tion, where the distances of the m-1-dimensional vectors
+are computed by formula 4. The method 9-NN2 means
+the corresponding method with the distances computed by
+using theEuclideandistance inthe2-dimensional visual im-
+ageproducedbytheunsupervisedvisualizationmethodsug-
+gested here.
+FromTable1wecanmakethefollowing observations. First,
+the quality of the crossvalidated k-NN classi cation accu-
+racy does not degrade signi cantly as we move from the
+high-dimensional space to the 2-dimensional space. This is
+furtherevidenceforthefactthattheproducedvisualizations
+are of good quality. Second, we can see that the classi ca-
+tion accuracy is quite comparable and in some cases even
+better to the accuracy of the Naive Bayes classi er, even
+though the visualization was done in a purely unsupervised
+
+
+
+328
+
+Table 1: Crossvalidated classi cation results.
+Data
+Default NB 9-NN 9-NN2
+Australian Credit
+55.5 87.1 82.0 81.2
+Breast Cancer Wisconsin
+65.5 97.4 97.3 96.9
+Breast Cancer
+70.3 72.3 71.7 74.1
+Credit Screening
+55.5 86.2 82.9 83.0
+Pima Indians Diabetes
+65.1 77.9 72.7 72.1
+German Credit
+70.0 74.9 67.4 66.1
+Heart Disease Cleveland
+54.1 57.8 57.4 57.4
+Heart Disease Hungarian
+63.9 83.3 82.7 81.3
+Heart Disease Statlog
+55.6 85.2 83.7 82.2
+Hepatitis
+79.4 83.2 82.6 82.6
+Ionosphere
+64.1 92.9 91.2 87.2
+Iris Plant
+33.3 94.0 88.7 87.3
+Liver Disorders
+58.0 63.2 58.8 58.6
+Lymphography
+54.7 85.8 81.8 78.4
+Mole Fever
+67.1 87.8 89.2 82.4
+Postoperative Patient
+71.1 67.8 71.1 68.9
+Thyroid Disease
+69.8 99.1 97.2 95.3
+Vehicle Silhouettes
+25.8 64.7 66.5 45.2
+Congressional Voting Records 61.4 90.1 88.0 87.1
+Wine Recognition
+39.9 97.2 96.1 96.1
+
+manner,andclassi cation wasnotatallthegoalofthevisu-
+alization process. This is even more surprising considering
+the fact that the 9-NN classi er used here was a random
+and naive choice for performing the classi cation, meant to
+be used only for illustrating the qualityof thevisual results.
+Consequently, the results suggest that the distance-based
+approach used would o er an interesting framework for pro-
+ducingaccurateclassi ers, ifthatwouldbetheprimarygoal
+of the research.
+
+6. CONCLUSIONS
+We have described a data reduction scheme based on the
+idea of de ning a probabilistic distance metric with respect
+to predictions obtained by a formal, probabilistic domain
+model. TheconcretemodelusedinthispaperwasaBayesian
+network, ormoreprecisely, apoolof supervisedNaiveBayes
+classi ers, although the general approach can be used with
+any type of a probabilistic model. We gave examples of
+how this type of distance measures can be de ned in both
+supervised and unsupervised manner. As a concrete appli-
+cation of the suggested scheme, we considered the problem
+of producing visual images of high-dimensional data. The
+method suggested in this paper is based on a Sammon's
+mapping technique with respect to the proposed probabilis-
+tic distance measure.
+The suggested visualization method was empirically tested
+by using publicly available UCI data sets. To study how
+well the resulting visual images can re ect the hiddenstruc-
+ture of the data, the class labels were not used at all in the
+visualization process, and the resulting images were colored
+afterwards according to this latent information. The results
+demonstrate that the suggested unsupervised visualization
+method can be used for e ectively discovering the underly-
+ing structure of the data. We also discussed more objective
+methods for measuring the quality of the produced visual-
+izations, and performed experiments by using a simple clas-
+si cation method for this purpose. The results con rm the
+visual observations about the good quality of the resulting
+images.
+7. ACKNOWLEDGMENTS
+This research has been supported by the National Technol-
+ogy Agency Tekes, and by the Academy of Finland.
+
+8. REFERENCES
+1 C. Blake, E. Keogh, and C. Merz. UCI repository of
+machine learning databases, 1998. URL: http: www.ics.
+uci.edu mlearn MLRepository.html.
+2 C. Chat eld and A. Collins. Introduction to Multivariate
+Analysis. Chapman and Hall, New York, 1980.
+3 R. Duda and P. Hart. Pattern classi cation and scene
+analysis. John Wiley, 1973.
+4 N. Friedman, D. Geiger, and M. Goldszmidt. Bayesian
+network classi ers. Machine Learning, 29:131 163, 1997.
+5 D. Heckerman. A tutorial on learning with Bayesian
+networks. Technical Report MSR-TR-95-06, Microsoft
+Research, Advanced Technology Division, One Microsoft
+Way, Redmond, WA 98052, 1996.
+6 D. Heckerman and C. Meek. Models and selection criteria
+for regression and classi cation. In D. Geiger and
+P. Shenoy, editors, Uncertainty in Ari cial Intelligence 13,
+pages 223 228. Morgan Kaufmann Publishers, San Mateo,
+CA, 1997.
+7 F. Jensen. An Introduction to Bayesian Networks. UCL
+Press, London, 1996.
+8 T. Kohonen. Self-Organizing Maps. Springer-Verlag, Berlin,
+1995.
+9 P. Kontkanen, J. Lahtinen, P. Myllymaki, T. Silander, and
+H. Tirri. Using Bayesian networks for visualizing high-
+dimensional data. Intelligent Data Analysis, 2000. To
+appear.
+10 P. Kontkanen, P. Myllymaki, T. Silander, and H. Tirri.
+BAYDA: Software for Bayesian classi cation and feature
+selection. In R. Agrawal, P. Stolorz, and G. Piatetsky-
+Shapiro, editors, Proceedings of the Fourth International
+Conference on Knowledge Discovery and Data Mining
+KDD-98, pages 254 258. AAAI Press, Menlo Park, 1998.
+11 P. Kontkanen, P. Myllymaki, T. Silander, and H. Tirri. On
+Bayesian case matching. In B. Smyth and P. Cunningham,
+editors, Advances in Case-Based Reasoning, Proceedings of
+the 4th European Workshop EWCBR-98, volume 1488 of
+Lecture Notes in Arti cial Intelligence, pages 13 24.
+Springer-Verlag, 1998.
+12 P. Kontkanen, P. Myllymaki, T. Silander, and H. Tirri. On
+supervised selection of Bayesian networks. In K. Laskey
+and H. Prade, editors, Proceedings of the 15th
+International Conference on Uncertainty in Arti cial
+Intelligence UAI'99, pages 334 342. Morgan Kaufmann
+Publishers, 1999.
+13 P. Kontkanen, P. Myllymaki, T. Silander, H. Tirri, and
+P. Grunwald. On predictive distributions and Bayesian
+networks. Statistics and Computing, 10:39 54, 2000.
+14 S. Lauritzen and D. Spiegelhalter. Local computations with
+probabilities on graphical structures and their application
+to expert systems. J. Royal Stat. Soc., Ser. B,
+502:157 224, 1988.
+15 R. Neapolitan. Probabilistic Reasoning in Expert Systems.
+John Wiley & Sons, New York, NY, 1990.
+16 J. Pearl. Probabilistic Reasoning in Intelligent Systems:
+Networks of Plausible Inference. Morgan Kaufmann
+Publishers, San Mateo, CA, 1988.
+17 H. Tirri, P. Kontkanen, and P. Myllymaki. Probabilistic
+instance-based learning. In L. Saitta, editor, Machine
+Learning: Proceedings of the Thirteenth International
+Conference ICML'96, pages 507 515. Morgan Kaufmann
+Publishers, 1996.
+
+
+
+329
+

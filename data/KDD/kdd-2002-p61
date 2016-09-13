@@ -1,0 +1,1480 @@
+Mining Knowledge-Sharing Sites for Viral Marketing
+Matthew Richardsonand PedroDomingos
+Departmentof ComputerScienceand Engineering
+Universityof Washington
+Box352350
+Seattle,WA 98195-2350
+{mattr,pedrod}@cs.washington.edu
+
+
+ABSTRACT
+Viral marketing takes advantage of networks of influence among
+customers to inexpensively achieve large changes in behavior.
+Our research seeks to put it on a firmer footing by mining these
+networks from data, building probabilistic models of them, and
+using these models to choose the best viral marketing plan.
+Knowledge-sharing sites, where customers review products and
+advise each other, are a fertile source for this type of data mining.
+In this paper we extend our previous techniques, achieving a large
+reduction in' computational cost, and apply them to data from a
+knowledge-sharing site. We optimize the amount of marketing
+funds spent on each customer, rather than just making a binary
+decision on whether to market to him. We take into account the
+fact that knowledge of the network is partial, and that gathering
+that knowledge can itself have a cost. Our results show the ro-
+bustness and utility of our approach.
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]: Database Applications - data
+mining; 1.2.6 [Artificial Intelligence]: Learning - induction; 1.5.1
+[Pattern Recognition]: Models - statistical; J.4 [Computer Ap-
+plications]: Social and Behavioral Sciences
+
+
+Keywords
+Probabilistic models, linear models, direct marketing, viral mar-
+keting, social networks, knowledge sharing
+
+
+I. INTRODUCTION
+Marketing has been one of the major applications of data mining
+since the field emerged. Typically, the decision of whether or not
+to market to a particular person is based solely on their character-
+istics (direct marketing), or those of the population segment to
+which they belong (mass marketing). This often leads to sub-
+optimal marketing decisions by not taking into account the effect
+that members of a market have on each other's purchasing deci-
+sions. In many markets, customers are strongly influenced by the
+opinions of their peers. Viral marketing takes advantage of this to
+inexpensively promote a product by marketing primarily to those
+with the strongest influence in the market. The use of relation-
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee providedthat copies are
+not made or distributed for profit or commercial advantage and that
+copies bear this notice and the full citation on the first page. To copy
+otherwise, to republish, to post on servers or to redistribute to lists,
+requires prior specific permission and/or a fee.
+SIGKDD02,Edmonton, Alberta, Canada.
+Copyright 2002 ACM 1-58113-567-X/02/0007 ...$5.00.
+ships between people makes viral marketing potentially more
+profitable than direct marketing.
+
+Data mining techniques have been successfully employed for
+direct marketing [9]. By building models that predict future pur-
+chasing behavior from past behavior, marketing can be more tar-
+geted and lead to increases in profit [18][22]. In previous work
+[5], we showed that the same could be done for viral marketing.
+By explicitly modeling the market as a social network [24], we
+were able to use the influence between customers to our advan-
+tage to significantly increase profits.
+
+Viral marketing uses the customers in a market to promote a
+product. This "word-of-mouth" advertising can be much more
+cost effective than traditional methods since it leverages the cus-
+tomers themselves to carry out most of the promotional effort.
+Further, people typically trust and act on recommendations from
+friends more than from the company selling the product.
+
+Examples of viral marketing are becoming increasingly common.
+A classic example of this is the Hotmail free email service, which
+grew from zero to 12 million users in 18 months on a miniscule
+advertising budget, thanks to the inclusion of a promotional mes-
+sage with the service's URL in every email sent using it [13].
+Competitors using conventional marketing fared far less well.
+Many markets, notably those associated with information goods
+(e.g., software, media, telecommunications, etc.) contain strong
+network effects (known in the economics literature as network
+externalities). In these, ignoring the relationships between cus-
+tomers can lead to a severely sub-optimal marketing plan.
+
+In the presence of strong network effects, it is crucial to consider
+not only a customer's intrinsic value (his value as a customer
+based on the products he is likely to purchase), but also his net-
+work value. The network value of a customer is high when he is
+expected to have a very positive influence on others' probabilities
+of purchasing the product. A customer whose intrinsic value is
+less than the cost of marketing may in fact be worth marketing to
+when his network value is considered. The immediate effect of
+marketing to him may be negative, but the overall effect may be
+positive once his influence on his friends, their influences on their
+friends, and so on is taken into account. Further, a customer who
+looks valuable based on intrinsic value alone may in fact not be
+worth marketing to if he is expected to have an overall negative
+effect on others in the market (e.g., a person who tends to give
+very low product ratings). Ignoring the network value can result in
+incorrect marketing decisions, especially in a market with strong
+network effects.
+
+To estimate the network value of its customers, a company needs
+to know the relationships between them. One source of such in-
+formation is the Internet, with its plethora of chat rooms, discus-
+
+
+
+
+61
+
+s/on forums, and knowledge-sharing web sites. In these is found a
+wealth of social interaction, often product-related, which a com-
+pany could use to gather information on the relationships between
+its customers. Knowledge-sharing sites in particular are often
+product-oriented. On these sites, information about product likes
+and dislikes, ratings of quality, benchmarks, and comparisons are
+exchanged, making them an ideal source for data about customer
+preferences and interactions.
+
+In this paper, we extend ideas from our earlier work [5] and apply
+them to the domain of knowledge-sharing sites. We show how to
+find optimal viral marketing plans, use continuously valued mar-
+keting actions, and reduce computational costs (Sections 2 and 3).
+In Sections 4 and 5, we apply the model to Epinlons, a popular
+knowledge-sharing site. In practice, the relationships between
+customers is often unknown, but may be obtained at some cost.
+We introduce a technique for marketing in such a situation and
+show that it performs well even with very limited marketing re-
+search funds. We conclude with a discussion of related work and
+future directions.
+
+2. THE MODEL
+Consider a .set of n potential customers, and let Xi be a Boolean
+variable that takes the value 1 if customer i buys the product being
+marketed, and 0 otherwise. Let the neighbors of Xi be the custom-
+ers who directly influence Xi: Ni={X/j.....Xt,i} ~ X-{X/}, where
+X={X~,...,X,}. The product is described by a set of attributes
+Y={Y1..... Ym}' Let Mi be the marketing action that is taken for
+customer i. For example, Mi could be a Boolean variable, with
+M~=I if the customer is (say) offered a discount, and Mi=O other-
+wise. Alternatively, M~could be a continuous variable indicating
+the size of the discount offered, or a nominal variable indicating
+which of several possible actions is taken. Let M={Mi..... Mn} be
+the marketing plan. Then, for all Xi, we will assume that
+
+P(Xi IX-{Xi},Y,M)
+
+= p(X i ]Nt,Y,M )
+(1)
+= #f0(x/IY, M/)+(1-jODPN(X/[Ni,Y,M)
+
+Po( Xi ]Y, Mi ) is X:s internal probability of purchasing the prod-
+uct. PN(Xi[ N|, Y, M ) is the effect that X:s neighbors have on
+him. ~ is a scalar with 0 _</~_<1 that measures how self-reliantX/
+is. For many products, such as cellular telephones, multi-player
+computer games, and Internet chat programs, a customer's prob-
+ability of purchasing depends strongly on whether his friends have
+also purchased the product. In previous work [5] we modeled this
+interaction with a non-linear function. In this paper, we employ a
+simple linear model to approximate this effect:
+
+PN(Xi=llNi,Y,M)=
+XwijXj
+(2)
+XjENi
+
+where w# represents how much customer i is influenced by his
+neighbor j, with wU >_ 0 and ~X:N~ wij = 1 (Note, wi.i = 0 if
+
+j ~N0. While not exact, we believe it is a reasonable approxima-
+tion when the probabilities are all small, as is typically the case
+for marketing domains. Linear models often perform well, espe-
+cially when data is sparse [4], and provide significant advantages
+for computation. Note that we are modeling only positive interac-
+tions between customers, which we found in our previous work to
+be the most common type.
+CombiningEquations 1 and 2, we get
+
+P(X i =11Ni,,Y,M) =
+
+flit:b(Xi =llY, Mi)+(l_fli ) XwijXj
+(3)
+Xj~Ni
+
+For the purposes of this paper, we will be calculating the optimal
+marketing plan for a product that has not yet been introduced to
+the market. In this situation, the state of the neighbors will not be
+known, so we derive a formula for computing P( Xi = 1 [Y, M ).
+We first sum over all possible neighbor states:
+
+P(X~ =IIY, M) =
+~P(X/=ilN,Y,M)P(NIY,M)
+~/EC(NI)
+
+where C(Ni) is the set of all possible configurations of the
+neighbors of Xi, and hence ~1 is an set of neighbor state assign-
+ments. Substituting equation 3, we get:
+
+P(X i = iIY, M )=
+
+~fliPo(Xi = l lY, Mi)P(~IIY, M )
+~C(Ni)
+
++
+Z
+(1-fli)Zw/j~P(NIY,M)
+N~C(Ni)
+Xj~Ni
+
+where ~ is the:value of Xj specified by gl. Po( Xi [Y, Mi ) is inde-
+pendent of gl, so the first term simplifies to it. We swap the sum-
+marion order in the second term, and note that it is zero whenever
+~,'jis zero. This leads to:
+
+P(X~=IIY, M)
+
+=fliPo(Xi =llY, Mi)+(1-fli)
+E
+~
+wijP(~llV, M)
+XjENi NEC(Ni)
+withNj=1
+
+Since the inner summation is over all possible values of ~1when-
+ever/~=1, it is equivalent to wuP( Xj= 1 [Y, M ), hence:
+
+P(X~ = l lY, M)
+
+= fifo(X / =llY, M/)+(l_fl~ ) ~wuP(X
+j =llY, M) (4)
+Xj~N~
+
+Because Equation 4 expresses the probabilities P( Xi = 1 I Y, M )
+as a function of themselves, it can be applied iteratively to find
+them, starting from a suitable initial assignment. A natural choice
+for initialization is to use the internal probabilities Po( Xi = 1 [Y,
+Mi).
+The marketer's goal is to find the marketing plan that maximizes
+profit. For simplicity, assume that M is a Boolean vector (i.e.,
+only one type of marketing action is being considered, such as
+offering the customer a given discount). Let c be the cost of mar-
+keting to a customer (assumed constant), ro be the revenue from
+selling the product to the customer if no marketing action is per-
+formed, and rl be the revenue if marketing is performed, ro and rl
+will be the stone unless the marketing action includes offering a
+discount. Let.if(M) be the result of setting M~to 1 and leaving the
+rest of M unchanged, and similarly for.~°(M). The expected lift in
+profit from marketing to customer i in isolation (i.e., ignoring his
+effect on other customers) is then [3]
+
+ELp/I(y,M) = rlP(X / = l lY, f/l(M))
+
+- roP(X / = 11Y, f/°(M)) - c
+
+
+
+
+62
+
+We also refer to this as the customer's intrinsic value. Let M0 be
+the null vector (all zeros). The global lift in profit that results from
+a particular marketing plan M is then
+
+ELP(Y,M) =
+
+~[qe(x,=
+11Y,M)- roP(X i = 11Y, M0)-ci]
+i=l
+
+where ri=r; and ci=c if Mi=l, and rt=roand ci=Oif Mi=O.
+
+A customer's total value is the global lift in profit from marketing
+to him: ELP(Y, H(M)) - ELP(Y, .if(M)). A customer's network
+value is the difference between his total and intrinsic values. A
+customer with a high network value is one who, when marketed
+to, directly or indirectly influences many others to purchase.
+
+Our previous work was based on this Boolean marketing case, but
+in this paper we explore continuous valued marketing actions as
+well. The expected lift in profit in the continuous case is a
+straightforward extension of the Boolean one. Let z be a market-
+ing action, with 0 _<z -< 1, and z = 0 when no marketing is per-
+formed. Let c(z) be the cost of performing the action (with
+c(O)=O), and r(z) be the revenue obtained if the product is pur-
+chased. Let f/Z(M) be the result of setting Mi to z and leaving the
+
+rest of M unchanged. The expected lift in profit from performing
+marketing action z on customer i in isolation is then
+
+ELPiZ(Y,M) = r(z)P(X i = I[Y, fiZ(M))
+(5)
+- r(O)P(X i = 11Y, f/°(M)) - c(z)
+
+The global lift in profit is
+
+ELP(Y,M) =
+
+
+[r(M i )P(X i = 1[Y, M) - r (O)P(X i = 1[Y, M0) - c(M i)]
+i=l
+
+
+3. INFERENCE AND SEARCH
+Our goal is to find the M that maximizes ELP(Y, M). In our pre-
+vious work, we assumed marketing actions were Boolean, and
+heuristically searched through the vast space of possible market-
+ing plans. Because of the linearity of the model presented here
+(see Equation 3), the effect that marketing to a person has on the
+rest of the network (their network effect) is independent of the
+marketing actions to other customers. From a customer's network
+effect, we can directly compute whether he is worth marketing to.
+Let the Ai(Y) be the network effect of customer i for a product
+with attributes Y. It is defined as the total increase in probability
+of purchasing in the network (includingX~)that results from a unit
+change in Po(Xi):
+
+.~ OP(X j = I IY,Mo)
+Ai (Y) = j~_l0p~i
+=~ jy~/)
+(6)
+
+
+Since Ai(Y) is the same for any M, we define it for M = M0. We
+can calculate A,(Y) using the following recursive formula (see the
+Appendix for a proof)
+
+It
+Ai(Y) = EwjiAj(Y)
+(7)
+j=l
+
+Intuitively, customer i's network effect is simply the effect that he
+has on people he influences, times their effect on the network.
+A,{Y) is initially set to 1 for all i, then recursively re-calculated
+using equation 7 until convergence (note this takes approximately
+linear time in the number of non-zero w~j's). Empirically, we
+found it converged quickly (10-20 iterations).
+
+Note that while the network value of a customer depends on the
+marketing scenario, the network effect does not. The network ef-
+fect simply describes how much influence a customer has on the
+network. The network value depends on the network effect, the
+customer's responsiveness to marketing, and the costs and reve-
+nues associated with the marketing scenario.
+
+With the network effects in hand, we can calculate the expected
+lift in profit of marketing to each customer. For convenience, we
+define APi(z,Y) to be the immediate change in customer rs prob-
+ability of purchasing when he is marketed to with marketing ac-
+tion z:
+
+ZX~(z, Y) =
+
+,a,
+[Po(Xi =
+11 Y, Mi = z) - Po (Xi = I IY, Mi = 0)]
+
+From Equation 6, and given that P(Xj = I IY, M 0) varies line-
+arly with Po(Xi =IIY, Mi), the change in the probability of
+purchasing across the entire network is then
+
+n
+~AP(Xj = I IY,M o) = As(Y)" AP0(Xi = 11Y,M~)
+j=l
+
+= Ai(Y). A/~ (z, Y)
+
+Typically, only a small portion of the network will be marketed to.
+Therefore, it is relatively safe to approximate the increase in reve-
+nue from the network due to marketing to customer i as his influ-
+ence on the network multiplied by r(0). The total lift in profit is
+this increase in revenue on the network, plus the change in reve-
+nue from customer i, minus the cost of the marketing action:
+
+ELPi~,otal(Y, M) =
+
+r(0)[(Ai(Y) - 1)-A/~(z, Y)]
+
++[r(z)P(X i = 11Y, f/z (M)) - r(O)P(X i = 1] Y,M)]
+
+-c(z)
+
+Notice that this approximation is exact when r(z) is constant,
+which is the case in any marketing scenario that is advertising-
+based (i.e., if it does not offer discounts). When this is the case,
+the equation simplifies to:
+
+ELPi~ot,a (Y, M)
+
+= r[(Aj(Y)-I).At~(z,Y)]+r[AF~(z,Y)]-c(z)
+(8)
+
+= rAi (Y). A/~(z, Y)-c(z)
+
+With Equation 8, we can directly estimate customer i's lift in
+profit for any marketing action z. Typically, we will want to find
+the z that maximizes the lift in profit. To do this, we take the de-
+rivative with respect to z and set it equal to zero, resulting in:
+
+rAi(Y) dA/~(z,Y) = dc(z)
+(9)
+dz
+dz
+
+Assuming APi(z,Y) is differentiable, this allows us to directly
+calculate the z which maximizes ELPiZtotat(Y, M) which, because
+our model is linear, is the optimal value for Mi in the M that
+
+
+
+
+63
+
+maximizes ELP(Y, M). Hence, from the customers' network ef-
+fects, Ai(Y), we can directly calculate the optimal marketing plan.
+We now show how this model can be applied to knowledge-
+sharing sites.
+
+4. MINING KNOWLEDGE-SHARING
+SITES
+Internet use has exploded over the past decade. Millions of people
+interact with each other online, and, in many instances, those
+social interactions are recorded in archives that reach back twenty
+years or more~. As a result, there are many online opportunities to
+mine social networks for the purposes of viral marketing. UseNet
+newsgroups, IRC, instant messaging, online forums, and email
+mailing lists are examples of possible sources.
+
+In this paper, we concentrate on knowledge-sharing sites. On such
+sites, volunteers offer advice, product ratings, or help to other
+users, typically for free. Social interaction on knowledge-sharing
+sites comes in a variety of forms. One feature that is often found is
+some form of explicit trust between users. For example, at many
+sites, users rate reviews according to how helpful or accurate they
+are. On others, users directly rate other users. Without a filtering
+feature such as this, knowledge-sharing sites can quickly become
+mired in inaccurate or inappropriate reviews.
+
+We have chosen to mine Epinions2, possibly the best known
+knowledge-sharing site. On Epinions, members submit product
+reviews, including a rating (from 0 to 5 stars) for any of over one
+hundred thousand products. As added incentive, reviewers are
+paid each time one of their reviews is read. Epinions users interact
+with each other in both of the ways outlined above, by rating re-
+views, and also by listing reviewers that they trust. The network of
+trust relationships between users is called the "web of trust", and
+is used by Epinions to re-order the product reviews such that a
+user first sees reviews by users that they trust. The trust relation-
+ships between users, and thus the entire web of trust, can be ob-
+tained by crawling through the pages of the individual users3.
+With over 75k users and 500k edges in its web of trust, and 586k
+reviews over 104k products, Epinions is an ideal source for ex-
+periments on social networks and viral marketing. Interestingly,
+we found that the distribution of trust relationships in the web of
+trust is Zipfian [25], as has been found in many social networks
+[24]. This is evidence that the web of trust is a representative
+example of a social network, and thus is a good basis for our
+study. A Zipfian distribution of trust is also indicative of a skewed
+distribution of network values, and therefore of the potential util-
+ity of viral marketing.
+
+To apply our model to Epinions, we needed to estimate some
+parameters, such as the effect that marketing has on a customer's
+probability of purchasing, the self-reliance factor fli, and the
+amount of influence between customers wtj. In practice, the mar-
+keting research department of a company, or the maintainers of
+the knowledge-sharing site itself, would typically have the re-
+sources and access to customers necessary to experimentally de-
+
+
+l See http://groups.google.com/and http://www.archive.org/.
+
+2http://www.epinions.com
+
+3 Epinions does not provide a list of all of its users, so we seeded
+the crawl with the top reviewers in each product category and
+followed both "trusts" and "trusted-by" links to find other users.
+termine these parameters. For instance, the effect that marketing
+has on a customer could be measured by selecting users at random
+and recording their responses (both when being marketed to and
+not). The parameters could be estimated individually for each
+user, or (requiri~ng far less data) as the same for all users, as was
+done in Chickering and Heckerman [3]. If this is not feasible, they
+could be set using a combination of prior knowledge and any
+demographic information available.
+
+For Epinions, we made the simplifying assumption that a user is
+more likely to purchase a product if it was reviewed by a person
+he trusts. Though not required by the model, we considered all
+trusted people to have equal influence, as there is no data in Epin-
+ions to inform otherwise. Thus, Ni={Xj such that i trusts j} and
+wij=l/INilfor X,~Ni. For the product attribute vector Y, we used a
+single attribute: the product category (from one of 25 top-level
+categories defined by Epinions). The model supports more com-
+plex attribute vectors. For exarnple, one could imagine using the
+text description of products, possibly augmented by the product
+category and sub-category. We plan to explore their effect in fu-
+ture work. All that remained to define was Po( Xi I Y, Ml ), which
+we estimated using a na'fve Bayes model[4] for Xi as a function of
+Y and Mi.
+
+eo(Yl Si)eo(Mi lSi)eo(Xi)
+Po(Xi IY,M~)=
+ZPo(YIXi)Po(M, lXi)Po(X,)
+Xi
+Po(X~[Y)Po(Mi]X~)
+~Po(Xi IY)Po(M~IXi)
+Xi
+
+We used a naive Bayes model for Po( Xi ]Y ). We equated review-
+ing a product with purchasing it4, so training the model was sim-
+ply a matter of counting. In the case of Epinions, measuring the
+effectiveness of marketing on the users was not possible for us.
+We expected marketing to have a larger effect on a customer who
+was already inc,lined to purchase the product, so we followed our
+previous work and set Po( Mi IXi ) so as to obtain (for the Boolean
+marketing scen~mo):
+
+Po(Xi =iIM i = 1)= min{ctP0(X i =IIM ~=0),1}
+(10)
+
+where a > 1 is a parameter that specifies the magnitude of the
+marketing effect5.
+
+5. EXPERIMENTS
+We built the model based on Epinions data, as discussed above,
+and used it to gather empirical results. For all of the experiments,
+we used just one of the 25 product categories, "Kids & Family",
+as it had the most reviews per product (10.2, on average) and
+
+
+
+4 We expect that more users purchase the product than review it.
+However, purchasers who do not review have no additional ef-
+fect on the network, so knowing the ratio of purchasers to re-
+viewers would simply scale the results. The results would be af-
+fected if we knew, per user, the probability of purchasing vs.
+reviewing, but this information is not available to us.
+
+5 To fully specify P( Mi IXi ) we used the additional constraint that
+P( Y, M,=l ) = P( Y, Mi=O ). With the values of a we used it
+was always possible to satisfy Equation 10 and this constraint
+simultaneously.
+
+
+
+
+64
+
+reviews per person who submitted at least one review in the cate-
+gory (5.8, on average). We first tested the Boolean marketing
+case. We hypothesized a simple advertising situation with ¢z=2,
+ro=l, rl=l, which meant revenues were in units of the number of
+products sold, and a person's internal probability of purchasing a
+product doubled after being advertised to6. In earlier work, we
+varied o~and found that, while it affected the scale of the results, it
+had little effect on the qualitative nature of them. Thus, for this
+paper, we fixed ~zand instead varied other characteristics of the
+model. We had no data to estimate users' self-reliance, so we
+simply chose to set fl/=0.5 for all customers. To combat data
+sparseness, Po( Xi [ Y ) was smoothed using an m-estimate with
+m=2 and the population average as the prior. These parameters
+were all chosen before running any experiments.
+
+
+Table 1: Profit results for Boolean marketing scenario for
+various costs of marketing.
+
+a=2, r0=l, rl=l
+
+c = 0.1
+c = 0.01
+c = 0.001
+
+No Marketing
+37.78
+37.78
+37.78
+
+Direct Marketing
+37.78
+42.71
+66.08
+
+Viral Marketing
+47.25
+60.54
+70.23
+
+
+
+5.1 Profits and Network Values
+Viral marketing resulted in a considerable increase in profit over
+direct marketing (see Table 1). Notice that when the cost of mar-
+keting is a significant fraction of the revenue, the dffect marketer
+will choose to market to no one because the cost of marketing
+exceeds the expected revenue from the customer (since the cus-
+tomers' influences on each other are being ignored). As this sce-
+nario illustrates, assuming the model is accurate, viral marketing
+will always perform at least as well as direct marketing, often
+outperforming it by a substantial margin.
+
+We measured the network value of all of the customers. Figure 1
+shows the 500 highest network values (out of 75888) in decreas-
+ing order. The unit of value in this graph is the average revenue
+that would be obtained by marketing to a customer in isolation,
+without costs or discounts. Thus, a network value of 200 for a
+given customer implies that by marketing to him we essentially
+get free marketing to an additional 200 customers. The scale of
+the graph depends on the marketing scenario (e.g., network values
+increase with ~, but the shape generally remains the same. The
+figure shows that a few users have very high network value. This
+is the ideal situation for the type of targeted viral marketing we
+propose, since we can effectively market to many people while
+incurring only the expense of marketing to those few.
+
+A customer with high network value is one who: (1) Is likely to
+purchase the product, and thus is more affected by the marketing,
+and (2) is trusted by many other people in the network, who tend
+
+
+
+
+6 In previous work we varied the value of ¢xand found that, while
+it affected the scale of results, they remained qualitatively simi-
+lar.
+25000
+G
+
+
+20000
+
+0
+15000
+Q
+Z
+10000
+
+m
+
+5000
+0
+Z
+0
+
+Rank
+
+
+
+Figure 1: Typical distribution of network value.
+
+to have low ~/, and who also have characteristic 2, and so on re-
+cursively. For instance, the customer with the highest network
+value (22,000) influences 784 people, and has a probability of
+purchasing of 0.03, which is 23 times that of the average person.
+
+5.2 Speed
+The linear model introduced in this paper has tremendous speed
+advantages over a non-linear model such as that introduced in our
+previous work. Because of the independence that linearity pro-
+vides, we are able to simultaneously calculate the network value
+for all customers. The network value is independent of the market-
+ing actions being performed on others, which allows us to find the
+optimal marketing plan7 without performing a heuristic search
+over plans. It would take approximately 100 hours to perform the
+single-pass search (the fastest of the heuristic search methods
+introduced in our previous work) with this model, or about 10-15
+minutes if we make approximations in the inference. In contrast,
+the linear model takes 1.05 seconds to find the optimal marketing
+plan. At these speeds, our model could be used to find optimal
+marketing plans for markets involving hundreds of millions of
+customers in just hours.
+
+5.3 Continuous Marketing Actions
+Continuous-valued marketing actions (M~E[0,I]) allow the mar-
+keter to better optimize the marketing plan - tailoring the action
+for each person specifically to his characteristics. Our framework
+allows for any function to be used to model Po( Xi I Y, Mi ), as
+long as it is differentiable in Mi. As in the Boolean case, we have
+chosen to model the effect of marketing as a multiplicative factor
+on the internal probability of purchasing:
+
+eo(Xi [Mi = z) = Of(z). Po(Xi IMi = O)
+
+a(z) could be any differentiable function, and we assume o(0)=1.
+c(z) also could be any differentiable function. We have chosen
+c(z)=clz such that the cost of marketing is directly proportional to
+the amount of marketing being performed.
+
+
+
+7 The plan is optimal if ro=rl (or if r(z) is constant in the continu-
+ous marketing scenarios). If rl<ro then the plan overestimates
+the revenues from influence on the network, potentially result-
+ing in a sub-optimal marketing plan. In our experience, this
+overestimation ranged from 1% to 10% of the profits. We thus
+believe the resulting plan was still nearly optimal.
+
+
+
+
+65
+
+2.5
+
+
+2
+
+
+
+
+1
+
+0.5 i
+
+
+0
+
+0
+0.2
+0.4
+0.6
+0.8
+
+Marketing Action (z)
+
+
+
+Figure 2: Marketing effect vs. marketing action.
+
+
+We believe an exponentially asymptotic function for o(z) is rea-
+sonable; it models the phenomenon of diminishing returns (i.e.,
+the more money that is spent on marketing, the less improvement
+is derived 'from it). We also experimented with logarithmic and
+inverse polynomial functions, which gave similar results. The
+function we used was:
+
+a(z) = a~ + (1-a.)e -az
+
+Note that a(0)=l, and a(z)--->a,~as z--->~.The parameter 2 affects
+the curvature of the function; a(z) converges to a**more quickly
+with a large 2. In the experiments below, we used .~=5, which is
+large enough that o(1) = ~
+yet low enough that o(z) does not
+converge to a, too quickly. The resulting curve, for 6~,,--2,is
+shown in Figure 2.
+
+From equation 9, we can find the optimal marketing action for
+each customer
+
+dc(z) = rAi(y)l~jPo(Xi = l lY, Mi = 0) d(a(z)-l)
+dz
+dz
+
+==~
+c = -rAi(Y)~i2(1-~**)e -2z
+
+(
+c
+I
+Ill
+- -
+
+rA~(Y)B~2(1-a.)Po(X i = I IY, M i = O)
+Z =-
+2
+
+The second derivative is negative, implying the point is a maxi-
+mum.
+
+We ran the same experiments as in the Boolean case, with ¢x**=2
+so that marketing fully to a customer will double their internal
+probability of purchasing the product, as before. The results are
+presented in Table 2. In all three scenarios, and for both direct and
+viral marketing, continuous marketing actions resulted in a higher
+lift in profit than Boolean actions, sometimes by a very significant
+amount. Viral marketing also continued to consistently out-
+perform direct marketing.
+
+The increased lift in profit is due to two factors: (1) At low z, the
+a(z) curve provides a more favorable ratio of marketing effect to
+cost, and (2) tailoring the marketing action for each customer
+allows us to optimize the tradeoff between the cost and benefit of
+marketing on a per customer basis.
+Table 2: Profit results for continuous marketing scenario for
+various costs of marketing.
+
+a~.=2, r(z)=l, 2=5
+
+cl = 0.1
+cl = 0.01 [ cl = 0.001
+
+No Marketing
+37.78
+37.78
+!
+37.78
+
+Direct Marke,ting
+37.84
+51.71
+68.38
+
+Viral Marketing
+51.14
+63.23
+71.28
+
+Lift over Boolean
+3.89
+2.69
+1.05
+Viral Marketing
+(41.08%)
+(11.82%)
+(3.24%)
+
+
+To verify that factor (1) is not the sole cause of the increase in
+profit, we ran Boolean marketing experiments with a= a(z) and
+c---c(z) for z ranging from 0 to 1. Doing so simulates a company
+which globally optimizes its choice of marketing action, but still
+performs that same (or no) action on each customer. The maxi-
+mum realizable profits in this case were 49.90, 61.60, and 70.23
+for a cl of 0.1, 0.01, and 0.001. These results show that tailoring
+the marketing action for each customer is indeed a significant
+cause of the increase in profits derived from the continuous mar-
+keting case.
+
+One interesting question is what happens if the marketing effect
+function a(z) is linear, o(z)= ~. In this case, continuous-valued
+marketing reduces to Boolean marketing. If it would be profitable
+to market to a customer some (z>0), then the benefit of marketing
+to him must be higher than the cost for any z (since both the cost
+and the benefit are linear), and it would thus advantageous to
+market to him the maximum possible (z=l).
+
+5.4 Incomplete Network Knowledge
+So far, we have considered only markets where the entire social
+network between customers is known. This is often not the case.
+In fact, most companies today have little or no knowledge of the
+actual relationships between their customers. In such a situation,
+companies may simply choose to use direct marketing, but if they
+do, they will likely lose profit opportunities, as demonstrated in
+earlier sections. In the following sections, we will demonstrate
+that even with little network knowledge, our viral marketing
+methods still outperform direct marketing. In all of the experi-
+ments that follow, we used continuous-valued marketing actions,
+with the same parameters as those used for Section 5.3 (Table 2)
+and cl = 0.1.
+
+5.4.1
+Viral marketing is robust
+We simulated partial knowledge by randomly removing members
+from the neighbor sets, which corresponds to randomly removing
+edges from the; social network. This is the situation a company
+would be in if they had only a random sample of the neighbor
+relations between customers. We devised the optimal marketing
+plan on the incomplete network, and then tested this plan on the
+complete network, which simulates the "real-world". Naturally,
+when no edges are known, viral marketing is equivalent to direct
+marketing.
+
+
+
+
+66
+
+16
+
+
+i14
+z
+Acuat
+-,,I--' /ft
+10
+J
+
+
+6
+
+2
+Es,mate0
+
+0
+0.2
+0.4
+0.6
+0.8
+1
+
+Fraction of edges known
+
+
+Figure 3: Actual and estimated difference between viral mar-
+keting and direct marketing profits with only partial network
+knowledge.
+
+
+In Figure 3 ("Actual"), we show the difference in profit between
+direct and viral marketing for partially known networks. Surpris-
+ingly, the company can achieve 69% of the lift in profit knowing
+only 5% of the edges in the network. Further, the algorithm con-
+siderably underestimates the lift in profit that will result (Figure 3,
+"Estimated"), meaning that for a company with only partial net-
+work knowledge, not only are viral marketing plans robust but the
+actual results of viral marketing will be significantly better than
+the algorithm estimates.
+
+We hypothesize that this robustness will occur whenever the
+edges are missing at random (or approximately so), resulting in a
+correlation between the number of people who trust a given per-
+son in the partial network and the number who trust him in the
+true network. A customer who appears to have a high network
+value in the partial network is likely to have a high network value
+in the full network, and would thus be chosen to be marketed to.
+We also believe that the algorithm could use an estimate of the
+fraction of edges that are missing to construct an even better viral
+marketing plan; we plan to investigate this in future work.
+
+5.4.2 Acquiring new network knowledge
+In many instances, a company will have little or no knowledge
+about the relationships between its customers, but may be willing
+to spend marketing research funds to acquire it. More knowledge
+about the influences between customers will allow the company to
+form a marketing plan with a higher lift in profit. If the company
+could compute the value of information [8] of knowing the
+neighbors of each customer, it could then make a decision-
+theoretic choice of which, and how many, customers to query.
+
+The acquisition of neighbor relations could be done in many
+ways. For the purposes of this paper, we assume that it is done by
+selecting a user to query, spending money to persuade him to
+provide a list of the people he trusts, selecting another user to
+query, and so on. We assume the company has a fixed amount of
+money it is willing to spend for this, and that the cost of querying
+a user is constant. The interesting problem is thus not how many
+users to query, but how to select the subset of users to query that
+leads to the most profit.
+14
+...........
+,.......
+
+
+12
+
+
+
+
+0
+20000
+40000
+60000
+
+Customers Queried
+80000
+
+
+
+Figure 4: Lift in profit (on the full network) for the viral mar-
+keting plan in which the given number of customers has been
+queried for their neighbor infornmtion.
+
+
+A customer with a high network effect has a large influence on the
+network, and is thus one that we wish to influence to purchase the
+product. Apart from directly marketing to the customer, we can
+indirectly influence him by marketing to those that he trusts,
+which we can discover by querying him. One estimate for a cus-
+tomer's network effect on the full network is his network effect on
+the partial network. We thus query the customer with the highest
+network effect on the partial network, recalculate network effects
+with the new information, query the next customer with highest
+network effect, and so on until the marketing funds have been
+spent.
+
+We performed this experiment, starting with a network containing
+no neighbor information8. Figure 4 shows the resulting lift in
+profit, compared to randomly selecting customers to query. Our
+method performs well, lifting profits an order of magnitude more
+than random choice would when 1000 customers are queried, and
+by almost 3 times the lift achieved by random choice when 10%
+of the customers are queried.
+
+We must re-calculate the customers' network effects each time we
+query a user. We can drastically speed this up by querying the 100
+customers with highest network effect at each iteration, with a
+potential loss of accuracy. Interestingly, the lift in profit when
+selecting 100 customers at a time is only (on average) 0.008 less
+than when selecting one at a time, a negligible amount compared
+to the lift in profit itself. Since it takes 1/100ththe time to run, this
+approximation could be used to make knowledge acquisition trac-
+table for non-linear models, or for markets of tens of millions of
+customers.
+
+In future work, we would like to find a measure that estimates the
+increase in ELP of querying one more user, thus informing the
+company when to stop acquiring network knowledge. This would
+allow us to optimize the overall profit (lift in profit minus funds
+spent to acquire network knowledge). We believe such a measure
+could be formed from the ELP, an estimate of the number of miss-
+ing edges, and other statistics on the partial network.
+
+
+
+
+s The first customers to query are therefore chosen at random.
+
+
+
+
+67
+
+6. RELATED WORK
+In our previous work [5], we mined a collaborative filtering sys-
+tem to demonstrate the advantages of our viral marketing ap-
+proach over direct or mass marketing. There, we used a more
+complicated, piecewise linear function over product ratings to
+determine the influences of customers on each other. In this paper,
+we used a model with stronger linearity assumptions to achieve
+greater scalability. A disadvantage of our previous work is that it
+required full knowledge of network structure, and restricted the
+marketer to selecting Boolean marketing actions. Both of these
+limitations were addressed and overcome in this paper.
+
+Interestingly, the computation of network effect (see Equation 7)
+is very similar to the PageRank[21] algorithm, used by Google[2]
+for determining important web pages. In PageRank, a web page is
+valued highly if many highly valued pages point to it. Similarly, in
+viral marketing a customer is valued highly if he influences many
+highly valued customers. The computation is equivalent to finding
+the primary eigenvector of the matrix W, where Wij=Wij(wji for
+PageRank). The network effect of a customer is also proportional
+to the probability that a random walker, who randomly traverses
+the links of influence in the network backwards, is at that cus-
+tomer. Also related is the HITS[15] algorithm, which would find
+bipartite "trusts/trusted-by" sub-graphs in the web of trust. Inter-
+estingly, social networks, the World-Wide Web, and many natu-
+rally occurring networks all exhibit Zipfian, or "scale free" char-
+acteristics, and have been the topic of much recent research [17]
+[1].
+
+Social networks have been the object of much research. One clas-
+sic paper is that by Milgram [20], which estimated that every per-
+son in the world is only six acquaintances away from every other.
+Some recent social network research uses the Internet as a source
+of data. For instance, Schwartz and Wood [23] mined social rela-
+tionships from email logs, the ReferralWeb project mined a social
+network from a wide variety of publicly-available online informa-
+tion [14], and the COBOT project gathered social statistics from
+participant interactions in the LambdaMoo MUD [11]. Our net-
+work was mined from a knowledge-sharing site. A good overview
+of Epinions and other sites like it can be found in Frauenfelder
+[6].
+
+Several researchers have studied the problem of estimating a cus-
+tomer's lifetime value from data [12], generally focusing on vari-
+ables like an individual's expected tenure as a customer [19] and
+future frequency of purchases [7]. Networks of customers have
+received some attention in the marketing literature [10] but most
+of these studies are purely qualitative, or involve very small data
+sets and overly simplified models. Krackhardt [16] proposes a
+model for optimizing which customers to offer a free sample of a
+product to, but the model only considers the impact on the cus-
+tomer's immediate friends, assumes the relevant probabilities are
+the same for all customers, and is only applied to a made-up net-
+work with seven nodes.
+
+7. FUTURE WORK
+We have developed models for viral marketing on social networks
+mined from real-world data. There are many directions in which
+these models, or their use, could be extended. In this section, we
+describe some of the main ones.
+
+In this paper, we mined a network from a single source. In gen-
+eral, multiple sources of relevant information will be available;
+the ReferralWeb [14] project exemplified their use. Methods for
+combining diverse: information into a sound representation of the
+underlying influence patterns are thus an important area for re-
+search.
+
+Here, we considered only constant r(z). In preliminary experi-
+ments, a decreasing r(z) caused the algorithm to somewhat overes-
+timate the lift in profit that would result from a particular market-
+ing plan, therefore likely leading to a sub-optimal marketing plan
+(though it still outperformed direct marketing). In future work, we
+would like to investigate methods for handling variable r(z),
+which may involve, for instance, a correction factor based on the
+expected number of customers that will be marketed to.
+
+We have introduced methods for developing a marketing plan
+when the structure of the network is unknown or only partially
+known, but there are still many directions in which the methods
+could be extended. In particular, we would like to explore the
+effect of having a biased network sample on the resulting viral
+marketing plan. Knowing how the sample is biased should lead to
+better marketing plans. Also, with more information it may be
+possible to make more intelligent selections about which users to
+query. All information known about a user (e.g., demographic
+characteristics, past purchasing behavior, and partial knowledge
+about "trusts/trusted-by" relations) could be used to estimate the
+value of querying him. We would like to further develop the ap-
+plication of the theory of value of information [8] to optimizing
+the tradeoff between the cost and expected benefits of acquiring
+knowledge about the network.
+
+This paper considered making marketing decisions at a specific
+point in time. A more sophisticated alternative would be to plan a
+marketing strategy by explicitly simulating the sequential adop-
+tion of a product by customers given different interventions at
+different times, and adapting the strategy as new data on customer
+response arrives. A further time-dependent aspect of the problem
+is that social networks are not static; they evolve, and particularly
+on the Internet can do so quite rapidly. Some of the largest oppor-
+tunities may lie in modeling and taking advantage of this evolu-
+tion. If the network evolution is understood, it may be possible to
+affect the structure itself, driving the network toward one which
+has a higher profit potential.
+
+We would also like to investigate further the algorithmic similari-
+ties between viral marketing and web page ranking algorithms
+such as PageRank[21] and HITS[15]. Applying the techniques
+and lessons learned in viral marketing to the web domain, or vice
+versa, could result in new insights into the problems found in
+each. For instance, recent work on mining significant Web sub-
+graphs such as bipartite cores, cliques and web tings (e.g., [17])
+may be applicable to viral marketing. Their techniques could pos-
+sibly be used to study network sub-structures and identify those
+with the highest profit potential.
+
+8. CONCLUSION
+This paper uses data mining to improve viral marketing. We apply
+our techniques to data mined from a real-world knowledge-
+sharing site, and show that they scale efficiently to networks of
+hundreds of millions of customers. We extend our techniques to
+handle continuously variable marketing actions and partial net-
+work knowledge. Our results show the promise of our approach.
+
+
+
+
+68
+
+9. ACKNOWLEDGEMENTS
+This research was partly funded by NSF CAREERand IBM Faculty
+awards to the second author.
+
+10. REFERENCES
+[1] A.L. Barab~isi,R. Albert, and H. Jong. Scale-free character-
+istics of random networks: The topology of the World Wide
+Web. Physica A, 281:69-77, 2000.
+
+[2]
+S. Brin and L. Page. The anatomy of a large-scale hypertex-
+tual Web search engine. In Proceedings of the Seventh Inter-
+national World Wide Web Conference, Brisbane, Australia,
+1998. Elsevier.
+
+[3] D.M. Chickering and D. Heckerman. A decision theoretic
+approach to targeted advertising. In Proceedings of the Six-
+teenth Annual Conference on Uncertainty in Artificial Intel-
+ligence, Stanford, CA, 2000. Morgan Kaufmann.
+
+[4] P. Domingos and M. Pazanni. On the optimality of the sim-
+ple Bayesian classifier under zero-one loss. Machine Learn-
+ing, 29:103-130, 1997.
+
+[5] P. Dolningos and M. Richardson. Miningthe Network Value
+of Customers. In Proceedings of the Seventh International
+Conference on Knowledge Discovery and Data Mining,
+pages 57-66, San Francisco, CA, 2001. ACM Press.
+
+[6] M. Frauenfelder. Revenge of the know-it-alls: Inside the
+Web's free-advice revolution. Wired 8(7):144-158, 2000.
+
+[7] K. Gelbrich and R. Nakhaeizadeh. Value Miner: A data min-
+ing environmentfor the calculation of the customer lifetime
+value with application to the automotive industry. In Pro-
+ceedings of the Eleventh European Conference on Machine
+Learning, pages 154-161, Barcelona, Spain, 2000. Springer.
+
+[8] R.A. Howard. Information value theory. IEEE Transactions
+on Systems Science and Cybernetics, SSC-2:22-26. 1966
+
+[9] A.M. Hughes. The Complete Database Marketer: Second-
+Generation Strategies and Techniques for Tapping the
+Power of you Customer Database. Irwin, Chicago, IL, 1996.
+
+[10] D. Iacobucci, editor. Networks in Marketing. Sage, Thousand
+Oaks, CA, 1996.
+
+[11] C. L. Isbell, Jr., M. Kearns, D. Korman, S. Singh, and P.
+Stone. Cobot in LambdaMOO: A social statistics agent. In
+Proceedings of the Seventeenth National Conference on Arti-
+ficial Intelligence, pages 36-41, Austin, TX, 2000. AAAI
+Press.
+
+[12] D. R. Jackson. Strategic application of customer lifetime
+value in direct marketing. Journal of Targeting, Measure-
+ment and Analysisfor Marketing, 1:9-17, 1994.
+
+[13] S. Jurvetson. What exactly is viral marketing? Red Herring,
+78:110-112, 2000.
+
+[14] H. Kautz, B. Selman, and M. Shah. ReferralWeb: Combining
+social networks and collaborative filtering. Communications
+of the ACM, 40(3):63-66, 1997.
+
+[15] J. M. Kleinberg. Authoritative sources in a hyperlinked envi-
+ronment. In Proceedings of the Ninth Annual ACM-SIAM
+Symposium on Discrete Algorithms, pages 668-677, Balti-
+more, MD, 1998. ACM Press.
+[16] D. Krackhardt. Structural leverage in marketing. In D.
+Iacobucci, editor, Networks in Marketing, pages 50-59. Sage,
+Thousand Oaks, CA, 1996.
+
+[17] R. Kumar, P. Raghavan, S. Rajagopalan, and A. Tomkins.
+Extracting large-scale knowledge bases from the Web. In
+Proceedings of the Twenty-Fifth International Conference on
+Very Large Databases, pages 639-650, Edinburgh, Scotland,
+1999. Morgan Kaufmann.
+
+[18] C. X. Ling and C. Li. Data miningfor direct marketing:
+Problems and solutions. In Proceedings of the Fourth Inter-
+national Conference on Knowledge Discovery and Data
+Mining, pages 73-79, New York, NY, 1998. AAAI Press.
+
+[19] D. R. Mani, J. Drew, A. Betz, and P. Datta. Statistics and
+data miningtechniques for lifetime value modeling. In Pro-
+ceedings of the Fifth ACM SIGKDD International Confer-
+ence on Knowledge Discovery and Data Mining, pages 94-
+103, New York, NY, 1999. ACM Press.
+
+[20] S. Milgram. The small world problem. Psychology Today,
+2:60-67, 1967.
+
+[21] L. Page, S. Brin, R. Motwani, and T. Winograd. The PageR-
+ank citation ranking: Bringingorder to the web. Technical
+Report, Stanford University, Stanford, CA. 1998.
+
+[22] G. Piatetsky-Shapiro and B. Masand. Estimating campaign
+benefits and modelinglift. In Proceedings of the Fifth ACM
+SIGKDD International Conference on Knowledge Discovery
+and Data Mining, pages 185-193, San Diego, CA, 1999.
+ACM Press.
+
+[23] M. F. Schwartz and D. C. M. Wood. Discovering shared
+interests using graph analysis. Communications of the ACM,
+36(8):78-80, 1993.
+
+[24] S. Wasserman and K. Faust. Social NetworkAnalysis: Meth-
+ods and Applications. Cambridge University Press, Cam-
+bridge, UK, 1994.
+
+[25] G. K. Zipf. Human Behavior and the Principle of Least Ef-
+fort. Addison-Wesley, Boston, MA, 1949.
+
+
+
+11. APPENDIX
+In this appendix, we give a proof for Equation 7:
+
+n
+
+Ai(Y) = ~ wjiAj (Y)
+j=l
+
+As this is an iterative equation, we identify which iteration we are
+on by a super-script. Let
+
+~- = Ai(Y)n and p/n = p(xi iY,M)n
+
+be the nth estimate of customer i's network effect and probability
+of purchasing, respectively, and let
+
+1~ = e O = Po(X i
+IY,Mi)
+
+since on the 0th iteration no network effect is taken into account.
+For notational convenience, we also define
+
+w~ =(1-fl~)w~
+
+
+
+
+69
+
+The iterative update from Equation 4 is:
+
+P~ =flkeo(Xk IY, Mk) +~2.,Wkmrm"-,-1
+m
+
+Thus,
+
+opt = XW~m~e~-,
+
+
+Note that
+
+~Pk° _ ~Pk _ {;
+if k = i
+
+0P~
+0/~
+if k ~-i
+
+Also note, from Equation 6, we have
+
+
+.
+OP~
+t~
+=
+XkO~
+
+and also
+
+A?
+-
+°P,°
+
+
+
+We first will prove by induction that
+
+~P~
+,
+,
+,
+~Pi = ZZ... Z WaliWa2aI""Wkan_Âfor n _>2
+(11)
+al a2
+an-i
+
+We first show this is true for the case where n = 2:
+
+
+
+oP, -ZwL, oP,
+a 1
+
+aP,~
+= ZwL, Zw;,m 0e,
+a I
+m
+
+= E w~, w;,,
+a!
+
+
+We now prove Equation 11 is true for n if we assume it is true for
+n-l:
+
+~p~
+0N -1
+
+0P/ =XWkmm 0e/
+
+= ZWPlo'nZZ "'" Z Wta,iWta2a, ""Wtman_2
+m
+aI a2
+an_2
+
+= Z
+Wkan_iZZ'"Z
+W;liWa2al'"Wan_lan_ 2
+an-I
+al a2
+an-2
+t
+t
+t
+= Z Z""
+X
+Wali Wa2aI ""Wkan_l
+al a2
+an-1
+
+This completes the proof of Equation 11.
+We will now prove by induction that
+
+~,~ . . . .
+,-1
+-~WkiZX k
+for n_>l
+(12)
+k
+
+We first prove that the induction hypothesis is true for the case
+where n = 1:
+
+
+
+
+=
+ZZWhn
+0e~ -I
+k m
+0e/
+
+-- Z w;i
+k
+,
+0
+= Z Wki~k
+k
+
+We now prove Equation 12 is true for n if we assume it is true for
+n-l.
+
+~-1
+~
+, ,n--2
+= 2.~Wkil3,k
+k
+
+By "unrolling" the recursion, we obtain
+
+~'~-' = XZ..-Z w;,:;:,...w;°_,a°_~
+al a2
+an..l
+
+
+From the definition of ~, and from Equation 11:
+
+
+I
+t
+t
+,~,~= _ oP," = ZXX... Z wo,,w,:,...W~a°_,
+
+
+renaming al as k, aj as aj.l for 2 _<j _<n-I, and k as an-l, we obtain:
+
+I~ni= Z ZZ""
+Z WtkiWtatk'"Wta._la._2
+an_1
+k
+a I
+an_ 2
+
+
+
+
+k
+~ aI
+an_I
+
+t An-1
+= 2.~Wkil~k
+k
+
+t An-I
+We have shown that ~ = 2., WkitXk
+. If this recursion is iterated
+k
+until it reaches a fixed point, the resulting values for A"i satisfy
+
+
+Ai (Y) = ~ wjiAj (Y)
+j=l
+
+This completes the proof of Equation 7.
+
+
+
+
+70
+

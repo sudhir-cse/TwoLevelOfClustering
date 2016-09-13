@@ -1,0 +1,2250 @@
+Selecting the Right Interestingness Measure for
+Association Patterns
+
+Pang-Ning Tan
+Department of Computer
+Science and Engineering
+Universityof Minnesota
+200 Union Street SE
+Minneapolis, MN 55455
+ptan @cs.umn.edu
+Vipin Kumar
+Department of Computer
+Science and Engineering
+Universityof Minnesota
+200 Union Street SE
+Minneapolis, MN 55455
+kumar@cs.umn.edu
+Jaideep Srivastava
+Department of Computer
+Science and Engineering
+University of Minnesota
+200 Union Street SE
+Minneapolis, MN 55455
+srivasta@cs.umn.edu
+
+
+ABSTRACT
+Many techniques for association rule mining and feature se-
+lection require a suitable metric to capture the dependencies
+among variables in a data set. For example, metrics such as
+support, confidence, lift, correlation, and collective strength
+are often 'used to determine the interestingness of associa-
+tion patterns. However, many such measures provide con-
+flicting information about the interestingness of a pattern,
+and the best metric to use for a given application domain is
+rarely known. In this paper, we present an overview of var-
+ious measures proposed in the statistics, machine learning
+and data mining literature. We describe several key proper-
+ties one should examine in order to select the right measure
+for a given application domain.
+A comparative study of
+these properties is made using twenty one of the existing
+measures. We show that each measure has different proper-
+ties which make them useful for some application domains,
+but not for others. We also present two scenarios in which
+most of the existing measures agree with each other, namely,
+support-based pruning and table standardization.
+Finally,
+we present an algorithm to select a small set of tables such
+that an expert can select a desirable measure by looking at
+just this small set of tables.
+
+
+Categories and Subject Descriptors
+H.2.8 [Database Management]:
+Database Applications--
+Data mining
+
+
+Keywords
+Interestingness Measure, Contingency tables, Associations
+
+
+1. INTRODUCTION
+The analysis of relationships among variables is a funda-
+mental task at the heart of many data mining problems.
+
+
+
+
+Permission to make digital or hard copies of all or part of this work for
+personal or classroom use is granted without fee provided that copies are
+not made or distributed for profit or commercial advantage and that copies
+bear this notice and the full citation on the first page. To copy otherwise, to
+republish, to post on servers or to redistribute to lists, requires prior specific
+permission and/or a fee.
+SIGKDD '02 Edmonton, Alberta, Canada
+Copyright 2002 ACM 1-58113-567-X/02/0007 ...$5.00.
+For instance, the central task of association rule mining [2]
+is to find sets of binary variables that co-occur together fre-
+quently in a tr~msaction database, while the goal of feature
+selection problems is to identify groups of variables that are
+strongly correlated with each other or with a specific target
+variable.
+Regardless of how the relationships are defined,
+such analysis often requires a suitable metric to capture the
+dependencies among variables. For example, metrics such as
+support, confidence, lift, correlation, and collective strength
+have been used extensively to evaluate the interestingness
+of association patterns [9, 14, 1, 15, 11]. These metrics are
+defined in terms of the frequency counts tabulated in a 2 × 2
+contingency table as shown in Table 1. Unfortunately, many
+such metrics provide conflicting information about the inter-
+estingness of a pattern, and the best metric to use for a given
+application domain is rarely known.
+
+
+
+Table 1:
+and B.
+A 2 x 2 contingency
+table for variables
+A
+
+J B
+A I fll
+110
+fl+
+I Iol
+foe
+fie+
+I1+1
+f+o
+iv
+
+
+
+Table 2: Example
+of contingency
+tables.
+Example
+fll
+flO
+f01
+f00
+E1
+E2
+E3
+E4
+E5
+E6
+E7
+E8
+E9
+EiO
+
+
+In this paper, we show that not all measures are equally
+good at capturing the dependencies among variables. Fur-
+thermore, there is no measure that is consistently better
+than others in all application domains. This is because each
+measure has its own selection bias that justifies the ratio-
+nale for preferring a set of tables over another. To illustrate
+this, consider the ten example contingency tables, E1 - El0,
+
+
+
+
+32
+
+Table 3: Rankings of contingency tables using various interestingness measures.
+Example
+¢
+A
+c~
+Q
+Y
+~
+M
+J
+G
+s
+c
+L
+V
+I
+IS
+PS
+F
+AV
+S
+~
+K
+E1
+E2
+
+
+E5
+E6
+E7
+E8
+E9
+
+
+
+
+given in Table 2. We compute the association in each ex-
+ample by using several well-known measures such as the ¢~
+coefficient1, interest factor, mutual information, J-Measure,
+etc.
+(A complete list and definitions of these metrics are
+given in Table 5.) Each example is then ranked according
+to its measure in decreasing order of magnitude, as shown
+in Table 3. The results of this table indicate that different
+measures can lead to substantially different orderings of con-
+tingency tables. For example, El0 is ranked highest by the
+I measure, but lowest according to the C-coefficient, while
+E3 is ranked lowest by the AV measure but highest accord-
+ing to the IS measure.
+Thus, selecting the right measure
+can be a tricky problem because one has to recognize the
+intrinsic properties of the existing measures.
+There are several properties that need to be considered
+when we analyze a measure. Some of these properties are
+well-known to the data mining community, while others,
+which are equally important, deserve more attention. One
+important property is the sensitivity of a measure to row
+and column scaling operations. We illustrate this with the
+following classic example by Mosteller [12]:
+
+
+
+Table 4: The Grade-Gender
+example.
+Male
+Female
+Male
+Female
+High
+2
+3
+5
+High
+4
+[
+30
+34
+Low
+1
+4
+5
+Low
+2
+40
+42
+3
+7
+10
+6
+L
+70
+76
+
+(a)
+(b)
+
+
+The table above illustrates the relationship between the
+gender of a student and the grade obtained for a particular
+course. Table 4(b) is obtained by doubling the number of
+male students and multiplying the number of female stu-
+dents by a factor of 10. However, on average, the perfor-
+mance of male students for the particular course is no bet-
+ter than it was before, and the same applies to the female
+students. Mosteller concluded that both tables are equiva-
+lent because the underlying association between gender and
+grade should be independent of the relative number of male
+and female students in the samples [12]. Yet, many intu-
+itively appealing measures, such as ¢, mutual information,
+gini index and cosine measure, are sensitive to scaling of
+rows and columns of the table. Although measures that are
+invariant to this operation do exist, e.g., odds ratio~ they
+have other properties that make them unsuitable for many
+applications.
+
+1The C-coefficient is analogous to Pearson's correlation co-
+efficient for continuous variables
+Nevertheless, there are situations in which many of the
+existing measures become consistent with each other. First,
+the measures may become highly correlated when support-
+based pruning is used.
+Support-based pruning also tends
+to eliminate uncorrelated and poorly correlated patterns.
+Second, after standardizing the contingency tables to have
+uniform margins[12, 3], many of the well-known measures
+become equivalent to each other.
+If both situations do not hold, we can find the most appro-
+priate measure by comparing how well each measure agrees
+with the expectations of domain experts. This would require
+the domain experts to manually rank all the patterns or con-
+tingency tables extracted from the data. However, we show
+that it is possible to select a small set of "well-separated"
+contingency tables such that finding the most appropriate
+measure using this small set of tables is almost equivalent
+to finding the best measure using the entire data set.
+The problem of evaluating objective measures used by
+data mining algorithms has attracted considerable atten-
+tion in recent years [7, 6, 10]. For example, Kononenko et
+al.
+[10] have examined the use of different impurity func-
+tions for top-down inductive decision trees while Hilderman
+et al. [7, 6] have conducted extensive studies on the behav-
+ior of various diversity measures for ranking data summaries
+generated by attribute-oriented generalization methods.
+The specific contributions of this paper are:
+
+· We present an overview of various measures proposed
+in the statistics, machine learning and data mining
+literature.
+
+· We describe several key properties one should examine
+in order to select the right measure for a given applica-
+tion domain. A comparative study of these properties
+is made using twenty one of the existing measures.
+
+· We present two scenarios in which most of the exist-
+ing measures agree with each other, namely, support-
+based pruning and table standardization.
+
+· We present an algorithm to select a small set of tables
+such that an expert can select a desirable measure by
+looking at just this small set of tables.
+
+
+2.
+PRELIMINARIES
+Let T(D)
+= (tl,t2,...tn}
+denotes the set of patterns,
+represented as contingency tables, derived from the data
+set D and P is the set of measures available to an analyst.
+Given an interestingness measure M E P, we can compute
+the vector M(T)
+:
+{ml,m2,...
+,
+iN}, which corresponds
+to the values of M for each contingency table that belongs to
+
+
+
+
+33
+
+Table 5: Interestingness Measures for Association Patterns.
+Measure
+
+C-coefficient
+
+Goodman-Kruskal's (A)
+
+Odds ratio (c~)
+
+Yule's Q
+
+Yule's Y
+
+Kappa (~)
+
+
+Mutual Information (M)
+
+J-Measure (J)
+
+
+Gini index (G)
+
+
+
+
+Support (s)
+Confidence (c)
+Laplace (L)
+
+Conviction (V)
+
+Interest (I)
+
+cosine (IS)
+Piatetsky-Shapiro's (PS)
+Certainty factor (F)
+Added Value (AV)
+Collective strength (S)
+
+Jaccard (¢)
+Klosgen (K)
+Formula
+
+·
+P(A)P(B)(1--P(A))(I-P(B))
+maxk P(Aj ,Bk)&~k max~P(Aj ,B~)--maxj P(Aj)-max~P(Bk)
+2--maxj P(As)-maxh:P(Bk)
+P(A,B)P('~,'B)
+P(A,B)P('~,B)
+P(A, B)P ('A'B)-P(A,__B')P(A',]3) = --a--1
+P(A,B)P(AB)TP(A,B)P(A,B)
+a-l-1
+
+~/P(A,B)P~J+~P(A,~)P(~,B.) = ~7~"
+P(A,B)+P(A,B)--P(A)P(B)--P(A)P(B)
+1-P(A)P(B)-P(A)P(B)
+1
+P(Ai'B ")
+E~Ej P(A~,Bj) og~,
+~.
+min(-- ~t P(A.i) logP(Ai.),- ~.~jP(Bj) logP(Bj))
+max (P(A, B)log(Pp~) + P(A'B) log(-~),
+
+P(A, B)log(-~-~) + P(AB) log(Pp~A~ ))
+max (P(A)[P(BIA)2 + P(B[A) 2] + P(~)[P(B[A)2 + p(~[~)2]
+_p(B)2
+_
+p(~)2,
+P(B)[P(AIB)2 + P(A[B) 2] + P(B)[P(A['B) 2 + P(~lB) 21
+_p(A)2 _ p(~)2)
+P(A, B)
+max(P(BIA), P(AIB))
+/
+NP(A,B)+i
+NP(A,B)+I
+max (--~--,
+NP(B)+2 )
+/PAd
+P(B)P('A)',
+maxi, P(AB) '--~-}
+
+
+~/P(A)P(B)
+P(A,
+B)
+-
+P(A)P(B)
+{ P(B]A)--P(B) P(A[B)--P(A)
+max ~
+1-P(B)
+'
+1--P(A)
+)
+max(P(B[A) - P(B), P(AIB) - P(A))
+P(A,B).-i-P(A'B)
+X 1--P(A)P(B)'-PI'A)P(B)
+P(A)P(B)+P(A)P(B)
+1-P(A,B)-P(~)
+P(A,B)
+P(A)q-P(B)--P(A,B)
+~/P(A, B) max(P(BIA) - P(B), P(AIB) - P(A))
+
+
+T(D). M(T) can also be transformed into a ranking vector
+OM(T) = {ol,o2,"" ,ON}, whose components correspond
+to the rank order of each interestingness value, ml. With
+this representation, the similarity between any two measures
+M1 and M2 can be evaluated by a similarity measure be-
+tween vectors OMi (T) and OM2(T).
+If the values within
+two ranking vectors are unique, one can show that Pearson's
+correlation, cosine measure and an inverse of the L2-norm
+are monotonically related. For simplicity, we choose one of
+them, Pearson's correlation, as our similarity measure.
+
+Definition I. [Similarity between Measures] Two mea-
+sures of association, M1 and M2, are similar to each other
+with respect to the data set D if the correlation between
+OM1(T) and OM2(T) is greater than or equal to some posi-
+tive threshold t.
+
+
+3.
+PROPERTIES OF A MEASURE
+In this section, we describe several key properties of a mea-
+sure. While some of these properties have been extensively
+investigated in the data mining literature [13, 8], others are
+not that well-known.
+A complete listing of the measures
+examined in this study is given in Table 5.
+
+3.1
+Desired Properties of a Measure
+Piatetsky-Shapiro [13] has proposed three key properties
+a good measure M should satisfy:
+PI: M = 0 if A and B are statistically independent;
+
+P2: M monotonically increases with P(A, B) when P(A)
+and P(B) remain the same;
+
+P3: M monotonically decreases with P(A) (or P(B)) when
+the rest of the parameters (P(A, B) and P(B) or P(A))
+remain unchanged.
+
+These properties axe well-known and have been extended by
+many authors [8, 6]. Table 6 illustrates the extent to which
+each of the existing measure satisfies the above properties.
+
+3.2
+Other Properties of a Measure
+There are other properties that deserve further investiga-
+tion. These properties can be described using a matrix for-
+mulation. In this formulation, every 2 × 2 contingency table
+is represented as a contingency matrix, M = [fllfxo; folfoo]
+while every interestingness measure is a matrix operator, O,
+that maps the matrix M into a scalar value, k, i.e., OM = k.
+For instance, t:he ¢ coefficient is equivalent to a normal-
+ized form of the determinant operator, where Det(M) =
+fllfoo-fmflo. Thus, statistical independence is represented
+by a singular matrix M whose determinant is equal to zero.
+The underlying properties of a measure can be analyzed by
+performing various operations on the contingency tables as
+depicted in Figure 1.
+
+
+
+
+34
+
+Table
+6:
+Properties
+of
+interestingness
+measures.
+Note
+that
+none
+of
+he
+measures
+satisfies
+all
+the
+properties.
+Symbol
+Measure
+~b
+~b-coefiicient
+A
+Goodman-Kruskal's
+a
+odds ratio
+Q
+Yule's Q
+Y
+Yule's Y
+Cohen's
+M
+Mutual Information
+J
+J-Measure
+G
+Gini index
+s
+Support
+c
+Confidence
+L
+Laplace
+V
+Conviction
+I
+Interest
+IS
+Cosine
+~S
+Piatetsky-Shapiro's
+~V
+Certainty factor
+Added value
+S
+Collective strength
+Jaccard
+K
+Klosgen's
+
+where: Pi:
+P2:
+P3:
+O1:
+O2:
+O3:
+O3':
+04:
+Yes* :
+No*:
+No**:
+Range
+P1
+P2
+P3
+O1
+[ 02
+03
+O3' [ 04
+-1...0...1
+Yes
+Yes
+Yes
+Yes
+No
+Yes
+Yes [ No
+0... 1
+Yes
+No
+No
+Yes
+No
+No*
+Yes
+No
+0. · · 1 · · ·~
+Yes*
+Yes
+Yes
+Yes
+Yes
+Yes*
+Yes
+No
+-1. · ·0. · · 1
+Yes
+Yes
+Yes
+Yes
+Yes
+Yes
+Yes [ No
+- 1 · · ·0. - · 1
+Yes
+Yes
+Yes
+Yes
+Yes
+Yes
+Yes
+No
+- 1.. ·0. ·. 1
+Yes
+Yes
+Yes
+Yes
+No
+No
+Yes
+No
+0... 1
+Yes
+Yes
+Yes
+No**
+No
+No*
+Yes
+No
+0... 1
+Yes
+No
+No
+No**
+No
+No
+No
+No
+0... 1
+Yes
+No
+No
+No**
+No
+No*
+Yes
+No
+0--. 1
+No
+Yes
+No
+Yes
+No
+No
+No
+No
+0... 1
+No
+Yes
+No
+No**
+No
+No
+No
+Yes
+0"- 1
+No
+Yes
+No
+No**
+No
+No
+No
+No
+0.5-. · 1 · · ·c~
+No
+Yes
+No
+No**
+No
+No
+Yes
+No
+0. · · 1. · ·c~
+Yes*
+Yes
+Yes
+Yes
+No
+No
+No
+No
+0..- P~,B)...
+1
+No
+Yes
+Yes
+Yes
+No
+No
+No ' Yes
+-0.25... 0. · ·0.25
+Yes
+Yes
+Yes
+Yes
+No
+Yes
+Yes
+No
+-1... 0... 1
+Yes
+Yes
+Yes
+No**
+No
+No
+Yes
+No
+-0.5. · ·0..- 1
+Yes
+Yes
+Yes
+No**
+No
+No
+No
+No
+0. · · 1.. - c~
+No
+Yes
+Yes
+Yes
+No
+Yes*
+Yes
+No
+0..- 1
+No
+Yes
+Yes
+Yes
+No
+No
+No
+Yes
+(~a -
+1)1/212 -
+~ -
+~3 ]''' 0... 373
+Yes
+Yes
+Yes
+No**
+No
+No
+No
+No
+
+O(M) = 0 if det(M) = O, i.e., whenever A and B are statistically independent.
+O(M2) > O(Mi) if M2 = Mi+
+[k - k; -k k].
+O(M2) < O(Mz) if M2 = Mz-+ [0 k; 0 - k] or M2
+= Mz
++ [0 0; k
+-
+k].
+Property 1: Symmetry under variable permutation.
+Property 2: Row and Column scaling invariance.
+Property 3: Antisymmetry under row or column permutation.
+Property 4: Inversion invariance.
+Property 5: Null invariance.
+Yes if measure is normalized.
+Symmetry under row or column permutation.
+No unless the measure is symmetrized by taking max(M(A, B), M(B, A)).
+
+
+
+I~
+I p
+Iq
+J,
+~,1
+B
+I p
+I
+,
+I
+I
+r
+I
+s
+I
+Vl
+~
+I q
+I s
+I
+
+(a) Variable Permutation Operation
+
+
+
+~
+t
+p
+]
+q
+t r-----~ ] A ~k3k,ptk4k,ql
+I
+r
+I
+s
+I
+~
+Ik~k~rlLk=s]
+(b) Row & Cotumn Scaling Operation
+
+
+
+
+I Z
+[
+r
+[
+s
+[
+~
+p
+q
+(C) Row & Column Permutation Operation
+
+
+
+rA,.....
+l'l'l'l
+[
+Z
+I
+,
+I
+,
+I
+~
+q
+p
+(d) Inversio¢lOperation
+
+
+
+
+Z
+I
+r
+I
+s
+I
+Z
+r
+[s÷k
+(a) Null Addition Operation
+
+
+
+Figure
+1:
+Operations
+on
+a contingency
+table.
+
+
+
+Property 1. [Symmetry
+Under
+Variable
+Permutation]
+A measure O is symmetric under variable permutation (Fig-
+ure l(a)), A ~-~ B, if O(M T) = O(M)
+for all contingency
+matrices M. Otherwise, it is called an asymmetric measure.
+
+
+
+The asymmetric measures investigated in this study include
+confidence, laplace, J-Measure, conviction, added value, gini
+index, mutual information, and Klosgen's evaluation func-
+tion. Examples of symmetric measures are C-coefficient, co-
+sine (IS), interest factor (I) and odds ratio (c~). In prac-
+tice, asymmetric measures are used for implication rules,
+where there is a need to distinguish between the strength of
+the rule A ~
+B from B ~
+A.
+Since every contingency
+matrix produces two values when we apply an asymmetric
+measure, we use the maximum of these two values to be its
+overall value when we compare the properties of symmetric
+and asymmetric measures.
+
+Property 2. [Row/Column
+Scaling
+Invariance]
+Let
+R = C = [kz 0; 0 k2] be a 2 x 2 square matrix, where kz and
+k2 are positive constants. The product R x M corresponds
+to scaling the first row of matrix M by kl and the second
+row by ks, while the product M x C corresponds to scaling
+the first column of M by kz and the second column by ks
+(Figure l(b)).
+A measure O is invariant under row and
+column scaling if O(RM)
+= O(M)
+and O(MC)
+= O(M)
+for all contingency matrices, M.
+
+Odds ratio (a) along with Yule's Q and Y coefficients are the
+only measures in Table 6 that are invariant under the row
+and column scaling operations.
+This property is useful for
+data sets containing nominal variables such as Mosteller's
+trade-gender example in Section 1.
+
+Property 3. [Antisymmetry
+Under
+Row/Column
+Per-
+mutation]
+Let S =
+[0 1; 1 0] be a 2 x 2 permutation
+matrix. A normalized 2 measure O is antisymmetric under
+
+~A measure is normalized if its value ranges between -1 and
+
+
+
+
+35
+
+the row permutation operation if O(SM) = -O(M), and
+antisymmetric under the column permutation operation if
+O(MS) = -O(M) for all contingency matrices M (Figure
+1(c))
+
+The C-coefficient, PS, Q and Y are examples of antisymmet-
+tic measures under the row and column permutation opera-
+tions while mutual information and gini index are examples
+of symmetric measures. Asymmetric measures under this
+operation include support, confidence, IS and interest fac-
+tor. Measures that are symmetric under the row and column
+permutation operations do not distinguish between positive
+and negative correlations of a table. One should be careful
+when using them to evaluate the interestingness of a pattern.
+
+Property 4. [Inversion Invariance]
+Let S = [01; 10]
+be a 2 × 2 permutation matrix. A measure O is invariant
+under the inversion operation (Figure l(d)) if O(SMS) =
+O(M) for all contingency matrices M.
+
+Inversion is a special case of the row/column permuta-
+tion where both rows and columns are swapped simultane-
+ously. We can think of the inversion operation as flipping
+the O's (absence) to become l's (presence), and vice-versa.
+This property allows us to distinguish between symmetric
+binary measures, which are invariant under the inversion
+operation, from asymmetric binary measures. Examples of
+symmetric binary measures include ¢, odds ratio, a and col-
+lective strength, while the examples for asymmetric binary
+measures include I, IS, PS and Jaccard measure.
+
+A
+B
+C
+D
+E
+F
+
+11IH11
+(a)
+(b)
+(c)
+
+
+
+Figure 2: Comparison between the C-coefficients for 3
+pairs of vectors.
+The ¢ values for (a), (b) and (c) are
+-0.1667, -0.1667 and 0.1667, respectively.
+
+We illustrate the importance of inversion invariance with
+an example depicted in Figure 2. In this figure, each column
+vector is a vector of transactions for a particular item. It is
+intuitively clear that the first pair of vectors, A and B, have
+very little association between them.
+The second pair of
+vectors, C and D, are inverted versions of vectors A and B.
+Despite the fact that both C and D co-occur together more
+frequently, their ¢ coefficient are still the same as before.
+In fact, it is smaller than the C-coefficient of the third pair
+of vectors, E and F, for which E = C and F = B. This
+example demonstrates the drawback of using C-coefficient
+and other symmetric binary measures for applications that
+require unequal treatments of the binary values of a variable,
+such as market basket analysis [5].
+Other matrix operations, such as matrix addition, can also
+be applied to a contingency matrix. For example, the second
+
++1. An unnormalized measure U that ranges between 0 and
++oo can be normalized via transformation functions such as
+U-1
+tan -1 [o~U)
+U+i
+or
+¢/2
+·
+property, P2, proposed by Piatetsky-Shapiro is equivalent
+to adding the matrix M with [k - k; -k k], while the
+third property, P3, is equivalent to adding [0 k; 0 - k] or
+[00; k -k]toNi.
+
+Property 5. [Null Invariance]
+A binary measure of
+association is null-invariant if O(M + C) = O(M) where
+C = [00; 0 k] and k is a positive constant.
+
+For binary variables, this operation corresponds to adding
+more records that do not contain the two variables under
+consideration, as shown in Figure l(e). Some of the null-
+invariant measures include IS (cosine) and the Jaccard simi-
+larity measure, ¢. This property is useful for domains having
+sparse data sets, where co-presence of items is more impor-
+tant than co-absence.
+
+3.3
+Summary
+The discussion in this section suggests that there is no
+measure that is better than others in all application do-
+mains. This is because different measures have different in-
+trinsic properties, some of which may be desirable for certain
+applications but not for others. Thus, in order to find the
+right measure, one must match the desired properties of an
+application against the properties of the existing measures.
+
+4.
+EFFECT OF SUPPORT-BASED PRUNING
+Support is a widely-used measure in association rule min-
+ing because it represents the statistical significance of a pat-
+tern.
+Due to its anti-monotonicity property, the support
+measure has been used extensively to develop efficient al-
+gorithms for mining such patterns.
+We now describe two
+additional consequences of using the support measure.
+
+4.1
+Equivalence of Measures under Support
+Constraints
+First, we show that many of the measures are highly cor-
+related with each other under certain support constraints.
+To illustrate this, we randomly generated a synthetic data
+set that contains 10,000 contingency tables and ranked the
+tables according to all the available measures. Using Defi-
+nition 1, we can compute the similarity between every pair
+of measures for the synthetic data set.
+Figure 3 depicts
+the pair-wise similarity when various support bounds are
+imposed. The dark cells indicate that the similarity, i.e.,
+correlation, between the two measures is greater than 0.85
+while the lighter cells indicate otherwise. We have re-ordered
+the similarity matrix using the reverse Cuthill-McKee algo-
+rithm [4] so that the darker cells are moved as close as possi-
+ble to the main diagonal. Our results show that by imposing
+a tighter bound on the support of the patterns, many of the
+measures become highly correlated with each other. This
+is shown by the growing region of dark cells as the support
+bounds are tightened. In fact, the majority of the pair-wise
+correlation between measures is greater them 0.85 when the
+support values axe between 0.5% and 30% (the bottom-right
+figure), which is a quite reasonable range of support values
+for many practical domains.
+
+4.2
+Elimination of Poorly Correlated Tables
+using Support-based Pruning
+Many association rule algorithms allow an analyst to spec-
+ify a minimum support threshold to prune out the low-
+support patterns.
+Since the choice of minimum support
+
+
+
+
+36
+
+All Pairs
+0.010 <= support <= 1.0
+0.050 <= support <= 1.0
+
+
+
+
+1 2 3 4 5 6 7 8 9 1011121314151817181~1
+
+
+0.005 <= support <= 0.5
+I 2 3 4 5 6 7 8 91G1112131415161"~18192021
+
+
+O.OLO <= support <= 0.5
+1 2 3 4 5 6 7 8 9101112131415161718192G~1
+
+
+0.050 <= support <= 0.5
+
+
+
+
+1 2 3 4 5 8 7 8 9101112131415161TI81~1
+
+
+0.005 <= support <= 0,3
+1 2 3 4 5 6 7 8 9101112131415161718192021
+
+
+O.OLO<= support<- 0.3
+1 2 3 4 5 8 7 8 91011121314151617181@2(~1
+
+
+0.050 <= support <= 0.3
+
+
+
+
+1 2 3 4 5 6 7 8 9 101112131415181718192CI21
+1 2 3 4 5 6 7 8 910111213141,5161TI8'1~21
+1 2 3 4 5 6 7 8 910111213141516'ITI81g2(~21
+
+
+
+Figure
+3: Similarity between
+measures
+at various ranges of support
+values. Note that the column
+labels are the same
+
+as the row labels.
+
+
+
+threshold is somewhat arbitrary, we need to ensure that such
+a pruning strategy will not inadvertently remove many of
+the highly correlated patterns. To study the effect of sup-
+port pruning, we examine the distribution of ¢ values for the
+contingency tables that are removed when various support
+thresholds are imposed on the synthetic data set. We use the
+c-coefficient because it resembles Pearson's correlation coef-
+ficient for continuous variables. For this analysis, we impose
+the minimum support threshold on fll and the maximum
+support threshold on both fl+ and f+l. Without support
+constraints, the C-coefficients for the entire tables are nor-
+rnally distributed around ~b= 0, as depicted in the top-left
+graph of figures 4(a) and (b). When a maximum support
+threshold is imposed, the ¢ values of the eliminated tables
+follow a bell-shaped distribution, as shown in figure 4(a).
+In other words, having a maximum support threshold will
+eliminate uncorrelated, positively correlated and negatively
+correlated tables at equal proportions.
+On the other hand, if a lower bound of support is specified
+(Figure 4(b)), most of the contingency tables removed are
+either uncorrelated (¢ = 0) or negatively correlated (¢ <
+0). This result makes sense because whenever a contingency
+table has a low support, the values of at least one of fl0,
+f01 or f00 must be relatively high to compensate for the low
+frequency count in ffll. This would correspond to poorly or
+negatively correlated contingency tables. The result is also
+consistent with the property P2 which states that a measure
+should increase as the support count increases.
+Thus, support pruning is a viable technique as long as only
+positively correlated tables are of interest to the data min-
+ing application. One such situation arises in market basket
+analysis where such a pruning strategy is used extensively.
+
+
+5.
+TABLE STANDARDIZATION
+Standardization is a widely-used technique in statistics,
+political science and social science studies to harldle contin-
+gency tables that have non-uniform marginals. Mosteller
+suggested that standardization is needed to get a better
+idea of the underlying association between variables [12],
+by transforming an existing table so that their marginals
+are equal, i.e., f~+ = f~+
+=
+f~-i
+=
+f~-o
+=
+N/2
+(see Ta,-
+ble 7). A standardized table is useful because it provides a
+visual depiction of how the joint distributionof two variables
+would look like aster eliminating biases due to non-uniform
+marginals.
+
+
+Table 7: Table Standardization.
+
+!
+B
+B
+B
+B
+A
+fll
+flo !'~'-
+A
+.f{l
+ff~o
+/oi
+foo 'fo+
+----~
+~
+/31
+.fg*o
+f+l
+f+O T
+f~l
+f~o
+
+(a)
+I~+
+
+N
+
+
+B
+B
+A
+x
+N[2 - x
+,
+
+N/2
+NT~
+
+(b)
+
+Mosteller also gave the followingiterative procedure, which
+is called the Iterative Proportional Fitting algorithm or IPF [3],
+
+
+
+
+37
+
+1000
+
+
+BOO
+
+
+
+
+4¢0
+
+
+2¢0
+
+h
+0 '
+-1
+.-O5
+o
+0.5
+1
+.-o5
+o
+o.5
+*
+¢
+
+
+con~oer¢~/laU~vath.gOod >0T
+Cor~cy tau~ wrm~¢¢,o¢t>0S
+1
+-t
+-0,5
+0
+0.5
+$
+3OO
+
+
+
+
+O 1
+Cont~gen¢t tablemv~ ouppo~t<0.01
+
+
+
+
+-0~
+0
+015
+
+
+
+comtt~/~
+~th=uppcxt~O.os
+
+
+
+
+-~
+..0.5
+0
+05
+1
+-1
+-05
+0
+0.5
+1
+-1
+-0,5
+0
+0.5
+1
+-1
+-0.5
+0
+0,5
+
+
+
+
+(a) Distribution of C-coefficient for contingency
+tables that are removed by applying a maximum
+support threshold.
+(b) Distribution of C-coefficient for contingency
+tables that are removed by applying a minimum
+support threshold..
+
+
+Figure 4: Effect of Support
+Pruning
+on Contingency
+tables.
+
+
+
+for adjusting the cell frequencies of a table until the desired
+margins, ff~+ and ff_~j, are obtained:
+
+
+Row scaling:
+) =
+×
+(1)
+
+
+
+Column scaling :
+fi(;+1) = ,f!~)~3 x f-~
+f(k)
+(2)
++j
+
+An example of the IPF standardization procedure is demon-
+strated in Figure 5.
+
+
+k=O
+!5
+10
+25
+35
+40
+75
+]
+
+50
+50
+100 I
+Odginal Table
+
+
+k=3
+
+28
+22
+I 50
+22
+28 1 50
+I
+50
+50 pOOl
+
+l
+k=4
+
+28
+22
+50
+I
+22
+28
+50
+
+50
+SO
+1001
+k=l
+
+30. .
+2 °
+50
+23
+27
+50
+t s3 , 47 I~001
+
+1
+k=2
+
+1
+28
+2.1 12ol
+22
+29
+J 50
+50
+50
+1100
+
+
+
+
+k=5
+
+28
+22 1 5ol
+22
+28
+I 50
+50 ' 50 '1lOO
+Standardized
+Table
+
+
+Figure 5: Example of IPF standardization.
+
+
+Interestingly, the consequence of doing standardization
+goes beyond ensuring uniform margins in a contingency ta-
+ble. More importantly, if we apply different measures from
+Table 5 on the standardized, positively-correlated tables,
+their rankings become identical. To the best of our knowl-
+edge, this fact has not been observed by anyone else before.
+As an illustration, Table 8 shows the results of ranking the
+standardized contingency tables for each example given in
+Table 3. Observe that the rankings are identical for all the
+measures. This observation can be explained in the following
+way. After standardization, the contingency matrix has the
+following form [x y; y x], where x = ff~l and y = N/2 - x.
+The rankings are the same because many measures of as-
+sociation (specifically, all 21 considered in this paper) are
+monotonically increasing functions of x when applied to the
+standardized, positively-correlated tables. We illustrate this
+with the following example.
+
+Example
+1. The tit-coefficient of a standardized table is:
+
+x 2 - (N/2
+- x) 2
+4x
+q~.
+.
+.
+.
+1
+(3)
+(N/2) 2
+N
+
+For a fixed N, ¢ is a monotonically increasing function of
+x. Similarly, we can show that other measures such as o~, I,
+IS,
+PS,
+etc., are also monotonically increasing functions of
+of x. The only exceptions to this are ~, gini index, mutual
+information, J-measure, and Klosgen's K, which are con-
+vex functions of x. Nevertheless, these measures are mono-
+tonically increa~ing when we consider only the values of x
+between N/4 and N/2, which correspond to non-negatively
+correlated tables. Since the examples given in Table 3 are
+positively-correlated, all 21 measures given in this paper pro-
+duce identical ordering for their standardized tables.
+
+Note that since each iterative step in IPF corresponds to
+either a row or column scaling operation, odds ratio is pre-
+served throughout the transformation (Table 6). In other
+words, the final rankings on the standardized tables for any
+measure are consistent with the rankings produced by odds
+ratio on the original tables.
+For this reason, a casual ob-
+server may think that odds ratio is perhaps the best mea-
+sure to use. This is not true because there are other ways
+to standardize a contingency table. To illustrate other stan-
+dardization schemes, we first show how to obtain the exact
+
+
+
+
+38
+
+Table S: Rankings of contingency tables after IPF standardization.
+Example
+q5
+A
+~
+Q
+Y
+,¢
+M
+J
+G
+s
+c
+L
+V
+I
+IS
+PS
+F
+AV
+S
+~
+K
+E1
+E2
+E3
+E4
+E5
+E6
+E7
+E8
+E9
+
+
+
+
+solutions for f~s using a direct approach. If we fix the stan-
+dardized table to have equal margins, this forces the f~s to
+satisfy the following equations:
+
+1;1
+.
+.
+.
+.
+=/do;
+110=f01;
+flx+f~0=N/2
+(4)
+
+Since there are only three equations in (4), we have the
+freedom of choosing a fourth equation that will provide a
+unique solution to the table standardization problem.
+In
+Mosteller's approach, the fourth equation is used to ensure
+that the odds ratio of the original table is the same as the
+odds ratio of the standardized table. This leads to the fol-
+lowing conservation equation:
+
+fHfoo
+=
+f~'t/d*o
+fmfol
+fx*of~x
+(5)
+
+After combining equations 4 and 5, the following solutions
+are obtained:
+
+.
+N~0
+flt
+=
+f~o = 2(vf-~-7~-_F 'X/~"l")
+(6)
+
+f;o =
+f~l =
+Nvff~-f~
+2(v07?1~ + J?7;-~7)
+(7)
+
+The above analysis suggests the possibility of using other
+standardization schemes for preserving measures besides the
+odds ratio. For example, the fourth equation could be cho-
+sen to preserve the invariance of IS (cosine measure). This
+would lead to the following conservation equation:
+
+fli
+=
+f;1
+(8)
+
+~(fl, -F flo)(f11 -F fox)
+~/(f;1 --bfl*o)(ftx -F f~l)
+
+whose solutions are:
+
+f~l = fo*o =
+N fH
+(9)
+2v/(flt + flo)(fll + fOX)
+
+Y;o = f~x = N ~(f~x + flo)(f~ + fo~) - fix
+(10)
+2
+V/(fll "4-fxo)(fxx + fol)
+
+Thus, each standardization scheme is closely tied to a spe-
+cific invariant measure. If IPF standardization is natural for
+a given application, then odds ratio is the right measure to
+use. In other applications, a standardization scheme that
+preserves some other measure may be more appropriate.
+
+
+6.
+MEASURE
+SELECTION
+BASED ON RANK-
+
+INGS BY EXPERTS
+Although the preceding sections describe two scenarios in
+which many of the measures become consistent with each
+other, such scenarios may not hold for all application do-
+mains. For example, support-based pruning may not be use*
+ful for domains containing nominal variables, while in other
+cases, one may not know the exact standardization scheme
+to follow. For such applications, an alternative approach is
+needed to find the best measure.
+In this section, we describe a novel approach for finding
+the right measure based on the relative rankings provided by
+domain experts. Ideally, we would like the experts to rank
+all the contingency tables derived from the data. This would
+allow us to identify the most appropriate measure, consistent
+with the expectations of the experts. Since manual ordering
+of the contingency tables can be quite a laborious task, it
+is more desirable to provide a smaller set of contingency
+tables to the experts for ranking. We investigate two table
+selection algorithms in this paper:
+
+· RANDOM: randomly select k out of the overall N ta-
+bles and present them to the experts.
+
+· DISJOINT: select k tables that are "furthest" apart
+according to their average rankings and would produce
+the largest amount of ranking conflicts, i.e., large stan-
+dard deviation in their ranking vector (see Table 9). A
+detailed explmmtion of this algorithm is given in [16].
+
+
+
+Table 9: The DISJOINT algorithm.
+Input: T: a set of N contingency tables,
+P: measures of association,
+k: the sample size,
+p: oversampling parameter
+
+Output: Z: a set of k contingency tables.
+
+1. T' ~-- randomly select p x k tables from T.
+2. For each contingency table t E T',
+2a. VMi E P, compute the rankings OMi(t).
+2b. Compute mean and standard deviation of rankings:
+~(t) = ~OM~(t)/IPI
+,~(t) = ~C~(OM,(t)
+--#(t))2/(IPI-
+t)
+3. Z = {tm} andT = T - {tm}, where tm = argmaxta(t)
+4. For each (ti,tj) E T'
+4a. VMk E P, Ak(ti, tj) = OM~(ti) -- OMk(tj)
+4b. tu(ti,tj) = E~ Ak(ti, ti)/lP[
+4c. a(ti,tj) = X[~k(Ak(ti,tj) --Iz(t~,tj))z/(pPl- 1)
+4d. d(t~,t3) = #(tl,tj) + a(tl,tj)
+5. while IZI < k
+3a. Find t E T' that maximizes ~i d(t, tj) Vtj e Z
+3b. Z=ZU{t}
+andT'=T'-
+(tf
+
+The DISJOINT algorithm can be quite expensive because
+we need to compute the distance between all N×(N--D pairs
+2
+
+
+
+
+39
+
+of tables. To avoid this problem, we introduce an oversam-
+pling parameter, p, where 1 < p << N/k, so that instead
+of sampling from the entire N tables, we select the k ta-
+bles from a sub-population that contains only k x p tables.
+This reduces the complexity of the algorithm significantly
+kpx(kp-z) distance computations.
+to
+2
+
+
+All Contingency Tables
+
+
+
+
+~
+select k
+tables
+
+
+
+
+~7
+Rank tables according
+to vadous measures
+Subset of Contingency
+Tables
+r
+
+TI' ~
+Preaent~To
+
+
+Exp~'~
+
+
+
+
+·
+Rank tables according
+to various measures
+
+
+
+
+Sv
+Compute similadty
+between different
+me~ures
+Compute slmtiadty
+between different
+measures
+
+
+
+
+l
+I
+
+Figure 6: Sampling contingency tables.
+
+
+To evaluate the effectiveness of our table selection algo-
+rithms, we use the approach shown in Figure 6. First, each
+contingency table is ranked according to the available mea-
+sures.
+The similarity between various measures are then
+computed using Pearson's correlation. A good table selec-
+tion scheme should minimize the difference between the sim-
+ilarity matrix computed from the samples, Ss, with the sim-
+ilarity matrix computed from the entire set of contingency
+tables, ST. The following distance function is used to deter-
+mine the difference between two similarity matrices:
+
+D(S~,ST) =ma~xlST(i,j)--Ss(i,j)[
+(11)
+$,3
+
+
+We have conducted our experiments using the data sets
+shown in Table 10. For each data set, we randomly sample
+100,000 pairs of binary variablesa as our initial set of contin-
+gency tables. We then apply the RANDOM and DISJOINT
+table selection algorithms on each data set and compare the
+distance function D at various sample sizes k.
+For each
+value of k, we repeat the procedure 20 times and compute
+the average distance D. Figure 7 shows the relationships
+between the average distance D and sample size k for the
+re0 data set.
+As expected, our results indicate that the
+distance function D decreases with increasing sample size,
+mainly because the larger the sample size, the more similar
+it is to the entire data set. Furthermore, the DISJOINT
+algorithm does a substantially better job than random sam-
+pling in terms of choosing the right tables to be presented to
+the domain experts. This is because it tends to select tables
+
+3Only the frequent variables are considered, i.e., those
+with support greater than a nser-specified minimum sup-
+port threshold.
+0.9
+
+
+0.8
+
+
+0.7
+
+
+0.8
+
+d
+0,5
+
+
+~
+0.4
+
+
+
+0.3
+
+
+
+0.2
+
+
+
+0.1
+,
+,
+,
+,
+,
+,
+,
+,
+,
+
+\
+I
+I
+..... DISJOINT(p=10) i
+i,~, DISJOINTIw-2o) I
+
+
+
+
+\
+.
+
+
+
+
+i
+i
+i
+i
+i
+i
+i
+I
+i
+10
+20
+30
+40
+50
+60
+70
+80
+90
+100
+
+Sample size, k
+
+
+
+Figure
+7:
+Average distance between similarity matrix
+computed from the samples (Ss) and the similarity ma-
+trix computed from the entire set of contingency tables
+(ST) for the re0 data set.
+
+
+that are furthest apart in terms of their relative rankings
+and tables that create a huge amount of ranking conflicts.
+Even at k = 20, there is little difference (D < 0.15) between
+the similarity matrices Ss and ST.
+
+
+Table 10: :Data sets used in our experiments.
+L._N_~_.~......~J.._De.scriptio.....___n
+Number of Variables
+~
+~ t e r ~ ~
+2886
+LA-Times articles
+31472
+Retail data
+14462
+Stock market data
+976
+Web data
+6664
+Survey data
+59
+
+
+We complement our evaluation above by showing that the
+ordering of measures produced by the DISJOINT algorithm
+on even a small sample of 20 tables is quite consistent with
+the ordering of measures if the entire tables are ranked by
+the domain experts. To do this, we assume that the rankings
+provided by the experts is identical to the rankings produced
+by one of the measures, say, the C-coefficient. Next, we re-
+move ¢ from the set of measures M considered by the DIS-
+JOINT algorithm and repeat the experiments above with
+k = 20 and p = 10. We compare the best measure selected
+by our algorithm against the best measure selected when the
+entire set of contingency tables is available. The results are
+depicted in Figure 8. In nearly all cases, the difference in
+the ranking of a measure between the two (all tables versus
+a sample of 20 tables) is 0 or 1.
+
+
+7.
+CONCLUSIONS
+In this paper, we have described several key properties one
+should consider before deciding what is the right measure to
+use for a given application domain. We show that there is no
+measure that is consistently better than others in all cases.
+Nevertheless, there are situations in which many of these
+measures are highly correlated with each other, e.g., when
+support-based pruning or table standardization are used.
+If both situations do not hold, one should select the best
+
+
+
+
+40
+
+All tableg
+7
+
+k:20
+6
+6
+
+
+
+
+All tlblee
+10
+k=2,5
+13
+K :~I:AV
+K
+:7
+L
+IS 1~2:9
+:
+~" M
+J
+1G3 ~
+V j
+4
+10 11
+9
+1,5 2
+20
+5
+1
+,5 14
+,5 1,5 13 10 11 12 17 18
+2
+1,5 19
+4
+2`5 3
+1
+9
+,5 14
+
+
+
+
+2
+5
+3
+6
+16 18 17 13 14
+20 12 11 1,5
+2
+8
+3
+,5 16 18 17 10 11 19
+1 20
+9
+4
+12
+
+
+
+
+AIItablee
+12 11
+3
+7
+14 16
+18
+1
+20
+5
+,5 15 13
+
+k=20
+13 13
+2
+77
+10
+9
+17 16 18
+1
+4
+19
+3
+20
+6
+,5
+8
+13 11
+
+
+
+
+AIItableo
+9
+8
+1
+10
+3
+4
+11
+14 1,2 13
+20 16 18
+7
+
+k=20
+7
+7
+2
+10
+4
+3
+,5 11 17 18 12 13 19
+20 1,5 14 1,5 7
+
+
+
+JS.,Com
+"Y
+KP~FAVK
+~ L IS ~ ~ i ~ M J G ~ VI
+AIItmblo$
+9
+8
+3
+14 13 16 11
+16
+1
+20
+"5
+"5 12 10 1,5
+
+k~20
+7
+7
+3
+15 14 13 11 17 18
+1
+4
+19
+20
+6
+,5 12
+7
+15
+
+
+
+Ic.....
+Q v ~s~Avx
+~ L,s~,5.6s
+~ M J G 6" vii
+AIItable~0
+10 10
+,5
+4
+tl
+13 12 14
+20 19 18 17 t0
+
+k=20
+,5
+,5
+3
+2
+9
+5
+4
+11 13 12 14 1,5 16
+1
+17 18 19 20
+
+
+All bllble$: R,nklngs
+when roll contlngen©y tablea iro ordered.
+
+ka2,5 : Ranklnge when 20 of the selected tllbleo ,re ordered.
+
+
+
+
+Figure 8: Ordering of measures based on contingency
+tables selected by the DISJOINT algorithm.
+
+
+measure by matching the properties of the existing measures
+against the expectations of the domain experts. We have
+presented an algorithm to select a small set of tables such
+that an expert can find the most appropriate measure by
+looking at just this small set of tables.
+This work can be extended to k-way contingency tables.
+However, understanding the underlying association within
+a k-way table requires techniques to decompose the overall
+association into partial associations between the constituent
+variables. Log-linear models provide a good alternative for
+doing this. More research is also needed to understand the
+association between variables of mixed data types. A stan-
+dard way to do this is by transforming the variables into
+similar data types (e.g., by discretizing continuous variables
+or reducing the multiple categorical levels into binary levels)
+before applying the appropriate measure of association.
+
+8.
+ACKNOWLEDGMENTS
+This work was partially supported by NSF grant # ACI-
+9982274, DOE contract # DOE/LLNL W-7045-ENG-48 and
+by Army High Performance Computing Research Center
+contract number DAAD19-01-2-0014. The content of this
+work does not necessarily reflect the position or policy of the
+government and no official endorsement should be inferred.
+Access to computing facilities was provided by AHPCRC
+and the Minnesota Supercomputing Institute.
+
+9.
+REFERENCES
+[1] C. Aggarwal and P. Yu. A new framework for itemset
+generation. In Proc. of the 17th Symposium on
+Principles of Database Systems, pages 18-24, Seattle,
+WA, June 1998.
+[2] R. Agrawal, T. Imielinski, and A. Swami. Mining
+association rules between sets of items in large
+databases. In Proe. of 1993 ACM-SIGMOD Int. Conf.
+on Management of Data, pages 207-216, Washington,
+D.C., May 1993.
+[3] A. Agresti. Categorical Data Analysis. John Wiley &
+Sons, 1990.
+[4] A. George and W. Liu. Computer Solution of Large
+Sparse Positive Definite Systems. Prentice-Hall series
+in computational mathematics, 1981.
+[5] D. Hand, H. Mannila, and P. Smyth. Principles of
+Data Mining. MIT Press, 2001.
+[6] R. Hilderman and H. Hamilton. Evaluation of
+interestingness measures for ranking discovered
+knowledge. In Proc. of the 5th Pacific-Asia Conference
+on Knowledge Discovery and Data Mining
+(PAKDD'01), pages 247-259, Hong Kong, April 2001.
+[7] R. Hilderman, H. Hamilton, and B. Barber. Ranking
+the interestingness of summaries from data mining
+systems. In Proc. of the 12th International Florida
+Artificial Intelligence Research Symposium
+(FLAIRS'99), pages 100-106, Orlando, FL, May 1999.
+[8] M. Kamber and R. Shinghal. Evaluating the
+interestingness of characteristic rules. In Proc. off the
+Second Int'l Conference on Knowledge Discovery and
+Data Mining, pages 263-266, Portland, Oregon, 1996.
+[9] M. Klemettinen, H. Mannila, P. Ronkainen,
+T. Toivonen, and A. Verkamo. Finding interesting
+rules from large sets of discovered association rules. In
+Proc. off the 3rd Int'l Conf. on Information and
+Knowledge Management (CIKM'94)., pages 401-407,
+Gaithersburg, Maryland, November 1994.
+[10] I. Kononenko. On biases in estimating multi-valued
+attributes. In Proc. off the Fourteenth Int'l Joint Conf.
+on Artificial Intelligence (IJCAI'95), pages 1034-1040,
+Montreal, Canada, 1995.
+[11] B. Liu, W. Hsu, and Y. Ma. Pruning and summarizing
+the discovered associations. In Proc. off the Fifth Int'l
+Conference on Knowledge Discovery and Data Mining,
+pages 125-134, San Diego, CA, August 1999.
+[12] F. Mosteller. Association and estimation in
+contingency tables. Journal offthe American Statistical
+Association, 63:1-28, 1968.
+[13] G. Piatetsky-Shapiro. Discovery, analysis and
+presentation of strong rules. In G. Piatetsky-Shapiro
+and W. Frawley, editors, Knowledge Discovery in
+Databases, pages 2299-248. MIT Press, Cambridge,
+MA, 1991.
+[14] A. Silberschatz and A. Tuzhilin. What makes patterns
+interesting in knowledge discovery systems. IEEE
+Transactions on Knowledge and Data Eng.,
+8(6):970-974, 1996.
+[15] C. Silverstein, S. Brin, and R. Motwani. Beyond
+market baskets: Generalizing association rules to
+dependence rules. Data Mining and Knowledge
+Discovery, 2(1):39-68, 1998.
+[16] P. Tan, V. Kumax, and J. Srivastava. Selecting the
+right interestingness measure for association patterns.
+Technical Report 2002-112, Army High Performance
+Computing Research Center, 2002.
+
+
+
+
+41
+
