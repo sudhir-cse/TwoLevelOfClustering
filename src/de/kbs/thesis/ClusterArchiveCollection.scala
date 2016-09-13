@@ -1,3 +1,11 @@
+/*
+ * Important notes
+ * 
+ * In the method preProcessData() - sort the resulting DataFrame based on TimeStam column
+ */
+
+
+
 package de.kbs.thesis
 
 import org.apache.spark.ml.clustering.LDA
@@ -20,6 +28,8 @@ import org.apache.spark.ml.clustering.KMeans
 import org.apache.spark.rdd.RDD
 import org.apache.spark.ml.clustering.KMeansSummary
 import org.apache.spark.ml.clustering.KMeansModel
+import org.apache.spark.ml.feature.CountVectorizerModel.CountVectorizerModelReader
+import org.apache.spark.ml.feature.IDFModel
 
 object ClusterArchiveCollection {
   
@@ -41,7 +51,7 @@ object ClusterArchiveCollection {
 		//RDD[Row(timeStemp, fileName, fileContent)]
 		//Filename has been composed of Time stamp and Filename. Separator as a "-" has been used
 		//Data filtering includes: toLoweCasae, replace all the white space characters with single char, keep only alphabetic chars, keep only the words > 2.
-		val trainingData = spark.sparkContext.wholeTextFiles("data/KDD")
+		val trainingData = spark.sparkContext.wholeTextFiles("data/KDDTraining")
 		
 		//Pre-process data
 		val preProcessedTrainingData = preProcessData(spark, trainingData)
@@ -50,6 +60,15 @@ object ClusterArchiveCollection {
 		computeModelHierarchy(spark, preProcessedTrainingData, firstLevelClustersNum, firstLevelClusterMaxItr, secondLevelClustersNum, secondLevelClusterMaxInt)
 		
 		computeTopicsHierarchy(spark)
+		
+//		//Test data
+//		val testData = spark.sparkContext.wholeTextFiles("data/KDDTest")
+//		
+//		//Pre-process test data
+//		val preProcessedTestData = preProcessData(spark, testData)
+//		
+//		//Perform topics detection on stream of test data
+//		detectNewTopicsOverDataStream(spark, preProcessedTestData)
 		  
    spark.stop()
     
@@ -61,11 +80,11 @@ object ClusterArchiveCollection {
     //RDD[Row(timeStemp, fileName, fileContent)]
 		//Filename has been composed of Timestamp and Filename. Separator as a "-" has been used
 		//Data filterring includes: toLoweCasae, replace all the white space characters with single char, keep only alphabetic chars, keep only the words > 2.
-		val tempData = data.map(kvTouple => Row(kvTouple._1, kvTouple._2.toLowerCase().replaceAll("""\s+""", " ").replaceAll("""[^a-zA-Z\s]""", "").replaceAll("""\b\p{IsLetter}{1,2}\b""","")))
+		val tempData = data.map(kvTouple => Row("timeStamp", kvTouple._1, kvTouple._2.toLowerCase().replaceAll("""\s+""", " ").replaceAll("""[^a-zA-Z\s]""", "").replaceAll("""\b\p{IsLetter}{1,2}\b""","")))
 
 		//Convert training RDD to DataFrame(fileName, fileContent)
 		//Schema is encoded in String
-		val schemaString = "fileName fileContent"
+		val schemaString = "timeStamp fileName fileContent"
 
 		//Generate schema based on the string of schema
 		val fields = schemaString.split(" ")
@@ -103,6 +122,9 @@ object ClusterArchiveCollection {
 		.setVocabSize(vocabSize)
 		.setMinDF(minDF)
 		.fit(preProcessedData)
+		
+		tfModel.write.overwrite().save("models/featuresSpace/firstLevelTF")
+		
 		val featurizedData  = tfModel.transform(preProcessedData)
 	  //featurizedData.show()
 	
@@ -110,7 +132,10 @@ object ClusterArchiveCollection {
 		val tfidfModel = new IDF()
 		  .setInputCol("featuresTF")
 		  .setOutputCol("featuresTFIDF")  //fist level topics features space
-		  .fit(featurizedData)		  
+		  .fit(featurizedData)
+		  
+	 tfidfModel.write.overwrite().save("models/featuresSpace/firstLevelTFIDF")
+		  
 	 val tfidf = tfidfModel.transform(featurizedData)
   
 	 return tfidf
@@ -163,7 +188,7 @@ object ClusterArchiveCollection {
   def computeModelHierarchy(spark: SparkSession, preProcessedDataset: Dataset[Row], firstLevelClustersNum: Int, firstLevelClustersMaxItr: Int, secondLevelClustersNum: Int, secondLevelClustersMaxItr: Int): Unit = {
     
     //Compute features space for first level topics
-		val tfidfForFLT = computeFeatureSpace(preProcessedDataset, 200, 10)
+		val tfidfForFLT = computeFeatureSpace(preProcessedDataset, 100, 2)
     
 		//cache data as K-means will make multiple iteration over data set
     tfidfForFLT.cache()
@@ -203,7 +228,7 @@ object ClusterArchiveCollection {
 		  //clusterDFWithRemovedFS.show()
 		  
 		  //compute features space for second level topic
-		  val tfidfForSLT = computeFeatureSpace(clusterDFWithRemovedFS, 150, 5)
+		  val tfidfForSLT = computeFeatureSpace(clusterDFWithRemovedFS, 50, 2)
 		  
 		  tfidfForSLT.cache()
 		  
@@ -253,11 +278,40 @@ object ClusterArchiveCollection {
     val topicsDF = spark.createDataFrame(topicsSet.toSeq).toDF("MainTopic", "SubTopic")
     val sortedTopicsDF = topicsDF.sort("MainTopic")
     
+    //save this DF as a temp table
+    sortedTopicsDF.createOrReplaceTempView("topicsTable")
+    
     println("Topic DataFrame: ")
     sortedTopicsDF.show(false)
    
     return topicsDF
+  }
+  
+  //This method detects new emerging topics over stream of text data
+  def detectNewTopicsOverDataStream(spark: SparkSession, preProcessedTestData: Dataset[Row]): Unit = {
+    
+    var tfModel = CountVectorizerModel.load("models/featuresSpace/firstLevelTF")
+    var tfidfModel = IDFModel.load("models/featuresSpace/firstLevelTFIDF")
+    
+    //preProcessedTestData("stoprot", "")
+    
+//    val tfDF = tfModel.transform(preProcessedTestData)
+//    val tfidf = tfidfModel.transform(tfDF)
+    
+    //Note**** : sort preprocessedTestData by TimeStamp column
+    preProcessedTestData.foreach { row => {
+      
+     //val temp = row.
+      
+      //val rowDF = spark.createDataFrame(row.toSeq).toDF()
+      
+    } }
+    
    
+    
+    
+    
+    
   }
   
 }
@@ -265,17 +319,21 @@ object ClusterArchiveCollection {
 /*
  * Important references:-
  * 
- * Tables:
+ * 	Tables:
  * 
- * Main   -   firstLevelTable
+ * 		Main   -   firstLevelTable
  * 
- * Second  -  secondLevelTable_$clusterIndex
+ * 		Second  -  secondLevelTable_$clusterIndex
  * 
- * Models:
+ * 	Models:
  * 
- * First Level -  models/firstLeveTopiclModel
+ * 		First Level -  models/firstLeveTopiclModel
  * 
- * Second Level  -   models/secondLeveTopiclModel/subModel_$clusterIndex
+ * 		Second Level  -   models/secondLeveTopiclModel/subModel_$clusterIndex
+ * 
+ * 	Topics:
+ * 
+ *		topicsTable
  */
 
 
