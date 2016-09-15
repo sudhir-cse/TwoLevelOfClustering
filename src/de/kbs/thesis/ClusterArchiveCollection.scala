@@ -4,32 +4,24 @@
  * In the method preProcessData() - sort the resulting DataFrame based on TimeStam column
  */
 
-
-
 package de.kbs.thesis
 
-import org.apache.spark.ml.clustering.LDA
 import org.apache.spark.ml.clustering.KMeans
-import org.apache.spark.ml.feature.HashingTF
+import org.apache.spark.ml.clustering.KMeans
+import org.apache.spark.ml.clustering.KMeansModel
+import org.apache.spark.ml.clustering.KMeansSummary
+import org.apache.spark.ml.feature.CountVectorizer
+import org.apache.spark.ml.feature.CountVectorizerModel
 import org.apache.spark.ml.feature.IDF
+import org.apache.spark.ml.feature.IDFModel
 import org.apache.spark.ml.feature.StopWordsRemover
 import org.apache.spark.ml.feature.Tokenizer
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.StringType
-import org.apache.spark.sql.types.StructField
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.ml.feature.{CountVectorizer, CountVectorizerModel}
+import org.apache.spark.sql.types._
 
-import scala.collection.mutable.WrappedArray
-import org.apache.spark.sql.Dataset
-
-import org.apache.spark.ml.clustering.KMeans
-import org.apache.spark.rdd.RDD
-import org.apache.spark.ml.clustering.KMeansSummary
-import org.apache.spark.ml.clustering.KMeansModel
-import org.apache.spark.ml.feature.CountVectorizerModel.CountVectorizerModelReader
-import org.apache.spark.ml.feature.IDFModel
 
 object ClusterArchiveCollection {
   
@@ -61,14 +53,16 @@ object ClusterArchiveCollection {
 		
 		computeTopicsHierarchy(spark)
 		
-//		//Test data
-//		val testData = spark.sparkContext.wholeTextFiles("data/KDDTest")
-//		
-//		//Pre-process test data
-//		val preProcessedTestData = preProcessData(spark, testData)
-//		
-//		//Perform topics detection on stream of test data
-//		detectNewTopicsOverDataStream(spark, preProcessedTestData)
+		//Test data
+		//val testData = spark.sparkContext.wholeTextFiles("data/KDDTest")
+		
+		//Pre-process test data
+		//val preProcessedTestData = preProcessData(spark, testData)
+		
+		//Perform topics detection on stream of test data
+		//detectNewTopicsOverDataStream(spark, preProcessedTestData)
+		
+		computeClustersCost(spark)
 		  
    spark.stop()
     
@@ -287,32 +281,112 @@ object ClusterArchiveCollection {
     return topicsDF
   }
   
-  //This method detects new emerging topics over stream of text data
-  def detectNewTopicsOverDataStream(spark: SparkSession, preProcessedTestData: Dataset[Row]): Unit = {
+  //Will be used for evaluation
+  //Computes cost associated with each cluster (firstLevel or secondLevel)
+  //Call this methods after model has been created (after computeModelHierarchy(...))
+  def computeClustersCost(spark: SparkSession): Unit ={
     
-    var tfModel = CountVectorizerModel.load("models/featuresSpace/firstLevelTF")
-    var tfidfModel = IDFModel.load("models/featuresSpace/firstLevelTFIDF")
+    case class ClusterCost(timeStamp: String, flClusterIndex: Int, flClusterCost: Double, slClusterIndex: Int, slClusterCost: Double )
     
-    //preProcessedTestData("stoprot", "")
+    val costsArray = new Array[ClusterCost](firstLevelClustersNum * secondLevelClustersNum)
+    var costsArrayIndex = 0
     
-//    val tfDF = tfModel.transform(preProcessedTestData)
-//    val tfidf = tfidfModel.transform(tfDF)
+    //spark.sparkContext.parallelize(seq, numSlices)
     
-    //Note**** : sort preprocessedTestData by TimeStamp column
-    preProcessedTestData.foreach { row => {
+    //Load the first level clusters model
+    val firstLevelKMeansModel = KMeansModel.load("models/firstLeveTopiclModel")
+    
+    //Iterate over first level clusters
+    for (firstLevelClusterIndex <- 0 until firstLevelClustersNum){
       
-     //val temp = row.
+      val firstLevelClusterDF = spark.sql(s"SELECT featuresTFIDF FROM firstLevelTable WHERE clusterPrediction = $firstLevelClusterIndex")
       
-      //val rowDF = spark.createDataFrame(row.toSeq).toDF()
+      val firstLevelClusterCost: Double = firstLevelKMeansModel.computeCost(firstLevelClusterDF)
       
-    } }
+      //Load the corresponding second level model
+      val secondLevelKMeansModel = KMeansModel.load(s"models/secondLeveTopiclModel/subModel_$firstLevelClusterIndex")
+      
+     
+      //Iterate over all the second level clusters
+      for (secondLevelClusterIndex <- 0 until secondLevelClustersNum){
+        
+        val secondLevelClusterDF = spark.sql(s"SELECT featuresTFIDF FROM secondLevelTable_$firstLevelClusterIndex WHERE clusterPrediction = $secondLevelClusterIndex")  
+        
+        val secondLevelClusterCost = secondLevelKMeansModel.computeCost(secondLevelClusterDF)
+        
+        costsArray(costsArrayIndex) = ClusterCost("TimeStamp", firstLevelClusterIndex, firstLevelClusterCost, secondLevelClusterIndex, secondLevelClusterCost)
+        costsArrayIndex = costsArrayIndex + 1      
+      }    
+    }
     
-   
+    val costsArrayRDD = spark.sparkContext.parallelize(costsArray)
+      .map { ca => Row(ca.timeStamp, ca.flClusterIndex, ca.flClusterCost, ca.slClusterIndex, ca.slClusterCost) }
     
+    //convert to DataFrame
+    val schema = StructType(Array[StructField](
+          StructField("TimeStamp", StringType, nullable = true),
+          StructField("firstLevelClusterIndex", IntegerType, nullable = true),
+          StructField("firstLevelClusterCost", DoubleType, nullable = true),
+          StructField("secondLevelClusterIndex", IntegerType, nullable = true),
+          StructField("secondLevelClusterCost", DoubleType, nullable = true)
+        ))
     
+    val costsArrayDF = spark.createDataFrame(costsArrayRDD, schema)
     
+    costsArrayDF.show(false)  
     
   }
+  
+  
+//  //Convert training RDD to DataFrame(fileName, fileContent)
+//		//Schema is encoded in String
+//		val schemaString = "timeStamp fileName fileContent"
+//
+//		//Generate schema based on the string of schema
+//		val fields = schemaString.split(" ")
+//		  .map ( fieldName => StructField(fieldName, StringType, nullable = true) )
+//
+//		//Now create schema
+//		val schema = StructType(fields)
+  
+  
+  
+  
+  
+  
+  
+//  //This method detects new emerging topics over stream of text data
+//  def detectNewTopicsOverDataStream(spark: SparkSession, preProcessedTestData: Dataset[Row]): Unit = {
+//    
+//    //Store preProcessedTestData to temp view
+//    preProcessedTestData.createOrReplaceTempView("testDataTable")
+//    
+//    //keep only the timeStamp and stopWordsFiltered column
+//    val reducedTestDF = spark.sql("SELECT timeStamp, stopWordsFiltered FROM testDataTable")
+//    
+//    //Load models for computing features space
+//    var tfModel = CountVectorizerModel.load("models/featuresSpace/firstLevelTF")
+//    var tfidfModel = IDFModel.load("models/featuresSpace/firstLevelTFIDF")
+//    
+//    //Load first level k-means model
+//    val firstLevelKmeansModel = KMeansModel.load("models/firstLeveTopiclModel")
+//    
+//    reducedTestDF.foreach { row => {
+//      
+//      val rowDF = spark.createDataFrame(Seq((row.get(0).toString(), row.get(1).toString()))).toDF("id", "name")
+//      
+//      //compute features vector
+//      val tf = tfModel.transform(rowDF)
+//      val tfidf = tfidfModel.transform(tf)
+//      
+//      val firslLevelClusterPrediction = firstLevelKmeansModel.transform(tfidf)
+//      
+//      firslLevelClusterPrediction.show()
+//      
+//      
+//    }}
+//         
+//  }
   
 }
 
@@ -321,9 +395,13 @@ object ClusterArchiveCollection {
  * 
  * 	Tables:
  * 
- * 		Main   -   firstLevelTable
+ *		Training: 
+ * 			Main   -   firstLevelTable
  * 
- * 		Second  -  secondLevelTable_$clusterIndex
+ * 			Second  -  secondLevelTable_$clusterIndex
+ * 
+ *		Test:
+ * 			Main  -  testDataTable
  * 
  * 	Models:
  * 
