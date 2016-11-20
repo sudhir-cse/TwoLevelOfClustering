@@ -1,41 +1,37 @@
 package de.kbs.thesis
 
-import org.apache.spark.ml.clustering.KMeans
-import org.apache.spark.ml.clustering.KMeans
-import org.apache.spark.ml.clustering.KMeansModel
 import org.apache.spark.ml.clustering.KMeansSummary
+import org.apache.spark.ml.clustering.LDA
 import org.apache.spark.ml.feature.CountVectorizer
 import org.apache.spark.ml.feature.CountVectorizerModel
-import org.apache.spark.ml.feature.IDF
-import org.apache.spark.ml.feature.IDFModel
 import org.apache.spark.ml.feature.StopWordsRemover
 import org.apache.spark.ml.feature.Tokenizer
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types._
-import org.joda.time.format.DateTimeFormat
-import org.apache.spark.ml.clustering.LDA
 import org.apache.spark.sql.functions._
-import scala.collection.mutable.WrappedArray
+import org.apache.spark.sql.types._
+import org.apache.spark.ml.linalg.DenseVector
+
 
 object TopicsDetectionLDA {
   
   val NUMBER_OF_FIRST_LEVEL_TOPICS = 5     //Number of clusters, value of k
-  val FIRST_LEVEL_TOPIS_LENGTH = 5      //In words
+  val FIRST_LEVEL_TOPIS_LENGTH = 3      //In words
   val FIRST_LEVEL_MAX_ITR = 50
   val FIRST_LEVEL_VOC_SIZE = 50
   val FIRST_LEVEL_MIN_DF = 10
+  val FIRST_LEVEL_CLUSTER_MIN_PROBABILITY: Double = 0.6 //Documents belong to the topics that has distribution grater than 0.6
   
   val NUMBER_OF_SECOND_LEVEL_TOPICS = 4
   val SECOND_LEVEL_TOPICS_LENGTH = 5
   val SECOND_LEVEL_MAX_ITR = 20
   val SECOND_LEVEL_VOC_SIZE = 35
   val SECOND_LEVEL_MIN_DF = 5
+  val SECOND_LEVEL_CLUSTER_MIN_PROBABILITY: Double = 0.6
   
-  val FIRST_LEVEL_CLUSTER_PROBABILITY = 0.5
-  val SECOND_LEVEL_CLUSTER_PROBABILITY = 0.5
+  val topicsDFs: Array[Dataset[Row]] = new Array[Dataset[Row]](NUMBER_OF_FIRST_LEVEL_TOPICS) //To store set of documents that belong to each topic
   
   //Main function
   def main(args: Array[String]): Unit = {
@@ -72,7 +68,7 @@ object TopicsDetectionLDA {
 		    kvTouple._2.toLowerCase().replaceAll("""\s+""", " ").replaceAll("""[^a-zA-Z\s]""", "").replaceAll("""\b\p{IsLetter}{1,2}\b""","")
 		    ))
 		    
-		//Convert training RDD to DataFrame(fileName, fileContent)
+		//Convert training RDD to DataFrame(timestamp, fileName, fileContent)
 		//Schema is encoded in String
 		val schemaString = "timeStamp fileName fileContent"
 
@@ -85,7 +81,7 @@ object TopicsDetectionLDA {
 
 		//Apply schema to RDD
 		val trainingDF = spark.createDataFrame(tempData, schema)
-		trainingDF.show()
+		//trainingDF.show()
 
 		//split fileContent column into words
 		val wordsData = new Tokenizer()
@@ -133,92 +129,61 @@ object TopicsDetectionLDA {
     //save LDA model
     ldaModel.write.overwrite().save("LDAModels/firstLeveTopiclModel")
     
-    val firstLevelVocals = tfModel.vocabulary
-   
-    val describeTopiceDF = ldaModel.describeTopics(FIRST_LEVEL_TOPIS_LENGTH)
+    //Perform final transformation
+    ldaModel.transform(featurizedData).createOrReplaceTempView("tempTable")
+    val topicDistributionDF = spark.sql("SELECT topicDistribution FROM tempTable");
+   // topicDistributionDF.show(false)
     
-    //User defined function
-    val udfIndicesToTopics = udf[Array[String], WrappedArray[Int]](indices => {
-      
-     val result = new Array[String](indices.toArray.length)
-     var resultIndex = 0
+    /*---------Filter out each topic and documents in it and store them in topicsDFs array------------*/
+   val transDataSet = ldaModel.transform(featurizedData)
+   
+   for (topicIndex <- 0 to NUMBER_OF_FIRST_LEVEL_TOPICS-1 ){
      
-     indices.toArray.foreach{ vocalIndex => {
-       
-       result(resultIndex) = firstLevelVocals(vocalIndex)
-       resultIndex = resultIndex + 1
-       
-     } }
-      
-     result
+     val firstTopicsDocumentsSet = transDataSet.filter { row => row.getAs[DenseVector]("topicDistribution").toArray(topicIndex) >= FIRST_LEVEL_CLUSTER_MIN_PROBABILITY }
      
-    })
-    
-   //use of user defined function
-   val topicsDF = describeTopiceDF.withColumn("firstLevelTopic", udfIndicesToTopics(describeTopiceDF.col("termIndices")))
+     topicsDFs(topicIndex) = firstTopicsDocumentsSet
+     
+   } 
    
-   //save as a table
-   topicsDF.createOrReplaceTempView("firstLevelTopicsTable")
-   
-   //work for second level topics
-   
-   
-   
+   /*---------- Compute second level topics ----------*/
+  // topicsDFs.foreach { x => ??? }
     
-    
-    
-    
-    
-    
-//    //user defined function
-//    val fromIndicesToTerms = udf[Array[String], WrappedArray[Int]](termIndices => {
+//    val firstLevelVocals = tfModel.vocabulary
+//   
+//   val describeTopiceDF = ldaModel.describeTopics(FIRST_LEVEL_TOPIS_LENGTH)
+//    
+//    //print("Describe topics");
+//    //describeTopiceDF.show();
+//    
+//    //User defined function
+//    val udfIndicesToTopics = udf[Array[String], WrappedArray[Int]](indices => {
 //      
-//      val termIndicesToArray = termIndices.toArray
+//      indices.toArray.map {index => firstLevelVocals(index)}
 //      
-//      val result = new Array[String](termIndicesToArray.length)
-//      var resultIndex = 0
-//      
-//      termIndicesToArray.foreach { termIndex => {result(resultIndex) = firstLevelVocals(termIndex); resultIndex = resultIndex + 1; } }
-//      
-//      result
-//       
 //    })
-//    
-//    
-//    val describeTopicsDF = ldaModel.describeTopics(FIRST_LEVEL_TOPIS_LENGTH)
-//    
-//    val firstLevelTopics = describeTopicsDF.withColumn("topic", fromIndicesToTerms(describeTopicsDF.col("termIndices")))
-//    
-//    println("Topics are: ")
-//    firstLevelTopics.show()
-//    describeTopicsDF.show(false)
-//    
-    //ldaModel.describeTopics(FIRST_LEVEL_TOPIS_LENGTH).show
+//     
+//   //use user defined function
+//   val topicsDF = describeTopiceDF.withColumn("firstLevelTopic", udfIndicesToTopics(describeTopiceDF.col("termIndices")))
+//   
+//   topicsDF.show()
+//   
+//   //save as a table
+//   topicsDF.createOrReplaceTempView("firstLevelTopicsTable")
+//   
+//   //work for second level topics
+//   
+//       
+////    println("Topics Matrix:  ")
+////    val topicsMatrix = ldaModel.topicsMatrix
+////    for(i <- 0 until topicsMatrix.numRows){
+////      for(j <- 0 until topicsMatrix.numCols){
+////        print(topicsMatrix.apply(i, j)+" ")
+////      }
+////      print("\n")
+////    }
     
-//    println("Topics Matrix:  ")
-//    val topicsMatrix = ldaModel.topicsMatrix
-//    for(i <- 0 until topicsMatrix.numRows){
-//      for(j <- 0 until topicsMatrix.numCols){
-//        print(topicsMatrix.apply(i, j)+" ")
-//      }
-//      print("\n")
-//    }
-    
-    
-   //val temp1 = tempView.rdd.map { row => println)}
-   //temp1.foreach { x => println } 
   }
-  
-  //Convert any to Double type
-  def toDouble: (Any) => Double = { case i: Int => i case f: Float => f case d: Double => d }
 }
 
 
-
-
-
-
-
-
-
-
+//final schema : DataFrame only with file content will be enough as well
