@@ -230,8 +230,26 @@ object TopicsDetectionLDA {
 	//Prints topics hierarchy
 	def printTopicsHierarchy(spark: SparkSession): Unit = {
 
-		println("First level topic")
-		spark.sql("SELECT * FROM firstLevelTopicsView").show()
-
+		println("First and second level topics are: ")
+		spark.sql("SELECT topic, firstLevelTopic FROM firstLevelTopicsView").foreach { rowF => {
+		  
+		  val firstLevelTopic = rowF.getAs[Array[String]]("firstLevelTopic").toString()
+		  val topicIndex = rowF.getAs[Int]("topic")
+		  
+		  println(firstLevelTopic)
+		  
+		  spark.sql("SELECT secondLevelTopic FROM secondLevelTopicsView$topic").foreach { rowS => {
+		    
+		    val secondLevelTopic = rowS.getAs[Array[String]]("secondLevelTopic").toString()
+		    
+		    print("\t"+secondLevelTopic)
+		    print("\n")
+		    
+		  } } 
+		} }
 	}
 }
+
+//next questions
+//Understand the DataSet, Find the way to run this algorithm on top of them, either download them locally or run on the server itself
+//Exception handling -> java.lang.IllegalArgumentException: requirement failed: The vocabulary size should be > 0. Lower minDF as necessary
